@@ -2,28 +2,31 @@ version: "3.7"
 services:
 
   presto:
+    user: "root"
     volumes:
-      - "./modules/security/ldap/presto/config.properties:/usr/lib/presto/etc/config.properties:ro"
-      - "./modules/security/ldap/presto/password-authenticator.properties:/usr/lib/presto/etc/password-authenticator.properties:ro"
-      - "./modules/security/ldap/resources/keystore.jks:/usr/lib/presto/etc/keystore.jks:ro"
-      - "./modules/security/ldap/resources/ldap-users:/usr/lib/presto/etc/ldap-users:ro"
-      - "./modules/security/ldap/resources/entrypoint.sh:/entrypoint.sh:ro"
+      - "./modules/security/ldap/presto/config.properties:/usr/lib/presto/etc/config.properties"
+      - "./modules/security/ldap/presto/password-authenticator.properties:/usr/lib/presto/etc/password-authenticator.properties"
+      - "./modules/security/ldap/resources/keystore.jks:/usr/lib/presto/etc/keystore.jks"
+      - "./modules/security/ldap/resources/ldap-users:/usr/lib/presto/etc/ldap-users"
+      - "./modules/security/ldap/resources/entrypoint.sh:/entrypoint.sh"
+      - "./modules/resources/wait-for-it.sh:/tmp/boot/wait-for-it.sh"
     command: "/entrypoint.sh"
     ports:
       - "8443:8443"
   
   ldap:
-    image: osixia/openldap:1.3.0
-    container_name: ldap
-    ports:
-      - "636:636"
+    image: "osixia/openldap:${OPEN_LDAP_VER}"
+    container_name: "ldap"
     depends_on:
       - "presto"
+    restart: "always"
     environment:
       LDAP_ORGANISATION: "${LDAP_ORGANISATION}"
       LDAP_DOMAIN: "${LDAP_DOMAIN}"
       LDAP_ADMIN_PASSWORD: "${LDAP_ADMIN_PASSWORD}"
       LDAP_TLS_VERIFY_CLIENT: "try"
+    ports:
+      - "636:636"
     labels:
       - "com.starburst.tests=minipresto"
       - "com.starburst.tests.module.ldap=security-ldap"

@@ -1,0 +1,18 @@
+version: "3.7"
+services:
+  
+  presto:
+    build:
+      context: .
+      args:
+        STARBURST_VER: "${STARBURST_VER}"
+      labels:
+        - "com.starburst.tests=minipresto"
+        - "com.starburst.tests.module=presto"
+    image: "minipresto/presto:${STARBURST_VER}"
+    container_name: "presto"
+    labels:
+      - "com.starburst.tests=minipresto"
+      - "com.starburst.tests.module=presto"
+    ports:
+      - "8080:8080"

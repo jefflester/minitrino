@@ -1,0 +1,18 @@
+version: "3.7"
+services:
+
+  presto:
+    volumes:
+      - "./modules/security/event-logger/presto/postgres_event_logger.properties:/usr/lib/presto/etc/catalog/postgres_event_logger.properties:ro"
+      - "./modules/security/event-logger/presto/event-listener.properties:/usr/lib/presto/etc/event-listener.properties:ro"
+      - "${STARBURST_LIC_PATH}:/usr/lib/presto/etc/starburstdata.license:ro"
+  
+  postgres-event-logger:
+    image: "postgres:${POSTGRES_EVENT_LOGGER_VER}"
+    container_name: "postgres-event-logger"
+    labels:
+      - "com.starburst.tests=minipresto"
+      - "com.starburst.tests.module.event-logger=security-event-logger"
+    env_file:
+      - "./modules/security/event-logger/postgres.env"
+      

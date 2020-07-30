@@ -1,0 +1,23 @@
+version: "3.7"
+services:
+    
+  test:
+    build: 
+      context: ./modules/catalog/test/
+      labels: 
+        - "com.starburst.tests=minipresto"
+        - "com.starburst.tests.module.test=catalog-test"
+    command: "tail -F anything" # Keep alive 
+    image: "minipresto:test"
+    container_name: "test"
+    labels: 
+      - "com.starburst.tests=minipresto"
+      - "com.starburst.tests.module.test=catalog-test"
+    volumes:
+      - "test-data:/etc/test/"
+
+volumes:
+  test-data:
+    labels:
+      - "com.starburst.tests=minipresto"
+      - "com.starburst.tests.module.test=catalog-test"

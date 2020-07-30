@@ -1,0 +1,16 @@
+version: "3.7"
+services:
+
+  presto:
+    environment:
+      SNOWFLAKE_DIST_CONNECT_URL: "${SNOWFLAKE_DIST_CONNECT_URL}"
+      SNOWFLAKE_DIST_CONNECT_USER: "${SNOWFLAKE_DIST_CONNECT_USER}"
+      SNOWFLAKE_DIST_CONNECT_PASSWORD: "${SNOWFLAKE_DIST_CONNECT_PASSWORD}"
+      SNOWFLAKE_DIST_WAREHOUSE: "${SNOWFLAKE_DIST_WAREHOUSE}"
+      SNOWFLAKE_DIST_DB: "${SNOWFLAKE_DIST_DB}"
+      SNOWFLAKE_DIST_STAGE_SCHEMA: "${SNOWFLAKE_DIST_STAGE_SCHEMA}"
+    labels:
+      - "com.starburst.tests.module.snowflake-distributed=catalog-snowflake-distributed"
+    volumes:
+      - "./modules/catalog/snowflake-distributed/presto/snowflake_distributed.properties:/usr/lib/presto/etc/catalog/snowflake_distributed.properties:ro"
+      - "${STARBURST_LIC_PATH}:/usr/lib/presto/etc/starburstdata.license:ro"

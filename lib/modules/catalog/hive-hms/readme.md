@@ -1,0 +1,2 @@
+# Hive-HMS Module
+This module uses an implementation of the Hive/HMS Docker image from the [presto-aws](https://github.com/starburstdata/presto-aws/tree/master/ami/src/main/resources/opt/hive-metastore) repository. It allows you to connect to an S3 bucket and mounts a persistent volume to the host machine, allowing for persistent HMS storage. 

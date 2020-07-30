@@ -1,0 +1,15 @@
+version: "3.7"
+services:
+
+  presto:
+    volumes:
+      - "./modules/catalog/postgres/presto/postgres.properties:/usr/lib/presto/etc/catalog/postgres.properties:ro"
+
+  postgres:
+    image: "postgres:${POSTGRES_VER}"
+    container_name: "postgres"
+    labels:
+      - "com.starburst.tests=minipresto"
+      - "com.starburst.tests.module.postgres=catalog-postgres"
+    env_file:
+      - "./modules/catalog/postgres/postgres.env"

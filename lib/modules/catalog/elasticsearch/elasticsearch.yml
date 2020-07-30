@@ -1,0 +1,31 @@
+version: "3.7"
+services:
+  
+  presto:
+    volumes:
+      - "./modules/catalog/elasticsearch/presto/elasticsearch.properties:/usr/lib/presto/etc/catalog/elasticsearch.properties:ro"
+
+  elasticsearch:
+    build:
+      context: "./modules/catalog/elasticsearch/"
+      args:
+        - ELASTICSEARCH_VER=${ELASTICSEARCH_VER}
+    image: "minipresto:elasticsearch"
+    container_name: elasticsearch
+    labels:
+      - "com.starburst.tests=minipresto"
+      - "com.starburst.tests.module.elasticsearch=catalog-elasticsearch"
+    ports:
+      - 9200:9200
+      - 9300:9300
+      
+  # kibana:
+  #   image: docker.elastic.co/kibana/kibana:${KIBANA_VER}
+  #   container_name: kibana
+  #   environment:
+  #     - ELASTICSEARCH_URL=http://elasticsearch:9200
+  #     - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+  #   labels:
+  #     - "com.starburst.tests=minipresto"
+  #   ports:
+  #     - 5601:5601

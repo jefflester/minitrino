@@ -14,12 +14,12 @@ from minipresto.settings import RESOURCE_LABEL
 
 def main():
     helpers.log_status("Running test_provision")
-    # test_daemon_off()
-    # test_standalone()
-    # test_invalid_catalog_module()
-    # test_invalid_security_module()
-    # test_env_override()
-    # test_invalid_env_override()
+    test_daemon_off()
+    test_standalone()
+    test_invalid_catalog_module()
+    test_invalid_security_module()
+    test_env_override()
+    test_invalid_env_override()
     test_build_bootstrap_config_props()
 
 

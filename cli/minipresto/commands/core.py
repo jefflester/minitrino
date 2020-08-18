@@ -339,13 +339,13 @@ def check_daemon(ctx):
 def validate_module_dirs(ctx, key, modules=[]):
     """
     Validates that the directory and Compose .yml exist for each provided
-    module. If they all exist, a list of module directories is returned.
-
-    The `modules` argument must be a tuple or a list.
+    module. If they all exist, a list of module directories and YAML file paths
+    is returned.
     """
 
     module_type = key.get("module_type", "")
     module_dirs = []
+    module_yaml_files = []
 
     for module in modules:
         module_dir = os.path.abspath(
@@ -357,8 +357,9 @@ def validate_module_dirs(ctx, key, modules=[]):
             ctx.log_err(f"Invalid {module_type} module: {module}")
             sys.exit(1)
         module_dirs.append(module_dir)
+        module_yaml_files.append(yaml_path)
 
-    return module_dirs
+    return module_dirs, module_yaml_files
 
 
 def convert_MultiArgOption_to_list(*args):

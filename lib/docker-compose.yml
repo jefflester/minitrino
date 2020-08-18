@@ -11,6 +11,7 @@ services:
         - "com.starburst.tests.module=presto"
     image: "minipresto/presto:${STARBURST_VER}"
     container_name: "presto"
+    hostname: "presto.minipresto.starburstdata.com"
     labels:
       - "com.starburst.tests=minipresto"
       - "com.starburst.tests.module=presto"

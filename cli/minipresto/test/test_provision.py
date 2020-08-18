@@ -3,6 +3,7 @@
 
 import os
 import docker
+import subprocess
 import minipresto.test.helpers as helpers
 
 from click.testing import CliRunner
@@ -13,13 +14,13 @@ from minipresto.settings import RESOURCE_LABEL
 
 def main():
     helpers.log_status("Running test_provision")
-    test_daemon_off()
-    test_standalone()
-    test_invalid_catalog_module()
-    test_invalid_security_module()
-    test_env_override()
-    test_invalid_env_override()
-    test_build()
+    # test_daemon_off()
+    # test_standalone()
+    # test_invalid_catalog_module()
+    # test_invalid_security_module()
+    # test_env_override()
+    # test_invalid_env_override()
+    test_build_bootstrap_config_props()
 
 
 def test_daemon_off():
@@ -147,15 +148,16 @@ def test_invalid_env_override():
     cleanup(runner)
 
 
-def test_build():
+def test_build_bootstrap_config_props():
     """
-    Verifies that we can successfully build from a given module's
-    Docker build context.
+    Verifies (1) we can successfully build from a given module's Docker build
+    context, (2) checks for successful bootstrap execution, and (3) checks for
+    successful adding of config properties to Presto config.properties file.
     """
 
     runner = CliRunner()
     result = runner.invoke(
-        cli, ["-v", "provision", "--catalog", "test", "elasticsearch", "-d", "--build"]
+        cli, ["-v", "provision", "--catalog", "test", "-d", "--build"]
     )
     assert result.exit_code == 0
     assert all(
@@ -166,9 +168,40 @@ def test_build():
     )
 
     containers = get_containers()
-    assert len(containers) == 3
+    assert len(containers) == 2
 
-    helpers.log_status(f"Passed test_build")
+    # Copy Presto config.properties to Minipresto user dir
+    subprocess.call(
+        f"docker cp presto:/usr/lib/presto/etc/config.properties {helpers.minipresto_user_dir}",
+        shell=True,
+    )
+    # Copy file created in test container by bootstrap script to Minipresto user dir
+    subprocess.call(
+        f"docker cp test:/root/test_bootstrap.txt {helpers.minipresto_user_dir}",
+        shell=True,
+    )
+
+    assert os.path.isfile(
+        os.path.join(helpers.minipresto_user_dir, "test_bootstrap.txt")
+    )
+
+    # Verify correct config.properties were added and check for duplicates
+    existing_config_props = {}
+    with open(os.path.join(helpers.minipresto_user_dir, "config.properties"), "r") as f:
+        for line in f:
+            line = line.strip().split("=")
+            if len(line) != 2:
+                continue
+            existing_config_props[line[0].strip()] = line[1].strip()
+
+    assert existing_config_props.get("query.max-stage-count", None) == "105"
+    assert existing_config_props.get("query.max-execution-time", None) == "1h"
+
+    # Remove copied files
+    os.remove(os.path.join(helpers.minipresto_user_dir, "config.properties"))
+    os.remove(os.path.join(helpers.minipresto_user_dir, "test_bootstrap.txt"))
+
+    helpers.log_status(f"Passed test_build_bootstrap_config_props")
     cleanup(runner)
 
 

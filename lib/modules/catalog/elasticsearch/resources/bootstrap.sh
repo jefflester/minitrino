@@ -4,10 +4,15 @@
 # https://github.com/andrewpuch/elasticsearch_examples
 #-----------------------------------------------------------------------------------------------
 
-# Create user index
+set -euxo pipefail
+
+echo "Waiting for Elasticsearch to come up..."
+/opt/minipresto/wait-for-it.sh elasticsearch:9200 --strict --timeout=60 -- echo "Elasticsearch service is up."
+
+echo "Creating user index..."
 curl -XPUT http://localhost:9200/user?pretty=true;
 
-# Create user mapping
+echo "Creating user mapping..."
 curl -XPUT http://localhost:9200/user/_mapping/profile?include_type_name=true -H 'Content-Type: application/json' -d '
 {
     "profile" : {
@@ -23,7 +28,7 @@ curl -XPUT http://localhost:9200/user/_mapping/profile?include_type_name=true -H
 }
 ';
 
-# Create user profile records
+echo "Creating user profile records..."
 curl -XPOST http://localhost:9200/user/profile/1?pretty=true -H 'Content-Type: application/json' -d '
 {
     "full_name" : "Andrew Puch",

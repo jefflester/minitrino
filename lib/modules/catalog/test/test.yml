@@ -1,5 +1,12 @@
 version: "3.7"
 services:
+
+  presto:
+    environment:
+      CONFIG_PROPERTIES: |-
+        query.max-stage-count=105
+        query.max-execution-time=1h
+        query.max-execution-time=1h
     
   test:
     build: 
@@ -7,6 +14,8 @@ services:
       labels: 
         - "com.starburst.tests=minipresto"
         - "com.starburst.tests.module.test=catalog-test"
+    environment:
+      MINIPRESTO_BOOTSTRAP: "bootstrap.sh"
     command: "tail -F anything" # Keep alive 
     image: "minipresto:test"
     container_name: "test"

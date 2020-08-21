@@ -69,3 +69,12 @@ done;
 
 echo "Adding JVM configs..."
 echo -e "${PRESTO_JAVA_OPTS}" >> /usr/lib/presto/etc/jvm.config
+
+echo "Adding Presto configs..."
+cat <<EOT >> /usr/lib/presto/etc/config.properties
+http-server.authentication.type=PASSWORD
+http-server.https.enabled=true
+http-server.https.port=8443
+http-server.https.keystore.path=/usr/lib/presto/etc/keystore.jks
+http-server.https.keystore.key=changeit
+EOT

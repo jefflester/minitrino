@@ -103,6 +103,11 @@ class CommandExecutor(object):
                     self.ctx.vlog(output.strip())
                 output_full += output
 
+            if process.returncode != 0:
+                if handle_error:
+                    self.ctx.log_err(f"Failed to execute command:\n{arg}")
+                    sys.exit(1)
+            
             retval.append(
                 {
                     "command": arg,
@@ -110,12 +115,7 @@ class CommandExecutor(object):
                     "return_code": process.returncode,
                 }
             )
-
-            if process.returncode != 0:
-                if handle_error:
-                    self.ctx.log_err(f"Failed to execute command:\n{arg}")
-                    sys.exit(1)
-            return retval
+        return retval
 
     def construct_environment(self, environment={}):
         """Constructs dictionary of environment variables."""

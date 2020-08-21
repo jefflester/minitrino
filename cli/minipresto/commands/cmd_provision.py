@@ -85,8 +85,7 @@ def cli(ctx, catalog, security, env, docker_native):
     )
 
     containers_to_restart = execute_bootstraps(catalog_yaml_files, security_yaml_files)
-    if handle_config_properties(catalog_yaml_files, security_yaml_files):
-        containers_to_restart.append("presto")
+    handle_config_properties()
     restart_containers(docker_client, containers_to_restart)
     ctx.log(f"Environment provisioning complete")
 
@@ -169,123 +168,10 @@ def validate(catalog=[], security=[]):
 
 
 @pass_environment
-def handle_config_properties(ctx, catalog_yaml_files=[], security_yaml_files=[]):
-    """
-    Loads Presto configuration properties as defined in the YAML file.
-
-    Returns `True` if any provisioned module called for changes to the Presto
-    config.properties file and `False` if not.
-    """
-
-    executor = CommandExecutor(ctx)
-    executor.execute_commands(
-        True,
-        {},
-        f"docker cp presto:/usr/lib/presto/etc/config.properties {ctx.minipresto_user_dir}",
-    )
-
-    host_presto_config_file = os.path.join(ctx.minipresto_user_dir, "config.properties")
-
-    yaml_files = catalog_yaml_files + security_yaml_files
-    all_config_props = {}
-    for yaml_file in yaml_files:
-        with open(yaml_file) as f:
-            yaml_dict = yaml.load(f, Loader=yaml.FullLoader)
-            config_props = recursive_yaml_lookup("CONFIG_PROPERTIES", yaml_dict)
-            if config_props is not None:
-                config_props = parse_config_props(config_props)
-                all_config_props = merge_config_props(all_config_props, config_props)
-
-    if all_config_props == {}:
-        return
-
-    existing_config_props = {}
-    try:
-        with open(host_presto_config_file, "r") as f:
-            for line in f:
-                line = line.strip().split("=")
-                if len(line) != 2:
-                    continue
-                existing_config_props[line[0].strip()] = line[1].strip()
-        all_config_props = merge_config_props(all_config_props, config_props)
-    except EnvironmentError as error:
-        ctx.log_err(
-            f"Error opening existing config.properties file copied from Presto container: {error}"
-        )
-        sys.exit(1)
-
-    for key, value in all_config_props.items():
-        with open(host_presto_config_file, "a") as f:
-            f.write(f"{key.strip()}={value.strip()}\n")
-
-    executor.execute_commands(
-        True,
-        {},
-        f"docker cp {host_presto_config_file} presto:/usr/lib/presto/etc/config.properties",
-    )
-    executor.execute_commands(
-        True,
-        {},
-        f"docker exec -it presto sudo chown presto:presto /usr/lib/presto/etc/config.properties",
-    )
-    os.remove(host_presto_config_file)
-    return True
-
-
-def recursive_yaml_lookup(key, yaml_dict):
-    """
-    Performs a recursive key lookup for a nested YAML dictionary. Returns the
-    value for the first instance of the key.
-    """
-
-    if key in yaml_dict:
-        return yaml_dict[key]
-    for value in yaml_dict.values():
-        if isinstance(value, dict):
-            return recursive_yaml_lookup(key, value)
-    return None
-
-
-@pass_environment
-def parse_config_props(ctx, config_props={}):
-    """Parses string of config properties from a module's YAML file and returns a dict."""
-
-    config_props = config_props.split("\n")
-    config_props_dict = {}
-    for config_prop in config_props:
-        config_prop = config_prop.strip().split("=")
-        if config_props_dict.get(
-            config_prop[0], True
-        ):  # Returns `False` if the property is already in our dict
-            config_props_dict[config_prop[0].strip()] = config_prop[1].strip()
-    return config_props_dict
-
-
-@pass_environment
-def merge_config_props(ctx, all_config_props={}, config_props={}):
-    """
-    Merges two dictionaries of config properties and removes duplicate keys.
-
-    Returns the merged dictionary.
-    """
-
-    delete = []
-    for key, value in config_props.items():
-        for key_all, value_all in all_config_props.items():
-            if key == key_all:
-                delete.append(key)
-    for delete_key in delete:
-        del config_props[delete_key]
-
-    all_config_props.update(config_props)
-    return all_config_props
-
-
-@pass_environment
 def execute_bootstraps(ctx, catalog_yaml_files=[], security_yaml_files=[]):
     """
-    Executes bootstrap script for each service that has it. After each script
-    executes, the relevant container is restarted.
+    Executes bootstrap script for each service that has one. After each script
+    executes, the relevant container is added to a restart list.
 
     Returns a list of containers names which had bootstrap scripts executed
     inside of them.
@@ -298,7 +184,10 @@ def execute_bootstraps(ctx, catalog_yaml_files=[], security_yaml_files=[]):
             yaml_dict = yaml.load(f, Loader=yaml.FullLoader)
             yaml_dict = yaml_dict.get("services")
             if yaml_dict is None:
-                continue
+                ctx.log_err(
+                    f"Invalid Docker Compose YAML file (no 'services' section found): {yaml_file}"
+                )
+                sys.exit(1)
             for service in yaml_dict.items():
                 services.append([service, yaml_file])
 
@@ -313,14 +202,14 @@ def execute_bootstraps(ctx, catalog_yaml_files=[], security_yaml_files=[]):
             container_name = service_dict[1].get("container_name")
             if container_name is None:
                 container_name = service_dict[0]
-            execute_bootstrap(bootstrap, container_name, service[1])
+            execute_container_bootstrap(bootstrap, container_name, service[1])
             containers.append(container_name)
     return containers
 
 
 @pass_environment
-def execute_bootstrap(ctx, bootstrap, container_name, yaml_file):
-    """Executes a single bootstrap for a Docker service."""
+def execute_container_bootstrap(ctx, bootstrap, container_name, yaml_file):
+    """Executes a single bootstrap inside a container."""
 
     bootstrap_file = os.path.join(os.path.dirname(yaml_file), "resources", bootstrap)
     if not os.path.isfile(bootstrap_file):
@@ -332,20 +221,55 @@ def execute_bootstrap(ctx, bootstrap, container_name, yaml_file):
     os.chmod(
         bootstrap_file, st.st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH,
     )
+
+    ctx.vlog(f"Executing bootstrap script in container: {container_name}")
     executor = CommandExecutor(ctx)
     executor.execute_commands(
-        True, {}, f"docker cp {bootstrap_file} {container_name}:/"
+        True,
+        {},
+        f"docker cp {bootstrap_file} {container_name}:/tmp/",
+        f"docker exec -i {container_name} /tmp/{os.path.basename(bootstrap_file)}",
     )
+
+
+@pass_environment
+def handle_config_properties(ctx):
+    """
+    Checks for and removes duplicates in the Presto config.properties file.
+    """
+
+    ctx.vlog("Checking config.properties for duplicate properties")
+    executor = CommandExecutor(ctx)
     executor.execute_commands(
         True,
         {},
-        f"docker exec -it {container_name} /{os.path.basename(bootstrap_file)}",
+        f"docker cp presto:/usr/lib/presto/etc/config.properties {ctx.minipresto_user_dir}",
     )
-    executor.execute_commands(
-        True,
-        {},
-        f"docker exec -it {container_name} rm /{os.path.basename(bootstrap_file)}",
-    )
+
+    host_presto_config_file = os.path.join(ctx.minipresto_user_dir, "config.properties")
+    config_props = {}
+
+    if not os.path.isfile(host_presto_config_file):
+        ctx.log_err(
+            f"Error opening config.properties file copied from Presto container: {error}"
+        )
+        sys.exit(1)
+
+    with open(host_presto_config_file, "r") as f:
+        for line in f:
+            line_list = line.strip().split("=")
+            if len(line_list) != 2:
+                continue
+            # This will return `False` if the property is not already in our dict
+            if not config_props.get(line_list[0].strip(), False):
+                config_props[line_list[0].strip()] = line_list[1].strip()
+            else:
+                ctx.log_warn(
+                    f"Found duplicate property key in config.properties file:\n"
+                    f"{line.strip()}\n"
+                    f"{line_list[0].strip()}={config_props.get(line_list[0].strip(), '')}\n"
+                )
+    os.remove(host_presto_config_file)
 
 
 @pass_environment

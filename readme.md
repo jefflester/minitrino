@@ -442,21 +442,22 @@ services:
 ```
 
 ### Managing Presto's `config.properties` File
-Since numerous modules can change the `config.properties` file, it is recommended to not mount this file to the Presto container, but instead to modify the file using an environment variable. You can use an environment variable in the Compose YAML file for this as follows:
+Since numerous modules can change the `config.properties` file, it is highly recommended to not mount a `config.properties` file to the Presto container, but instead to modify the file the supported bootstrap script functionality. An example bootstrap snippet can be found below:
 
-```yaml
-version: "3.7"
-services:
+```bash
+#!/usr/bin/env bash
 
-  presto:
-    environment:
-      CONFIG_PROPERTIES: |-
-        http-server.authentication.type=PASSWORD
-        http-server.https.enabled=true
-        http-server.https.port=8443
-        http-server.https.keystore.path=/usr/lib/presto/etc/keystore.jks
-        http-server.https.keystore.key=changeit
+set -euxo pipefail
+
+echo "Adding Presto configs..."
+cat <<EOT >> /usr/lib/presto/etc/config.properties
+query.max-stage-count=105
+query.max-execution-time=1h
+query.max-execution-time=1h
+EOT
 ```
+
+Every time the `provision` command is executed, Minipresto will check for duplicate properties in `config.properties` and remove them if necessary.
 
 -----
 

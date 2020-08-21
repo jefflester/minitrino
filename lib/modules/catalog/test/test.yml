@@ -3,10 +3,7 @@ services:
 
   presto:
     environment:
-      CONFIG_PROPERTIES: |-
-        query.max-stage-count=105
-        query.max-execution-time=1h
-        query.max-execution-time=1h
+      MINIPRESTO_BOOTSTRAP: "presto-bootstrap.sh"
     
   test:
     build: 

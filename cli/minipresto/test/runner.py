@@ -11,7 +11,7 @@ import minipresto.test.test_snapshot as test_snapshot
 def main():
     """minipresto unit test runner."""
 
-    test_config.main()
+    # test_config.main()
     test_down.main()
     test_provision.main()
     test_remove.main()

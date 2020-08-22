@@ -2,6 +2,9 @@
 
 function install() {
 
+    # remove
+    python --version
+
     if pip --version | grep -q "python3.[6-9]"; then
         PIP=pip
     elif pip3 --version | grep -q "python3.[6-9]"; then

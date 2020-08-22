@@ -3,7 +3,7 @@ dist: xenial
 os: linux
 services:
   - docker
-python: "3.6"
+python: "3.8"
 
 addons:
   apt:

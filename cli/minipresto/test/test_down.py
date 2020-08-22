@@ -65,7 +65,8 @@ def test_running_containers():
 
     runner = CliRunner()
     runner.invoke(cli, ["down"])  # Run preliminary down in case something is up
-    runner.invoke(cli, ["provision", "--catalog", "test"])
+    result = runner.invoke(cli, ["provision", "--catalog", "test"])
+    print(result.output)
     result = runner.invoke(cli, ["-v", "down"])
     assert result.exit_code == 0, result.output
     assert all(

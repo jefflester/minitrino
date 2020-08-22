@@ -6,7 +6,6 @@ import minipresto.test.helpers as helpers
 
 from click.testing import CliRunner
 from minipresto.cli import cli
-
 from minipresto.settings import RESOURCE_LABEL
 
 
@@ -27,11 +26,12 @@ def test_daemon_off():
 
     runner = CliRunner()
     result = runner.invoke(cli, ["down"])
-    assert result.exit_code == 1, result.output
+    print(result.output)
+    assert result.exit_code == 1
     assert (
         "Error when pinging the Docker server. Is the Docker daemon running?"
         in result.output
-    ), result.output
+    )
 
     helpers.log_status(f"Passed test_daemon_off")
 
@@ -47,8 +47,9 @@ def test_no_containers():
     runner = CliRunner()
     runner.invoke(cli, ["down"])  # Run preliminary down in case something is up
     result = runner.invoke(cli, ["down"])
-    assert result.exit_code == 0, result.output
-    assert "No containers to bring down" in result.output, result.output
+    print(result.output)
+    assert result.exit_code == 0
+    assert "No containers to bring down" in result.output
 
     docker_client = docker.from_env()
     containers = docker_client.containers.list(filters={"label": RESOURCE_LABEL})
@@ -68,14 +69,14 @@ def test_running_containers():
     result = runner.invoke(cli, ["provision", "--catalog", "test"])
     print(result.output)
     result = runner.invoke(cli, ["-v", "down"])
-    assert result.exit_code == 0, result.output
+    assert result.exit_code == 0
     assert all(
         (
             "Stopped/removed container" in result.output,
             "test" in result.output,
             "presto" in result.output,
         )
-    ), result.output
+    )
 
     docker_client = docker.from_env()
     containers = docker_client.containers.list(filters={"label": RESOURCE_LABEL})

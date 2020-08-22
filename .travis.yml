@@ -20,9 +20,13 @@ before_install:
   - chmod +x docker-compose
   - sudo mv docker-compose /usr/local/bin
 
+install:
+  - pip3 install --editable cli/
+
 script:
-  - "sudo -H ./install.sh -v"
-  - "python3 ./cli/minipresto/test/runner.py"
+  - |
+  source ~/virtualenv/python3.8/bin/activate
+  python ./cli/minipresto/test/runner.py
 
 after_failure:
   - "Tests failed."

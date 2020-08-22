@@ -3,15 +3,13 @@ dist: xenial
 os: linux
 services:
   - docker
+python: "3.6"
 
 addons:
   apt:
     update: true
-    sources:
-      - deadsnakes
     packages:
       - python3-pip
-      - python3.6
 
 env:
   - DOCKER_COMPOSE_VERSION=1.25.5
@@ -24,7 +22,7 @@ before_install:
 
 script:
   - "sudo -H ./install.sh -v"
-  - "python3.6 ./cli/minipresto/test/runner.py"
+  - "python ./cli/minipresto/test/runner.py"
 
 after_failure:
   - "Tests failed."

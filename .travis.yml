@@ -1,10 +1,15 @@
 language: generic
 sudo: required
-python:
-  - "3.6"
+python: "3.6"
 
 services:
   - docker
+
+addons:
+  apt:
+    update: true
+    packages:
+      - python3-pip
 
 env:
   - DOCKER_COMPOSE_VERSION=1.25.5
@@ -17,7 +22,7 @@ before_install:
 
 script:
   - "sudo -H ./install.sh -v"
-  - "python ./cli/minipresto/test/runner.py"
+  - "python3 ./cli/minipresto/test/runner.py"
 
 after_failure:
   - "Tests failed."

@@ -4,6 +4,7 @@
 import os
 import docker
 import time
+import sys
 import subprocess
 import click
 
@@ -31,7 +32,12 @@ def log_status(msg):
 def start_docker_daemon():
     """Starts the Docker daemon (works on MacOS)."""
 
-    return_code = subprocess.call("open --background -a Docker", shell=True)
+    if sys.platform.lower() == "darwin":
+        return_code = subprocess.call("open --background -a Docker", shell=True)
+    elif "linux" in sys.platform.lower():
+        return_code = subprocess.call("sudo service docker start", shell=True)
+    else:
+        raise Exception(f"Incompatible testing platform: {sys.platform}")
     if return_code != 0:
         raise Exception("Failed to start Docker daemon.")
 
@@ -51,7 +57,12 @@ def start_docker_daemon():
 def stop_docker_daemon():
     """Stops the Docker daemon (works on MacOS)."""
 
-    return_code = subprocess.call("osascript -e 'quit app \"Docker\"'", shell=True)
+    if sys.platform.lower() == "darwin":
+        return_code = subprocess.call("osascript -e 'quit app \"Docker\"'", shell=True)
+    elif "linux" in sys.platform.lower():
+        return_code = subprocess.call("sudo service docker stop", shell=True)
+    else:
+        raise Exception(f"Incompatible testing platform: {sys.platform}")
     if return_code != 0:
         raise Exception("Failed to stop Docker daemon.")
 

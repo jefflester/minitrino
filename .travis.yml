@@ -8,6 +8,8 @@ services:
 addons:
   apt:
     update: true
+    sources:
+      - deadsnakes
     packages:
       - python3-pip
       - python3.6

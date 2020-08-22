@@ -1,4 +1,4 @@
-language: generic
+language: python
 dist: xenial 
 os: linux
 services:
@@ -22,7 +22,7 @@ before_install:
 
 script:
   - "sudo -H ./install.sh -v"
-  - "python ./cli/minipresto/test/runner.py"
+  - "python3 ./cli/minipresto/test/runner.py"
 
 after_failure:
   - "Tests failed."

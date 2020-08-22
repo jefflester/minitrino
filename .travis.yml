@@ -10,6 +10,7 @@ addons:
     update: true
     packages:
       - python3-pip
+      - python3.6
 
 env:
   - DOCKER_COMPOSE_VERSION=1.25.5
@@ -22,7 +23,7 @@ before_install:
 
 script:
   - "sudo -H ./install.sh -v"
-  - "python3 ./cli/minipresto/test/runner.py"
+  - "python3.6 ./cli/minipresto/test/runner.py"
 
 after_failure:
   - "Tests failed."

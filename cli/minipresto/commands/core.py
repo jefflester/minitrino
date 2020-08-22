@@ -72,20 +72,30 @@ class CommandExecutor(object):
 
         self.ctx = ctx
 
-    def execute_commands(self, handle_error=True, environment={}, *args):
+    def execute_commands(self, **kwargs):
         """
-        Executes commands in a subprocess and returns a list of dictionaries
-        containing information about each command's execution.
-        """
+        Executes commands in a subprocess.
+        
+        Return Values
+        -------------
+        :return: A list of dictionaries containing information about each command's execution.
 
+        Parameters
+        ----------
+        :param handle_error: (Boolean :: True) If `False`, errors (non-zer return codes) are not handled by the function.
+        :param environment: (Dict :: {}) A dictionary of environment variables to pass to the subprocess.
+        :param commands: (List :: []) A list of commands that will be executed in the order provides.
+        """
+        
+        environment = kwargs.get("environment", {})
         environment = self.construct_environment(environment)
 
         retval = []
-        for arg in args:
-            self.ctx.vlog(f"Preparing to execute command:\n{arg}")
+        for command in kwargs.get("commands", []):
+            self.ctx.vlog(f"Preparing to execute command:\n{command}")
 
             process = subprocess.Popen(
-                arg,
+                command,
                 shell=True,
                 env=environment,
                 stdout=subprocess.PIPE,
@@ -104,13 +114,13 @@ class CommandExecutor(object):
                 output_full += output
 
             if process.returncode != 0:
-                if handle_error:
-                    self.ctx.log_err(f"Failed to execute command:\n{arg}")
+                if not kwargs.get("handle_error", True):
+                    self.ctx.log_err(f"Failed to execute command:\n{command}")
                     sys.exit(1)
             
             retval.append(
                 {
-                    "command": arg,
+                    "command": command,
                     "output": output_full,
                     "return_code": process.returncode,
                 }

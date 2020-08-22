@@ -81,7 +81,7 @@ def cli(ctx, catalog, security, env, docker_native):
     )
     executor = CommandExecutor(ctx)
     executor.execute_commands(
-        True, compose_environment.compose_env_dict, compose_command
+        environment=compose_environment.compose_env_dict, commands=[compose_command]
     )
 
     containers_to_restart = execute_bootstraps(catalog_yaml_files, security_yaml_files)
@@ -225,10 +225,10 @@ def execute_container_bootstrap(ctx, bootstrap, container_name, yaml_file):
     ctx.vlog(f"Executing bootstrap script in container: {container_name}")
     executor = CommandExecutor(ctx)
     executor.execute_commands(
-        True,
-        {},
-        f"docker cp {bootstrap_file} {container_name}:/tmp/",
-        f"docker exec -i {container_name} /tmp/{os.path.basename(bootstrap_file)}",
+        commands=[
+            f"docker cp {bootstrap_file} {container_name}:/tmp/",
+            f"docker exec -i {container_name} /tmp/{os.path.basename(bootstrap_file)}",
+        ]
     )
 
 
@@ -241,18 +241,16 @@ def handle_config_properties(ctx):
     ctx.vlog("Checking config.properties for duplicate properties")
     executor = CommandExecutor(ctx)
     executor.execute_commands(
-        True,
-        {},
-        f"docker cp presto:/usr/lib/presto/etc/config.properties {ctx.minipresto_user_dir}",
+        commands=[
+            f"docker cp presto:/usr/lib/presto/etc/config.properties {ctx.minipresto_user_dir}"
+        ]
     )
 
     host_presto_config_file = os.path.join(ctx.minipresto_user_dir, "config.properties")
     config_props = {}
 
     if not os.path.isfile(host_presto_config_file):
-        ctx.log_err(
-            f"Error opening config.properties file copied from Presto container: {error}"
-        )
+        ctx.log_err(f"config.properties file improperly copied from Presto container")
         sys.exit(1)
 
     with open(host_presto_config_file, "r") as f:

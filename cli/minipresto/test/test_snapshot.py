@@ -148,7 +148,8 @@ def run_assertions(result, check_yaml=True):
 
     assert "Snapshot complete" in result.output
     assert result.exit_code == 0
-    assert os.path.isfile(helpers.SNAPSHOT_CONFIG_FILE)
+    if os.path.isfile(os.path.join(helpers.MINIPRESTO_USER_DIR, "minipresto.cfg")):
+        assert os.path.isfile(helpers.SNAPSHOT_CONFIG_FILE)
 
     command_snapshot_file = os.path.join(
         helpers.MINIPRESTO_USER_SNAPSHOTS_DIR, "test", "provision-snapshot.sh"

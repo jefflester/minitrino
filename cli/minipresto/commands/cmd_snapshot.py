@@ -320,8 +320,8 @@ def create_named_tarball(ctx, name, snapshot_name_dir):
 def snapshot_runner(name, no_scrub, active, catalog=[], security=[]):
     """Executes sequential snapshot command functions."""
 
-    catalog_dirs = validate_module_dirs({"module_type": MODULE_CATALOG}, catalog)
-    security_dirs = validate_module_dirs({"module_type": MODULE_SECURITY}, security)
+    catalog_dirs, _ = validate_module_dirs({"module_type": MODULE_CATALOG}, catalog)
+    security_dirs, _ = validate_module_dirs({"module_type": MODULE_SECURITY}, security)
     snapshot_name_dir = prepare_snapshot_dir(name, active, no_scrub, catalog, security)
     copy_module_dirs(snapshot_name_dir, catalog_dirs, security_dirs)
     create_named_tarball(name, snapshot_name_dir)

@@ -6,15 +6,15 @@ import docker
 import subprocess
 import minipresto.test.helpers as helpers
 
-from click.testing import CliRunner
-from minipresto.cli import cli
-
+from inspect import currentframe
+from types import FrameType
+from typing import cast
 from minipresto.settings import RESOURCE_LABEL
 
 
 def main():
-    helpers.log_status("Running test_provision")
-    test_daemon_off()
+    helpers.log_status(__file__)
+    helpers.start_docker_daemon()
     test_standalone()
     test_invalid_catalog_module()
     test_invalid_security_module()
@@ -23,35 +23,14 @@ def main():
     test_build_bootstrap_config_props()
 
 
-def test_daemon_off():
-    """
-    Verifies the command exits properly if the Docker daemon is off or
-    unresponsive.
-    """
-
-    helpers.stop_docker_daemon()
-
-    runner = CliRunner()
-    result = runner.invoke(cli, ["provision"])
-    assert result.exit_code == 1
-    assert (
-        "Error when pinging the Docker server. Is the Docker daemon running?"
-        in result.output
-    )
-
-    helpers.log_status(f"Passed test_daemon_off")
-
-
 def test_standalone():
     """
     Verifies that a standalone Presto container is provisioned when no options 
     are passed in.
     """
 
-    helpers.start_docker_daemon()
+    result = helpers.initialize_test(["-v", "provision"])
 
-    runner = CliRunner()
-    result = runner.invoke(cli, ["provision"])
     assert result.exit_code == 0
     assert "Provisioning standalone Presto container" in result.output
 
@@ -61,8 +40,8 @@ def test_standalone():
     for container in containers:
         assert container.name == "presto"
 
-    helpers.log_status(f"Passed test_standalone")
-    cleanup(runner)
+    helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
+    cleanup()
 
 
 def test_invalid_catalog_module():
@@ -71,18 +50,18 @@ def test_invalid_catalog_module():
     provision an invalid catalog module.
     """
 
-    runner = CliRunner()
-    result = runner.invoke(
-        cli, ["provision", "--catalog", "hive-hms", "not-a-real-module"]
+    result = helpers.initialize_test(
+        ["-v", "provision", "--catalog", "hive-hms", "not-a-real-module"]
     )
+
     assert result.exit_code == 1
     assert "Invalid catalog module" in result.output
 
     containers = get_containers()
     assert len(containers) == 0
 
-    helpers.log_status(f"Passed test_invalid_catalog_module")
-    cleanup(runner)
+    helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
+    cleanup()
 
 
 def test_invalid_security_module():
@@ -91,18 +70,18 @@ def test_invalid_security_module():
     provision an invalid security module.
     """
 
-    runner = CliRunner()
-    result = runner.invoke(
-        cli, ["provision", "--security", "ldap", "not-a-real-module"]
+    result = helpers.initialize_test(
+        ["-v", "provision", "--security", "ldap", "not-a-real-module"]
     )
+
     assert result.exit_code == 1
     assert "Invalid security module" in result.output
 
     containers = get_containers()
     assert len(containers) == 0
 
-    helpers.log_status(f"Passed test_invalid_security_module")
-    cleanup(runner)
+    helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
+    cleanup()
 
 
 def test_env_override():
@@ -111,10 +90,10 @@ def test_env_override():
     passed in.
     """
 
-    runner = CliRunner()
-    result = runner.invoke(
-        cli, ["-v", "provision", "--env", "COMPOSE_PROJECT_NAME=test"]
+    result = helpers.initialize_test(
+        ["-v", "provision", "--env", "COMPOSE_PROJECT_NAME=test"]
     )
+
     assert result.exit_code == 0
     assert "COMPOSE_PROJECT_NAME=test" in result.output
 
@@ -124,8 +103,8 @@ def test_env_override():
     for container in containers:
         assert container.name == "presto"
 
-    helpers.log_status(f"Passed test_env_override")
-    cleanup(runner)
+    helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
+    cleanup()
 
 
 def test_invalid_env_override():
@@ -134,18 +113,18 @@ def test_invalid_env_override():
     the CLI to exit with a non-zero status code.
     """
 
-    runner = CliRunner()
-    result = runner.invoke(
-        cli, ["-v", "provision", "--env", "COMPOSE_PROJECT_NAME===test"]
+    result = helpers.initialize_test(
+        ["-v", "provision", "--env", "COMPOSE_PROJECT_NAME===test"]
     )
+
     assert result.exit_code == 1
     assert "Invalid environment variable" in result.output
 
     containers = get_containers()
     assert len(containers) == 0
 
-    helpers.log_status(f"Passed test_invalid_env_override")
-    cleanup(runner)
+    helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
+    cleanup()
 
 
 def test_build_bootstrap_config_props():
@@ -155,54 +134,48 @@ def test_build_bootstrap_config_props():
     successful adding of config properties to Presto config.properties file.
     """
 
-    runner = CliRunner()
-    result = runner.invoke(
-        cli, ["-v", "provision", "--catalog", "test", "-d", "--build"]
+    result = helpers.initialize_test(
+        ["-v", "provision", "--catalog", "test", "-d", "--build"]
     )
+
     assert result.exit_code == 0
     assert all(
         (
             "Environment provisioning complete" in result.output,
             "Received native Docker Compose options" in result.output,
+            "Found duplicate property key in config.properties file" in result.output,
         )
     )
 
     containers = get_containers()
     assert len(containers) == 2
 
-    # Copy Presto config.properties to Minipresto user dir
-    subprocess.call(
-        f"docker cp presto:/usr/lib/presto/etc/config.properties {helpers.minipresto_user_dir}",
+    process_config_props_check = subprocess.Popen(
+        f"docker exec -i presto cat /usr/lib/presto/etc/config.properties",
         shell=True,
+        stdout=subprocess.PIPE,
+        universal_newlines=True,
     )
-    # Copy file created in test container by bootstrap script to Minipresto user dir
-    subprocess.call(
-        f"docker cp test:/root/test_bootstrap.txt {helpers.minipresto_user_dir}",
+    process_bootstrap_check = subprocess.Popen(
+        f"docker exec -i test cat /root/test_bootstrap.txt",
         shell=True,
+        stdout=subprocess.PIPE,
+        universal_newlines=True,
     )
 
-    assert os.path.isfile(
-        os.path.join(helpers.minipresto_user_dir, "test_bootstrap.txt")
+    config_prop_output, _ = process_config_props_check.communicate()
+    bootstrap_check_output, _ = process_bootstrap_check.communicate()
+
+    assert all(
+        (
+            "query.max-stage-count=105" in str(config_prop_output),
+            "query.max-execution-time=1h" in str(config_prop_output),
+            "hello world" in str(bootstrap_check_output),
+        )
     )
 
-    # Verify correct config.properties were added and check for duplicates
-    existing_config_props = {}
-    with open(os.path.join(helpers.minipresto_user_dir, "config.properties"), "r") as f:
-        for line in f:
-            line = line.strip().split("=")
-            if len(line) != 2:
-                continue
-            existing_config_props[line[0].strip()] = line[1].strip()
-
-    assert existing_config_props.get("query.max-stage-count", None) == "105"
-    assert existing_config_props.get("query.max-execution-time", None) == "1h"
-
-    # Remove copied files
-    os.remove(os.path.join(helpers.minipresto_user_dir, "config.properties"))
-    os.remove(os.path.join(helpers.minipresto_user_dir, "test_bootstrap.txt"))
-
-    helpers.log_status(f"Passed test_build_bootstrap_config_props")
-    cleanup(runner)
+    helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
+    cleanup()
 
 
 def get_containers():
@@ -212,12 +185,12 @@ def get_containers():
     return docker_client.containers.list(filters={"label": RESOURCE_LABEL})
 
 
-def cleanup(runner):
+def cleanup():
     """
     Brings down containers and removes resources.
     """
 
-    runner.invoke(cli, ["down"])
+    helpers.execute_command(["down"])
 
 
 if __name__ == "__main__":

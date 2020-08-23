@@ -7,11 +7,12 @@ import pathlib
 import subprocess
 import minipresto.test.helpers as helpers
 
-from click.testing import CliRunner
-from minipresto.cli import cli
+from inspect import currentframe
+from types import FrameType
+from typing import cast
 
-snapshot_test_yaml_file = os.path.join(
-    helpers.minipresto_user_snapshots_dir,
+SNAPSHOT_TEST_YAML_FILE = os.path.join(
+    helpers.MINIPRESTO_USER_SNAPSHOTS_DIR,
     "test",
     "lib",
     "modules",
@@ -22,8 +23,8 @@ snapshot_test_yaml_file = os.path.join(
 
 
 def main():
-    helpers.log_status("Running test_snapshot")
-    test_daemon_off()
+    helpers.log_status(__file__)
+    helpers.start_docker_daemon()
     test_snapshot_no_directory()
     test_snapshot_active_env()
     test_snapshot_inactive_env()
@@ -32,43 +33,21 @@ def main():
     test_no_scrub()
 
 
-def test_daemon_off():
-    """
-    Verifies the command exits properly if the Docker daemon is off or
-    unresponsive. Only applicable when trying to snapshot an active environment.
-    """
-
-    helpers.stop_docker_daemon()
-    cleanup()
-
-    runner = CliRunner()
-    result = runner.invoke(cli, ["snapshot", "--name", "test"])
-    assert result.exit_code == 1
-    assert (
-        "Error when pinging the Docker server. Is the Docker daemon running?"
-        in result.output
-    )
-
-    helpers.log_status(f"Passed test_daemon_off")
-
-
 def test_snapshot_no_directory():
     """
     Verifies that a snapshot can be created when there is no existing snapshots
     directory in the minipresto user home directory.
     """
 
-    helpers.start_docker_daemon()
     cleanup()
-
-    subprocess.call(f"rm -rf {helpers.minipresto_user_snapshots_dir}", shell=True)
-    runner = CliRunner()
-    result = runner.invoke(cli, ["snapshot", "--name", "test", "--catalog", "test"])
+    subprocess.call(f"rm -rf {helpers.MINIPRESTO_USER_SNAPSHOTS_DIR}", shell=True)
+    result = helpers.initialize_test(
+        ["snapshot", "--name", "test", "--catalog", "test"]
+    )
 
     run_assertions(result)
-    assert os.path.isfile(snapshot_test_yaml_file)
 
-    helpers.log_status(f"Passed test_snapshot_no_directory")
+    helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
 
 
 def test_snapshot_active_env():
@@ -78,15 +57,13 @@ def test_snapshot_active_env():
     """
 
     cleanup()
+    helpers.execute_command(["provision"])
+    result = helpers.initialize_test(["snapshot", "--name", "test"])
 
-    runner = CliRunner()
-    runner.invoke(cli, ["provision"])
-    result = runner.invoke(cli, ["snapshot", "--name", "test"])
-
-    run_assertions(result)
+    run_assertions(result, False)
     assert "Creating snapshot of active environment" in result.output
 
-    helpers.log_status(f"Passed test_snapshot_active_env")
+    helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
 
 
 def test_snapshot_inactive_env():
@@ -96,15 +73,14 @@ def test_snapshot_inactive_env():
     """
 
     cleanup()
-
-    runner = CliRunner()
-    result = runner.invoke(cli, ["snapshot", "--name", "test", "--catalog", "test"])
+    result = helpers.initialize_test(
+        ["snapshot", "--name", "test", "--catalog", "test"]
+    )
 
     run_assertions(result)
     assert "Creating snapshot of inactive environment" in result.output
-    assert os.path.isfile(snapshot_test_yaml_file)
 
-    helpers.log_status(f"Passed test_snapshot_inactive_env")
+    helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
 
 
 def test_force():
@@ -113,17 +89,15 @@ def test_force():
     tarball exists.
     """
 
-    runner = CliRunner()
-    result = runner.invoke(
-        cli, ["snapshot", "--name", "test", "--catalog", "test", "--force"]
+    result = helpers.initialize_test(
+        ["snapshot", "--name", "test", "--catalog", "test", "--force"]
     )
 
     run_assertions(result)
     assert "Creating snapshot of inactive environment" in result.output
-    assert os.path.isfile(snapshot_test_yaml_file)
 
     cleanup()
-    helpers.log_status(f"Passed test_force")
+    helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
 
 
 def test_no_scrub():
@@ -133,21 +107,16 @@ def test_no_scrub():
     """
 
     helpers.make_sample_config()
-
-    runner = CliRunner()
-    result = runner.invoke(
-        cli,
-        ["snapshot", "--name", "test", "--catalog", "test", "--no-scrub"],
-        input="y\n",
+    result = helpers.initialize_test(
+        ["snapshot", "--name", "test", "--catalog", "test", "--no-scrub"], "y\n"
     )
 
     run_assertions(result)
-    with open(helpers.snapshot_config_file) as f:
+    with open(helpers.SNAPSHOT_CONFIG_FILE) as f:
         assert "*" * 20 not in f.read()
-    assert os.path.isfile(snapshot_test_yaml_file)
 
     cleanup()
-    helpers.log_status(f"Passed test_no_scrub")
+    helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
 
 
 def test_scrub():
@@ -157,28 +126,32 @@ def test_scrub():
     """
 
     helpers.make_sample_config()
-
-    runner = CliRunner()
-    result = runner.invoke(cli, ["snapshot", "--name", "test", "--catalog", "test"])
+    result = helpers.initialize_test(
+        ["snapshot", "--name", "test", "--catalog", "test"]
+    )
 
     run_assertions(result)
-    with open(helpers.snapshot_config_file) as f:
+    with open(helpers.SNAPSHOT_CONFIG_FILE) as f:
         assert "*" * 20 in f.read()
-    assert os.path.isfile(snapshot_test_yaml_file)
 
     cleanup()
-    helpers.log_status(f"Passed test_scrub")
+    helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
 
 
-def run_assertions(result):
+def run_assertions(result, check_yaml=True):
     """Runs standard assertions for the snapshot command."""
+
+    if check_yaml:
+        assert os.path.isfile(
+            SNAPSHOT_TEST_YAML_FILE
+        ), f"Not a valid file: {SNAPSHOT_TEST_YAML_FILE}"
 
     assert "Snapshot complete" in result.output
     assert result.exit_code == 0
-    assert os.path.isfile(helpers.snapshot_config_file)
+    assert os.path.isfile(helpers.SNAPSHOT_CONFIG_FILE)
 
     command_snapshot_file = os.path.join(
-        helpers.minipresto_user_snapshots_dir, "test", "provision-snapshot.sh"
+        helpers.MINIPRESTO_USER_SNAPSHOTS_DIR, "test", "provision-snapshot.sh"
     )
     assert os.path.isfile(command_snapshot_file)
 
@@ -191,9 +164,8 @@ def cleanup():
     Removes test snapshot tarball and turns off running resources.
     """
 
-    subprocess.call(f"rm -rf {helpers.snapshot_file}", shell=True)
-    runner = CliRunner()
-    runner.invoke(cli, ["down"])
+    subprocess.call(f"rm -rf {helpers.SNAPSHOT_FILE}", shell=True)
+    helpers.execute_command(["down"])
 
 
 if __name__ == "__main__":

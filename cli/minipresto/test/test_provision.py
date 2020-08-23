@@ -32,7 +32,7 @@ def test_standalone():
     result = helpers.initialize_test(["-v", "provision"])
 
     assert result.exit_code == 0
-    assert "Provisioning standalone Presto container" in result.output
+    assert "Provisioning standalone" in result.output
 
     containers = get_containers()
     assert len(containers) == 1

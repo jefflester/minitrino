@@ -72,20 +72,30 @@ class CommandExecutor(object):
 
         self.ctx = ctx
 
-    def execute_commands(self, handle_error=True, environment={}, *args):
+    def execute_commands(self, **kwargs):
         """
-        Executes commands in a subprocess and returns a list of dictionaries
-        containing information about each command's execution.
-        """
+        Executes commands in a subprocess.
+        
+        Return Values
+        -------------
+        :return: A list of dictionaries containing information about each command's execution.
 
+        Parameters
+        ----------
+        :param handle_error: (Boolean :: True) If `False`, errors (non-zer return codes) are not handled by the function.
+        :param environment: (Dict :: {}) A dictionary of environment variables to pass to the subprocess.
+        :param commands: (List :: []) A list of commands that will be executed in the order provides.
+        """
+        
+        environment = kwargs.get("environment", {})
         environment = self.construct_environment(environment)
 
         retval = []
-        for arg in args:
-            self.ctx.vlog(f"Preparing to execute command:\n{arg}")
+        for command in kwargs.get("commands", []):
+            self.ctx.vlog(f"Preparing to execute command:\n{command}")
 
             process = subprocess.Popen(
-                arg,
+                command,
                 shell=True,
                 env=environment,
                 stdout=subprocess.PIPE,
@@ -103,19 +113,19 @@ class CommandExecutor(object):
                     self.ctx.vlog(output.strip())
                 output_full += output
 
+            if process.returncode != 0:
+                if not kwargs.get("handle_error", True):
+                    self.ctx.log_err(f"Failed to execute command:\n{command}")
+                    sys.exit(1)
+            
             retval.append(
                 {
-                    "command": arg,
+                    "command": command,
                     "output": output_full,
                     "return_code": process.returncode,
                 }
             )
-
-            if process.returncode != 0:
-                if handle_error:
-                    self.ctx.log_err(f"Failed to execute command:\n{arg}")
-                    sys.exit(1)
-            return retval
+        return retval
 
     def construct_environment(self, environment={}):
         """Constructs dictionary of environment variables."""
@@ -339,13 +349,13 @@ def check_daemon(ctx):
 def validate_module_dirs(ctx, key, modules=[]):
     """
     Validates that the directory and Compose .yml exist for each provided
-    module. If they all exist, a list of module directories is returned.
-
-    The `modules` argument must be a tuple or a list.
+    module. If they all exist, a list of module directories and YAML file paths
+    is returned.
     """
 
     module_type = key.get("module_type", "")
     module_dirs = []
+    module_yaml_files = []
 
     for module in modules:
         module_dir = os.path.abspath(
@@ -357,8 +367,9 @@ def validate_module_dirs(ctx, key, modules=[]):
             ctx.log_err(f"Invalid {module_type} module: {module}")
             sys.exit(1)
         module_dirs.append(module_dir)
+        module_yaml_files.append(yaml_path)
 
-    return module_dirs
+    return module_dirs, module_yaml_files
 
 
 def convert_MultiArgOption_to_list(*args):

@@ -1,5 +1,9 @@
 version: "3.7"
 services:
+
+  presto:
+    environment:
+      MINIPRESTO_BOOTSTRAP: "presto-bootstrap.sh"
     
   test:
     build: 
@@ -7,6 +11,8 @@ services:
       labels: 
         - "com.starburst.tests=minipresto"
         - "com.starburst.tests.module.test=catalog-test"
+    environment:
+      MINIPRESTO_BOOTSTRAP: "bootstrap.sh"
     command: "tail -F anything" # Keep alive 
     image: "minipresto:test"
     container_name: "test"

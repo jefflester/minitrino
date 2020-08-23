@@ -8,7 +8,7 @@ setup(
     version="1.0",
     packages=["minipresto", "minipresto.commands"],
     include_package_data=True,
-    install_requires=["click", "colorama", "docker",],
+    install_requires=["click", "colorama", "docker", "pyyaml",],
     entry_points="""
         [console_scripts]
         minipresto=minipresto.cli:cli

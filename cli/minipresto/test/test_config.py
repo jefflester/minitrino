@@ -5,12 +5,16 @@ import os
 import subprocess
 import minipresto.test.helpers as helpers
 
+from inspect import currentframe
+from types import FrameType
+from typing import cast
+
 # Using the Click CliRunner does not appear to play well with commands that
 # require user input. That is being researched.
 
 
 def main():
-    helpers.log_status("Running test_config")
+    helpers.log_status(__file__)
     test_reset_no_directory()
     test_reset_with_directory()
     test_edit_invalid_config()
@@ -30,7 +34,7 @@ def test_reset_no_directory():
     assert os.path.isdir(helpers.minipresto_user_dir)
     assert os.path.isfile(helpers.config_file)
 
-    helpers.log_status(f"Passed test_reset_no_directory")
+    helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
 
 
 def test_reset_with_directory():
@@ -46,7 +50,7 @@ def test_reset_with_directory():
     assert return_code == 0
     assert os.path.isdir(helpers.minipresto_user_dir)
 
-    helpers.log_status(f"Passed test_reset_with_directory")
+    helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
 
 
 def test_edit_invalid_config():
@@ -62,7 +66,7 @@ def test_edit_invalid_config():
     subprocess.call(f"touch {helpers.config_file}", shell=True)
     return_code = subprocess.call(f"minipresto config", shell=True)
     assert return_code == 0
-    helpers.log_status(f"Passed test_edit_invalid_config")
+    helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
 
 
 def test_edit_valid_config():
@@ -75,7 +79,7 @@ def test_edit_valid_config():
     helpers.make_sample_config()
     return_code = subprocess.call(f"minipresto config", shell=True)
     assert return_code == 0
-    helpers.log_status(f"Passed test_edit_valid_config")
+    helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
 
 
 if __name__ == "__main__":

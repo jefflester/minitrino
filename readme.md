@@ -1,6 +1,8 @@
 # Minipresto
 A tool that makes it easy to run modular Presto environments locally.
 
+[![Build Status](https://travis-ci.org/jefflester/minipresto.svg?branch=master)](https://travis-ci.org/jefflester/minipresto)
+
 ## Overview
 - [Requirements](#requirements)
 - [Installation](#installation)
@@ -254,6 +256,8 @@ Notice that the build context for the Dockerfile and the volume we mount to the 
 ### Presto Dockerfile
 The Presto CLI was removed in some Starburst Docker images starting sometime around late 323-e and 332-e. Instead of pulling a vanilla Starburst image, we toss in some extra configuration sugar by basing an image build off of a Starburst image, downloading the version's Presto CLI JAR file, and adding a Bash alias command. This ensures that one can invoke `presto` from inside the Presto container, and it will bring up the Presto CLI. This has been verified as compatible as far back as early 312-e images.
 
+Additionally, the Dockerfile gives the `presto` user root privileges for commands that require sudo in bootstrap scripts.
+
 -----
 
 ## Adding New Modules (Tutorial)
@@ -424,6 +428,38 @@ presto> show catalogs;
 
 ### Customizing Images
 If you need to customize an image for a specific use, you can do so via Dockerfiles. For example, the Elasticsearch catalog uses this approach to properly execute a bootstrap script at startup. 
+
+### Bootstrap Scripts
+Minipresto supports container bootstrap scripts. These scripts **do not replace** the entrypoint (or default command) for a given container. The script is copied from the Minipresto library to the container, executed, and then removed from the container. Containers are restarted after each bootstrap script execution, **so bootstrap scripts should not restart the container service**.
+
+To add a bootstrap script, simply add a `resources/` directory in any given module, create a shell script, and then reference the script name in the Compose YAML file:
+
+```yaml
+version: "3.7"
+services:
+
+  presto:
+    environment:
+      MINIPRESTO_BOOTSTRAP: "bootstrap.sh"
+```
+
+### Managing Presto's `config.properties` File
+Since numerous modules can change the `config.properties` file, it is highly recommended to not mount a `config.properties` file to the Presto container, but instead to modify the file the supported bootstrap script functionality. An example bootstrap snippet can be found below:
+
+```bash
+#!/usr/bin/env bash
+
+set -euxo pipefail
+
+echo "Adding Presto configs..."
+cat <<EOT >> /usr/lib/presto/etc/config.properties
+query.max-stage-count=105
+query.max-execution-time=1h
+query.max-execution-time=1h
+EOT
+```
+
+Every time the `provision` command is executed, Minipresto will check for duplicate properties in `config.properties` and remove them if necessary.
 
 -----
 

@@ -4,34 +4,72 @@
 import os
 import docker
 import time
+import sys
 import subprocess
 import click
 
+from click.testing import CliRunner
 from pathlib import Path
+from minipresto.cli import cli
 
 # Path references
-user_home_dir = os.path.expanduser("~")
-minipresto_user_dir = os.path.abspath(os.path.join(user_home_dir, ".minipresto"))
-config_file = os.path.abspath(os.path.join(minipresto_user_dir, "minipresto.cfg"))
-minipresto_lib_dir = Path(os.path.abspath(__file__)).resolve().parents[3]
-snapshot_dir = os.path.join(minipresto_lib_dir, "lib", "snapshots")
-snapshot_file = os.path.join(snapshot_dir, "test.tar.gz")
-minipresto_user_snapshots_dir = os.path.join(minipresto_user_dir, "snapshots")
-snapshot_config_file = os.path.join(
-    minipresto_user_snapshots_dir, "test", "minipresto.cfg"
+# -----------------------------------------------------------------------------------
+USER_HOME_DIR = os.path.expanduser("~")
+MINIPRESTO_USER_DIR = os.path.abspath(os.path.join(USER_HOME_DIR, ".minipresto"))
+CONFIG_FILE = os.path.abspath(os.path.join(MINIPRESTO_USER_DIR, "minipresto.cfg"))
+MINIPRESTO_LIB_DIR = Path(os.path.abspath(__file__)).resolve().parents[3]
+SNAPSHOT_DIR = os.path.join(MINIPRESTO_LIB_DIR, "lib", "snapshots")
+SNAPSHOT_FILE = os.path.join(SNAPSHOT_DIR, "test.tar.gz")
+MINIPRESTO_USER_SNAPSHOTS_DIR = os.path.join(MINIPRESTO_USER_DIR, "snapshots")
+SNAPSHOT_CONFIG_FILE = os.path.join(
+    MINIPRESTO_USER_SNAPSHOTS_DIR, "test", "minipresto.cfg"
 )
+# -----------------------------------------------------------------------------------
+
+
+def initialize_test(command=[], command_input=""):
+    """
+    Accepts a command (in list type) to execute by the Click CliRunner. Returns
+    a the command result.
+    """
+
+    result = execute_command(command, command_input)
+    print(f"Test command [minipresto {' '.join(command)}] output:\n{result.output}")
+    return result
+
+
+def execute_command(command=[], command_input=""):
+    """Executes a command through the Click CliRunner."""
+
+    runner = CliRunner()
+    if command_input == "":
+        result = runner.invoke(cli, command)
+    else:
+        result = runner.invoke(cli, command, input=command_input)
+    return result
+
+
+def log_success(msg):
+    """Logs test status message to stdout."""
+
+    click.echo(click.style("[SUCCESS] ", fg="green", bold=True) + msg + "\n")
 
 
 def log_status(msg):
-    """Logs test status message to the console."""
+    """Logs test status message to stdout."""
 
-    click.echo(click.style(">> ", fg="green", bold=True) + msg)
+    click.echo(click.style("[RUNNING] ", fg="yellow", bold=True) + msg + "\n")
 
 
 def start_docker_daemon():
-    """Starts the Docker daemon (works on MacOS)."""
+    """Starts the Docker daemon (works on MacOS/Ubuntu)."""
 
-    return_code = subprocess.call("open --background -a Docker", shell=True)
+    if sys.platform.lower() == "darwin":
+        return_code = subprocess.call("open --background -a Docker", shell=True)
+    elif "linux" in sys.platform.lower():
+        return_code = subprocess.call("sudo service docker start", shell=True)
+    else:
+        raise Exception(f"Incompatible testing platform: {sys.platform}")
     if return_code != 0:
         raise Exception("Failed to start Docker daemon.")
 
@@ -49,9 +87,14 @@ def start_docker_daemon():
 
 
 def stop_docker_daemon():
-    """Stops the Docker daemon (works on MacOS)."""
+    """Stops the Docker daemon (works on MacOS/Ubuntu)."""
 
-    return_code = subprocess.call("osascript -e 'quit app \"Docker\"'", shell=True)
+    if sys.platform.lower() == "darwin":
+        return_code = subprocess.call("osascript -e 'quit app \"Docker\"'", shell=True)
+    elif "linux" in sys.platform.lower():
+        return_code = subprocess.call("sudo service docker stop", shell=True)
+    else:
+        raise Exception(f"Incompatible testing platform: {sys.platform}")
     if return_code != 0:
         raise Exception("Failed to stop Docker daemon.")
 
@@ -62,7 +105,7 @@ def stop_docker_daemon():
 def make_sample_config():
     """Creates a sample config file."""
 
-    config_file = os.path.join(minipresto_user_dir, "minipresto.cfg")
+    config_file = os.path.join(MINIPRESTO_USER_DIR, "minipresto.cfg")
     subprocess.call(
         f'bash -c "cat << EOF > {config_file}\n'
         f"[CLI]\n"

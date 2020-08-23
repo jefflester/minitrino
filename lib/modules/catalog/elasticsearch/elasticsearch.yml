@@ -6,12 +6,17 @@ services:
       - "./modules/catalog/elasticsearch/presto/elasticsearch.properties:/usr/lib/presto/etc/catalog/elasticsearch.properties:ro"
 
   elasticsearch:
-    build:
-      context: "./modules/catalog/elasticsearch/"
-      args:
-        - ELASTICSEARCH_VER=${ELASTICSEARCH_VER}
-    image: "minipresto:elasticsearch"
+    image: "elasticsearch:${ELASTICSEARCH_VER}"
     container_name: elasticsearch
+    volumes:
+      - "./modules/resources/wait-for-it.sh:/opt/minipresto/wait-for-it.sh:ro"
+    environment:
+      MINIPRESTO_BOOTSTRAP: "bootstrap.sh"
+      discovery.type: "single-node"
+      bootstrap.memory_lock: "true"
+      network.host: "0.0.0.0"
+      network.bind_host: "0.0.0.0"
+      ES_JAVA_OPTS: "-Xms256m -Xmx256m"
     labels:
       - "com.starburst.tests=minipresto"
       - "com.starburst.tests.module.elasticsearch=catalog-elasticsearch"

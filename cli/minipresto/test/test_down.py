@@ -4,36 +4,17 @@
 import docker
 import minipresto.test.helpers as helpers
 
-from click.testing import CliRunner
-from minipresto.cli import cli
-
+from inspect import currentframe
+from types import FrameType
+from typing import cast
 from minipresto.settings import RESOURCE_LABEL
 
 
 def main():
-    helpers.log_status("Running test_down")
-    test_daemon_off()
+    helpers.log_status(__file__)
+    helpers.start_docker_daemon()
     test_no_containers()
     test_running_containers()
-
-
-def test_daemon_off():
-    """
-    Verifies the command exits properly if the Docker daemon is off or
-    unresponsive.
-    """
-
-    helpers.stop_docker_daemon()
-
-    runner = CliRunner()
-    result = runner.invoke(cli, ["down"])
-    assert result.exit_code == 1
-    assert (
-        "Error when pinging the Docker server. Is the Docker daemon running?"
-        in result.output
-    )
-
-    helpers.log_status(f"Passed test_daemon_off")
 
 
 def test_no_containers():
@@ -42,20 +23,19 @@ def test_no_containers():
     are running.
     """
 
-    helpers.start_docker_daemon()
+    # Run preliminary `down` in case a container is running
+    helpers.execute_command(["down"])
+    result = helpers.initialize_test(["down"])
 
-    runner = CliRunner()
-    runner.invoke(cli, ["down"])  # Run preliminary down in case something is up
-    result = runner.invoke(cli, ["down"])
     assert result.exit_code == 0
     assert "No containers to bring down" in result.output
 
     docker_client = docker.from_env()
     containers = docker_client.containers.list(filters={"label": RESOURCE_LABEL})
-    assert len(containers) == 0
+    assert len(containers) == 0, "There should be no running containers"
 
-    helpers.log_status(f"Passed test_no_containers")
-    cleanup(runner)
+    helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
+    cleanup()
 
 
 def test_running_containers():
@@ -63,10 +43,10 @@ def test_running_containers():
     Verifies that the down command works when multiple containers are running.
     """
 
-    runner = CliRunner()
-    runner.invoke(cli, ["down"])  # Run preliminary down in case something is up
-    runner.invoke(cli, ["provision", "--catalog", "test"])
-    result = runner.invoke(cli, ["-v", "down"])
+    helpers.execute_command(["down"])
+    helpers.execute_command(["provision", "--catalog", "test"])
+    result = helpers.initialize_test(["-v", "down"])
+
     assert result.exit_code == 0
     assert all(
         (
@@ -78,18 +58,18 @@ def test_running_containers():
 
     docker_client = docker.from_env()
     containers = docker_client.containers.list(filters={"label": RESOURCE_LABEL})
-    assert len(containers) == 0
+    assert len(containers) == 0, "There should be no running containers"
 
-    helpers.log_status(f"Passed test_running_containers")
-    cleanup(runner)
+    helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
+    cleanup()
 
 
-def cleanup(runner):
+def cleanup():
     """
     Stops/removes containers.
     """
 
-    runner.invoke(cli, ["down"])
+    helpers.execute_command(["down"])
 
 
 if __name__ == "__main__":

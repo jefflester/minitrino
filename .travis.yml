@@ -21,7 +21,7 @@ before_install:
   - sudo mv docker-compose /usr/local/bin
 
 install:
-  - pip3 install --editable cli/
+  - pip3 install --editable /home/travis/build/jefflester/minipresto/cli/
 
 script:
   - |

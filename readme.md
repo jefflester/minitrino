@@ -1,6 +1,8 @@
 # Minipresto
 A tool that makes it easy to run modular Presto environments locally.
 
+[![Build Status](https://travis-ci.org/jefflester/minipresto.svg?branch=master)](https://travis-ci.org/jefflester/minipresto)
+
 ## Overview
 - [Requirements](#requirements)
 - [Installation](#installation)

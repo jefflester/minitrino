@@ -34,7 +34,7 @@ def initialize_test(command=[], command_input=""):
     """
 
     result = execute_command(command, command_input)
-    print(f"Test command [`minipresto {' '.join(command)}`] output:\n{result.output}")
+    print(f"Test command [minipresto {' '.join(command)}] output:\n{result.output}")
     return result
 
 

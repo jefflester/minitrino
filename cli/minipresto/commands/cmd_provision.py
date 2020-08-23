@@ -10,6 +10,7 @@ import os
 import sys
 import docker
 import stat
+import yaml
 import click
 
 from minipresto.cli import pass_environment

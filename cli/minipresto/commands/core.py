@@ -4,6 +4,7 @@
 import os
 import re
 import sys
+import json
 import click
 import docker
 import subprocess
@@ -75,16 +76,22 @@ class CommandExecutor(object):
     def execute_commands(self, **kwargs):
         """
         Executes commands in a subprocess.
-        
+
         Return Values
         -------------
-        :return: A list of dictionaries containing information about each command's execution.
+        - A list of dicts with each dict containing the following keys:
+            - `command`: the original command passed to the function
+            - `output`: the combined output of stdout and stderr
+            - `return_code`: the return code of the command
 
         Parameters
         ----------
-        :param handle_error: (Boolean :: True) If `False`, errors (non-zer return codes) are not handled by the function.
-        :param environment: (Dict :: {}) A dictionary of environment variables to pass to the subprocess.
-        :param commands: (List :: []) A list of commands that will be executed in the order provides.
+        - `handle_error` (`bool` | `True`): If `False`, errors (non-zero return
+          codes) are not handled by the function
+        - `environment` (`dict` | `{}`): A dictionary of environment variables
+          to pass to the subprocess
+        - `commands` (`list` | `[]`): A list of commands that will be executed
+          in the order provides
         """
         
         environment = kwargs.get("environment", {})
@@ -197,7 +204,6 @@ class ComposeEnvironment(object):
                     env_variable = self.handle_override(env_variable, env_override)
                 key, value = self.validate_env_variable(env_variable)
                 core_env[key] = value
-                self.ctx.vlog(f"Registered environment variable: {env_variable}")
 
         if not core_env:
             self.ctx.log_err(
@@ -208,6 +214,9 @@ class ComposeEnvironment(object):
         # Update core environment dict with config environment dict
         config_env.update(core_env)
         compose_env_dict = config_env
+        self.ctx.vlog(
+            f"Registered environment variables:\n{json.dumps(compose_env_dict)}"
+        )
         return self.get_env_string(compose_env_dict), compose_env_dict
 
     def handle_override(self, env_variable="", env_override=[]):

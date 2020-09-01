@@ -13,7 +13,6 @@ A tool that makes it easy to run modular Presto environments locally.
   - [Config Environment Variables](#config-environment-variables)
 - [Project Structure](#project-structure)
 - [Adding New Modules (Tutorial)](#adding-new-modules-tutorial)
-- [Developer Notes](#developer-notes)
 
 -----
 
@@ -42,7 +41,7 @@ You can provision an environment via the `provision` command.
 - `provision`: Executes a `docker-compose` command and brings up an environment. 
   - `--catalog`: Catalog module to provision. Can be none, one, or many.
   - `--security`: Security module to provision. Can be none, one, or many.
-  - `--env-override`: Override an existing environment variable in the Minipresto library's `.env` file. Can be none, one, or many.
+  - `--env-override`: Override an existing environment variable in the Minipresto library's `.env` file and `minipresto.cfg` file. Can be none, one, or many.
   - `--docker-native`: Appends the constructed Compose command with native Docker Compose CLI options. Can be none, one, or many. To use this, simply pass in additional Docker Compose options, i.e. `minipresto provision --docker-native '--remove-orphans --force-recreate'` or `minipresto provision -d --build`. 
     - When passing multiple parameters to this option, the list needs to be space-delimited and surrounded with double or single quotes.
 - If no options are passed in, the CLI will provision a standalone Presto container.
@@ -141,17 +140,17 @@ minipresto [COMMAND] --help
 minipresto --verbose [COMMAND] # -v works as well
 ```
 
-### Library Path/Directory 
+### Minipresto Library
 The CLI's library directory should always point to the directory that holds the modules and snapshots you intend to interact with. The library directory can be set one of three ways, listed below in the order of precedence:
 
 1. The `--lib-dir` CLI option sets the library directory for the current command.
 2. The `minipresto.cfg` configuration file sets the library directory via the `LIB_PATH` variable. 
 3. The CLI source code is used to set the library directory and assumes the project is being run out of a cloned repository.
 
-If you are running as a user without the entire repository, it is advisable to provide a pointer to the library in Minipresto's configuration via the `LIB_PATH` variable.
+If you are running as a user without a cloned repository, it is advisable to provide a pointer to the library in Minipresto's configuration via the `LIB_PATH` variable.
 
 ### Environment Variables
-Environment variables are defined in the `.env` file in the library root. The `.env` file can be adjusted and added to as necessary. Note that environment variable keys which have Bash variables assigned to their values are defined in the `minipresto.cfg` file. These special variables are able to be propagated to any Docker container via container environment variables (see the root `docker-compose.yml` file for an example) passed to the Compose command.
+Environment variables are defined in the `.env` file in the library root. The `.env` file can be adjusted and added to as necessary. Note that environment variable keys which have Bash variables assigned to their values are defined in the `minipresto.cfg` file. These variables are able to be propagated to any Docker container via container environment variables passed to the Compose command. Any variable can be overridden with the `provision` command's `--env-override` option.
 
 ### Config File
 Permanent configuration is set in `~/.minipresto/minipresto.cfg`. Here, you can define your library path and set Docker environment variables. Docker Environment variables are passed to the provisioned modules when the variables are defined in the `minipresto.cfg` file.
@@ -188,7 +187,7 @@ Below is a list of all valid environment variables. The majority of these are pa
 -----
 
 ## Project Structure 
-The suite is built around Docker Compose files and heavily utilizes Docker's ability to [extend Compose files](https://docs.docker.com/compose/extends/#multiple-compose-files).
+The suite is built around Docker Compose files and utilizes Docker's ability to [extend Compose files](https://docs.docker.com/compose/extends/#multiple-compose-files).
 
 The Starburst Presto service is defined in a Compose file at the project root. All other services will look up in the directory tree in order to reference the parent Presto service. Therefore, it is required that we provide the fully-qualified path relative to the project's root `docker-compose.yml` file when defining Docker resources. For example, suppose you have the following directory structure:
 
@@ -197,52 +196,44 @@ lib
 ├── Dockerfile
 ├── docker-compose.yml
 ├── modules
-│   ├── catalog
-│   │   ├── elasticsearch
-│   │   │   ├── elasticsearch.yml
-│   │   │   ├── presto
-│   │   │   │   └── elasticsearch.properties
-│   │   │   ├── readme.md
-│   │   │   └── resources
-│   │   │       └── bootstrap.sh
-│   └── security
+│   ├── catalog
+│   │   └── postgres
+│   │       ├── postgres.yml
+│   │       ├── readme.md
+│   │       └── resources
+│   │           ├── postgres
+│   │           │   └── postgres.env
+│   │           └── presto
+│   │               └── postgres.properties
+│   ├── resources
+│   └── security
 └── snapshots
 ```
 
-The `elasticsearch.yml` file looks like:
+The `postgres.yml` file looks like:
 
 ```yaml
 version: "3.7"
 services:
-  
+
   presto:
     volumes:
-      - "./modules/catalog/elasticsearch/presto/elasticsearch.properties:/usr/lib/presto/etc/catalog/elasticsearch.properties:ro"
+      - "./modules/catalog/postgres/resources/presto/postgres.properties:/usr/lib/presto/etc/catalog/postgres.properties:ro"
 
-  elasticsearch:
-    image: "elasticsearch:${ELASTICSEARCH_VER}"
-    container_name: elasticsearch
-    volumes:
-      - "./modules/resources/wait-for-it.sh:/opt/minipresto/wait-for-it.sh:ro"
-    environment:
-      MINIPRESTO_BOOTSTRAP: "bootstrap.sh"
-      discovery.type: "single-node"
-      bootstrap.memory_lock: "true"
-      network.host: "0.0.0.0"
-      network.bind_host: "0.0.0.0"
-      ES_JAVA_OPTS: "-Xms256m -Xmx256m"
+  postgres:
+    image: "postgres:${POSTGRES_VER}"
+    container_name: "postgres"
     labels:
       - "com.starburst.tests=minipresto"
-      - "com.starburst.tests.module.elasticsearch=catalog-elasticsearch"
-    ports:
-      - 9200:9200
-      - 9300:9300
+      - "com.starburst.tests.module.postgres=catalog-postgres"
+    env_file:
+      - "./modules/catalog/postgres/resources/postgres/postgres.env"
 ```
 
-Notice that the build context for the Dockerfile and the volume we mount to the Starburst Presto service are not relative to the `elasticsearch/` directory––it is relative to the parent directory which houses the top-level `docker-compose.yml` file. Also notice the label––this label will be used to identify resources related to testing suite so that the client commands actually work.
+Notice that the build context for the Dockerfile and the volume we mount to the Starburst Presto service are not relative to the `lib/modules/catalog/postgres/` directory––it is relative to the parent directory which houses the top-level `docker-compose.yml` file. Also, notice the label––this label will be used to identify resources related to testing suite so that the client commands actually work.
 
 ### Presto Dockerfile
-Minipresto modifies the Starburst Presto Docker image by adding the Presto CLI to the image, as well as by providing `sudo` to the `presto` user. This is required for certain bootstrap scripts (i.e. using `yum` to install packages in a Presto container for a module). This image is compatible with Starburst Presto images back to version `332-e.0`.
+Minipresto modifies the Starburst Presto Docker image by adding the Presto CLI to the image, as well as by providing `sudo` to the `presto` user. This is required for certain bootstrap scripts (i.e. using `yum` to install packages in a Presto container for a module). This image is compatible with Starburst Presto images back to Starburst Enterprise Presto version `332-e.0`.
 
 -----
 
@@ -250,7 +241,7 @@ Minipresto modifies the Starburst Presto Docker image by adding the Presto CLI t
 Adding new modules is relatively simple, but there are a few important guidelines to follow to ensure compatibility with the Minipresto CLI. The design rules are the same for both catalogs and security modules. The best way to demonstrate this process is through a tutorial. The example below demonstrates the process of creating a new catalog module for Postgres.
 
 ### Create the Relevant Directory
-Create the module's directory in the `modules/catalog/` directory:
+Create the module's directory in the `lib/modules/catalog/` directory:
 
 ```sh
 mkdir lib/modules/catalog/postgres/
@@ -258,10 +249,10 @@ cd lib/modules/catalog/postgres/
 ```
 
 ### Add Presto Resources 
-Place Presto-specific resources into a `presto/` directory within the module, then mount the resources to the Presto service defined in the root `docker-compose.yml` file. 
+All resources for a module go inside of a `resources/` directory within the module. Inside this directory, place Presto-specific resources into a `presto/` directory, then mount the resources to the Presto service defined in the root `docker-compose.yml` file. 
 
 ```sh
-mkdir presto
+mkdir -p resources/presto/
 ```
 
 In the newly-created `presto/` directory, add a properties file.
@@ -271,9 +262,11 @@ bash -c "cat << EOF > postgres.properties
 connector.name=postgresql
 connection-url=jdbc:postgresql://postgres:5432/minipresto
 connection-user=admin
-connection-password=password
+connection-password=prestoRocks15
 EOF"
 ```
+
+**Note**: Passwords should always be `prestoRocks15` for consistency. 
 
 ### Add the Docker Compose YAML
 In `lib/modules/catalog/postgres/`, add a Docker Compose file:
@@ -282,29 +275,37 @@ In `lib/modules/catalog/postgres/`, add a Docker Compose file:
 touch postgres.yml
 ```
 
-Notice the naming convention––`postgres.yml`. Giving the same root name of "postgres" to both the parent directory `postgres/` and to the Docker Compose file `postgres.yml` will allow the Minipresto CLI to find our new catalog module when it is provisioned. 
+Notice the naming convention––`postgres.yml`. Giving the same root name of "postgres" to both the parent directory `postgres/` and to the Docker Compose file `postgres.yml` will allow Minipresto to find our new catalog module when it is provisioned. 
 
-Next, add an environment file for the Postgres service in the `modules/catalog/postgres/` directory:
+Next, add an environment file for the Postgres service. Non-Presto resources should go into their own directory, so create one for postgres:
+
+```sh
+mkdir resources/postgres/
+```
+
+In the newly-created directory, add an environment file which will register the variables in the Postgres container when spun up:
 
 ```sh
 bash -c "cat << EOF > postgres.env
 POSTGRES_USER=admin
-POSTGRES_PASSWORD=password
+POSTGRES_PASSWORD=prestoRocks15
 POSTGRES_DB=minipresto
 EOF"
 ```
 
-This file will initialize Postgres with a database Minipresto, a user `presto`, and a password `password`.
+This file will initialize Postgres with a database Minipresto, a user `presto`, and a password `prestoRocks15`.
 
 ### Review Progress 
 The resulting directory tree should look like this (from the `/modules/catalog/` directory):
 
 ```
 postgres
-├── postgres.env
 ├── postgres.yml
-└── presto
-    └── postgres.properties
+└── resources
+    ├── postgres
+    │   └── postgres.env
+    └── presto
+        └── postgres.properties
 ```
 
 ### Configure the Docker Compose YAML File
@@ -318,7 +319,7 @@ services:
     volumes:
     # You can make the volume read-only with `:ro` so that the container cannot write files to the host
     # Always place Presto files in `/usr/lib/presto/etc/` as symbolic links can change between versions
-      - "./modules/catalog/postgres/presto/postgres.properties:/usr/lib/presto/etc/catalog/postgres.properties:ro"
+      - "./modules/catalog/postgres/resources/presto/postgres.properties:/usr/lib/presto/etc/catalog/postgres.properties:ro"
 
   postgres:
     image: "postgres:${POSTGRES_VER}"
@@ -369,7 +370,7 @@ services:
 
   presto:
     volumes:
-      - "./modules/catalog/postgres/presto/postgres.properties:/usr/lib/presto/etc/catalog/postgres.properties:ro"
+      - "./modules/catalog/postgres/resources/presto/postgres.properties:/usr/lib/presto/etc/catalog/postgres.properties:ro"
 
   postgres:
     image: "postgres:${POSTGRES_VER}"
@@ -379,8 +380,6 @@ services:
       - "com.starburst.tests.module.postgres=catalog-postgres"
     env_file:
       - "./modules/catalog/postgres/postgres.env"
-    volumes:
-      - "postgres-data:/var/lib/postgresql/data"
 
 volumes:
   postgres-data:
@@ -411,12 +410,12 @@ presto> show catalogs;
 ```
 
 ### Customizing Images
-If you need to customize an image for a specific use, you can do so via Dockerfiles. For example, the Elasticsearch catalog uses this approach to properly execute a bootstrap script at startup. 
+If you need to build a custom image, you can do so and structure the Compose file accordingly. See the library's root `docker-compose.yml` file for an example of this.
 
 ### Bootstrap Scripts
-Minipresto supports container bootstrap scripts. These scripts **do not replace** the entrypoint (or default command) for a given container. The script is copied from the Minipresto library to the container, executed, and then removed from the container. Containers are restarted after each bootstrap script execution, **so bootstrap scripts should not restart the container service**.
+Minipresto supports container bootstrap scripts. These scripts **do not replace** the entrypoint (or default command) for a given container. The script is copied from the Minipresto library to the container, executed, and then removed from the container. Containers are restarted after each bootstrap script execution, **so the bootstrap scripts themselves should not restart the container**.
 
-To add a bootstrap script, simply add a `bootstrap/` directory in any given module, create a shell script, and then reference the script name in the Compose YAML file:
+To add a bootstrap script, simply add a `resources/bootstrap/` directory in any given module, create a shell script, and then reference the script name in the Compose YAML file:
 
 ```yaml
 version: "3.7"
@@ -428,7 +427,7 @@ services:
 ```
 
 ### Managing Presto's `config.properties` File
-Since numerous modules can change the `config.properties` file, it is highly recommended to not mount a `config.properties` file to the Presto container, but instead to modify the file the supported bootstrap script functionality. An example bootstrap snippet can be found below:
+Since numerous modules can change the `config.properties` file, it is highly recommended to **not** mount a `config.properties` file to the Presto container, but instead to modify the file via the supported bootstrap script functionality. An example bootstrap snippet can be found below:
 
 ```bash
 #!/usr/bin/env bash
@@ -443,29 +442,4 @@ query.max-execution-time=1h
 EOT
 ```
 
-Every time the `provision` command is executed, Minipresto will check for duplicate properties in `config.properties` and remove them if necessary.
-
------
-
-## Developer Notes
-This section is limited and will be added to in the future. In general, it will cover:
-
-- Major functions of the CLI
-- Docker modules
-- Project/library structure 
-- Style guide
-- Tests 
-
-### Style Guide
-- Python code is formatted with the Black formatting tool. Click command and option decorator functions do not have Black formatting applied to them because it looks incredibly obnoxious.
-- All handled CLI errors should result in a `sys.exit(1)` to standardize the failed exit status. 
-- All variables referencing directories should end with `_dir`.
-- All variables referencing files should end with `_file`.
-- Filesystem paths should be constructed with `os.path` when possible. 
-
-### Tests
-The tests are currently built to be compatible on MacOS. The tie to the operating system lies within the Docker daemon start/stop functions in the tests `helpers.py` file; these could be easily ported over to different Linux distributions. 
-
-All tests can be chained together and automated with the exception of `test_config.py`. This is because all of the test cases require user input in the form of yes/no (easy to automate) and exiting `vi` (harder to automate).
-
-Tests are built following the [Click testing guide](https://click.palletsprojects.com/en/7.x/testing/). 
+Every time the `provision` command is executed, Minipresto will check for duplicate properties in `config.properties` and warn the user if they are present. The above script would warn the user about the duplicate key `query.max-execution-time`.

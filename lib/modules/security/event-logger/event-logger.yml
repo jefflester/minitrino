@@ -3,8 +3,8 @@ services:
 
   presto:
     volumes:
-      - "./modules/security/event-logger/resources/presto/postgres_event_logger.properties:/usr/lib/presto/etc/catalog/postgres_event_logger.properties:ro"
-      - "./modules/security/event-logger/resources/presto/event-listener.properties:/usr/lib/presto/etc/event-listener.properties:ro"
+      - "./modules/security/event-logger/resources/presto/postgres_event_logger.properties:/usr/lib/presto/etc/catalog/postgres_event_logger.properties"
+      - "./modules/security/event-logger/resources/presto/event-listener.properties:/usr/lib/presto/etc/event-listener.properties"
   
   postgres-event-logger:
     image: "postgres:${POSTGRES_EVENT_LOGGER_VER}"

@@ -3,7 +3,7 @@ version: "3.7"
 services:
   presto:
     volumes:
-      - "./modules/security/system-ranger/resources/presto/access-control.properties:/usr/lib/presto/etc/access-control.properties:ro"
+      - "./modules/security/system-ranger/resources/presto/access-control.properties:/usr/lib/presto/etc/access-control.properties"
 
   ranger-admin:
     image: harbor.starburstdata.net/starburstdata/starburst-ranger-admin:${SEP_RANGER_VER}
@@ -14,7 +14,7 @@ services:
     env_file:
       - "./modules/security/system-ranger/resources/ranger-admin/ranger-admin.env"
     volumes:
-      - "./modules/resources/wait-for-it.sh:/opt/minipresto/wait-for-it.sh:ro"
+      - "./modules/resources/wait-for-it.sh:/opt/minipresto/wait-for-it.sh"
     depends_on:
       - ranger-postgres
     labels:

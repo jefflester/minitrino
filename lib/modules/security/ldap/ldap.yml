@@ -3,8 +3,8 @@ services:
 
   presto:
     volumes:
-      - "./modules/security/ldap/resources/presto/password-authenticator.properties:/usr/lib/presto/etc/password-authenticator.properties:ro"
-      - "./modules/security/ldap/resources/ldap/ldap-users:/usr/lib/presto/etc/ldap-users:ro"
+      - "./modules/security/ldap/resources/presto/password-authenticator.properties:/usr/lib/presto/etc/password-authenticator.properties"
+      - "./modules/security/ldap/resources/ldap/ldap-users:/usr/lib/presto/etc/ldap-users"
     environment:
       MINIPRESTO_BOOTSTRAP: "bootstrap-presto.sh"
     links:

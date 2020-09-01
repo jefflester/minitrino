@@ -226,7 +226,7 @@ services:
 
   presto:
     volumes:
-      - "./modules/catalog/postgres/resources/presto/postgres.properties:/usr/lib/presto/etc/catalog/postgres.properties:ro"
+      - "./modules/catalog/postgres/resources/presto/postgres.properties:/usr/lib/presto/etc/catalog/postgres.properties"
 
   postgres:
     image: "postgres:${POSTGRES_VER}"
@@ -325,9 +325,8 @@ services:
 
   presto:
     volumes:
-    # You can make the volume read-only with `:ro` so that the container cannot write files to the host
     # Always place Presto files in `/usr/lib/presto/etc/` as symbolic links can change between versions
-      - "./modules/catalog/postgres/resources/presto/postgres.properties:/usr/lib/presto/etc/catalog/postgres.properties:ro"
+      - "./modules/catalog/postgres/resources/presto/postgres.properties:/usr/lib/presto/etc/catalog/postgres.properties"
 
   postgres:
     image: "postgres:${POSTGRES_VER}"
@@ -378,7 +377,7 @@ services:
 
   presto:
     volumes:
-      - "./modules/catalog/postgres/resources/presto/postgres.properties:/usr/lib/presto/etc/catalog/postgres.properties:ro"
+      - "./modules/catalog/postgres/resources/presto/postgres.properties:/usr/lib/presto/etc/catalog/postgres.properties"
 
   postgres:
     image: "postgres:${POSTGRES_VER}"

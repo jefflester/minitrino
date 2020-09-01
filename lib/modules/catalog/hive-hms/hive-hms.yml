@@ -8,7 +8,7 @@ services:
       S3_SECRET_KEY: "${S3_SECRET_KEY}"
       REGION: "${REGION}"
     volumes:
-      - "./modules/catalog/hive-hms/resources/presto/hive_hms.properties:/usr/lib/presto/etc/catalog/hive_hms.properties:ro"
+      - "./modules/catalog/hive-hms/resources/presto/hive_hms.properties:/usr/lib/presto/etc/catalog/hive_hms.properties"
   
   postgres-hive-hms:
     image: "postgres:${POSTGRES_HIVE_HMS_VER}"
@@ -33,7 +33,7 @@ services:
     env_file:
       - "./modules/catalog/hive-hms/resources/hms/hms.env"
     volumes:
-      - "./modules/resources/wait-for-it.sh:/etc/boot/wait-for-it.sh:ro"
+      - "./modules/resources/wait-for-it.sh:/etc/boot/wait-for-it.sh"
     command: ["./etc/boot/wait-for-it.sh" , "postgres-hive-hms:5432" , "--strict" , "--timeout=60" , "--" , "./opt/bin/start-hive-metastore.sh"]
     ports:
       - "9083:9083"

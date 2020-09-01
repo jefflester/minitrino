@@ -3,13 +3,13 @@ services:
   
   presto:
     volumes:
-      - "./modules/catalog/elasticsearch/resources/presto/elasticsearch.properties:/usr/lib/presto/etc/catalog/elasticsearch.properties:ro"
+      - "./modules/catalog/elasticsearch/resources/presto/elasticsearch.properties:/usr/lib/presto/etc/catalog/elasticsearch.properties"
 
   elasticsearch:
     image: "elasticsearch:${ELASTICSEARCH_VER}"
     container_name: elasticsearch
     volumes:
-      - "./modules/resources/wait-for-it.sh:/opt/minipresto/wait-for-it.sh:ro"
+      - "./modules/resources/wait-for-it.sh:/opt/minipresto/wait-for-it.sh"
     environment:
       MINIPRESTO_BOOTSTRAP: "bootstrap-elasticsearch.sh"
       discovery.type: "single-node"

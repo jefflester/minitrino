@@ -3,7 +3,7 @@ services:
 
   presto:
     volumes:
-      - "./modules/catalog/postgres/resources/presto/postgres.properties:/usr/lib/presto/etc/catalog/postgres.properties:ro"
+      - "./modules/catalog/postgres/resources/presto/postgres.properties:/usr/lib/presto/etc/catalog/postgres.properties"
 
   postgres:
     image: "postgres:${POSTGRES_VER}"

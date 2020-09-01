@@ -197,14 +197,22 @@ lib
 ├── docker-compose.yml
 ├── modules
 │   ├── catalog
-│   │   └── postgres
-│   │       ├── postgres.yml
-│   │       ├── readme.md
-│   │       └── resources
-│   │           ├── postgres
-│   │           │   └── postgres.env
-│   │           └── presto
-│   │               └── postgres.properties
+│   │   ├── postgres
+│   │   │   ├── postgres.yml
+│   │   │   ├── readme.md
+│   │   │   └── resources
+│   │   │       ├── postgres
+│   │   │       │   └── postgres.env
+│   │   │       └── presto
+│   │   │           └── postgres.properties
+│   │   ├── elasticsearch
+│   │   │   ├── elasticsearch.yml
+│   │   │   ├── readme.md
+│   │   │   └── resources
+│   │   │       ├── bootstrap
+│   │   │       │   └── bootstrap-elasticsearch.sh
+│   │   │       └── presto
+│   │   │           └── elasticsearch.properties
 │   ├── resources
 │   └── security
 └── snapshots

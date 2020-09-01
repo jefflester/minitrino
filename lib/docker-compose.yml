@@ -15,5 +15,7 @@ services:
     labels:
       - "com.starburst.tests=minipresto"
       - "com.starburst.tests.module=presto"
+    volumes:
+      - "${STARBURST_LIC_PATH}:/usr/lib/presto/etc/starburstdata.license:ro"
     ports:
       - "8080:8080"

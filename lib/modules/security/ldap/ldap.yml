@@ -3,10 +3,10 @@ services:
 
   presto:
     volumes:
-      - "./modules/security/ldap/presto/password-authenticator.properties:/usr/lib/presto/etc/password-authenticator.properties:ro"
-      - "./modules/security/ldap/resources/ldap-users:/usr/lib/presto/etc/ldap-users:ro"
+      - "./modules/security/ldap/resources/presto/password-authenticator.properties:/usr/lib/presto/etc/password-authenticator.properties:ro"
+      - "./modules/security/ldap/resources/ldap/ldap-users:/usr/lib/presto/etc/ldap-users:ro"
     environment:
-      MINIPRESTO_BOOTSTRAP: "bootstrap.sh"
+      MINIPRESTO_BOOTSTRAP: "bootstrap-presto.sh"
     links:
       - "ldap:ldap.minipresto.starburstdata.com"
     ports:
@@ -17,10 +17,11 @@ services:
     container_name: "ldap"
     hostname: "ldap.minipresto.starburstdata.com"
     environment:
-      LDAP_ORGANISATION: "${LDAP_ORGANISATION}"
-      LDAP_DOMAIN: "${LDAP_DOMAIN}"
-      LDAP_ADMIN_PASSWORD: "${LDAP_ADMIN_PASSWORD}"
+      LDAP_ORGANISATION: "Example Inc."
+      LDAP_DOMAIN: "example.com"
+      LDAP_ADMIN_PASSWORD: "prestoRocks15"
       LDAP_TLS_VERIFY_CLIENT: "try"
+      LDAPTLS_REQCERT: "never" 
     labels:
       - "com.starburst.tests=minipresto"
       - "com.starburst.tests.module.ldap=security-ldap"

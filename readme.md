@@ -42,7 +42,7 @@ You can provision an environment via the `provision` command.
 - `provision`: Executes a `docker-compose` command and brings up an environment. 
   - `--catalog`: Catalog module to provision. Can be none, one, or many.
   - `--security`: Security module to provision. Can be none, one, or many.
-  - `--env`: Override an existing environment variable in the Minipresto library's `.env` file. Can be none, one, or many.
+  - `--env-override`: Override an existing environment variable in the Minipresto library's `.env` file. Can be none, one, or many.
   - `--docker-native`: Appends the constructed Compose command with native Docker Compose CLI options. Can be none, one, or many. To use this, simply pass in additional Docker Compose options, i.e. `minipresto provision --docker-native '--remove-orphans --force-recreate'` or `minipresto provision -d --build`. 
     - When passing multiple parameters to this option, the list needs to be space-delimited and surrounded with double or single quotes.
 - If no options are passed in, the CLI will provision a standalone Presto container.
@@ -53,7 +53,7 @@ Sample `provision` commands:
 ```bash
 minipresto provision --catalog hive-hms elasticsearch --security ldap --docker-native '--build --force-recreate'
 minipresto provision -c hive-hms elasticsearch -s ldap -d '--build --force-recreate'
-minipresto provision --env STARBURST_VER=332-e.6
+minipresto provision --env-override STARBURST_VER=332-e.6
 ```
 
 This command constructs a Docker Compose command and executes it in the host shell. The commands look loosely similar to something like the below:
@@ -180,9 +180,6 @@ Below is a list of all valid environment variables. The majority of these are pa
 - SNOWFLAKE_JDBC_WAREHOUSE
 - SNOWFLAKE_JDBC_DB
 - SNOWFLAKE_JDBC_STAGE_SCHEMA
-- LDAP_ORGANISATION
-- LDAP_DOMAIN
-- LDAP_ADMIN_PASSWORD
 
 ### Caveats 
 - The `snapshot` command does not retain overridden environment variables since they can change during intermediate commands executed against a running environment. 
@@ -208,7 +205,6 @@ lib
 │   │   │   ├── readme.md
 │   │   │   └── resources
 │   │   │       └── bootstrap.sh
-│   ├── resources
 │   └── security
 └── snapshots
 ```
@@ -420,7 +416,7 @@ If you need to customize an image for a specific use, you can do so via Dockerfi
 ### Bootstrap Scripts
 Minipresto supports container bootstrap scripts. These scripts **do not replace** the entrypoint (or default command) for a given container. The script is copied from the Minipresto library to the container, executed, and then removed from the container. Containers are restarted after each bootstrap script execution, **so bootstrap scripts should not restart the container service**.
 
-To add a bootstrap script, simply add a `resources/` directory in any given module, create a shell script, and then reference the script name in the Compose YAML file:
+To add a bootstrap script, simply add a `bootstrap/` directory in any given module, create a shell script, and then reference the script name in the Compose YAML file:
 
 ```yaml
 version: "3.7"

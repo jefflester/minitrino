@@ -21,6 +21,7 @@ def main():
     test_env_override()
     test_invalid_env_override()
     test_build_bootstrap_config_props()
+    test_license_checks()
 
 
 def test_standalone():
@@ -91,7 +92,7 @@ def test_env_override():
     """
 
     result = helpers.initialize_test(
-        ["-v", "provision", "--env", "COMPOSE_PROJECT_NAME=test"]
+        ["-v", "provision", "--env-override", "COMPOSE_PROJECT_NAME=test"]
     )
 
     assert result.exit_code == 0
@@ -114,7 +115,7 @@ def test_invalid_env_override():
     """
 
     result = helpers.initialize_test(
-        ["-v", "provision", "--env", "COMPOSE_PROJECT_NAME===test"]
+        ["-v", "provision", "--env-override", "COMPOSE_PROJECT_NAME===test"]
     )
 
     assert result.exit_code == 1
@@ -138,12 +139,13 @@ def test_build_bootstrap_config_props():
         ["-v", "provision", "--catalog", "test", "-d", "--build"]
     )
 
-    assert result.exit_code == 0
     assert all(
         (
+            result.exit_code == 0,
             "Environment provisioning complete" in result.output,
             "Received native Docker Compose options" in result.output,
-            "Found duplicate property key in config.properties file" in result.output,
+            "Duplicate Presto configuration properties detected in config.properties"
+            in result.output,
         )
     )
 
@@ -173,6 +175,54 @@ def test_build_bootstrap_config_props():
             "hello world" in str(bootstrap_check_output),
         )
     )
+
+    helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
+    cleanup()
+
+
+def test_license_checks():
+    """Validates correct handling of the Starburst license file checks."""
+
+    placeholder_lic_file = os.path.join(
+        helpers.MINIPRESTO_USER_DIR, "placeholder.license"
+    )
+
+    def remove_placeholder():
+        process = subprocess.Popen(f"rm -rf {placeholder_lic_file}", shell=True,)
+
+    # Non-existent file
+    remove_placeholder()
+    result = helpers.initialize_test(
+        ["-v", "provision", "--env-override", "STARBURST_LIC_PATH=/not/a/real/file.txt"]
+    )
+
+    assert result.exit_code == 0
+    assert "Starburst license not found in" in result.output
+    assert "Creating placeholder license in" in result.output
+    cleanup()
+
+    # No file at all
+    remove_placeholder()
+    result = helpers.initialize_test(
+        ["-v", "provision", "--env-override", "STARBURST_LIC_PATH="]
+    )
+
+    assert result.exit_code == 0
+    assert "Creating placeholder license in" in result.output
+    cleanup()
+
+    # Existing file - placeholder for testing
+    result = helpers.initialize_test(
+        [
+            "-v",
+            "provision",
+            "--env-override",
+            f"STARBURST_LIC_PATH={placeholder_lic_file}",
+        ]
+    )
+
+    assert result.exit_code == 0
+    assert "Creating placeholder license in" not in result.output
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()

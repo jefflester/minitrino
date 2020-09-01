@@ -8,7 +8,7 @@ services:
       S3_SECRET_KEY: "${S3_SECRET_KEY}"
       REGION: "${REGION}"
     volumes:
-      - "./modules/catalog/hive-hms/presto/hive_hms.properties:/usr/lib/presto/etc/catalog/hive_hms.properties:ro"
+      - "./modules/catalog/hive-hms/resources/presto/hive_hms.properties:/usr/lib/presto/etc/catalog/hive_hms.properties:ro"
   
   postgres-hive-hms:
     image: "postgres:${POSTGRES_HIVE_HMS_VER}"
@@ -18,7 +18,7 @@ services:
       - "com.starburst.tests.module.hive-hms=catalog-hive-hms"
     user: "postgres"
     env_file:
-      - "./modules/catalog/hive-hms/hms/postgres.env"
+      - "./modules/catalog/hive-hms/resources/hms/postgres.env"
     volumes:
       - "postgres-hive-hms-data:/var/lib/postgresql/data"
   

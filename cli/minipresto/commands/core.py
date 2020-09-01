@@ -4,7 +4,6 @@
 import os
 import re
 import sys
-import json
 import click
 import docker
 import subprocess
@@ -77,23 +76,23 @@ class CommandExecutor(object):
         """
         Executes commands in a subprocess.
 
+        Parameters
+        ----------
+        - `handle_error: True`: If `False`, errors (non-zero return codes) are
+          not handled by the function
+        - `environment: {}`: A dictionary of environment variables to pass to
+          the subprocess
+        - `commands: []`: A list of commands that will be executed in the order
+          provides
+
         Return Values
         -------------
         - A list of dicts with each dict containing the following keys:
             - `command`: the original command passed to the function
             - `output`: the combined output of stdout and stderr
             - `return_code`: the return code of the command
-
-        Parameters
-        ----------
-        - `handle_error` (`bool` | `True`): If `False`, errors (non-zero return
-          codes) are not handled by the function
-        - `environment` (`dict` | `{}`): A dictionary of environment variables
-          to pass to the subprocess
-        - `commands` (`list` | `[]`): A list of commands that will be executed
-          in the order provides
         """
-        
+
         environment = kwargs.get("environment", {})
         environment = self.construct_environment(environment)
 
@@ -121,10 +120,10 @@ class CommandExecutor(object):
                 output_full += output
 
             if process.returncode != 0:
-                if not kwargs.get("handle_error", True):
+                if not kwargs.get("handle_error", False):
                     self.ctx.log_err(f"Failed to execute command:\n{command}")
                     sys.exit(1)
-            
+
             retval.append(
                 {
                     "command": command,
@@ -165,9 +164,11 @@ class CommandExecutor(object):
 class ComposeEnvironment(object):
     def __init__(self, ctx, env_override=[]):
         """
-        Creates a string and a dictionary of environment variables. Environment
-        variables are sourced from the user's `minipresto.cfg` file and the
-        `.env` file in the Minipresto library.
+        Creates a string and a dictionary of environment variables for use by
+        Docker Compose. Environment variables are sourced from the user's
+        `minipresto.cfg` file and the `.env` file in the Minipresto library.
+        These two resources are parsed and combined into a single environment
+        dictionary.
         """
 
         self.ctx = ctx
@@ -178,9 +179,9 @@ class ComposeEnvironment(object):
 
     def get_compose_env(self, env_override=[]):
         """
-        Loads environment variables from root .env file and user configuration,
-        then merges the two sets of environment variables. Returns a string of
-        key-value pairs and a dict.
+        Loads environment variables from library's root `.env` file and user
+        configuration, then merges the two sets of environment variables.
+        Returns a string shell-compatible of key-value pairs and a dict.
         """
 
         env_file = os.path.join(self.ctx.minipresto_lib_dir, ".env")
@@ -214,9 +215,14 @@ class ComposeEnvironment(object):
         # Update core environment dict with config environment dict
         config_env.update(core_env)
         compose_env_dict = config_env
+        environment_formatted = ""
+
+        for key, value in compose_env_dict.items():
+            environment_formatted += f"{key}: {value}\n"
         self.ctx.vlog(
-            f"Registered environment variables:\n{json.dumps(compose_env_dict)}"
+            f"Registered environment variables:\n{environment_formatted}"
         )
+
         return self.get_env_string(compose_env_dict), compose_env_dict
 
     def handle_override(self, env_variable="", env_override=[]):

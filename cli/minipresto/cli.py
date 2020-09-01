@@ -23,21 +23,15 @@ class Environment:
 
         Properties
         ----------
-
-        `verbose`: Indicates whether or not output verbose logs to stdout.
-
-        `user_home_dir`: The home directory of the current user.
-
-        `minipresto_user_dir`: The location of the minipresto directory relative
+        - `verbose`: Indicates whether or not output verbose logs to stdout.
+        - `user_home_dir`: The home directory of the current user.
+        - `minipresto_user_dir`: The location of the minipresto directory relative
         to the user home directory. 
-
-        `config_file`: The location of the user's configuration file. 
-
-        `snapshot_dir`: The location of the user's snapshot directory (this is
+        - `config_file`: The location of the user's configuration file. 
+        - `snapshot_dir`: The location of the user's snapshot directory (this is
         essentially a temporary directory, as 'permanent' snapshot tarballs are
         written to the library).
-
-        `minipresto_lib_dir`: The location of the minipresto library directory.
+        - `minipresto_lib_dir`: The location of the minipresto library directory.
         """
 
         # Verbose logging
@@ -136,11 +130,11 @@ class Environment:
         """
         Determines the directory of the minipresto library. The directory can be
         set in three ways (this is also the order of precedence):
-        1. The -l / --lib-path CLI option sets the library directory for the current
-           command.
-        2. The minipresto.cfg file's configuration sets the library directory if
-           present. 
-        3. The project root is used to set the library directory and assumes the
+        1. The `-l` / `--lib-path` CLI option sets the library directory for the
+           current command.
+        2. The `minipresto.cfg` file's configuration sets the library directory
+           if present. 
+        3. The CLI root is used to set the library directory and assumes the
            project is being run out of a cloned repository. 
         """
 
@@ -217,7 +211,7 @@ Changes the command's library path.
 
 @pass_environment
 def cli(ctx, verbose, lib_path):
-    """minipresto command line interface"""
+    """Minipresto command line interface"""
 
     ctx.verbose = verbose
     if lib_path:

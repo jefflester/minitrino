@@ -36,9 +36,9 @@ Catalog modules to provision.
 @click.option("-s", "--security", default="", type=str, cls=MultiArgOption, help="""
 Security modules to provision. 
 """)
-@click.option("-e", "--env", default="", type=str, cls=MultiArgOption, help="""
-Overrides a pre-defined environment variable(s). Can override config in the user's
-`minipresto.cfg` file and the library's `.env` file.
+@click.option("-e", "--env-override", default="", type=str, cls=MultiArgOption, help="""
+Overrides a pre-defined environment variable(s). Can override config in the
+user's `minipresto.cfg` file and the library's `.env` file.
 """)
 @click.option("-d", "--docker-native", default="", type=str, help="""
 Appends native docker-compose commands to the built docker-compose command. Run
@@ -51,19 +51,18 @@ Example: minipresto provision -d '--remove-orphans --force-recreate'
 
 
 @pass_environment
-def cli(ctx, catalog, security, env, docker_native):
+def cli(ctx, catalog, security, env_override, docker_native):
     """
-    Provision command for minipresto. If the resulting docker-compose command
+    Provision command for Minipresto. If the resulting docker-compose command
     is unsuccessful, the function exits with a non-zero status code.
     """
 
     docker_client = check_daemon()
-    catalog, security, env = convert_MultiArgOption_to_list(catalog, security, env)
 
-    catalog_paths = []
-    security_paths = []
+    catalog, security, env_override = convert_MultiArgOption_to_list(
+        catalog, security, env_override
+    )
     catalog_yaml_files, security_yaml_files = validate(catalog, security)
-
     catalog_chunk = compose_chunk(catalog, {"module_type": "catalog"})
     security_chunk = compose_chunk(security, {"module_type": "security"})
 
@@ -72,7 +71,8 @@ def cli(ctx, catalog, security, env, docker_native):
             f"No catalog or security options received. Provisioning standalone Presto container"
         )
 
-    compose_environment = ComposeEnvironment(ctx, env)
+    compose_environment = ComposeEnvironment(ctx, env_override)
+    compose_environment = check_license(compose_environment)
     compose_command = compose_builder(
         docker_native,
         compose_environment.compose_env_string,
@@ -170,8 +170,10 @@ def validate(catalog=[], security=[]):
 @pass_environment
 def execute_bootstraps(ctx, catalog_yaml_files=[], security_yaml_files=[]):
     """
-    Executes bootstrap script for each service that has one. After each script
-    executes, the relevant container is added to a restart list.
+    Executes bootstrap script for each container that has one––bootstrap scripts
+    will only execute once the container is fully running to prevent conflicts
+    with procedures executing as part of the container's entrypoint. After each
+    script executes, the relevant container is added to a restart list.
 
     Returns a list of containers names which had bootstrap scripts executed
     inside of them.
@@ -211,7 +213,9 @@ def execute_bootstraps(ctx, catalog_yaml_files=[], security_yaml_files=[]):
 def execute_container_bootstrap(ctx, bootstrap, container_name, yaml_file):
     """Executes a single bootstrap inside a container."""
 
-    bootstrap_file = os.path.join(os.path.dirname(yaml_file), "resources", bootstrap)
+    bootstrap_file = os.path.join(
+        os.path.dirname(yaml_file), "resources", "bootstrap", bootstrap
+    )
     if not os.path.isfile(bootstrap_file):
         ctx.log_err(f"Bootstrap file does not exist: {bootstrap_file}")
         sys.exit(1)
@@ -235,39 +239,48 @@ def execute_container_bootstrap(ctx, bootstrap, container_name, yaml_file):
 @pass_environment
 def handle_config_properties(ctx):
     """
-    Checks for and removes duplicates in the Presto config.properties file.
+    Checks for duplicates in the Presto config.properties file and issues
+    warnings for any detected duplicates.
     """
 
     ctx.vlog("Checking config.properties for duplicate properties")
     executor = CommandExecutor(ctx)
-    executor.execute_commands(
-        commands=[
-            f"docker cp presto:/usr/lib/presto/etc/config.properties {ctx.minipresto_user_dir}"
-        ]
+    output = executor.execute_commands(
+        commands=["docker exec -i presto cat /usr/lib/presto/etc/config.properties"]
     )
 
-    host_presto_config_file = os.path.join(ctx.minipresto_user_dir, "config.properties")
-    config_props = {}
-
-    if not os.path.isfile(host_presto_config_file):
-        ctx.log_err(f"config.properties file improperly copied from Presto container")
+    config_props = output[0].get("output", False)
+    if not config_props:
+        ctx.log_err(
+            "Presto config.properties file unable to be read from Presto container"
+        )
         sys.exit(1)
 
-    with open(host_presto_config_file, "r") as f:
-        for line in f:
-            line_list = line.strip().split("=")
-            if len(line_list) != 2:
-                continue
-            # This will return `False` if the property is not already in our dict
-            if not config_props.get(line_list[0].strip(), False):
-                config_props[line_list[0].strip()] = line_list[1].strip()
+    config_props = config_props.strip().split("\n")
+    config_props.sort()
+    counter = 0
+    while counter < len(config_props):
+        config_prop = config_props[counter]
+        config_prop = config_prop.strip().split("=")
+        key = config_prop[0].strip()
+
+        inner_counter = counter + 1
+        while inner_counter < len(config_props):
+            duplicates = []
+            check_config_prop = config_props[inner_counter].strip().split("=")
+            check_key = check_config_prop[0].strip()
+            if key == check_key:
+                duplicates.append(config_props[inner_counter])
             else:
-                ctx.log_warn(
-                    f"Found duplicate property key in config.properties file:\n"
-                    f"{line.strip()}\n"
-                    f"{line_list[0].strip()}={config_props.get(line_list[0].strip(), '')}\n"
-                )
-    os.remove(host_presto_config_file)
+                break
+
+        if duplicates:
+            duplicates.insert(0, config_props[counter])
+            duplicates_string = "\n".join(duplicates)
+            ctx.log_warn(
+                f"Duplicate Presto configuration properties detected in config.properties:\n{duplicates_string}"
+            )
+        counter = inner_counter
 
 
 @pass_environment
@@ -290,3 +303,37 @@ def restart_containers(ctx, docker_client, containers_to_restart=[]):
                 f"Attempting to restart container {container.name}, but the container was not found"
             )
             sys.exit(1)
+
+
+@pass_environment
+def check_license(ctx, compose_environment):
+    """
+    Checks for Starburst Data license. If no license, creates a placeholder
+    license and points to it.
+    """
+
+    starburst_lic_file = compose_environment.compose_env_dict.get(
+        "STARBURST_LIC_PATH", ""
+    ).strip()
+    placeholder_lic_file = os.path.join(ctx.minipresto_user_dir, "placeholder.license")
+
+    if starburst_lic_file:
+        if not os.path.isfile(starburst_lic_file):
+            ctx.vlog(
+                f"Starburst license not found in {starburst_lic_file}."
+                f"Creating placeholder license in {placeholder_lic_file}"
+            )
+            with open(placeholder_lic_file, "w") as f:
+                pass
+        else:
+            return compose_environment
+
+    compose_environment.compose_env_dict["STARBURST_LIC_PATH"] = placeholder_lic_file
+    compose_environment.compose_env_string += (
+        f'STARBURST_LIC_PATH="{placeholder_lic_file}" '
+    )
+    if not os.path.isfile(placeholder_lic_file):
+        ctx.vlog(f"Creating placeholder license in {placeholder_lic_file}")
+        with open(placeholder_lic_file, "w") as f:
+            pass
+    return compose_environment

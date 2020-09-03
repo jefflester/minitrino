@@ -265,12 +265,13 @@ def handle_config_properties(ctx):
         key = config_prop[0].strip()
 
         inner_counter = counter + 1
+        duplicates = []
         while inner_counter < len(config_props):
-            duplicates = []
             check_config_prop = config_props[inner_counter].strip().split("=")
             check_key = check_config_prop[0].strip()
             if key == check_key:
                 duplicates.append(config_props[inner_counter])
+                inner_counter += 1
             else:
                 break
 

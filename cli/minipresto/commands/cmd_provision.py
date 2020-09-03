@@ -320,7 +320,7 @@ def check_license(ctx, compose_environment):
     if starburst_lic_file:
         if not os.path.isfile(starburst_lic_file):
             ctx.vlog(
-                f"Starburst license not found in {starburst_lic_file}."
+                f"Starburst license not found in {starburst_lic_file}.\n"
                 f"Creating placeholder license in {placeholder_lic_file}"
             )
             with open(placeholder_lic_file, "w") as f:

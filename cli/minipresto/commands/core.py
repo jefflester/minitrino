@@ -216,13 +216,13 @@ class ComposeEnvironment(object):
         # Add env variables and override existing if necessary
         if env:
             for env_variable in env:
-                env_variable = env_variable.split("=")
-                if not len(env_variable) == 2:
+                env_variable_list = env_variable.split("=")
+                if not len(env_variable_list) == 2:
                     self.ctx.log_err(
                         f"Invalid environment variable: {env_variable}. Should be a key-value pair"
                     )
                     sys.exit(1)
-                config_dict[env_variable[0].strip()] = env_variable[1].strip()
+                config_dict[env_variable_list[0].strip()] = env_variable_list[1].strip()
 
         environment_formatted = ""
         for key, value in config_dict.items():

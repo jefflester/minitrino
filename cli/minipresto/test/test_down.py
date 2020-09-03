@@ -24,8 +24,8 @@ def test_no_containers():
     """
 
     # Run preliminary `down` in case a container is running
-    helpers.execute_command(["down"])
-    result = helpers.initialize_test(["down"])
+    helpers.execute_command(["-v", "down"])
+    result = helpers.initialize_test(["-v", "down"])
 
     assert result.exit_code == 0
     assert "No containers to bring down" in result.output
@@ -43,8 +43,8 @@ def test_running_containers():
     Verifies that the down command works when multiple containers are running.
     """
 
-    helpers.execute_command(["down"])
-    helpers.execute_command(["provision", "--catalog", "test"])
+    helpers.execute_command(["-v", "down"])
+    helpers.execute_command(["-v", "provision", "--catalog", "test"])
     result = helpers.initialize_test(["-v", "down"])
 
     assert result.exit_code == 0
@@ -69,7 +69,7 @@ def cleanup():
     Stops/removes containers.
     """
 
-    helpers.execute_command(["down"])
+    helpers.execute_command(["-v", "down"])
 
 
 if __name__ == "__main__":

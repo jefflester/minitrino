@@ -18,8 +18,8 @@ def main():
     test_standalone()
     test_invalid_catalog_module()
     test_invalid_security_module()
-    test_env_override()
-    test_invalid_env_override()
+    test_env()
+    test_invalid_env()
     test_build_bootstrap_config_props()
     test_license_checks()
 
@@ -85,14 +85,13 @@ def test_invalid_security_module():
     cleanup()
 
 
-def test_env_override():
+def test_env():
     """
-    Verifies that an overridden environment variable can be successfully
-    passed in.
+    Verifies that an environment variable can be successfully passed in.
     """
 
     result = helpers.execute_command(
-        ["-v", "provision", "--env-override", "COMPOSE_PROJECT_NAME=test"]
+        ["-v", "provision", "--env", "COMPOSE_PROJECT_NAME=test"]
     )
 
     assert result.exit_code == 0
@@ -108,14 +107,14 @@ def test_env_override():
     cleanup()
 
 
-def test_invalid_env_override():
+def test_invalid_env():
     """
-    Verifies that an invalid, overridden environment variable will cause
-    the CLI to exit with a non-zero status code.
+    Verifies that an invalid environment variable will cause the CLI to exit
+    with a non-zero status code.
     """
 
     result = helpers.execute_command(
-        ["-v", "provision", "--env-override", "COMPOSE_PROJECT_NAME===test"]
+        ["-v", "provision", "--env", "COMPOSE_PROJECT_NAME===test"]
     )
 
     assert result.exit_code == 1
@@ -193,7 +192,7 @@ def test_license_checks():
     # Non-existent file
     remove_placeholder()
     result = helpers.execute_command(
-        ["-v", "provision", "--env-override", "STARBURST_LIC_PATH=/not/a/real/file.txt"]
+        ["-v", "provision", "--env", "STARBURST_LIC_PATH=/not/a/real/file.txt"]
     )
 
     assert result.exit_code == 0
@@ -204,7 +203,7 @@ def test_license_checks():
     # No file at all
     remove_placeholder()
     result = helpers.execute_command(
-        ["-v", "provision", "--env-override", "STARBURST_LIC_PATH="]
+        ["-v", "provision", "--env", "STARBURST_LIC_PATH="]
     )
 
     assert result.exit_code == 0
@@ -216,7 +215,7 @@ def test_license_checks():
         [
             "-v",
             "provision",
-            "--env-override",
+            "--env",
             f"STARBURST_LIC_PATH={placeholder_lic_file}",
         ]
     )

@@ -28,6 +28,7 @@ def main():
     test_snapshot_no_directory()
     test_snapshot_active_env()
     test_snapshot_inactive_env()
+    test_command_snapshot_file()
     test_force()
     test_scrub()
     test_no_scrub()
@@ -80,6 +81,30 @@ def test_snapshot_inactive_env():
     run_assertions(result)
     assert "Creating snapshot of inactive environment" in result.output
 
+    helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
+
+
+def test_command_snapshot_file():
+    """
+    Verifies that an environment can be provisioned from a snapshot command file
+    (these are written when a snapshot is created so that other users can easily
+    reproduce the environment).
+    """
+
+    command_snapshot_file = os.path.join(helpers.MINIPRESTO_USER_SNAPSHOTS_DIR, "test", "provision-snapshot.sh")
+    process = subprocess.Popen(
+        f"./{command_snapshot_file}",
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        universal_newlines=True,
+    )
+    stdout, _ = process.communicate()
+
+    assert process.returncode == 0
+    assert "Environment provisioning complete" in stdout
+
+    cleanup()
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
 
 

@@ -23,6 +23,7 @@ from minipresto.settings import LIB
 from minipresto.settings import MODULE_ROOT
 from minipresto.settings import MODULE_CATALOG
 from minipresto.settings import MODULE_SECURITY
+from minipresto.settings import MODULE_RESOURCES
 from minipresto.settings import SCRUB_KEYS
 
 
@@ -154,7 +155,7 @@ def build_command_string(ctx, catalog=[], security=[]):
 
     bash_source = '"${BASH_SOURCE%/*}"'
     command_string = (
-        f"minipresto -v --lib-path {bash_source} provision {option_string}\n\n"
+        f"minipresto -v --lib-path {bash_source}/lib provision {option_string}\n\n"
     )
 
     return command_string.replace("  ", " ")
@@ -202,11 +203,19 @@ def clone_lib_dir(ctx, name):
     snapshot_name_dir = os.path.join(ctx.snapshot_dir, name)
     os.makedirs(os.path.join(snapshot_name_dir, LIB, MODULE_ROOT, MODULE_CATALOG))
     os.mkdir(os.path.join(snapshot_name_dir, LIB, MODULE_ROOT, MODULE_SECURITY))
+    os.mkdir(os.path.join(snapshot_name_dir, LIB, MODULE_ROOT, MODULE_RESOURCES))
 
+    # Copy root files
     for filename in os.listdir(ctx.minipresto_lib_dir):
         if filename in SNAPSHOT_ROOT_FILES:
             file_path = os.path.join(ctx.minipresto_lib_dir, filename)
             shutil.copy(file_path, os.path.join(snapshot_name_dir, LIB))
+
+    # Copy everything from module resources
+    resources_dir = os.path.join(ctx.minipresto_lib_dir, MODULE_ROOT, MODULE_RESOURCES)
+    for filename in os.listdir(resources_dir):
+        file_path = os.path.join(resources_dir, filename)
+        shutil.copy(file_path, os.path.join(snapshot_name_dir, LIB, MODULE_ROOT, MODULE_RESOURCES))
 
     return snapshot_name_dir
 

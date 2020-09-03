@@ -41,7 +41,7 @@ You can provision an environment via the `provision` command.
 - `provision`: Executes a `docker-compose` command and brings up an environment. 
   - `--catalog`: Catalog module to provision. Can be none, one, or many.
   - `--security`: Security module to provision. Can be none, one, or many.
-  - `--env-override`: Override an existing environment variable in the Minipresto library's `.env` file and `minipresto.cfg` file. Can be none, one, or many.
+  - `--env`: Add or override environment variables. If any of the variables overlap with variables in the library's `.env` file or the `minipresto.cfg` file, the variable will be overridden with what is provided in `--env`. Can be none, one, or many.
   - `--docker-native`: Appends the constructed Compose command with native Docker Compose CLI options. Can be none, one, or many. To use this, simply pass in additional Docker Compose options, i.e. `minipresto provision --docker-native '--remove-orphans --force-recreate'` or `minipresto provision -d --build`. 
     - When passing multiple parameters to this option, the list needs to be space-delimited and surrounded with double or single quotes.
 - If no options are passed in, the CLI will provision a standalone Presto container.
@@ -52,7 +52,7 @@ Sample `provision` commands:
 ```bash
 minipresto provision --catalog hive-hms elasticsearch --security ldap --docker-native '--build --force-recreate'
 minipresto provision -c hive-hms elasticsearch -s ldap -d '--build --force-recreate'
-minipresto provision --env-override STARBURST_VER=332-e.6
+minipresto provision --env STARBURST_VER=332-e.6
 ```
 
 This command constructs a Docker Compose command and executes it in the host shell. The commands look loosely similar to something like the below:
@@ -150,7 +150,7 @@ The CLI's library directory should always point to the directory that holds the 
 If you are running as a user without a cloned repository, it is advisable to provide a pointer to the library in Minipresto's configuration via the `LIB_PATH` variable.
 
 ### Environment Variables
-Environment variables are defined in the `.env` file in the library root. The `.env` file can be adjusted and added to as necessary. Note that environment variable keys which have Bash variables assigned to their values are defined in the `minipresto.cfg` file. These variables are able to be propagated to any Docker container via container environment variables passed to the Compose command. Any variable can be overridden with the `provision` command's `--env-override` option.
+Environment variables are defined in the `.env` file in the library root. The `.env` file can be adjusted and added to as necessary. Note that environment variable keys which have Bash variables assigned to their values are defined in the `minipresto.cfg` file. These variables are able to be propagated to any Docker container via container environment variables passed to the Compose command. Any variable can be overridden with the `provision` command's `--env` option.
 
 ### Config File
 Permanent configuration is set in `~/.minipresto/minipresto.cfg`. Here, you can define your library path and set Docker environment variables. Docker Environment variables are passed to the provisioned modules when the variables are defined in the `minipresto.cfg` file.

@@ -13,6 +13,7 @@ LIB = "lib"
 MODULE_ROOT = "modules"
 MODULE_CATALOG = "catalog"
 MODULE_SECURITY = "security"
+MODULE_RESOURCES = "resources"
 
 # Snapshots
 SNAPSHOT_ROOT_FILES = ["docker-compose.yml", ".env", "Dockerfile"]

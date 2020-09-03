@@ -36,9 +36,10 @@ Catalog modules to provision.
 @click.option("-s", "--security", default="", type=str, cls=MultiArgOption, help="""
 Security modules to provision. 
 """)
-@click.option("-e", "--env-override", default="", type=str, cls=MultiArgOption, help="""
-Overrides a pre-defined environment variable(s). Can override config in the
-user's `minipresto.cfg` file and the library's `.env` file.
+@click.option("-e", "--env", default="", type=str, cls=MultiArgOption, help="""
+Add or override environment variables. If any of the variables overlap with
+variables in the library's `.env` file or the `minipresto.cfg` file, the
+variable will be overridden with what is provided in `--env`.
 """)
 @click.option("-d", "--docker-native", default="", type=str, help="""
 Appends native docker-compose commands to the built docker-compose command. Run
@@ -51,7 +52,7 @@ Example: minipresto provision -d '--remove-orphans --force-recreate'
 
 
 @pass_environment
-def cli(ctx, catalog, security, env_override, docker_native):
+def cli(ctx, catalog, security, env, docker_native):
     """
     Provision command for Minipresto. If the resulting docker-compose command
     is unsuccessful, the function exits with a non-zero status code.
@@ -59,9 +60,7 @@ def cli(ctx, catalog, security, env_override, docker_native):
 
     docker_client = check_daemon()
 
-    catalog, security, env_override = convert_MultiArgOption_to_list(
-        catalog, security, env_override
-    )
+    catalog, security, env = convert_MultiArgOption_to_list(catalog, security, env)
     catalog_yaml_files, security_yaml_files = validate(catalog, security)
     catalog_chunk = compose_chunk(catalog, {"module_type": "catalog"})
     security_chunk = compose_chunk(security, {"module_type": "security"})
@@ -71,7 +70,7 @@ def cli(ctx, catalog, security, env_override, docker_native):
             f"No catalog or security options received. Provisioning standalone Presto container"
         )
 
-    compose_environment = ComposeEnvironment(ctx, env_override)
+    compose_environment = ComposeEnvironment(ctx, env)
     compose_environment = check_license(compose_environment)
     compose_command = compose_builder(
         docker_native,

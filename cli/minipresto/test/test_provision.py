@@ -30,7 +30,7 @@ def test_standalone():
     are passed in.
     """
 
-    result = helpers.initialize_test(["-v", "provision"])
+    result = helpers.execute_command(["-v", "provision"])
 
     assert result.exit_code == 0
     assert "Provisioning standalone" in result.output
@@ -51,7 +51,7 @@ def test_invalid_catalog_module():
     provision an invalid catalog module.
     """
 
-    result = helpers.initialize_test(
+    result = helpers.execute_command(
         ["-v", "provision", "--catalog", "hive-hms", "not-a-real-module"]
     )
 
@@ -71,7 +71,7 @@ def test_invalid_security_module():
     provision an invalid security module.
     """
 
-    result = helpers.initialize_test(
+    result = helpers.execute_command(
         ["-v", "provision", "--security", "ldap", "not-a-real-module"]
     )
 
@@ -91,7 +91,7 @@ def test_env_override():
     passed in.
     """
 
-    result = helpers.initialize_test(
+    result = helpers.execute_command(
         ["-v", "provision", "--env-override", "COMPOSE_PROJECT_NAME=test"]
     )
 
@@ -114,7 +114,7 @@ def test_invalid_env_override():
     the CLI to exit with a non-zero status code.
     """
 
-    result = helpers.initialize_test(
+    result = helpers.execute_command(
         ["-v", "provision", "--env-override", "COMPOSE_PROJECT_NAME===test"]
     )
 
@@ -135,7 +135,7 @@ def test_build_bootstrap_config_props():
     successful adding of config properties to Presto config.properties file.
     """
 
-    result = helpers.initialize_test(
+    result = helpers.execute_command(
         ["-v", "provision", "--catalog", "test", "-d", "--build"]
     )
 
@@ -192,7 +192,7 @@ def test_license_checks():
 
     # Non-existent file
     remove_placeholder()
-    result = helpers.initialize_test(
+    result = helpers.execute_command(
         ["-v", "provision", "--env-override", "STARBURST_LIC_PATH=/not/a/real/file.txt"]
     )
 
@@ -203,7 +203,7 @@ def test_license_checks():
 
     # No file at all
     remove_placeholder()
-    result = helpers.initialize_test(
+    result = helpers.execute_command(
         ["-v", "provision", "--env-override", "STARBURST_LIC_PATH="]
     )
 
@@ -212,7 +212,7 @@ def test_license_checks():
     cleanup()
 
     # Existing file - placeholder for testing
-    result = helpers.initialize_test(
+    result = helpers.execute_command(
         [
             "-v",
             "provision",

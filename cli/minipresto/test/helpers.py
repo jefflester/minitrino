@@ -27,18 +27,7 @@ SNAPSHOT_CONFIG_FILE = os.path.join(
 # -----------------------------------------------------------------------------------
 
 
-def initialize_test(command=[], command_input=""):
-    """
-    Accepts a command (in list type) to execute by the Click CliRunner. Returns
-    a the command result.
-    """
-
-    result = execute_command(command, command_input)
-    print(f"Test command [minipresto {' '.join(command)}] output:\n{result.output}")
-    return result
-
-
-def execute_command(command=[], command_input=""):
+def execute_command(command=[], print_output=True, command_input=""):
     """Executes a command through the Click CliRunner."""
 
     runner = CliRunner()
@@ -46,6 +35,10 @@ def execute_command(command=[], command_input=""):
         result = runner.invoke(cli, command)
     else:
         result = runner.invoke(cli, command, input=command_input)
+    if print_output:
+        print(
+            f"Output of command [minipresto {' '.join(command)}] output:\n{result.output}"
+        )
     return result
 
 

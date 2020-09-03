@@ -41,8 +41,8 @@ def test_snapshot_no_directory():
 
     cleanup()
     subprocess.call(f"rm -rf {helpers.MINIPRESTO_USER_SNAPSHOTS_DIR}", shell=True)
-    result = helpers.initialize_test(
-        ["snapshot", "--name", "test", "--catalog", "test"]
+    result = helpers.execute_command(
+        ["-v", "snapshot", "--name", "test", "--catalog", "test"]
     )
 
     run_assertions(result)
@@ -58,7 +58,7 @@ def test_snapshot_active_env():
 
     cleanup()
     helpers.execute_command(["provision"])
-    result = helpers.initialize_test(["snapshot", "--name", "test"])
+    result = helpers.execute_command(["-v", "snapshot", "--name", "test"])
 
     run_assertions(result, False)
     assert "Creating snapshot of active environment" in result.output
@@ -73,8 +73,8 @@ def test_snapshot_inactive_env():
     """
 
     cleanup()
-    result = helpers.initialize_test(
-        ["snapshot", "--name", "test", "--catalog", "test"]
+    result = helpers.execute_command(
+        ["-v", "snapshot", "--name", "test", "--catalog", "test"]
     )
 
     run_assertions(result)
@@ -89,8 +89,8 @@ def test_force():
     tarball exists.
     """
 
-    result = helpers.initialize_test(
-        ["snapshot", "--name", "test", "--catalog", "test", "--force"]
+    result = helpers.execute_command(
+        ["-v", "snapshot", "--name", "test", "--catalog", "test", "--force"]
     )
 
     run_assertions(result)
@@ -107,8 +107,8 @@ def test_no_scrub():
     """
 
     helpers.make_sample_config()
-    result = helpers.initialize_test(
-        ["snapshot", "--name", "test", "--catalog", "test", "--no-scrub"], "y\n"
+    result = helpers.execute_command(
+        ["-v", "snapshot", "--name", "test", "--catalog", "test", "--no-scrub"], "y\n"
     )
 
     run_assertions(result)
@@ -126,8 +126,8 @@ def test_scrub():
     """
 
     helpers.make_sample_config()
-    result = helpers.initialize_test(
-        ["snapshot", "--name", "test", "--catalog", "test"]
+    result = helpers.execute_command(
+        ["-v", "snapshot", "--name", "test", "--catalog", "test"]
     )
 
     run_assertions(result)

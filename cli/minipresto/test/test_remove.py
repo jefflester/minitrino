@@ -31,7 +31,7 @@ def test_images():
 
     helpers.execute_command(["provision", "--catalog", "test"])
     helpers.execute_command(["down"])
-    result = helpers.initialize_test(["-v", "remove", "--images"])
+    result = helpers.execute_command(["-v", "remove", "--images"])
 
     assert result.exit_code == 0
     assert "Image removed:" in result.output
@@ -53,7 +53,7 @@ def test_volumes():
 
     helpers.execute_command(["provision", "--catalog", "test"])
     helpers.execute_command(["down"])
-    result = helpers.initialize_test(["-v", "remove", "--volumes"])
+    result = helpers.execute_command(["-v", "remove", "--volumes"])
 
     assert result.exit_code == 0
     assert "Volume removed:" in result.output
@@ -75,7 +75,7 @@ def test_label():
 
     helpers.execute_command(["provision", "--catalog", "test"])
     helpers.execute_command(["down"])
-    result = helpers.initialize_test(
+    result = helpers.execute_command(
         [
             "-v",
             "remove",
@@ -105,7 +105,7 @@ def test_multiple_labels():
 
     helpers.execute_command(["provision", "--catalog", "test"])
     helpers.execute_command(["down"])
-    result = helpers.initialize_test(
+    result = helpers.execute_command(
         [
             "-v",
             "remove",
@@ -136,7 +136,7 @@ def test_invalid_label():
 
     helpers.execute_command(["provision", "--catalog", "test"])
     helpers.execute_command(["down"])
-    result = helpers.initialize_test(
+    result = helpers.execute_command(
         ["-v", "remove", "--images", "--label", "not-real-label=not-real"]
     )
 
@@ -154,7 +154,7 @@ def test_all():
 
     helpers.execute_command(["provision", "--catalog", "test"])
     helpers.execute_command(["down"])
-    result = helpers.initialize_test(["-v", "remove", "--images", "--volumes"])
+    result = helpers.execute_command(["-v", "remove", "--images", "--volumes"])
 
     assert result.exit_code == 0
     assert all(("Volume removed:" in result.output, "Image removed:" in result.output))
@@ -170,7 +170,7 @@ def test_remove_dependent_resources_running():
     """
 
     helpers.execute_command(["provision", "--catalog", "test"])
-    result = helpers.initialize_test(["-v", "remove", "--images", "--volumes"])
+    result = helpers.execute_command(["-v", "remove", "--images", "--volumes"])
 
     assert result.exit_code == 0
     assert all(
@@ -192,7 +192,7 @@ def test_remove_dependent_resources_stopped():
 
     helpers.execute_command(["provision", "--catalog", "test"])
     subprocess.call("docker stop test", shell=True)
-    result = helpers.initialize_test(
+    result = helpers.execute_command(
         [
             "-v",
             "remove",
@@ -223,7 +223,7 @@ def test_remove_dependent_resources_force():
 
     helpers.execute_command(["provision", "--catalog", "test"])
     subprocess.call("docker stop test", shell=True)
-    result = helpers.initialize_test(
+    result = helpers.execute_command(
         [
             "-v",
             "remove",

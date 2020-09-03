@@ -95,7 +95,7 @@ def test_env():
     )
 
     assert result.exit_code == 0
-    assert "COMPOSE_PROJECT_NAME=test" in result.output
+    assert "COMPOSE_PROJECT_NAME: test" in result.output
 
     containers = get_containers()
     assert len(containers) == 1

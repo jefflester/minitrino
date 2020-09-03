@@ -23,9 +23,9 @@ RUN set -euxo pipefail \
     && echo presto | passwd presto --stdin \
     && echo "presto ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers \
     && cd /usr/lib/presto/lib/ || exit \
-    && DIST=${STARBURST_VER:0:3}e \
-    && S3_URL=https://s3.us-east-2.amazonaws.com/software.starburstdata.net \
-    && curl -fsSL "${S3_URL}"/"${DIST}"/"${STARBURST_VER}"/presto-cli-"${STARBURST_VER}"-executable.jar -o presto-cli \
+    && DIST=${STARBURST_VER:0:3} \
+    && CLI_URL=https://repo1.maven.org/maven2/io/prestosql/presto-cli/"${DIST}"/presto-cli-"${DIST}"-executable.jar \
+    && curl -fsSL "${CLI_URL}" -o presto-cli \
     && chmod -v +x presto-cli \
     && chown presto:presto presto-cli \
     && runuser -l presto -c 'echo alias presto="/usr/lib/presto/lib/presto-cli" >> ~/.bash_profile \

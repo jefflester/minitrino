@@ -36,9 +36,7 @@ def execute_command(command=[], print_output=True, command_input=""):
     else:
         result = runner.invoke(cli, command, input=command_input)
     if print_output:
-        print(
-            f"Output of command [minipresto {' '.join(command)}]:\n{result.output}"
-        )
+        print(f"Output of command [minipresto {' '.join(command)}]:\n{result.output}")
     return result
 
 

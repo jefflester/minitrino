@@ -20,7 +20,7 @@ class MultiArgOption(click.Option):
     Extends Click's `Option` class to allow for multiple arguments in a single
     option without specifying the option twice, as is otherwise required via
     Click's Multiple Options:
-    https://click.palletsprojects.com/en/7.x/options/#multiple-options)
+    https://click.palletsprojects.com/en/7.x/options/#multiple-options
 
     Class Implementation:
     https://stackoverflow.com/questions/48391777/nargs-equivalent-for-options-in-click
@@ -222,6 +222,10 @@ class ComposeEnvironment(object):
                         f"Invalid environment variable: {env_variable}. Should be a key-value pair"
                     )
                     sys.exit(1)
+                try:
+                    del config_dict[env_variable_list[0].strip()] # remove if present
+                except:
+                    pass
                 config_dict[env_variable_list[0].strip()] = env_variable_list[1].strip()
 
         environment_formatted = ""

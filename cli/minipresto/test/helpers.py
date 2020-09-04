@@ -8,6 +8,7 @@ import sys
 import subprocess
 import click
 
+from datetime import datetime
 from click.testing import CliRunner
 from pathlib import Path
 from minipresto.cli import cli
@@ -27,18 +28,7 @@ SNAPSHOT_CONFIG_FILE = os.path.join(
 # -----------------------------------------------------------------------------------
 
 
-def initialize_test(command=[], command_input=""):
-    """
-    Accepts a command (in list type) to execute by the Click CliRunner. Returns
-    a the command result.
-    """
-
-    result = execute_command(command, command_input)
-    print(f"Test command [minipresto {' '.join(command)}] output:\n{result.output}")
-    return result
-
-
-def execute_command(command=[], command_input=""):
+def execute_command(command=[], print_output=True, command_input=""):
     """Executes a command through the Click CliRunner."""
 
     runner = CliRunner()
@@ -46,19 +36,37 @@ def execute_command(command=[], command_input=""):
         result = runner.invoke(cli, command)
     else:
         result = runner.invoke(cli, command, input=command_input)
+    if print_output:
+        print(f"Output of command [minipresto {' '.join(command)}]:\n{result.output}")
     return result
 
 
 def log_success(msg):
     """Logs test status message to stdout."""
 
-    click.echo(click.style("[SUCCESS] ", fg="green", bold=True) + msg + "\n")
+    click.echo(
+        click.style(
+            f"[{datetime.now().strftime('%d/%m/%Y %H:%M:%S')}] [SUCCESS] ",
+            fg="green",
+            bold=True,
+        )
+        + msg
+        + "\n"
+    )
 
 
 def log_status(msg):
     """Logs test status message to stdout."""
 
-    click.echo(click.style("[RUNNING] ", fg="yellow", bold=True) + msg + "\n")
+    click.echo(
+        click.style(
+            f"[{datetime.now().strftime('%d/%m/%Y %H:%M:%S')}] [RUNNING] ",
+            fg="yellow",
+            bold=True,
+        )
+        + msg
+        + "\n"
+    )
 
 
 def start_docker_daemon():

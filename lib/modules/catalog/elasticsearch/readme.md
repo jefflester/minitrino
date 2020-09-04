@@ -1,6 +1,5 @@
-# Elasticsearch Module
-This module contains an ES container with some preloaded data. 
-It contains: a schema (ES mapping), a table (ES doc mapping), and data (ES docs).
+# Elasticsearch Connector Module
+This module contains an ES container with some preloaded data. It contains: a schema (ES mapping), a table (ES doc mapping), and data (ES docs).
 
 ## Loading your own data
 Since port 9200 is exposed on localhost you can add your own data like this:

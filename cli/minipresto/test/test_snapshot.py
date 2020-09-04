@@ -28,6 +28,7 @@ def main():
     test_snapshot_no_directory()
     test_snapshot_active_env()
     test_snapshot_inactive_env()
+    test_command_snapshot_file()
     test_force()
     test_scrub()
     test_no_scrub()
@@ -41,8 +42,8 @@ def test_snapshot_no_directory():
 
     cleanup()
     subprocess.call(f"rm -rf {helpers.MINIPRESTO_USER_SNAPSHOTS_DIR}", shell=True)
-    result = helpers.initialize_test(
-        ["snapshot", "--name", "test", "--catalog", "test"]
+    result = helpers.execute_command(
+        ["-v", "snapshot", "--name", "test", "--catalog", "test"]
     )
 
     run_assertions(result)
@@ -58,7 +59,7 @@ def test_snapshot_active_env():
 
     cleanup()
     helpers.execute_command(["provision"])
-    result = helpers.initialize_test(["snapshot", "--name", "test"])
+    result = helpers.execute_command(["-v", "snapshot", "--name", "test"])
 
     run_assertions(result, False)
     assert "Creating snapshot of active environment" in result.output
@@ -73,13 +74,39 @@ def test_snapshot_inactive_env():
     """
 
     cleanup()
-    result = helpers.initialize_test(
-        ["snapshot", "--name", "test", "--catalog", "test"]
+    result = helpers.execute_command(
+        ["-v", "snapshot", "--name", "test", "--catalog", "test"]
     )
 
     run_assertions(result)
     assert "Creating snapshot of inactive environment" in result.output
 
+    helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
+
+
+def test_command_snapshot_file():
+    """
+    Verifies that an environment can be provisioned from a snapshot command file
+    (these are written when a snapshot is created so that other users can easily
+    reproduce the environment).
+    """
+
+    command_snapshot_file = os.path.join(
+        helpers.MINIPRESTO_USER_SNAPSHOTS_DIR, "test", "provision-snapshot.sh"
+    )
+    process = subprocess.Popen(
+        command_snapshot_file,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        universal_newlines=True,
+    )
+    stdout, _ = process.communicate()
+
+    assert process.returncode == 0
+    assert "Environment provisioning complete" in stdout
+
+    cleanup()
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
 
 
@@ -89,8 +116,8 @@ def test_force():
     tarball exists.
     """
 
-    result = helpers.initialize_test(
-        ["snapshot", "--name", "test", "--catalog", "test", "--force"]
+    result = helpers.execute_command(
+        ["-v", "snapshot", "--name", "test", "--catalog", "test", "--force"]
     )
 
     run_assertions(result)
@@ -107,8 +134,10 @@ def test_no_scrub():
     """
 
     helpers.make_sample_config()
-    result = helpers.initialize_test(
-        ["snapshot", "--name", "test", "--catalog", "test", "--no-scrub"], "y\n"
+    result = helpers.execute_command(
+        ["-v", "snapshot", "--name", "test", "--catalog", "test", "--no-scrub"],
+        True,
+        "y\n",
     )
 
     run_assertions(result)
@@ -126,8 +155,8 @@ def test_scrub():
     """
 
     helpers.make_sample_config()
-    result = helpers.initialize_test(
-        ["snapshot", "--name", "test", "--catalog", "test"]
+    result = helpers.execute_command(
+        ["-v", "snapshot", "--name", "test", "--catalog", "test"]
     )
 
     run_assertions(result)

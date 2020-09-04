@@ -20,7 +20,7 @@ class MultiArgOption(click.Option):
     Extends Click's `Option` class to allow for multiple arguments in a single
     option without specifying the option twice, as is otherwise required via
     Click's Multiple Options:
-    https://click.palletsprojects.com/en/7.x/options/#multiple-options)
+    https://click.palletsprojects.com/en/7.x/options/#multiple-options
 
     Class Implementation:
     https://stackoverflow.com/questions/48391777/nargs-equivalent-for-options-in-click
@@ -75,18 +75,24 @@ class CommandExecutor(object):
     def execute_commands(self, **kwargs):
         """
         Executes commands in a subprocess.
-        
-        Return Values
-        -------------
-        :return: A list of dictionaries containing information about each command's execution.
 
         Parameters
         ----------
-        :param handle_error: (Boolean :: True) If `False`, errors (non-zer return codes) are not handled by the function.
-        :param environment: (Dict :: {}) A dictionary of environment variables to pass to the subprocess.
-        :param commands: (List :: []) A list of commands that will be executed in the order provides.
+        - `handle_error: True`: If `False`, errors (non-zero return codes) are
+          not handled by the function
+        - `environment: {}`: A dictionary of environment variables to pass to
+          the subprocess
+        - `commands: []`: A list of commands that will be executed in the order
+          provides
+
+        Return Values
+        -------------
+        - A list of dicts with each dict containing the following keys:
+            - `command`: the original command passed to the function
+            - `output`: the combined output of stdout and stderr
+            - `return_code`: the return code of the command
         """
-        
+
         environment = kwargs.get("environment", {})
         environment = self.construct_environment(environment)
 
@@ -114,10 +120,10 @@ class CommandExecutor(object):
                 output_full += output
 
             if process.returncode != 0:
-                if not kwargs.get("handle_error", True):
+                if not kwargs.get("handle_error", False):
                     self.ctx.log_err(f"Failed to execute command:\n{command}")
                     sys.exit(1)
-            
+
             retval.append(
                 {
                     "command": command,
@@ -156,24 +162,25 @@ class CommandExecutor(object):
 
 
 class ComposeEnvironment(object):
-    def __init__(self, ctx, env_override=[]):
+    def __init__(self, ctx, env=[]):
         """
-        Creates a string and a dictionary of environment variables. Environment
-        variables are sourced from the user's `minipresto.cfg` file and the
-        `.env` file in the Minipresto library.
+        Creates a string and a dictionary of environment variables for use by
+        Docker Compose. Environment variables are sourced from the user's
+        `minipresto.cfg` file and the `.env` file in the Minipresto library.
+        These two resources are parsed and combined into a single environment
+        dictionary.
         """
 
         self.ctx = ctx
-        self.env_override = env_override
-        self.compose_env_string, self.compose_env_dict = self.get_compose_env(
-            env_override
-        )
+        self.env = env
+        self.compose_env_string, self.compose_env_dict = self.get_compose_env(env)
 
-    def get_compose_env(self, env_override=[]):
+    def get_compose_env(self, env=[]):
         """
-        Loads environment variables from root .env file and user configuration,
-        then merges the two sets of environment variables. Returns a string of
-        key-value pairs and a dict.
+        Merges environment variables from library's root `.env` file, the
+        Minipresto configuration file, and variables provided via the `--env`
+        flag. Values from `--env` will override variables from everything else.
+        Returns a shell-compatible string of key-value pairs and a dict.
         """
 
         env_file = os.path.join(self.ctx.minipresto_lib_dir, ".env")
@@ -181,73 +188,52 @@ class ComposeEnvironment(object):
             self.ctx.log_err(f"Environment file does not exist at path {env_file}")
             sys.exit(1)
 
-        config = self.ctx.get_config()
-        if config:
-            config_env = dict(config.items("DOCKER"))
-        else:
-            config_env = {}
-
-        core_env = {}
-        with open(env_file, "r") as env_file:
-            for env_variable in env_file:
-                if env_variable == "\n":
+        env_file_dict = {}
+        with open(env_file, "r") as f:
+            for env_variable in f:
+                env_variable = env_variable.strip()
+                if not env_variable:
                     continue
-                env_variable = env_variable.replace("\n", "")
-                if env_override:
-                    env_variable = self.handle_override(env_variable, env_override)
-                key, value = self.validate_env_variable(env_variable)
-                core_env[key] = value
-                self.ctx.vlog(f"Registered environment variable: {env_variable}")
+                env_variable = env_variable.split("=")
+                if len(env_variable) == 2:
+                    env_file_dict[env_variable[0].strip()] = env_variable[1].strip()
 
-        if not core_env:
+        if not env_file_dict:
             self.ctx.log_err(
                 f"Environment file not loaded properly from path:\n{env_file}"
             )
             sys.exit(1)
 
-        # Update core environment dict with config environment dict
-        config_env.update(core_env)
-        compose_env_dict = config_env
-        return self.get_env_string(compose_env_dict), compose_env_dict
-
-    def handle_override(self, env_variable="", env_override=[]):
-        """
-        Returns the overridden value if the key matches an existing key.
-        Otherwise, returns an unmodified key-value pair. 
-        """
-
-        match, override = self.check_override_match(env_variable, env_override)
-
-        if match:
-            self.ctx.vlog(f"Overrode environment variable {env_variable} to {override}")
-            return override
+        config = self.ctx.get_config(False)
+        if config:
+            config_dict = dict(config.items("DOCKER"))
         else:
-            return env_variable
+            config_dict = {}
 
-    def check_override_match(self, env_variable="", env_override=[]):
-        """Checks if the given environment variable key matches a key in env_override_list."""
+        # Merge environment file config with Minipresto config
+        config_dict.update(env_file_dict)
 
-        env_variable = env_variable.strip().split("=")
+        # Add env variables and override existing if necessary
+        if env:
+            for env_variable in env:
+                env_variable_list = env_variable.split("=")
+                if not len(env_variable_list) == 2:
+                    self.ctx.log_err(
+                        f"Invalid environment variable: {env_variable}. Should be a key-value pair"
+                    )
+                    sys.exit(1)
+                try:
+                    del config_dict[env_variable_list[0].strip()] # remove if present
+                except:
+                    pass
+                config_dict[env_variable_list[0].strip()] = env_variable_list[1].strip()
 
-        for override in env_override:
-            override_split = override.split("=")
-            if override_split[0].strip() == env_variable[0].strip():
-                return True, override
-        return False, None
+        environment_formatted = ""
+        for key, value in config_dict.items():
+            environment_formatted += f"{key}: {value}\n"
+        self.ctx.vlog(f"Registered environment variables:\n{environment_formatted}")
 
-    def validate_env_variable(self, env_variable=""):
-        """
-        Validates that an environment variable is a proper key/value pair.
-        If valid, returns the key/value pair as a tuple.
-        """
-
-        env_variable_list = env_variable.split("=")
-        if not len(env_variable_list) == 2:
-            self.ctx.log_err(
-                f"Invalid environment variable: {env_variable}. Should be a key-value pair"
-            )
-            sys.exit(1)
-        return env_variable_list[0], env_variable_list[1]
+        return self.get_env_string(config_dict), config_dict
 
     def get_env_string(self, compose_env_dict={}):
         """Returns a string of key-value pairs from a dict."""

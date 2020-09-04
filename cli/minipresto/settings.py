@@ -13,6 +13,7 @@ LIB = "lib"
 MODULE_ROOT = "modules"
 MODULE_CATALOG = "catalog"
 MODULE_SECURITY = "security"
+MODULE_RESOURCES = "resources"
 
 # Snapshots
 SNAPSHOT_ROOT_FILES = ["docker-compose.yml", ".env", "Dockerfile"]
@@ -42,10 +43,6 @@ S3_ENDPOINT=s3.region.amazonaws.com
 S3_ACCESS_KEY=
 S3_SECRET_KEY=
 AWS_REGION=
-
-LDAP_ORGANISATION=
-LDAP_DOMAIN=
-LDAP_ADMIN_PASSWORD=
 
 SNOWFLAKE_DIST_CONNECT_URL=
 SNOWFLAKE_DIST_CONNECT_USER=

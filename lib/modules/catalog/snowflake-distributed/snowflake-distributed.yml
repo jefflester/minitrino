@@ -12,5 +12,4 @@ services:
     labels:
       - "com.starburst.tests.module.snowflake-distributed=catalog-snowflake-distributed"
     volumes:
-      - "./modules/catalog/snowflake-distributed/presto/snowflake_distributed.properties:/usr/lib/presto/etc/catalog/snowflake_distributed.properties:ro"
-      - "${STARBURST_LIC_PATH}:/usr/lib/presto/etc/starburstdata.license:ro"
+      - "./modules/catalog/snowflake-distributed/resources/presto/snowflake_distributed.properties:/usr/lib/presto/etc/catalog/snowflake_distributed.properties"

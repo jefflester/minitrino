@@ -12,5 +12,4 @@ services:
     labels:
       - "com.starburst.tests.module.snowflake-jdbc=catalog-snowflake-jdbc"
     volumes:
-      - "./modules/catalog/snowflake-jdbc/presto/snowflake_jdbc.properties:/usr/lib/presto/etc/catalog/snowflake_jdbc.properties:ro"
-      - "${STARBURST_LIC_PATH}:/usr/lib/presto/etc/starburstdata.license:ro"
+      - "./modules/catalog/snowflake-jdbc/resources/presto/snowflake_jdbc.properties:/usr/lib/presto/etc/catalog/snowflake_jdbc.properties"

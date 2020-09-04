@@ -28,7 +28,7 @@ def test_daemon_off_all(*args):
     """
 
     for arg in args:
-        result = helpers.initialize_test(arg)
+        result = helpers.execute_command(arg)
         run_assertions(result)
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)

@@ -9,4 +9,4 @@ objectClass: top
 cn: alice
 sn: alice
 mail: alice@example.com
-userPassword: alicepass
+userPassword: prestoRocks15

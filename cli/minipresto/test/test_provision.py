@@ -195,8 +195,6 @@ def test_license_checks():
         ["-v", "provision", "--env", "STARBURST_LIC_PATH=/not/a/real/file.txt"]
     )
 
-    stripped_output = helpers.strip_ansi(result.output)
-
     assert result.exit_code == 0
     assert "Starburst license not found in" in result.output
     assert "Creating placeholder" in result.output

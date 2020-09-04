@@ -2,12 +2,12 @@
 
 function install() {
 
-    if pip --version | grep -q "python3.[6-9]"; then
+    if pip --version 2>&1 | grep -q "python3.[6-9]"; then
         PIP=pip
-    elif pip3 --version | grep -q "python3.[6-9]"; then
+    elif pip3 --version 2>&1 | grep -q "python3.[6-9]"; then
         PIP=pip3
     else
-        echo "minipresto requires Python 3.6+. Please install a compatible Python version."
+        echo "Minipresto requires Python 3.6+. Please install a compatible Python version and ensure Pip points to it."
         exit 1
     fi
 

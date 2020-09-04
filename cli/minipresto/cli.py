@@ -145,7 +145,7 @@ class Environment:
             repo_root = Path(os.path.abspath(__file__)).resolve().parents[2]
             return os.path.join(repo_root, "lib")
 
-    def get_config(self, no_exit=True):
+    def get_config(self, warn=True):
         """Reads minipresto config."""
 
         if os.path.isfile(self.config_file):
@@ -153,13 +153,11 @@ class Environment:
             config.optionxform = str  # Preserve case
             config.read(self.config_file)
             return config
-        else:
+        elif warn == True:
             self.log_warn(
-                f"No minipresto.cfg file found in {self.user_home_dir}. "
+                f"No minipresto.cfg file found in {self.config_file}. "
                 f"Run 'minipresto config' to reconfigure this file and directory."
             )
-            if not no_exit:
-                sys.exit(0)
         return {}
 
     def get_config_value(self, section, key):

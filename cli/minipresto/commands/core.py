@@ -204,7 +204,7 @@ class ComposeEnvironment(object):
             )
             sys.exit(1)
 
-        config = self.ctx.get_config()
+        config = self.ctx.get_config(False)
         if config:
             config_dict = dict(config.items("DOCKER"))
         else:

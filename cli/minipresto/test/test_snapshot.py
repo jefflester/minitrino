@@ -93,7 +93,7 @@ def test_command_snapshot_file():
 
     command_snapshot_file = os.path.join(helpers.MINIPRESTO_USER_SNAPSHOTS_DIR, "test", "provision-snapshot.sh")
     process = subprocess.Popen(
-        f"./{command_snapshot_file}",
+        command_snapshot_file,
         shell=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,

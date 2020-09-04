@@ -8,6 +8,7 @@ import sys
 import subprocess
 import click
 
+from datetime import datetime
 from click.testing import CliRunner
 from pathlib import Path
 from minipresto.cli import cli
@@ -43,13 +44,29 @@ def execute_command(command=[], print_output=True, command_input=""):
 def log_success(msg):
     """Logs test status message to stdout."""
 
-    click.echo(click.style("[SUCCESS] ", fg="green", bold=True) + msg + "\n")
+    click.echo(
+        click.style(
+            f"[{datetime.now().strftime('%d/%m/%Y %H:%M:%S')}] [SUCCESS] ",
+            fg="green",
+            bold=True,
+        )
+        + msg
+        + "\n"
+    )
 
 
 def log_status(msg):
     """Logs test status message to stdout."""
 
-    click.echo(click.style("[RUNNING] ", fg="yellow", bold=True) + msg + "\n")
+    click.echo(
+        click.style(
+            f"[{datetime.now().strftime('%d/%m/%Y %H:%M:%S')}] [RUNNING] ",
+            fg="yellow",
+            bold=True,
+        )
+        + msg
+        + "\n"
+    )
 
 
 def start_docker_daemon():

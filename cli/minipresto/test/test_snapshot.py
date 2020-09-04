@@ -91,7 +91,9 @@ def test_command_snapshot_file():
     reproduce the environment).
     """
 
-    command_snapshot_file = os.path.join(helpers.MINIPRESTO_USER_SNAPSHOTS_DIR, "test", "provision-snapshot.sh")
+    command_snapshot_file = os.path.join(
+        helpers.MINIPRESTO_USER_SNAPSHOTS_DIR, "test", "provision-snapshot.sh"
+    )
     process = subprocess.Popen(
         command_snapshot_file,
         shell=True,
@@ -133,7 +135,9 @@ def test_no_scrub():
 
     helpers.make_sample_config()
     result = helpers.execute_command(
-        ["-v", "snapshot", "--name", "test", "--catalog", "test", "--no-scrub"], "y\n"
+        ["-v", "snapshot", "--name", "test", "--catalog", "test", "--no-scrub"],
+        True,
+        "y\n",
     )
 
     run_assertions(result)

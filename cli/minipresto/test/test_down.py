@@ -71,6 +71,7 @@ def test_keep():
     helpers.execute_command(["-v", "provision", "--catalog", "test"])
     result = helpers.execute_command(["-v", "down", "--keep"])
 
+    assert "Stopped container" in result.output
     assert "Removed container" not in result.output
 
     docker_client = docker.from_env()

@@ -245,7 +245,8 @@ def handle_config_properties(ctx):
     ctx.vlog("Checking config.properties for duplicate properties")
     executor = CommandExecutor(ctx)
     output = executor.execute_commands(
-        commands=["docker exec -i presto cat /usr/lib/presto/etc/config.properties"]
+        commands=["docker exec -i presto cat /usr/lib/presto/etc/config.properties"],
+        suppress_output=True
     )
 
     config_props = output[0].get("output", False)

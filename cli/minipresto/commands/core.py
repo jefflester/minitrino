@@ -84,6 +84,8 @@ class CommandExecutor(object):
           the subprocess
         - `commands: []`: A list of commands that will be executed in the order
           provides
+        - `suppress_output: False`: If `True`, output from the executed command
+          will be directed to DEVNULL.
 
         Return Values
         -------------
@@ -109,16 +111,15 @@ class CommandExecutor(object):
                 universal_newlines=True,
             )
 
-            output_full = ""
-            while True:
-                output = process.stdout.readline()
-                if output == "" and process.poll() is not None:
-                    break
-                if output:
-                    output = self.strip_ansi(output)
-                    self.ctx.vlog(output.strip())
-                output_full += output
-
+            if not kwargs.get("suppress_output", False):
+                while True:
+                    output = process.stdout.readline()
+                    if output == "" and process.poll() is not None:
+                        break
+                    if output:
+                        output = self.strip_ansi(output)
+                        self.ctx.vlog(output.strip())
+            output, _ = process.communicate()
             if process.returncode != 0:
                 if not kwargs.get("handle_error", False):
                     self.ctx.log_err(f"Failed to execute command:\n{command}")
@@ -127,7 +128,7 @@ class CommandExecutor(object):
             retval.append(
                 {
                     "command": command,
-                    "output": output_full,
+                    "output": str(output),
                     "return_code": process.returncode,
                 }
             )

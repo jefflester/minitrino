@@ -89,6 +89,7 @@ minipresto -v remove --volumes --label com.starburst.tests.module.postgres=catal
 You can shut down an active environment with the `down` command.
 
 - `down`: Stops and removes all running Minipresto containers (exactly what `docker-compose down` does).
+  - `--keep`: Prevents the removal from containers; with this flag, containers will only be stopped, preserving any unnamed container volumes. Defaults to `False`.
 
 Sample `down` command:
 

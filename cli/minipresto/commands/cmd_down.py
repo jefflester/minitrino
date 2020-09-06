@@ -15,10 +15,13 @@ Brings down all running minipresto containers. This command follows the
 behavior of `docker-compose down`, where containers are both stopped and
 removed.
 """)
+@click.option("-k", "--keep", is_flag=True, default=False, help="""
+Does not remove any containers; instead, they will only be stopped.
+""")
 
 
 @pass_environment
-def cli(ctx):
+def cli(ctx, keep):
     """
     Down command for minipresto. Exits with a 0 status code if there are no
     running minipresto containers.
@@ -36,7 +39,9 @@ def cli(ctx):
 
     for container in containers:
         container.stop()
-        container.remove()  # Default behavior of Compose is to remove containers
-        ctx.vlog(f"Stopped/removed container: {container.short_id} | {container.name}")
+        ctx.vlog(f"Stopped container: {container.short_id} | {container.name}")
+        if not keep:
+            container.remove()  # Default behavior of Compose is to remove containers
+            ctx.vlog(f"Removed container: {container.short_id} | {container.name}")
 
     ctx.log(f"Brought down all running minipresto containers")

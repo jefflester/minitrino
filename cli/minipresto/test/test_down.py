@@ -49,7 +49,8 @@ def test_running_containers():
     assert result.exit_code == 0
     assert all(
         (
-            "Stopped/removed container" in result.output,
+            "Stopped container" in result.output,
+            "Removed container" in result.output,
             "test" in result.output,
             "presto" in result.output,
         )

@@ -5,9 +5,12 @@ import docker
 import subprocess
 import minipresto.test.helpers as helpers
 
+from minipresto.settings import RESOURCE_LABEL
 from inspect import currentframe
 from types import FrameType
 from typing import cast
+
+docker_client = docker.from_env()
 
 
 def main():
@@ -26,7 +29,8 @@ def main():
 
 def test_images():
     """
-    Verifies that images with the minipresto label applied to them are removed.
+    Verifies that images with the standard minipresto label applied to them are
+    removed.
     """
 
     helpers.execute_command(["provision", "--catalog", "test"])
@@ -36,11 +40,13 @@ def test_images():
     assert result.exit_code == 0
     assert "Image removed:" in result.output
 
-    docker_client = docker.from_env()
-    images = docker_client.images.list(
-        filters={"label": "com.starburst.tests.module.test=catalog-test"}
+    assert_docker_resource_count(
+        {
+            "resource_type": docker_client.images,
+            "label": RESOURCE_LABEL,
+            "expected_count": 0,
+        }
     )
-    assert len(images) == 0
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()
@@ -48,7 +54,8 @@ def test_images():
 
 def test_volumes():
     """
-    Verifies that volumes with the minipresto label applied to them are removed.
+    Verifies that volumes with the standard minipresto label applied to them are
+    removed.
     """
 
     helpers.execute_command(["provision", "--catalog", "test"])
@@ -58,11 +65,13 @@ def test_volumes():
     assert result.exit_code == 0
     assert "Volume removed:" in result.output
 
-    docker_client = docker.from_env()
-    volumes = docker_client.volumes.list(
-        filters={"label": "com.starburst.tests.module.test=catalog-test"}
+    assert_docker_resource_count(
+        {
+            "resource_type": docker_client.volumes,
+            "label": RESOURCE_LABEL,
+            "expected_count": 0,
+        }
     )
-    assert len(volumes) == 0
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()
@@ -70,7 +79,7 @@ def test_volumes():
 
 def test_label():
     """
-    Verifies that images with the minipresto label applied to them are removed.
+    Verifies that only images with the given label are removed.
     """
 
     helpers.execute_command(["provision", "--catalog", "test"])
@@ -88,11 +97,18 @@ def test_label():
     assert result.exit_code == 0
     assert "Image removed:" in result.output
 
-    docker_client = docker.from_env()
-    images = docker_client.images.list(
-        filters={"label": "com.starburst.tests.module.test=catalog-test"}
+    assert_docker_resource_count(
+        {
+            "resource_type": docker_client.images,
+            "label": "com.starburst.tests.module.test=catalog-test",
+            "expected_count": 0,
+        },
+        {
+            "resource_type": docker_client.images,
+            "label": "com.starburst.tests.module=presto",
+            "expected_count": 1,
+        },
     )
-    assert len(images) == 0
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()
@@ -100,7 +116,7 @@ def test_label():
 
 def test_multiple_labels():
     """
-    Verifies that images with the minipresto label applied to them are removed.
+    Verifies that images with any of the given labels are removed.
     """
 
     helpers.execute_command(["provision", "--catalog", "test"])
@@ -112,18 +128,25 @@ def test_multiple_labels():
             "--volumes",
             "--label",
             "com.starburst.tests.module.test=catalog-test",
-            "com.starburst.tests=minipresto",
+            RESOURCE_LABEL,
         ],
     )
 
     assert result.exit_code == 0
     assert "Volume removed:" in result.output
 
-    docker_client = docker.from_env()
-    volumes = docker_client.volumes.list(
-        filters={"label": "com.starburst.tests.module.test=catalog-test"}
+    assert_docker_resource_count(
+        {
+            "resource_type": docker_client.volumes,
+            "label": RESOURCE_LABEL,
+            "expected_count": 0,
+        },
+        {
+            "resource_type": docker_client.volumes,
+            "label": "com.starburst.tests.module.test=catalog-test",
+            "expected_count": 0,
+        },
     )
-    assert len(volumes) == 0
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()
@@ -143,6 +166,14 @@ def test_invalid_label():
     assert result.exit_code == 0
     assert "Image removed:" not in result.output
 
+    assert_docker_resource_count(
+        {
+            "resource_type": docker_client.images,
+            "label": "com.starburst.tests.module.test=catalog-test",
+            "expected_count": 1,
+        }
+    )
+
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()
 
@@ -158,6 +189,19 @@ def test_all():
 
     assert result.exit_code == 0
     assert all(("Volume removed:" in result.output, "Image removed:" in result.output))
+
+    assert_docker_resource_count(
+        {
+            "resource_type": docker_client.images,
+            "label": RESOURCE_LABEL,
+            "expected_count": 0,
+        },
+        {
+            "resource_type": docker_client.volumes,
+            "label": RESOURCE_LABEL,
+            "expected_count": 0,
+        },
+    )
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()
@@ -178,6 +222,19 @@ def test_remove_dependent_resources_running():
             "Cannot remove volume:" in result.output,
             "Cannot remove image:" in result.output,
         )
+    )
+
+    assert_docker_resource_count(
+        {
+            "resource_type": docker_client.images,
+            "label": "com.starburst.tests.module.test=catalog-test",
+            "expected_count": 1,
+        },
+        {
+            "resource_type": docker_client.volumes,
+            "label": "com.starburst.tests.module.test=catalog-test",
+            "expected_count": 1,
+        },
     )
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
@@ -204,7 +261,25 @@ def test_remove_dependent_resources_stopped():
     )
 
     assert result.exit_code == 0
-    assert "Cannot remove volume:" in result.output
+    assert all(
+        (
+            "Cannot remove volume:" in result.output,
+            "Cannot remove image:" in result.output,
+        )
+    )
+
+    assert_docker_resource_count(
+        {
+            "resource_type": docker_client.images,
+            "label": "com.starburst.tests.module.test=catalog-test",
+            "expected_count": 1,
+        },
+        {
+            "resource_type": docker_client.volumes,
+            "label": "com.starburst.tests.module.test=catalog-test",
+            "expected_count": 1,
+        },
+    )
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()
@@ -237,8 +312,40 @@ def test_remove_dependent_resources_force():
     assert result.exit_code == 0
     assert "Image removed:" in result.output
 
+    assert_docker_resource_count(
+        {
+            "resource_type": docker_client.images,
+            "label": "com.starburst.tests.module.test=catalog-test",
+            "expected_count": 0,
+        },
+        {
+            "resource_type": docker_client.volumes,
+            "label": "com.starburst.tests.module.test=catalog-test",
+            "expected_count": 1,
+        },
+    )
+
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()
+
+
+def assert_docker_resource_count(*args):
+    """
+    Asserts the accuracy of the count returned from a Docker resource lookup.
+    Accepts variable number of dictionaries and will perform processing for each
+    dictionary.
+
+    - `resource_type`: Resource type (container, volume, image)
+    - `label`: Label to filter by
+    - `expected_count`: The expected length of the returned list
+    """
+
+    for arg in args:
+        resource_type = arg.get("resource_type", None)
+        label = arg.get("label", None)
+        expected_count = arg.get("expected_count", None)
+        resource_list = resource_type.list(filters={"label": label})
+        assert len(resource_list) == expected_count
 
 
 def cleanup():

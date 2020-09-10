@@ -39,7 +39,7 @@ def cli(ctx, images, volumes, label, force):
     """Remove command for minipresto."""
 
     docker_client = check_daemon()
-    label = convert_MultiArgOption_to_list(label)
+    label, = convert_MultiArgOption_to_list(label)
 
     if images:
         remove_items(docker_client, {"item_type": IMAGE}, force, label)

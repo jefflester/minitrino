@@ -40,7 +40,8 @@ def cli(ctx, keep):
     for container in containers:
         container.stop()
         ctx.vlog(f"Stopped container: {container.short_id} | {container.name}")
-        if not keep:
+    if not keep:
+        for container in containers:
             container.remove()  # Default behavior of Compose is to remove containers
             ctx.vlog(f"Removed container: {container.short_id} | {container.name}")
 

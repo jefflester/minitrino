@@ -47,7 +47,7 @@ You can provision an environment via the `provision` command.
   - `--docker-native`: Appends the constructed Compose command with native Docker Compose CLI options. Can be none, one, or many. To use this, simply pass in additional Docker Compose options, i.e. `minipresto provision --docker-native '--remove-orphans --force-recreate'` or `minipresto provision -d --build`. 
     - When passing multiple parameters to this option, the list needs to be space-delimited and surrounded with double or single quotes.
 - If no options are passed in, the CLI will provision a standalone Presto container.
-- The command cannot currently be used to append additional modules to an active environment. To modify an environment, first shut it down, then reprovision with the needed modules.
+- The command cannot currently be used to append additional modules to an active environment. To modify an environment, first shut it down, then re-provision with the needed modules.
 
 Sample `provision` commands:
 
@@ -89,6 +89,7 @@ minipresto -v remove --volumes --label com.starburst.tests.module.postgres=catal
 You can shut down an active environment with the `down` command.
 
 - `down`: Stops and removes all running Minipresto containers (exactly what `docker-compose down` does).
+  - `--keep`: Prevents the removal from containers; with this flag, containers will only be stopped, preserving any unnamed container volumes. Defaults to `False`.
 
 Sample `down` command:
 
@@ -423,6 +424,10 @@ If you need to build a custom image, you can do so and structure the Compose fil
 
 ### Bootstrap Scripts
 Minipresto supports container bootstrap scripts. These scripts **do not replace** the entrypoint (or default command) for a given container. The script is copied from the Minipresto library to the container, executed, and then removed from the container. Containers are restarted after each bootstrap script execution, **so the bootstrap scripts themselves should not restart the container**.
+
+If a bootstrap script has executed in a container and the unnamed volume associated with the container still exists, Minipresto will not re-execute the bootstrap script unless the contents of the script have changed. The is useful after running `minipresto down --keep` (which does not remove unnamed volumes associated with the containers), so that the subsequent provisioning command will not re-execute the same bootstrap script(s).
+
+If a bootstrap script is updated, it is recommended to destroy the associated container(s) via `minipresto down` and then to re-provision.
 
 To add a bootstrap script, simply add a `resources/bootstrap/` directory in any given module, create a shell script, and then reference the script name in the Compose YAML file:
 

@@ -130,8 +130,10 @@ def test_invalid_env():
 def test_build_bootstrap_config_props():
     """
     Verifies (1) we can successfully build from a given module's Docker build
-    context, (2) checks for successful bootstrap execution, and (3) checks for
-    successful adding of config properties to Presto config.properties file.
+    context, (2) checks for successful bootstrap execution, (3) checks for
+    successful adding of config properties to Presto config.properties file, (4)
+    verifies that a bootstrap script that has already executed will not execute
+    again on container startup.
     """
 
     result = helpers.execute_command(
@@ -174,6 +176,18 @@ def test_build_bootstrap_config_props():
             "hello world" in str(bootstrap_check_output),
         )
     )
+
+    # Ensure bootstrap does not execute again when container boots back up
+    helpers.execute_command(
+        ["-v", "down", "--keep"]
+    )
+    result = helpers.execute_command(
+        ["-v", "provision", "--catalog", "test", "-d", "--build"]
+    )
+
+    assert result.exit_code == 0
+    assert "Bootstrap already executed for container test" in result.output
+    assert "Successfully executed bootstrap script for test" not in result.output
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()

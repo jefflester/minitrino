@@ -64,7 +64,7 @@ class MultiArgOption(click.Option):
 
 
 class CommandExecutor(object):
-    def __init__(self, ctx):
+    def __init__(self, ctx=None):
         """
         Executes commands in the host shell with customized handling of
         stdout/stderr output.
@@ -83,7 +83,14 @@ class CommandExecutor(object):
         - `environment: {}`: A dictionary of environment variables to pass to
           the subprocess
         - `commands: []`: A list of commands that will be executed in the order
-          provides
+          provided
+        - `suppress_output: False`: If `True`, output from the executed command
+          will be suppressed.
+        - `container: None`: A Docker container object. If passed in, the
+          command will be executed through the Docker SDK instead of the
+          subprocess module.
+        - `docker_user: root`: The user to execute the command as in the Docker
+          container.
 
         Return Values
         -------------
@@ -93,51 +100,105 @@ class CommandExecutor(object):
             - `return_code`: the return code of the command
         """
 
-        environment = kwargs.get("environment", {})
-        environment = self.construct_environment(environment)
+        kwargs["environment"] = self.construct_environment(
+            kwargs.get("environment", {})
+        )
+        cmd_details = []
 
-        retval = []
-        for command in kwargs.get("commands", []):
-            self.ctx.vlog(f"Preparing to execute command:\n{command}")
+        if kwargs.get("container", None):
+            for command in kwargs.get("commands", []):
+                cmd_details = self._execute_in_container(command, **kwargs)
+        else:
+            for command in kwargs.get("commands", []):
+                cmd_details = self._execute_in_shell(command, **kwargs)
+        return cmd_details
 
-            process = subprocess.Popen(
-                command,
-                shell=True,
-                env=environment,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                universal_newlines=True,
-            )
+    def _execute_in_shell(self, command="", **kwargs):
+        """
+        Executes a command in the shell.
+        """
 
-            output_full = ""
+        self.ctx.vlog(f"Preparing to execute command in shell:\n{command}")
+
+        cmd_details = []
+        process = subprocess.Popen(
+            command,
+            shell=True,
+            env=kwargs.get("environment", {}),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True,
+        )
+
+        if not kwargs.get("suppress_output", False):
             while True:
                 output = process.stdout.readline()
                 if output == "" and process.poll() is not None:
                     break
                 if output:
-                    output = self.strip_ansi(output)
+                    output = self._strip_ansi(str(output))
                     self.ctx.vlog(output.strip())
-                output_full += output
+        output, _ = process.communicate()
+        if process.returncode != 0 and kwargs.get("handle_error", True):
+            self.ctx.log_err(f"Failed to execute shell command:\n{command}")
+            sys.exit(1)
 
-            if process.returncode != 0:
-                if not kwargs.get("handle_error", False):
-                    self.ctx.log_err(f"Failed to execute command:\n{command}")
-                    sys.exit(1)
+        cmd_details.append(
+            {
+                "command": command,
+                "output": self._strip_ansi(str(output)),
+                "return_code": process.returncode,
+            }
+        )
+        return cmd_details
 
-            retval.append(
-                {
-                    "command": command,
-                    "output": output_full,
-                    "return_code": process.returncode,
-                }
+    def _execute_in_container(self, command="", **kwargs):
+        """
+        Executes a command inside of a container through the Docker SDK (similar
+        to docker exec)
+        """
+
+        container = kwargs.get("container", None)
+        self.ctx.vlog(
+            f"Preparing to execute command in container '{container.name}':\n{command}"
+        )
+
+        cmd_details = []
+        docker_client = docker.from_env()
+        api_client = docker.APIClient(version="auto")
+
+        exec_handler = api_client.exec_create(
+            container.name,
+            cmd=command,
+            privileged=True,
+            user=kwargs.get("docker_user", "root"),
+        )
+
+        output = api_client.exec_start(exec_handler, stream=True)
+        output_string = ""
+
+        for line in output:
+            line = self._strip_ansi(line.decode().strip())
+            output_string += line
+            if not kwargs.get("suppress_output", False):
+                self.ctx.vlog(line)
+        return_code = api_client.exec_inspect(exec_handler["Id"]).get("ExitCode")
+        if return_code != 0 and kwargs.get("handle_error", True):
+            self.ctx.log_err(
+                f"Failed to execute command in container '{container.name}':\n{command}"
             )
-        return retval
+            sys.exit(1)
+
+        cmd_details.append(
+            {"command": command, "output": output_string, "return_code": return_code}
+        )
+        return cmd_details
 
     def construct_environment(self, environment={}):
         """Constructs dictionary of environment variables."""
 
         # Remove conflicting keys from host environment; user config and Compose
-        # keys take precendance
+        # config take precendance
         host_environment = os.environ.copy()
         if environment:
             delete = []
@@ -152,7 +213,7 @@ class CommandExecutor(object):
         environment.update(host_environment)
         return environment
 
-    def strip_ansi(self, value=""):
+    def _strip_ansi(self, value=""):
         """Strips ANSI escape sequences from strings."""
 
         # Strip ANSI codes before Click so that our logging helpers
@@ -162,7 +223,7 @@ class CommandExecutor(object):
 
 
 class ComposeEnvironment(object):
-    def __init__(self, ctx, env=[]):
+    def __init__(self, ctx=None, env=[]):
         """
         Creates a string and a dictionary of environment variables for use by
         Docker Compose. Environment variables are sourced from the user's
@@ -223,7 +284,7 @@ class ComposeEnvironment(object):
                     )
                     sys.exit(1)
                 try:
-                    del config_dict[env_variable_list[0].strip()] # remove if present
+                    del config_dict[env_variable_list[0].strip()]  # remove if present
                 except:
                     pass
                 config_dict[env_variable_list[0].strip()] = env_variable_list[1].strip()
@@ -268,7 +329,7 @@ class Modules(object):
 
         return containers, module_label_vals, catalog, security
 
-    def get_running_containers(self, docker_client):
+    def get_running_containers(self, docker_client=None):
         """Gets all running minipresto containers."""
 
         containers = docker_client.containers.list(filters={"label": RESOURCE_LABEL})
@@ -332,7 +393,7 @@ def check_daemon(ctx):
 
 
 @pass_environment
-def validate_module_dirs(ctx, key, modules=[]):
+def validate_module_dirs(ctx, key={}, modules=[]):
     """
     Validates that the directory and Compose .yml exist for each provided
     module. If they all exist, a list of module directories and YAML file paths
@@ -378,7 +439,7 @@ def convert_MultiArgOption_to_list(*args):
     return tuple(retval)
 
 
-def validate_yes_response(response):
+def validate_yes_response(response=""):
     """Validates 'yes' user input."""
 
     response = response.replace(" ", "")

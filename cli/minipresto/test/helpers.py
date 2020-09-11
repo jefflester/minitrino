@@ -119,7 +119,7 @@ def make_sample_config():
         f"[CLI]\n"
         f"LIB_PATH=\n"
         f"\n"
-        f"[DOCKER]\n"
+        f"[MODULES]\n"
         f"S3_ACCESS_KEY=example\n"
         f'S3_SECRET_KEY=example\n"',
         shell=True,

@@ -36,7 +36,7 @@ CONFIG_TEMPLATE = """
 [CLI]
 LIB_PATH=
 
-[DOCKER]
+[MODULES]
 STARBURST_LIC_PATH=
 
 S3_ENDPOINT=s3.region.amazonaws.com

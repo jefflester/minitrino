@@ -267,7 +267,7 @@ class ComposeEnvironment(object):
 
         config = self.ctx.get_config(False)
         if config:
-            config_dict = dict(config.items("DOCKER"))
+            config_dict = dict(config.items("MODULES"))
         else:
             config_dict = {}
 

@@ -163,9 +163,14 @@ The template `minipresto.cfg` file includes all of the keys for each available v
 ### Config Environment Variables
 Below is a list of all valid environment variables. The majority of these are passed to properties files and registered via Presto Secrets.
 
-- LIB_PATH
-- STARBURST_LIC_PATH
-  - This is required if using licensed Starburst features. It can point to any valid license on your filesystem.
+CLI environment variables:
+- LIB_PATH: the filesystem path of the Minipresto library.
+
+Docker environment variables:
+- DOCKER_HOST: the host of the Docker daemon. Required if Docker is located anywhere other than localhost.
+
+Module environment variables:
+- STARBURST_LIC_PATH: required if using licensed Starburst features. It can point to any valid license on your filesystem.
 - S3_ENDPOINT
 - S3_ACCESS_KEY
 - S3_SECRET_KEY

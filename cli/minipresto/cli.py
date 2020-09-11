@@ -4,6 +4,7 @@
 import os
 import sys
 import click
+import docker
 
 from pathlib import Path
 from configparser import ConfigParser
@@ -46,6 +47,9 @@ class Environment:
         # Points to the directory containing minipresto library. Library
         # consists of modules, snapshots, and module parent files
         self.minipresto_lib_dir = self.get_minipresto_lib_dir()
+
+        # Docker clients
+        self.docker_client, self.api_client = self.get_docker_clients()
 
     def log(self, *args):
         """Logs a message."""
@@ -174,6 +178,25 @@ class Environment:
                     f"Missing configuration section: [{section}] and/or key: [{key}]"
                 )
                 return None
+
+    def get_docker_clients(self):
+        """
+        Gets DockerClient and APIClient objects. References the DOCKER_HOST
+        variable in `minipresto.cfg` and uses for clients if present.
+
+        Return Values
+        -------------
+        A tuple of DockerClient and APIClient objects, respectiveley.
+        """
+
+        config = self.get_config(False)
+        if config:
+            config_dict = dict(config.items("DOCKER"))
+        
+        docker_host = config.get("DOCKER_HOST", "")
+        docker_client = docker.DockerClient(base_url=docker_host, version="auto")
+        api_client = docker.APIClient(base_url=docker_host, version="auto")
+        return docker_client, api_client
 
 
 pass_environment = click.make_pass_decorator(Environment, ensure=True)

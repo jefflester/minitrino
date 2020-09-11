@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+MAX_ATTEMPTS=60
+for (( ATTEMPTS=1; ATTEMPTS<=MAX_ATTEMPTS; ATTEMPTS++ ))
+do
+   mysql -pprestoRocks15 -e "GRANT ALL PRIVILEGES ON *.* TO 'admin';"
+   if [ $? == 0 ]; then
+      break
+   fi
+   sleep 1
+done

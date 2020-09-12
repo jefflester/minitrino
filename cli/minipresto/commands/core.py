@@ -164,17 +164,14 @@ class CommandExecutor(object):
         )
 
         cmd_details = []
-        docker_client = docker.from_env()
-        api_client = docker.APIClient(version="auto")
-
-        exec_handler = api_client.exec_create(
+        exec_handler = self.ctx.api_client.exec_create(
             container.name,
             cmd=command,
             privileged=True,
             user=kwargs.get("docker_user", "root"),
         )
 
-        output = api_client.exec_start(exec_handler, stream=True)
+        output = self.ctx.api_client.exec_start(exec_handler, stream=True)
         output_string = ""
 
         for line in output:
@@ -182,7 +179,9 @@ class CommandExecutor(object):
             output_string += line
             if not kwargs.get("suppress_output", False):
                 self.ctx.vlog(line)
-        return_code = api_client.exec_inspect(exec_handler["Id"]).get("ExitCode")
+        return_code = self.ctx.api_client.exec_inspect(exec_handler["Id"]).get(
+            "ExitCode"
+        )
         if return_code != 0 and kwargs.get("handle_error", True):
             self.ctx.log_err(
                 f"Failed to execute command in container '{container.name}':\n{command}"
@@ -266,9 +265,13 @@ class ComposeEnvironment(object):
             sys.exit(1)
 
         config = self.ctx.get_config(False)
-        if config:
+        try:
             config_dict = dict(config.items("MODULES"))
-        else:
+        except:
+            self.ctx.log_warn(
+                f"No MODULES section found in {self.ctx.config_file}. "
+                f"To pass environment variables to your containers, you will need to set this"
+            )
             config_dict = {}
 
         # Merge environment file config with Minipresto config
@@ -322,17 +325,19 @@ class Modules(object):
     def get_running_modules(self):
         """Returns list of running modules."""
 
-        docker_client = check_daemon()
-        containers = self.get_running_containers(docker_client)
+        check_daemon()
+        containers = self.get_running_containers()
         module_label_vals = self.get_module_label_values(containers)
         catalog, security = self.parse_module_label_values(module_label_vals)
 
         return containers, module_label_vals, catalog, security
 
-    def get_running_containers(self, docker_client=None):
+    def get_running_containers(self):
         """Gets all running minipresto containers."""
 
-        containers = docker_client.containers.list(filters={"label": RESOURCE_LABEL})
+        containers = self.ctx.docker_client.containers.list(
+            filters={"label": RESOURCE_LABEL}
+        )
         if not containers:
             self.ctx.log_err(
                 f"No running minipresto containers. To create a snapshot of an inactive environment, "
@@ -382,9 +387,7 @@ def check_daemon(ctx):
     """Checks if the Docker daemon is running."""
 
     try:
-        docker_client = docker.from_env()
-        docker_client.ping()
-        return docker_client
+        ctx.docker_client.ping()
     except:
         ctx.log_err(
             f"Error when pinging the Docker server. Is the Docker daemon running?"

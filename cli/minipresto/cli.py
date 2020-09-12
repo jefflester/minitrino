@@ -33,6 +33,8 @@ class Environment:
         essentially a temporary directory, as 'permanent' snapshot tarballs are
         written to the library).
         - `minipresto_lib_dir`: The location of the minipresto library directory.
+        - `docker_client`: Docker client of object type `docker.DockerClient`
+        - `api_client`: API Docker client of object type `docker.APIClient`
         """
 
         # Verbose logging
@@ -56,7 +58,8 @@ class Environment:
 
         for arg in args:
             arg = self.transform_log_msg(arg)
-            if not arg: return
+            if not arg:
+                return
             click.echo(
                 click.style(
                     f"[i]  {click.style(arg, fg='cyan', bold=False)}",
@@ -70,7 +73,8 @@ class Environment:
 
         for arg in args:
             arg = self.transform_log_msg(arg)
-            if not arg: return
+            if not arg:
+                return
             click.echo(
                 click.style(
                     f"[w]  {click.style(arg, fg='yellow', bold=False)}",
@@ -84,7 +88,8 @@ class Environment:
 
         for arg in args:
             arg = self.transform_log_msg(arg)
-            if not arg: return
+            if not arg:
+                return
             click.echo(
                 click.style(f"[e]  {click.style(arg, fg='red')}", fg="red", bold=True,)
             )
@@ -164,7 +169,7 @@ class Environment:
             )
         return {}
 
-    def get_config_value(self, section, key):
+    def get_config_value(self, section, key, warn=True, default=None):
         """Returns a value from the config if present."""
 
         config = self.get_config()
@@ -174,10 +179,11 @@ class Environment:
                 value = config.get(key.upper())
                 return value
             except:
-                self.log_warn(
-                    f"Missing configuration section: [{section}] and/or key: [{key}]"
-                )
-                return None
+                if warn:
+                    self.log_warn(
+                        f"Missing configuration section: [{section}] and/or key: [{key}]"
+                    )
+                return default
 
     def get_docker_clients(self):
         """
@@ -189,13 +195,9 @@ class Environment:
         A tuple of DockerClient and APIClient objects, respectiveley.
         """
 
-        config = self.get_config(False)
-        if config:
-            config_dict = dict(config.items("DOCKER"))
-        
-        docker_host = config.get("DOCKER_HOST", "")
-        docker_client = docker.DockerClient(base_url=docker_host, version="auto")
-        api_client = docker.APIClient(base_url=docker_host, version="auto")
+        docker_host = self.get_config_value("DOCKER", "DOCKER_HOST", False, "")
+        docker_client = docker.DockerClient(base_url=docker_host)
+        api_client = docker.APIClient(base_url=docker_host)
         return docker_client, api_client
 
 

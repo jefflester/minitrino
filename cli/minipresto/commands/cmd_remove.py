@@ -38,13 +38,13 @@ restrictions apply.
 def cli(ctx, images, volumes, label, force):
     """Remove command for minipresto."""
 
-    docker_client = check_daemon()
-    label, = convert_MultiArgOption_to_list(label)
+    check_daemon()
+    (label,) = convert_MultiArgOption_to_list(label)
 
     if images:
-        remove_items(docker_client, {"item_type": IMAGE}, force, label)
+        remove_items({"item_type": IMAGE}, force, label)
     if volumes:
-        remove_items(docker_client, {"item_type": VOLUME}, force, label)
+        remove_items({"item_type": VOLUME}, force, label)
 
     if all((not images, not volumes)):
         response = click.prompt(
@@ -54,8 +54,8 @@ def cli(ctx, images, volumes, label, force):
             type=str,
         )
         if validate_yes_response(response):
-            remove_items(docker_client, {"item_type": IMAGE}, force, label)
-            remove_items(docker_client, {"item_type": VOLUME}, force, label)
+            remove_items({"item_type": IMAGE}, force, label)
+            remove_items({"item_type": VOLUME}, force, label)
         else:
             ctx.log(f"Opted to skip removal")
             sys.exit(0)
@@ -64,7 +64,7 @@ def cli(ctx, images, volumes, label, force):
 
 
 @pass_environment
-def remove_items(ctx, docker_client, key, force, labels=[]):
+def remove_items(ctx, key, force, labels=[]):
     """
     Removes Docker items. If no labels are passed in, all minipresto
     resources are removed. If label(s) are passed in, the removal is limited to
@@ -78,19 +78,19 @@ def remove_items(ctx, docker_client, key, force, labels=[]):
 
     for label in labels:
         if item_type == IMAGE:
-            images = docker_client.images.list(filters={"label": label})
+            images = ctx.docker_client.images.list(filters={"label": label})
             for image in images:
                 try:
                     if force:
                         ctx.vlog(f"Forcing removal of minipresto image(s)")
-                        docker_client.images.remove(
+                        ctx.docker_client.images.remove(
                             image.short_id, force=True, noprune=False
                         )
                         ctx.vlog(
                             f"{item_type.title()} removed: {image.short_id} {try_get_image_tag(image)}"
                         )
                     else:
-                        docker_client.images.remove(image.short_id)
+                        ctx.docker_client.images.remove(image.short_id)
                         ctx.vlog(
                             f"{item_type.title()} removed: {image.short_id} {try_get_image_tag(image)}"
                         )
@@ -100,7 +100,7 @@ def remove_items(ctx, docker_client, key, force, labels=[]):
                         f"Error from Docker: {error.explanation}"
                     )
         elif item_type == VOLUME:
-            volumes = docker_client.volumes.list(filters={"label": label})
+            volumes = ctx.docker_client.volumes.list(filters={"label": label})
             for volume in volumes:
                 try:
                     if force:

@@ -27,9 +27,9 @@ def cli(ctx, keep):
     running minipresto containers.
     """
 
-    docker_client = check_daemon()
+    check_daemon()
 
-    containers = docker_client.containers.list(
+    containers = ctx.docker_client.containers.list(
         filters={"label": RESOURCE_LABEL}, all=True
     )
 

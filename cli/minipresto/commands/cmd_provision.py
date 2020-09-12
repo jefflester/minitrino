@@ -60,7 +60,7 @@ def cli(ctx, catalog="", security="", env="", docker_native=""):
     unsuccessful, the function exits with a non-zero status code.
     """
 
-    docker_client = check_daemon()
+    check_daemon()
 
     catalog, security, env = convert_MultiArgOption_to_list(catalog, security, env)
     catalog_yaml_files, security_yaml_files = validate(catalog, security)
@@ -85,12 +85,10 @@ def cli(ctx, catalog="", security="", env="", docker_native=""):
         environment=compose_environment.compose_env_dict, commands=[compose_command]
     )
 
-    initialize_containers(docker_client)
-    containers_to_restart = execute_bootstraps(
-        catalog_yaml_files, security_yaml_files, docker_client
-    )
-    handle_config_properties(docker_client)
-    restart_containers(docker_client, containers_to_restart)
+    initialize_containers()
+    containers_to_restart = execute_bootstraps(catalog_yaml_files, security_yaml_files)
+    handle_config_properties()
+    restart_containers(containers_to_restart)
     ctx.log(f"Environment provisioning complete")
 
 
@@ -172,9 +170,7 @@ def validate(catalog=[], security=[]):
 
 
 @pass_environment
-def execute_bootstraps(
-    ctx, catalog_yaml_files=[], security_yaml_files=[], docker_client=None
-):
+def execute_bootstraps(ctx, catalog_yaml_files=[], security_yaml_files=[]):
     """
     Executes bootstrap script for each container that has one––bootstrap scripts
     will only execute once the container is fully running to prevent conflicts
@@ -210,22 +206,22 @@ def execute_bootstraps(
             container_name = service_dict[1].get("container_name")
             if container_name is None:
                 container_name = service_dict[0]
-            execute_container_bootstrap(
-                bootstrap, container_name, service[1], docker_client
-            )
-            containers.append(container_name)
+            if execute_container_bootstrap(bootstrap, container_name, service[1]):
+                containers.append(container_name)
     return containers
 
 
 @pass_environment
 def execute_container_bootstrap(
-    ctx, bootstrap_basename="", container_name="", yaml_file="", docker_client=None
+    ctx, bootstrap_basename="", container_name="", yaml_file=""
 ):
     """
     Executes a single bootstrap inside a container. If the
     `/opt/minipresto/bootstrap_status.txt` file has the same checksum as the
     bootstrap script that is about to be executed, the boostrap script is
     skipped.
+
+    Returns `False` if the script is not executed and `True` if it is.
     """
 
     bootstrap_file = os.path.join(
@@ -243,7 +239,7 @@ def execute_container_bootstrap(
 
     executor = CommandExecutor(ctx)
     bootstrap_checksum = hashlib.md5(open(bootstrap_file, "rb").read()).hexdigest()
-    container = docker_client.containers.get(container_name)
+    container = ctx.docker_client.containers.get(container_name)
 
     output = executor.execute_commands(
         commands=["cat /opt/minipresto/bootstrap_status.txt"],
@@ -252,7 +248,7 @@ def execute_container_bootstrap(
     )
     if f"{bootstrap_checksum}" in output[0].get("output", ""):
         ctx.vlog(f"Bootstrap already executed for container {container_name}. Skipping")
-        return
+        return False
 
     ctx.vlog(f"Executing bootstrap script in container: {container_name}")
     executor.execute_commands(
@@ -267,10 +263,11 @@ def execute_container_bootstrap(
     )
 
     ctx.vlog(f"Successfully executed bootstrap script for {container_name}")
+    return True
 
 
 @pass_environment
-def handle_config_properties(ctx, docker_client=None):
+def handle_config_properties(ctx):
     """
     Checks for duplicates in the Presto config.properties file and issues
     warnings for any detected duplicates.
@@ -278,7 +275,7 @@ def handle_config_properties(ctx, docker_client=None):
 
     ctx.vlog("Checking config.properties for duplicate properties")
     executor = CommandExecutor(ctx)
-    container = docker_client.containers.get("presto")
+    container = ctx.docker_client.containers.get("presto")
     output = executor.execute_commands(
         commands=["cat /usr/lib/presto/etc/config.properties"],
         suppress_output=True,
@@ -321,7 +318,7 @@ def handle_config_properties(ctx, docker_client=None):
 
 
 @pass_environment
-def restart_containers(ctx, docker_client=None, containers_to_restart=[]):
+def restart_containers(ctx, containers_to_restart=[]):
     """Restarts all the containers in the list."""
 
     if containers_to_restart == []:
@@ -332,7 +329,7 @@ def restart_containers(ctx, docker_client=None, containers_to_restart=[]):
 
     for container in containers_to_restart:
         try:
-            container = docker_client.containers.get(container)
+            container = ctx.docker_client.containers.get(container)
             ctx.vlog(f"Restarting container: {container.name}")
             container.restart()
         except docker.errors.NotFound as error:
@@ -377,12 +374,12 @@ def check_license(ctx, compose_environment={}):
 
 
 @pass_environment
-def initialize_containers(ctx, docker_client=None):
+def initialize_containers(ctx):
     """
     Initializes each container with /opt/minipresto/bootstrap_status.txt
     """
     executor = CommandExecutor(ctx)
-    containers = docker_client.containers.list(filters={"label": RESOURCE_LABEL})
+    containers = ctx.docker_client.containers.list(filters={"label": RESOURCE_LABEL})
     for container in containers:
         output = executor.execute_commands(
             commands=["cat /opt/minipresto/bootstrap_status.txt"],

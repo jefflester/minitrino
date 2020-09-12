@@ -215,7 +215,10 @@ def clone_lib_dir(ctx, name):
     resources_dir = os.path.join(ctx.minipresto_lib_dir, MODULE_ROOT, MODULE_RESOURCES)
     for filename in os.listdir(resources_dir):
         file_path = os.path.join(resources_dir, filename)
-        shutil.copy(file_path, os.path.join(snapshot_name_dir, LIB, MODULE_ROOT, MODULE_RESOURCES))
+        shutil.copy(
+            file_path,
+            os.path.join(snapshot_name_dir, LIB, MODULE_ROOT, MODULE_RESOURCES),
+        )
 
     return snapshot_name_dir
 
@@ -228,11 +231,8 @@ def handle_copy_config_file(ctx, snapshot_name_dir, no_scrub):
     """
 
     if no_scrub:
-        response = click.prompt(
-            ctx.transform_prompt_msg(
-                f"All sensitive information in user config will be added to the snapshot. Continue? [Y/N]"
-            ),
-            type=str,
+        response = ctx.prompt_msg(
+            f"All sensitive information in user config will be added to the snapshot. Continue? [Y/N]"
         )
         if validate_yes_response(response):
             copy_config_file(snapshot_name_dir, no_scrub)
@@ -361,11 +361,8 @@ def check_exists(ctx, name, force):
             os.path.join(ctx.minipresto_lib_dir, "snapshots", f"{name}.tar.gz")
         )
         if os.path.isfile(snapshot_file):
-            response = click.prompt(
-                ctx.transform_prompt_msg(
-                    f"Snapshot file {name}.tar.gz already exists. Overwrite? [Y/N]"
-                ),
-                type=str,
+            response = ctx.prompt_msg(
+                f"Snapshot file {name}.tar.gz already exists. Overwrite? [Y/N]"
             )
             if validate_yes_response(response):
                 pass

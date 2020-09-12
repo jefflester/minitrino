@@ -47,11 +47,8 @@ def cli(ctx, images, volumes, label, force):
         remove_items({"item_type": VOLUME}, force, label)
 
     if all((not images, not volumes)):
-        response = click.prompt(
-            ctx.transform_prompt_msg(
-                "You are about to all remove minipresto images and volumes. Continue? [Y/N]"
-            ),
-            type=str,
+        response = ctx.prompt_msg(
+            "You are about to all remove minipresto images and volumes. Continue? [Y/N]"
         )
         if validate_yes_response(response):
             remove_items({"item_type": IMAGE}, force, label)

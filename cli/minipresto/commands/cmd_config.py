@@ -53,12 +53,7 @@ def __reset(ctx):
     try:
         os.mkdir(ctx.minipresto_user_dir)
     except:
-        response = click.prompt(
-            ctx.transform_prompt_msg(
-                "Configuration directory exists. Overwrite? [Y/N]"
-            ),
-            type=str,
-        )
+        response = ctx.prompt_msg("Configuration directory exists. Overwrite? [Y/N]")
         if validate_yes_response(response):
             shutil.rmtree(ctx.minipresto_user_dir)
             os.mkdir(ctx.minipresto_user_dir)

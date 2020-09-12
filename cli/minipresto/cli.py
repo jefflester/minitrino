@@ -42,22 +42,22 @@ class Environment:
 
         # Paths
         self.user_home_dir = os.path.expanduser("~")
-        self.minipresto_user_dir = self.handle_minipresto_user_dir()
+        self.minipresto_user_dir = self._handle_minipresto_user_dir()
         self.config_file = os.path.join(self.minipresto_user_dir, "minipresto.cfg")
         self.snapshot_dir = os.path.join(self.minipresto_user_dir, "snapshots")
 
         # Points to the directory containing minipresto library. Library
         # consists of modules, snapshots, and module parent files
-        self.minipresto_lib_dir = self.get_minipresto_lib_dir()
+        self.minipresto_lib_dir = self._get_minipresto_lib_dir()
 
         # Docker clients
-        self.docker_client, self.api_client = self.get_docker_clients()
+        self.docker_client, self.api_client = self._get_docker_clients()
 
     def log(self, *args):
         """Logs a message."""
 
         for arg in args:
-            arg = self.transform_log_msg(arg)
+            arg = self._transform_log_msg(arg)
             if not arg:
                 return
             click.echo(
@@ -72,7 +72,7 @@ class Environment:
         """Logs a warning message."""
 
         for arg in args:
-            arg = self.transform_log_msg(arg)
+            arg = self._transform_log_msg(arg)
             if not arg:
                 return
             click.echo(
@@ -87,7 +87,7 @@ class Environment:
         """Logs an error message."""
 
         for arg in args:
-            arg = self.transform_log_msg(arg)
+            arg = self._transform_log_msg(arg)
             if not arg:
                 return
             click.echo(
@@ -101,7 +101,7 @@ class Environment:
             for arg in args:
                 self.log(arg)
 
-    def transform_log_msg(self, msg):
+    def _transform_log_msg(self, msg):
         if msg.strip() == "":
             return None
         terminal_width, _ = get_terminal_size()
@@ -114,14 +114,25 @@ class Environment:
         )
         return msg
 
-    def transform_prompt_msg(self, msg):
-        return click.style(
-            f"[i]  {click.style(self.transform_log_msg(msg), fg='cyan', bold=False)}",
-            fg="cyan",
-            bold=True,
+    def prompt_msg(self, msg="", input_type=str):
+        """
+        Prints a prompt message and returns the user's input.
+
+        Parameters
+        ----------
+        - `msg: ""`: The prompt message
+        - `input_type: str`: The object type to check the input for
+        """
+        return click.prompt(
+            click.style(
+                f"[i]  {click.style(self._transform_log_msg(msg), fg='cyan', bold=False)}",
+                fg="cyan",
+                bold=True,
+            ),
+            type=input_type,
         )
 
-    def handle_minipresto_user_dir(self):
+    def _handle_minipresto_user_dir(self):
         """
         Checks if a minipresto directory exists in the user home directory. If
         it does not, it is created. The path to the minipresto user home
@@ -135,7 +146,7 @@ class Environment:
             os.mkdir(minipresto_user_dir)
         return minipresto_user_dir
 
-    def get_minipresto_lib_dir(self):
+    def _get_minipresto_lib_dir(self):
         """
         Determines the directory of the minipresto library. The directory can be
         set in three ways (this is also the order of precedence):
@@ -185,7 +196,7 @@ class Environment:
                     )
                 return default
 
-    def get_docker_clients(self):
+    def _get_docker_clients(self):
         """
         Gets DockerClient and APIClient objects. References the DOCKER_HOST
         variable in `minipresto.cfg` and uses for clients if present.

@@ -338,7 +338,8 @@ services:
       - "com.starburst.tests=minipresto"
       - "com.starburst.tests.module.postgres=catalog-postgres"
     env_file:
-      - "./modules/catalog/postgres/postgres.env"
+      - "./modules/catalog/postgres/resources/postgres/postgres.env"
+
 ```
 
 ### Important Implementation Details: Paths and Labels
@@ -389,7 +390,7 @@ services:
       - "com.starburst.tests=minipresto"
       - "com.starburst.tests.module.postgres=catalog-postgres"
     env_file:
-      - "./modules/catalog/postgres/postgres.env"
+      - "./modules/catalog/postgres/resources/postgres/postgres.env"
 
 volumes:
   postgres-data:

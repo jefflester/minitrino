@@ -43,7 +43,7 @@ keytool -genkeypair \
 	-keypass prestoRocks15 \
 	-storepass prestoRocks15 \
 	-dname "CN=*.starburstdata.com" \
-  -ext san=dns:presto.minipresto.starburstdata.com,dns:presto,dns:localhost
+	-ext san=dns:presto.minipresto.starburstdata.com,dns:presto,dns:localhost
 
 echo "Change truststore password..."
 keytool -storepasswd \

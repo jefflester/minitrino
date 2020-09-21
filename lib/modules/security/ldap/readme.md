@@ -24,13 +24,19 @@ The Java keystore and truststore needed for clients and drivers to securely conn
 Via Docker
 
 ```
-docker exec -it presto /usr/lib/presto/lib/presto-cli --server https://presto:8443 --truststore-path /home/presto/truststore.jks --truststore-password prestoRocks15 --keystore-path /home/presto/keystore.jks --keystore-password prestoRocks15 --user bob --password
+docker exec -it presto /usr/lib/presto/lib/presto-cli --server https://presto:8443 \
+   --truststore-path /home/presto/truststore.jks --truststore-password prestoRocks15 \
+   --keystore-path /home/presto/keystore.jks --keystore-password prestoRocks15 \
+   --user bob --password
 ```
 
-Via Host
+Via Host Machine
 ```
 cd <MINIPRESTO LIB PATH>
-presto-cli-xxx-executable.jar --server https://localhost:8443 --truststore-path ssl/truststore.jks --truststore-password prestoRocks15 --keystore-path ssl/keystore.jks --keystore-password prestoRocks15 --user bob --password
+presto-cli-xxx-executable.jar --server https://localhost:8443 \
+   --truststore-path ssl/truststore.jks --truststore-password prestoRocks15 \
+   --keystore-path ssl/keystore.jks --keystore-password prestoRocks15 \
+   --user bob --password
 ```
 
 Note that the CLI will prompt you for the password.
@@ -40,9 +46,11 @@ Open a web browser and go to https://localhost:8443 and log in with a valid LDAP
 
 To have the browser accept the self-signed certificate, do the following:
 
-Chrome: Click anywhere on the page and type `thisisunsafe`.
-Firefox: Click on the **Advanced** button and then click on **Accept the Risk and Continue**.
-Safari: Click on the button **Show Details** and then click the link **visit this website**.
+**Chrome**: Click anywhere on the page and type `thisisunsafe`.
+
+**Firefox**: Click on the **Advanced** button and then click on **Accept the Risk and Continue**.
+
+**Safari**: Click on the button **Show Details** and then click the link **visit this website**.
 
 ## Adding a new user to LDAP
 1. Open a shell to the LDAP container

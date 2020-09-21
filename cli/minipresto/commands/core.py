@@ -100,11 +100,11 @@ class CommandExecutor(object):
             - `return_code`: the return code of the command
         """
 
-        kwargs["environment"] = self.construct_environment(
+        kwargs["environment"] = self._construct_environment(
             kwargs.get("environment", {})
         )
-        cmd_details = []
 
+        cmd_details = []
         if kwargs.get("container", None):
             for command in kwargs.get("commands", []):
                 cmd_details = self._execute_in_container(command, **kwargs)
@@ -155,7 +155,7 @@ class CommandExecutor(object):
     def _execute_in_container(self, command="", **kwargs):
         """
         Executes a command inside of a container through the Docker SDK (similar
-        to docker exec)
+        to docker exec).
         """
 
         container = kwargs.get("container", None)
@@ -193,8 +193,11 @@ class CommandExecutor(object):
         )
         return cmd_details
 
-    def construct_environment(self, environment={}):
-        """Constructs dictionary of environment variables."""
+    def _construct_environment(self, environment={}):
+        """
+        Merges provided environment dictionary with user's shell environment
+        variables.
+        """
 
         # Remove conflicting keys from host environment; user config and Compose
         # config take precendance
@@ -229,13 +232,28 @@ class ComposeEnvironment(object):
         `minipresto.cfg` file and the `.env` file in the Minipresto library.
         These two resources are parsed and combined into a single environment
         dictionary.
+
+        Parameters
+        ----------
+        - `ctx: minipresto.cli.Environment`: client environment object.
+        - `env: []`: A list of `key=value` environment variables to append to
+          the environment variable dictionary.
+
+        Properties
+        ----------
+        - `ctx: minipresto.cli.Environment`: client environment object.
+        - `env`: The list of `key=value` environment variables passed to the
+          constructor.
+        - `compose_env_string`: String of environment variables in `key=value`
+          format delimited by spaces.
+        - `compose_env_dict`: Dictionary of environment variables.
         """
 
         self.ctx = ctx
         self.env = env
-        self.compose_env_string, self.compose_env_dict = self.get_compose_env(env)
+        self.compose_env_string, self.compose_env_dict = self._get_compose_env(env)
 
-    def get_compose_env(self, env=[]):
+    def _get_compose_env(self, env=[]):
         """
         Merges environment variables from library's root `.env` file, the
         Minipresto configuration file, and variables provided via the `--env`
@@ -297,9 +315,9 @@ class ComposeEnvironment(object):
             environment_formatted += f"{key}: {value}\n"
         self.ctx.vlog(f"Registered environment variables:\n{environment_formatted}")
 
-        return self.get_env_string(config_dict), config_dict
+        return self._get_env_string(config_dict), config_dict
 
-    def get_env_string(self, compose_env_dict={}):
+    def _get_env_string(self, compose_env_dict={}):
         """Returns a string of key-value pairs from a dict."""
 
         compose_env_list = []
@@ -312,6 +330,20 @@ class Modules(object):
     def __init__(self, ctx):
         """
         Contains information about running Minipresto modules.
+
+        Parameters
+        ----------
+        - `ctx: minipresto.cli.Environment`: client environment object.
+
+        Properties
+        ----------
+        - `ctx: minipresto.cli.Environment`: client environment object.
+        - `containers: []`: List of Docker container objects that map to active
+          Minipresto modules.
+        - `module_label_vals: []`: List of labels tied to active Minipresto
+          containers. Presto container is excluded from the list.
+        - `catalog: []`: List of active catalog module names.
+        - `security []`: List of active security module names.
         """
 
         self.ctx = ctx
@@ -320,19 +352,19 @@ class Modules(object):
             self.module_label_vals,
             self.catalog,
             self.security,
-        ) = self.get_running_modules()
+        ) = self._get_running_modules()
 
-    def get_running_modules(self):
+    def _get_running_modules(self):
         """Returns list of running modules."""
 
         check_daemon()
-        containers = self.get_running_containers()
-        module_label_vals = self.get_module_label_values(containers)
-        catalog, security = self.parse_module_label_values(module_label_vals)
+        containers = self._get_running_containers()
+        module_label_vals = self._get_module_label_values(containers)
+        catalog, security = self._parse_module_label_values(module_label_vals)
 
         return containers, module_label_vals, catalog, security
 
-    def get_running_containers(self):
+    def _get_running_containers(self):
         """Gets all running minipresto containers."""
 
         containers = self.ctx.docker_client.containers.list(
@@ -346,7 +378,7 @@ class Modules(object):
             sys.exit(1)
         return containers
 
-    def get_module_label_values(self, containers=[]):
+    def _get_module_label_values(self, containers=[]):
         """Gets all module label values from list of containers."""
 
         module_label_vals = []
@@ -361,11 +393,10 @@ class Modules(object):
         module_label_vals.remove("presto")
         return module_label_vals
 
-    def parse_module_label_values(self, module_label_vals=[]):
+    def _parse_module_label_values(self, module_label_vals=[]):
         """
-        Parses module label values and returns a tuple (space-delimited strings of
-        both catalog and security modules) used to identify the correct directories
-        to copy into the named snapshot directory.
+        Parses module label values and returns a tuple of lists used to identify
+        the correct directories to copy into the named snapshot directory.
         """
 
         catalog = []
@@ -398,7 +429,7 @@ def check_daemon(ctx):
 @pass_environment
 def validate_module_dirs(ctx, key={}, modules=[]):
     """
-    Validates that the directory and Compose .yml exist for each provided
+    Validates that the directory and Docker Compose .yml exist for each provided
     module. If they all exist, a list of module directories and YAML file paths
     is returned.
     """

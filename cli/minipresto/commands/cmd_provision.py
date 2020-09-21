@@ -15,11 +15,9 @@ import hashlib
 import click
 
 from minipresto.cli import pass_environment
-from minipresto.commands.core import MultiArgOption
 from minipresto.commands.core import CommandExecutor
 from minipresto.commands.core import ComposeEnvironment
 from minipresto.commands.core import check_daemon
-from minipresto.commands.core import convert_MultiArgOption_to_list
 from minipresto.commands.core import validate_module_dirs
 
 from minipresto.settings import RESOURCE_LABEL
@@ -32,13 +30,13 @@ from minipresto.settings import MODULE_SECURITY
 Provisions an environment based on chosen modules. All options are optional and
 can be left empty. 
 """)
-@click.option("-c", "--catalog", default="", type=str, cls=MultiArgOption, help="""
-Catalog modules to provision. 
+@click.option("-c", "--catalog", default=[], type=str, multiple=True, help="""
+Catalog module to provision. 
 """)
-@click.option("-s", "--security", default="", type=str, cls=MultiArgOption, help="""
-Security modules to provision. 
+@click.option("-s", "--security", default=[], type=str, multiple=True, help="""
+Security module to provision. 
 """)
-@click.option("-e", "--env", default="", type=str, cls=MultiArgOption, help="""
+@click.option("-e", "--env", default=[], type=str, multiple=True, help="""
 Add or override environment variables. If any of the variables overlap with
 variables in the library's `.env` file or the `minipresto.cfg` file, the
 variable will be overridden with what is provided in `--env`.
@@ -62,7 +60,6 @@ def cli(ctx, catalog="", security="", env="", docker_native=""):
 
     check_daemon()
 
-    catalog, security, env = convert_MultiArgOption_to_list(catalog, security, env)
     catalog_yaml_files, security_yaml_files = validate(catalog, security)
     catalog_chunk = compose_chunk(catalog, {"module_type": "catalog"})
     security_chunk = compose_chunk(security, {"module_type": "security"})

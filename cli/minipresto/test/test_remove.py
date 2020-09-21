@@ -128,6 +128,7 @@ def test_multiple_labels():
             "--volumes",
             "--label",
             "com.starburst.tests.module.test=catalog-test",
+            "--label",
             RESOURCE_LABEL,
         ],
     )

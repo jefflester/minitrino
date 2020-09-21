@@ -6,9 +6,7 @@ import click
 
 from docker.errors import APIError
 from minipresto.cli import pass_environment
-from minipresto.commands.core import MultiArgOption
 from minipresto.commands.core import check_daemon
-from minipresto.commands.core import convert_MultiArgOption_to_list
 from minipresto.commands.core import validate_yes_response
 
 from minipresto.settings import IMAGE
@@ -25,7 +23,7 @@ Removes minipresto images.
 @click.option("-v", "--volumes", is_flag=True, default=False, help="""
 Removes minipresto volumes.
 """)
-@click.option("-l", "--label", type=str, default="", cls=MultiArgOption, help="""
+@click.option("-l", "--label", type=str, default=[], multiple=True, help="""
 Target specific labels for removal (key-value pair(s)).
 """)
 @click.option("-f", "--force", is_flag=True, default=False, help="""
@@ -39,7 +37,6 @@ def cli(ctx, images, volumes, label, force):
     """Remove command for minipresto."""
 
     check_daemon()
-    (label,) = convert_MultiArgOption_to_list(label)
 
     if images:
         remove_items({"item_type": IMAGE}, force, label)

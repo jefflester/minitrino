@@ -10,12 +10,10 @@ import tarfile
 import fileinput
 
 from minipresto.cli import pass_environment
-from minipresto.commands.core import MultiArgOption
 from minipresto.commands.core import Modules
 from minipresto.commands.core import check_daemon
 from minipresto.commands.core import validate_yes_response
 from minipresto.commands.core import validate_module_dirs
-from minipresto.commands.core import convert_MultiArgOption_to_list
 
 from minipresto.settings import SNAPSHOT_ROOT_FILES
 from minipresto.settings import PROVISION_SNAPSHOT_TEMPLATE
@@ -37,10 +35,10 @@ To take a snapshot of an active environment, leave the `--catalog` and
 To take a snapshot of modules, whether they are active or not, specify the
 modules via the `--catalog` and `--security` options.
 """)
-@click.option("-c", "--catalog", default="", type=str, cls=MultiArgOption, help="""
+@click.option("-c", "--catalog", default=[], type=str, multiple=True, help="""
 Catalog modules to include in the snapshot. 
 """)
-@click.option("-s", "--security", default="", type=str, cls=MultiArgOption, help="""
+@click.option("-s", "--security", default=[], type=str, multiple=True, help="""
 Security modules to include in the snapshot. 
 """)
 @click.option("-n", "--name", required=True, type=str, help="""
@@ -64,7 +62,6 @@ def cli(ctx, catalog, security, name, force, no_scrub):
     """Snapshot command for minipresto."""
 
     validate_name(name)
-    catalog, security = convert_MultiArgOption_to_list(catalog, security)
     check_exists(name, force)
 
     if catalog or security:

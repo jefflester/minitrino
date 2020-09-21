@@ -52,7 +52,7 @@ def test_invalid_catalog_module():
     """
 
     result = helpers.execute_command(
-        ["-v", "provision", "--catalog", "hive-hms", "not-a-real-module"]
+        ["-v", "provision", "--catalog", "hive-hms", "--catalog", "not-a-real-module"]
     )
 
     assert result.exit_code == 1
@@ -72,7 +72,7 @@ def test_invalid_security_module():
     """
 
     result = helpers.execute_command(
-        ["-v", "provision", "--security", "ldap", "not-a-real-module"]
+        ["-v", "provision", "--security", "ldap", "--security", "not-a-real-module"]
     )
 
     assert result.exit_code == 1
@@ -178,9 +178,7 @@ def test_build_bootstrap_config_props():
     )
 
     # Ensure bootstrap does not execute again when container boots back up
-    helpers.execute_command(
-        ["-v", "down", "--keep"]
-    )
+    helpers.execute_command(["-v", "down", "--keep"])
     result = helpers.execute_command(
         ["-v", "provision", "--catalog", "test", "-d", "--build"]
     )
@@ -226,12 +224,7 @@ def test_license_checks():
 
     # Existing file - placeholder for testing
     result = helpers.execute_command(
-        [
-            "-v",
-            "provision",
-            "--env",
-            f"STARBURST_LIC_PATH={placeholder_lic_file}",
-        ]
+        ["-v", "provision", "--env", f"STARBURST_LIC_PATH={placeholder_lic_file}",]
     )
 
     assert result.exit_code == 0

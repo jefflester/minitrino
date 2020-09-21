@@ -52,8 +52,8 @@ You can provision an environment via the `provision` command.
 Sample `provision` commands:
 
 ```bash
-minipresto provision --catalog hive-hms elasticsearch --security ldap --docker-native '--build --force-recreate'
-minipresto provision -c hive-hms elasticsearch -s ldap -d '--build --force-recreate'
+minipresto provision --catalog hive-hms --catalog elasticsearch --security ldap --docker-native '--build --force-recreate'
+minipresto provision -c hive-hms -c elasticsearch -s ldap -d '--build --force-recreate'
 minipresto provision --env STARBURST_VER=332-e.6
 ```
 

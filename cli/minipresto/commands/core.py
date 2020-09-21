@@ -15,54 +15,6 @@ from minipresto.settings import MODULE_LABEL_KEY_ROOT
 from minipresto.settings import MODULE_ROOT
 
 
-class MultiArgOption(click.Option):
-    """
-    Extends Click's `Option` class to allow for multiple arguments in a single
-    option without specifying the option twice, as is otherwise required via
-    Click's Multiple Options:
-    https://click.palletsprojects.com/en/7.x/options/#multiple-options
-
-    Class Implementation:
-    https://stackoverflow.com/questions/48391777/nargs-equivalent-for-options-in-click
-
-    Returns a tuple after parsing the input data.
-    """
-
-    def __init__(self, *args, **kwargs):
-        nargs = kwargs.pop("nargs", -1)
-        assert nargs == -1, f"nargs, if set, must be -1 not {nargs}"
-        super(MultiArgOption, self).__init__(*args, **kwargs)
-        self._previous_parser_process = None
-        self._eat_all_parser = None
-
-    def add_to_parser(self, parser, ctx):
-        def parser_process(value, state):
-            # Method to hook to the parser.process
-            done = False
-            value = [value]
-            # Grab everything up to the next option
-            while state.rargs and not done:
-                for prefix in self._eat_all_parser.prefixes:
-                    if state.rargs[0].startswith(prefix):
-                        done = True
-                if not done:
-                    value.append(state.rargs.pop(0).strip())
-            value = tuple(value)
-
-            # Call the actual process
-            self._previous_parser_process(value, state)
-
-        retval = super(MultiArgOption, self).add_to_parser(parser, ctx)
-        for name in self.opts:
-            our_parser = parser._long_opt.get(name) or parser._short_opt.get(name)
-            if our_parser:
-                self._eat_all_parser = our_parser
-                self._previous_parser_process = our_parser.process
-                our_parser.process = parser_process
-                break
-        return retval
-
-
 class CommandExecutor(object):
     def __init__(self, ctx=None):
         """
@@ -451,26 +403,6 @@ def validate_module_dirs(ctx, key={}, modules=[]):
         module_yaml_files.append(yaml_path)
 
     return module_dirs, module_yaml_files
-
-
-def convert_MultiArgOption_to_list(*args):
-    """
-    Converts tuple datatype returned from the MultiArgOption to a list, as lists
-    are the standard type used in the majority of the functions in Minipresto.
-    """
-
-    retval = []
-    for arg in args:
-        if not isinstance(arg, list):
-            if arg == "":
-                arg = []
-                retval.append(arg)
-            elif isinstance(arg, tuple):
-                arg = list(arg)
-                retval.append(arg)
-        else:
-            retval.append(arg)
-    return tuple(retval)
 
 
 def validate_yes_response(response=""):

@@ -26,15 +26,27 @@ class Environment:
         ----------
         - `verbose`: Indicates whether or not output verbose logs to stdout.
         - `user_home_dir`: The home directory of the current user.
-        - `minipresto_user_dir`: The location of the minipresto directory relative
-        to the user home directory. 
+        - `minipresto_user_dir`: The location of the minipresto directory
+          relative to the user home directory. 
         - `config_file`: The location of the user's configuration file. 
         - `snapshot_dir`: The location of the user's snapshot directory (this is
-        essentially a temporary directory, as 'permanent' snapshot tarballs are
-        written to the library).
-        - `minipresto_lib_dir`: The location of the minipresto library directory.
+          essentially a temporary directory, as 'permanent' snapshot tarballs
+          are written to the library).
+        - `minipresto_lib_dir`: The location of the minipresto library
+          directory.
         - `docker_client`: Docker client of object type `docker.DockerClient`
         - `api_client`: API Docker client of object type `docker.APIClient`
+
+        Methods
+        -------
+        - `log()`: Log messages to the user's console.
+        - `log_warn()`: Log warning messages to the user's console.
+        - `log_err()`: Log error messages to the user's console.
+        - `vlog()`: Log verbose messages to the user's console.
+        - `prompt_msg()`: Prints a prompt message and returns the user's input.
+        - `get_config()`: Returns an instantiated ConfigParser object from the
+          Minipresto user config. file.
+        - `get_config_value()`: Returns a value from the config if present.
         """
 
         # Verbose logging
@@ -54,45 +66,42 @@ class Environment:
         self.docker_client, self.api_client = self._get_docker_clients()
 
     def log(self, *args):
-        """Logs a message."""
+        """Logs messages to the user's console."""
 
         for arg in args:
             arg = self._transform_log_msg(arg)
-            if not arg:
-                return
-            click.echo(
-                click.style(
-                    f"[i]  {click.style(arg, fg='cyan', bold=False)}",
-                    fg="cyan",
-                    bold=True,
+            if arg:
+                click.echo(
+                    click.style(
+                        f"[i]  {click.style(arg, fg='cyan', bold=False)}",
+                        fg="cyan",
+                        bold=True,
+                    )
                 )
-            )
 
     def log_warn(self, *args):
-        """Logs a warning message."""
+        """Logs warning messages to the user's console.."""
 
         for arg in args:
             arg = self._transform_log_msg(arg)
-            if not arg:
-                return
-            click.echo(
-                click.style(
-                    f"[w]  {click.style(arg, fg='yellow', bold=False)}",
-                    fg="yellow",
-                    bold=True,
+            if arg:
+                click.echo(
+                    click.style(
+                        f"[w]  {click.style(arg, fg='yellow', bold=False)}",
+                        fg="yellow",
+                        bold=True,
+                    )
                 )
-            )
 
     def log_err(self, *args):
-        """Logs an error message."""
+        """Logs error messages to the user's console."""
 
         for arg in args:
             arg = self._transform_log_msg(arg)
-            if not arg:
-                return
-            click.echo(
-                click.style(f"[e]  {click.style(arg, fg='red')}", fg="red", bold=True,)
-            )
+            if arg:
+                click.echo(
+                    click.style(f"[e]  {click.style(arg, fg='red')}", fg="red", bold=True,)
+                )
 
     def vlog(self, *args):
         """Logs a message only if verbose logging is enabled."""
@@ -102,7 +111,11 @@ class Environment:
                 self.log(arg)
 
     def _transform_log_msg(self, msg):
-        if msg.strip() == "":
+        try:
+            msg = msg.strip()
+            if not msg:
+                return None 
+        except:
             return None
         terminal_width, _ = get_terminal_size()
         msg = msg.replace("\n", f"\n{DEFAULT_INDENT}")
@@ -120,8 +133,8 @@ class Environment:
 
         Parameters
         ----------
-        - `msg: ""`: The prompt message
-        - `input_type: str`: The object type to check the input for
+        - `msg`: The prompt message
+        - `input_type`: The object type to check the input for
         """
         return click.prompt(
             click.style(
@@ -158,15 +171,23 @@ class Environment:
            project is being run out of a cloned repository. 
         """
 
-        lib_dir = self.get_config_value("CLI", "LIB_PATH")
-        if lib_dir is not None and lib_dir != "":
+        lib_dir = self.get_config_value("CLI", "LIB_PATH", False, None)
+        if lib_dir:
             return lib_dir
         else:
             repo_root = Path(os.path.abspath(__file__)).resolve().parents[2]
             return os.path.join(repo_root, "lib")
 
     def get_config(self, warn=True):
-        """Reads minipresto config."""
+        """
+        Returns an instantiated ConfigParser object from the Minipresto user
+        config file.
+
+        Parameters
+        ----------
+        - `warn`: If `True` and the user configuration file does not exist, a
+          warning message will be logged to the user.
+        """
 
         if os.path.isfile(self.config_file):
             config = ConfigParser()
@@ -180,8 +201,18 @@ class Environment:
             )
         return {}
 
-    def get_config_value(self, section, key, warn=True, default=None):
-        """Returns a value from the config if present."""
+    def get_config_value(self, section="", key="", warn=True, default=None):
+        """
+        Returns a value from the config if present.
+
+        Parameters
+        ----------
+        - `section`: The section of minipresto user config.
+        - `key`: The key for the desired value.
+        - `warn`: If `True` and the value is not found, a warning message will
+          be logged to the user.
+        - `default`: The return value if the value is not found.
+        """
 
         config = self.get_config()
         if config:
@@ -199,11 +230,8 @@ class Environment:
     def _get_docker_clients(self):
         """
         Gets DockerClient and APIClient objects. References the DOCKER_HOST
-        variable in `minipresto.cfg` and uses for clients if present.
-
-        Return Values
-        -------------
-        A tuple of DockerClient and APIClient objects, respectiveley.
+        variable in `minipresto.cfg` and uses for clients if present. Returns a
+        tuple of DockerClient and APIClient objects, respectiveley.
         """
 
         docker_host = self.get_config_value("DOCKER", "DOCKER_HOST", False, "")

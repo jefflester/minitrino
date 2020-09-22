@@ -20,29 +20,33 @@ class CommandExecutor(object):
         """
         Executes commands in the host shell with customized handling of
         stdout/stderr output.
+
+        Methods
+        -------
+        - `execute_commands()`: Executes commands in the user's shell or inside
+          of a container.
         """
 
         self.ctx = ctx
 
     def execute_commands(self, **kwargs):
         """
-        Executes commands in a subprocess.
+        Executes commands in the user's shell or inside of a container.
 
         Parameters
         ----------
-        - `handle_error: True`: If `False`, errors (non-zero return codes) are
-          not handled by the function
-        - `environment: {}`: A dictionary of environment variables to pass to
-          the subprocess
-        - `commands: []`: A list of commands that will be executed in the order
-          provided
-        - `suppress_output: False`: If `True`, output from the executed command
-          will be suppressed.
-        - `container: None`: A Docker container object. If passed in, the
-          command will be executed through the Docker SDK instead of the
-          subprocess module.
-        - `docker_user: root`: The user to execute the command as in the Docker
-          container.
+        - `handle_error`: If `False`, errors (non-zero return codes) are not
+          handled by the function.
+        - `environment`: A dictionary of environment variables to pass to the
+          subprocess.
+        - `commands`: A list of commands that will be executed in the order
+          provided.
+        - `suppress_output`: If `True`, output from the executed command will be
+          suppressed.
+        - `container`: A Docker container object. If passed in, the command will
+          be executed through the Docker SDK instead of the subprocess module.
+        - `docker_user`: The user to execute the command as in the Docker
+          container (default: `root`).
 
         Return Values
         -------------
@@ -83,7 +87,7 @@ class CommandExecutor(object):
         )
 
         if not kwargs.get("suppress_output", False):
-            while True:
+            while True: # Stream output
                 output = process.stdout.readline()
                 if output == "" and process.poll() is not None:
                     break
@@ -123,10 +127,12 @@ class CommandExecutor(object):
             user=kwargs.get("docker_user", "root"),
         )
 
+        # Executes the command and returns a binary output generator
         output = self.ctx.api_client.exec_start(exec_handler, stream=True)
         output_string = ""
 
         for line in output:
+            # Stream generator output & decode binary to string
             line = self._strip_ansi(line.decode().strip())
             output_string += line
             if not kwargs.get("suppress_output", False):
@@ -187,25 +193,20 @@ class ComposeEnvironment(object):
 
         Parameters
         ----------
-        - `ctx: minipresto.cli.Environment`: client environment object.
-        - `env: []`: A list of `key=value` environment variables to append to
-          the environment variable dictionary.
+        - `ctx`: environment object (minipresto.cli.Environment).
+        - `env`: A list of `key=value` environment variables to append to the
+          environment variable dictionary.
 
         Properties
         ----------
-        - `ctx: minipresto.cli.Environment`: client environment object.
-        - `env`: The list of `key=value` environment variables passed to the
-          constructor.
         - `compose_env_string`: String of environment variables in `key=value`
           format delimited by spaces.
         - `compose_env_dict`: Dictionary of environment variables.
         """
 
-        self.ctx = ctx
-        self.env = env
-        self.compose_env_string, self.compose_env_dict = self._get_compose_env(env)
+        self.compose_env_string, self.compose_env_dict = self._get_compose_env(ctx, env)
 
-    def _get_compose_env(self, env=[]):
+    def _get_compose_env(self, ctx, env=[]):
         """
         Merges environment variables from library's root `.env` file, the
         Minipresto configuration file, and variables provided via the `--env`
@@ -213,9 +214,9 @@ class ComposeEnvironment(object):
         Returns a shell-compatible string of key-value pairs and a dict.
         """
 
-        env_file = os.path.join(self.ctx.minipresto_lib_dir, ".env")
+        env_file = os.path.join(ctx.minipresto_lib_dir, ".env")
         if not os.path.isfile(env_file):
-            self.ctx.log_err(f"Environment file does not exist at path {env_file}")
+            ctx.log_err(f"Environment file does not exist at path {env_file}")
             sys.exit(1)
 
         env_file_dict = {}
@@ -229,17 +230,17 @@ class ComposeEnvironment(object):
                     env_file_dict[env_variable[0].strip()] = env_variable[1].strip()
 
         if not env_file_dict:
-            self.ctx.log_err(
+            ctx.log_err(
                 f"Environment file not loaded properly from path:\n{env_file}"
             )
             sys.exit(1)
 
-        config = self.ctx.get_config(False)
+        config = ctx.get_config(False)
         try:
             config_dict = dict(config.items("MODULES"))
         except:
-            self.ctx.log_warn(
-                f"No MODULES section found in {self.ctx.config_file}. "
+            ctx.log_warn(
+                f"No MODULES section found in {ctx.config_file}. "
                 f"To pass environment variables to your containers, you will need to set this"
             )
             config_dict = {}
@@ -252,7 +253,7 @@ class ComposeEnvironment(object):
             for env_variable in env:
                 env_variable_list = env_variable.split("=")
                 if not len(env_variable_list) == 2:
-                    self.ctx.log_err(
+                    ctx.log_err(
                         f"Invalid environment variable: {env_variable}. Should be a key-value pair"
                     )
                     sys.exit(1)
@@ -265,7 +266,7 @@ class ComposeEnvironment(object):
         environment_formatted = ""
         for key, value in config_dict.items():
             environment_formatted += f"{key}: {value}\n"
-        self.ctx.vlog(f"Registered environment variables:\n{environment_formatted}")
+        ctx.vlog(f"Registered environment variables:\n{environment_formatted}")
 
         return self._get_env_string(config_dict), config_dict
 
@@ -289,7 +290,6 @@ class Modules(object):
 
         Properties
         ----------
-        - `ctx: minipresto.cli.Environment`: client environment object.
         - `containers: []`: List of Docker container objects that map to active
           Minipresto modules.
         - `module_label_vals: []`: List of labels tied to active Minipresto
@@ -379,14 +379,19 @@ def check_daemon(ctx):
 
 
 @pass_environment
-def validate_module_dirs(ctx, key={}, modules=[]):
+def validate_module_dirs(ctx, module_type="", modules=[]):
     """
     Validates that the directory and Docker Compose .yml exist for each provided
-    module. If they all exist, a list of module directories and YAML file paths
+    module. After validation, a list of module directories and YAML file paths
     is returned.
+
+    Parameters
+    ----------
+    - `module_type`: one of minipresto.settings.MODULE_CATALOG or
+      minipresto.settings.MODULE_SECURITY.
+    - `modules`: a list of module root names.
     """
 
-    module_type = key.get("module_type", "")
     module_dirs = []
     module_yaml_files = []
 

@@ -157,12 +157,8 @@ def validate(catalog=[], security=[]):
     Returns file paths to passed in catalog and security modules.
     """
 
-    _, catalog_yaml_files = validate_module_dirs(
-        {"module_type": MODULE_CATALOG}, catalog
-    )
-    _, security_yaml_files = validate_module_dirs(
-        {"module_type": MODULE_SECURITY}, security
-    )
+    _, catalog_yaml_files = validate_module_dirs(MODULE_CATALOG, catalog)
+    _, security_yaml_files = validate_module_dirs(MODULE_SECURITY, security)
     return catalog_yaml_files, security_yaml_files
 
 

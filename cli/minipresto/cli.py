@@ -100,7 +100,9 @@ class Environment:
             arg = self._transform_log_msg(arg)
             if arg:
                 click.echo(
-                    click.style(f"[e]  {click.style(arg, fg='red')}", fg="red", bold=True,)
+                    click.style(
+                        f"[e]  {click.style(arg, fg='red')}", fg="red", bold=True,
+                    )
                 )
 
     def vlog(self, *args):
@@ -114,7 +116,7 @@ class Environment:
         try:
             msg = msg.strip()
             if not msg:
-                return None 
+                return None
         except:
             return None
         terminal_width, _ = get_terminal_size()

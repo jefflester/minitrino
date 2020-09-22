@@ -32,12 +32,15 @@ def execute_command(command=[], print_output=True, command_input=""):
     """Executes a command through the Click CliRunner."""
 
     runner = CliRunner()
-    if command_input == "":
+    if not command_input:
         result = runner.invoke(cli, command)
     else:
         result = runner.invoke(cli, command, input=command_input)
     if print_output:
         print(f"Output of command [minipresto {' '.join(command)}]:\n{result.output}")
+
+    # Remove newlines for string assertion consistency
+    result.output = result.output.replace("\n", " ")
     return result
 
 

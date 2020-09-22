@@ -254,7 +254,7 @@ def execute_container_bootstrap(
     executor.execute_commands(
         commands=[
             f"/tmp/{os.path.basename(bootstrap_file)}",
-            f'bash -c "echo \"{bootstrap_checksum}\" >> /opt/minipresto/bootstrap_status.txt"',
+            f'bash -c "echo {bootstrap_checksum} >> /opt/minipresto/bootstrap_status.txt"',
         ],
         container=container,
     )

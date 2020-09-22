@@ -71,13 +71,7 @@ class Environment:
         for arg in args:
             arg = self._transform_log_msg(arg)
             if arg:
-                click.echo(
-                    click.style(
-                        f"[i]  {click.style(arg, fg='cyan', bold=False)}",
-                        fg="cyan",
-                        bold=True,
-                    )
-                )
+                click.echo(f"{click.style('[i]  ', fg='cyan', bold=True)}{arg}")
 
     def log_warn(self, *args):
         """Logs warning messages to the user's console.."""
@@ -85,13 +79,7 @@ class Environment:
         for arg in args:
             arg = self._transform_log_msg(arg)
             if arg:
-                click.echo(
-                    click.style(
-                        f"[w]  {click.style(arg, fg='yellow', bold=False)}",
-                        fg="yellow",
-                        bold=True,
-                    )
-                )
+                click.echo(f"{click.style('[w]  ', fg='yellow', bold=True)}{arg}")
 
     def log_err(self, *args):
         """Logs error messages to the user's console."""
@@ -99,11 +87,7 @@ class Environment:
         for arg in args:
             arg = self._transform_log_msg(arg)
             if arg:
-                click.echo(
-                    click.style(
-                        f"[e]  {click.style(arg, fg='red')}", fg="red", bold=True,
-                    )
-                )
+                click.echo(f"{click.style('[e]  ', fg='red', bold=True)}{arg}")
 
     def vlog(self, *args):
         """Logs a message only if verbose logging is enabled."""
@@ -126,6 +110,7 @@ class Environment:
             terminal_width,
             subsequent_indent=DEFAULT_INDENT,
             replace_whitespace=False,
+            break_on_hyphens=False,
         )
         return msg
 
@@ -138,13 +123,10 @@ class Environment:
         - `msg`: The prompt message
         - `input_type`: The object type to check the input for
         """
+
+        msg = self._transform_log_msg(msg)
         return click.prompt(
-            click.style(
-                f"[i]  {click.style(self._transform_log_msg(msg), fg='cyan', bold=False)}",
-                fg="cyan",
-                bold=True,
-            ),
-            type=input_type,
+            f"{click.style('[i]  ', fg='cyan', bold=True)}{msg}", type=input_type
         )
 
     def _handle_minipresto_user_dir(self):

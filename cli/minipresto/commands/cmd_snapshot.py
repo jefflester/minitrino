@@ -161,7 +161,7 @@ def build_command_string(ctx, catalog=[], security=[]):
 @pass_environment
 def create_snapshot_command_file(ctx, command_string="", snapshot_name_dir=""):
     """
-    creates an .sh file in the minipresto directory for usage by the snapshot
+    Creates an .sh file in the minipresto directory for usage by the snapshot
     command. This way, a similar command used to provision the environment is
     preserved.
     """
@@ -224,7 +224,7 @@ def clone_lib_dir(ctx, name):
 def handle_copy_config_file(ctx, snapshot_name_dir, no_scrub):
     """
     Handles the copying of the user config file to the named snapshot directory.
-    Calls `scrub_config_file` if `no_scrub` is True.
+    Calls `scrub_config_file()` if `no_scrub` is True.
     """
 
     if no_scrub:
@@ -274,9 +274,7 @@ def scrub_config_file(ctx, snapshot_name_dir):
 @pass_environment
 def scrub_line(ctx, line):
     """
-    Scrubs a line from a snapshot config file.
-
-    Returns the scrubbed line.
+    Scrubs a line from a snapshot config file. Returns the scrubbed line.
     """
 
     line = line.strip().split("=")

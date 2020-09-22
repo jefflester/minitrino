@@ -26,7 +26,7 @@ def cli(ctx, reset):
     """Config command for minipresto."""
 
     if reset:
-        __reset()
+        _reset()
 
     if not os.path.isdir(ctx.minipresto_user_dir):
         ctx.log("No .minipresto directory found. Creating")
@@ -43,7 +43,7 @@ def cli(ctx, reset):
 
 
 @pass_environment
-def __reset(ctx):
+def _reset(ctx):
     """
     Resets minipresto user configuration directory. If the user configuration
     directory exists, it will prompt the user for approval before overwriting.

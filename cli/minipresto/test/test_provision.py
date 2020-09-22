@@ -184,8 +184,8 @@ def test_build_bootstrap_config_props():
     )
 
     assert result.exit_code == 0
-    assert "Bootstrap already executed for container test" in result.output
-    assert "Successfully executed bootstrap script for test" not in result.output
+    assert "Bootstrap already executed in container 'test'" in result.output
+    assert "Successfully executed bootstrap script in container 'test'" not in result.output
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()
@@ -208,7 +208,7 @@ def test_license_checks():
     )
 
     assert result.exit_code == 0
-    assert "Starburst license not found in" in result.output
+    assert "Starburst license not found at path" in result.output
     assert "Creating placeholder" in result.output
     cleanup()
 

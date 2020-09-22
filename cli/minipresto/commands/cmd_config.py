@@ -29,15 +29,15 @@ def cli(ctx, reset):
         _reset()
 
     if not os.path.isdir(ctx.minipresto_user_dir):
-        ctx.log("No .minipresto directory found. Creating")
+        ctx.log("No .minipresto/ directory found in user's home directory. Creating...")
         os.mkdir(ctx.minipresto_user_dir)
 
     if os.path.isfile(ctx.config_file):
-        ctx.vlog("Opening existing config file")
+        ctx.vlog("Opening existing config file at path: {ctx.config_file}")
         click.edit(filename=ctx.config_file)
     else:
         ctx.vlog(
-            "No config file found. Creating template config file and opening for edits"
+            "No config file found. Creating template config file and opening for edits..."
         )
         copy_template_and_edit()
 
@@ -58,7 +58,7 @@ def _reset(ctx):
             shutil.rmtree(ctx.minipresto_user_dir)
             os.mkdir(ctx.minipresto_user_dir)
         else:
-            ctx.log("Opted to skip recreating configuration directory")
+            ctx.log("Opted to skip recreating .minipresto/ home directory.")
             sys.exit(0)
     ctx.vlog("Created minipresto configuration directory")
 

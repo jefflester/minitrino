@@ -34,15 +34,15 @@ def cli(ctx, keep):
     )
 
     if len(containers) == 0:
-        ctx.log(f"No containers to bring down")
+        ctx.log(f"No containers to bring down.")
         sys.exit(0)
 
     for container in containers:
         container.stop()
-        ctx.vlog(f"Stopped container: {container.short_id} | {container.name}")
+        ctx.vlog(f"Stopped container [ID: {container.short_id}] [Name: {container.name}]")
     if not keep:
         for container in containers:
             container.remove()  # Default behavior of Compose is to remove containers
-            ctx.vlog(f"Removed container: {container.short_id} | {container.name}")
+            ctx.vlog(f"Removed container [ID: {container.short_id}] [Name: {container.name}]")
 
-    ctx.log(f"Brought down all running minipresto containers")
+    ctx.log(f"Brought down all Minipresto containers.")

@@ -51,10 +51,10 @@ def cli(ctx, images, volumes, label, force):
             remove_items({"item_type": IMAGE}, force, label)
             remove_items({"item_type": VOLUME}, force, label)
         else:
-            ctx.log(f"Opted to skip removal")
+            ctx.log(f"Opted to skip resource removal.")
             sys.exit(0)
 
-    ctx.log(f"Removal complete")
+    ctx.log(f"Removal complete.")
 
 
 @pass_environment
@@ -76,7 +76,7 @@ def remove_items(ctx, key, force, labels=[]):
             for image in images:
                 try:
                     if force:
-                        ctx.vlog(f"Forcing removal of minipresto image(s)")
+                        ctx.vlog(f"Forcing removal of minipresto image(s)...")
                         ctx.docker_client.images.remove(
                             image.short_id, force=True, noprune=False
                         )
@@ -98,7 +98,7 @@ def remove_items(ctx, key, force, labels=[]):
             for volume in volumes:
                 try:
                     if force:
-                        ctx.vlog(f"Forcing removal of minipresto volume {volume.id}")
+                        ctx.vlog(f"Forcing removal of minipresto volume: {volume.id}")
                         volume.remove(force=True)
                         ctx.vlog(f"{item_type.title()} removed: {volume.id}")
                     else:

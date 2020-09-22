@@ -87,7 +87,7 @@ class CommandExecutor(object):
         )
 
         if not kwargs.get("suppress_output", False):
-            while True: # Stream output
+            while True:  # Stream output
                 output = process.stdout.readline()
                 if output == "" and process.poll() is not None:
                     break
@@ -96,7 +96,10 @@ class CommandExecutor(object):
                     self.ctx.vlog(output.strip())
         output, _ = process.communicate()
         if process.returncode != 0 and kwargs.get("handle_error", True):
-            self.ctx.log_err(f"Failed to execute shell command:\n{command}")
+            self.ctx.log_err(
+                f"Failed to execute shell command:\n{command}\n"
+                f"Exit code: {process.returncode}"
+            )
             sys.exit(1)
 
         cmd_details.append(
@@ -142,7 +145,8 @@ class CommandExecutor(object):
         )
         if return_code != 0 and kwargs.get("handle_error", True):
             self.ctx.log_err(
-                f"Failed to execute command in container '{container.name}':\n{command}"
+                f"Failed to execute command in container '{container.name}':\n{command}\n"
+                f"Exit code: {return_code}"
             )
             sys.exit(1)
 
@@ -216,7 +220,7 @@ class ComposeEnvironment(object):
 
         env_file = os.path.join(ctx.minipresto_lib_dir, ".env")
         if not os.path.isfile(env_file):
-            ctx.log_err(f"Environment file does not exist at path {env_file}")
+            ctx.log_err(f"Environment file does not exist at path: {env_file}")
             sys.exit(1)
 
         env_file_dict = {}
@@ -230,9 +234,7 @@ class ComposeEnvironment(object):
                     env_file_dict[env_variable[0].strip()] = env_variable[1].strip()
 
         if not env_file_dict:
-            ctx.log_err(
-                f"Environment file not loaded properly from path:\n{env_file}"
-            )
+            ctx.log_err(f"Environment file not loaded properly from path: {env_file}")
             sys.exit(1)
 
         config = ctx.get_config(False)
@@ -240,8 +242,8 @@ class ComposeEnvironment(object):
             config_dict = dict(config.items("MODULES"))
         except:
             ctx.log_warn(
-                f"No MODULES section found in {ctx.config_file}. "
-                f"To pass environment variables to your containers, you will need to set this"
+                f"No MODULES section found in {ctx.config_file}\n"
+                f"To pass environment variables to Minipresto containers, you will need to populate this section."
             )
             config_dict = {}
 
@@ -254,7 +256,7 @@ class ComposeEnvironment(object):
                 env_variable_list = env_variable.split("=")
                 if not len(env_variable_list) == 2:
                     ctx.log_err(
-                        f"Invalid environment variable: {env_variable}. Should be a key-value pair"
+                        f"Invalid environment variable: '{env_variable}'. Should be formatted as KEY=VALUE."
                     )
                     sys.exit(1)
                 try:
@@ -282,7 +284,9 @@ class ComposeEnvironment(object):
 class Modules(object):
     def __init__(self, ctx):
         """
-        Contains information about running Minipresto modules.
+        Contains information about running Minipresto modules. If no Minipresto
+        containers are running, all properties will be equal to None or an empty
+        type, such as `[]`.
 
         Parameters
         ----------
@@ -322,16 +326,13 @@ class Modules(object):
         containers = self.ctx.docker_client.containers.list(
             filters={"label": RESOURCE_LABEL}
         )
-        if not containers:
-            self.ctx.log_err(
-                f"No running minipresto containers. To create a snapshot of an inactive environment, "
-                f"you must specify the catalog and security modules. Run --help for more information."
-            )
-            sys.exit(1)
         return containers
 
     def _get_module_label_values(self, containers=[]):
         """Gets all module label values from list of containers."""
+
+        if not containers:
+            return None
 
         module_label_vals = []
         for container in containers:
@@ -351,6 +352,9 @@ class Modules(object):
         the correct directories to copy into the named snapshot directory.
         """
 
+        if not module_label_vals:
+            return None, None
+
         catalog = []
         security = []
 
@@ -360,7 +364,7 @@ class Modules(object):
             elif "security-" in value:
                 security.append(value.strip().replace("security-", ""))
             else:
-                self.ctx.log_err(f"Invalid module label value {value}")
+                self.ctx.log_err(f"Invalid module label value '{value}'.")
                 sys.exit(1)
         return catalog, security
 
@@ -402,7 +406,7 @@ def validate_module_dirs(ctx, module_type="", modules=[]):
         yaml_path = os.path.join(module_dir, f"{module}.yml")
 
         if not (os.path.isfile(yaml_path)):
-            ctx.log_err(f"Invalid {module_type} module: {module}")
+            ctx.log_err(f"Invalid {module_type} module: '{module}'.")
             sys.exit(1)
         module_dirs.append(module_dir)
         module_yaml_files.append(yaml_path)

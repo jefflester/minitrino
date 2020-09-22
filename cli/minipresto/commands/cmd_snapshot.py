@@ -27,7 +27,7 @@ from minipresto.settings import SCRUB_KEYS
 
 @click.command("snapshot", help="""
 Creates a snapshot of a minipresto environment. Places a tarball in the
-minipresto `lib/snapshots` directory.
+Minipresto `lib/snapshots/` directory.
 
 To take a snapshot of an active environment, leave the `--catalog` and
 `--security` options out of the command. 
@@ -65,15 +65,15 @@ def cli(ctx, catalog, security, name, force, no_scrub):
     check_exists(name, force)
 
     if catalog or security:
-        ctx.log(f"Creating snapshot of inactive environment")
+        ctx.log(f"Creating snapshot of inactive environment...")
         snapshot_runner(name, no_scrub, False, catalog, security)
     else:
-        ctx.log(f"Creating snapshot of active environment")
+        ctx.log(f"Creating snapshot of active environment...")
         modules = Modules(ctx)
         snapshot_runner(name, no_scrub, True, modules.catalog, modules.security)
 
     check_complete(name)
-    ctx.log(f"Snapshot complete")
+    ctx.log(f"Snapshot complete.")
 
 
 @pass_environment
@@ -88,11 +88,11 @@ def prepare_snapshot_dir(ctx, name, active, no_scrub, catalog=[], security=[]):
     """
 
     if os.path.isdir(ctx.snapshot_dir):
-        ctx.vlog(f"Snapshot directory exists. Removing and recreating")
+        ctx.vlog(f"Snapshot directory exists. Removing and recreating...")
         shutil.rmtree(ctx.snapshot_dir)
         os.mkdir(ctx.snapshot_dir)
     else:
-        ctx.vlog(f"Snapshot directory does not exist. Creating")
+        ctx.vlog(f"Snapshot directory does not exist. Creating...")
         os.mkdir(ctx.snapshot_dir)
 
     snapshot_name_dir = clone_lib_dir(name)
@@ -123,6 +123,12 @@ def build_snapshot_command(
 
     if active:
         modules = Modules(ctx)
+        if not modules.catalog and not modules.security:
+            ctx.log_err(
+                f"No running Minipresto containers. To create a snapshot of an inactive environment, "
+                f"you must specify the catalog and security modules. Run --help for more information."
+            )
+            sys.exit(1)
         command_string = build_command_string(modules.catalog, modules.security)
     else:
         command_string = build_command_string(catalog, security)
@@ -167,7 +173,7 @@ def create_snapshot_command_file(ctx, command_string="", snapshot_name_dir=""):
     """
 
     file_dest = os.path.join(snapshot_name_dir, "provision-snapshot.sh")
-    ctx.vlog(f"Writing snapshot command to file {file_dest}")
+    ctx.vlog(f"Writing snapshot command to file at path: {file_dest}")
 
     # Create provisioning command snapshot file from template and make it
     # executable
@@ -180,7 +186,7 @@ def create_snapshot_command_file(ctx, command_string="", snapshot_name_dir=""):
         )
     except Exception as error:
         ctx.log_err(
-            f"Failed to write to file {file_dest} and apply executable permissions with error {error}"
+            f"Failed to write to file {file_dest} and apply executable permissions with error: {error}"
         )
         sys.exit(1)
 
@@ -234,7 +240,7 @@ def handle_copy_config_file(ctx, snapshot_name_dir, no_scrub):
         if validate_yes_response(response):
             copy_config_file(snapshot_name_dir, no_scrub)
         else:
-            ctx.log(f"Opted to scrub sensitive config data")
+            ctx.log(f"Opted to scrub sensitive user config data.")
             copy_config_file(snapshot_name_dir)
     else:
         copy_config_file(snapshot_name_dir)
@@ -248,7 +254,7 @@ def copy_config_file(ctx, snapshot_name_dir, no_scrub=False):
         shutil.copy(ctx.config_file, snapshot_name_dir)
     else:
         ctx.log_warn(
-            f"No user config file in {ctx.config_file}. Will not be added to snapshot"
+            f"No user config file at path: {ctx.config_file}. Will not be added to snapshot."
         )
         return
 
@@ -268,7 +274,9 @@ def scrub_config_file(ctx, snapshot_name_dir):
             else:
                 print(line.replace(line, line.rstrip()))
     else:
-        ctx.log_warn(f"No user config file in {ctx.config_file}. Nothing to scrub")
+        ctx.log_warn(
+            f"No user config file at path: {ctx.config_file}. Nothing to scrub."
+        )
 
 
 @pass_environment
@@ -279,7 +287,10 @@ def scrub_line(ctx, line):
 
     line = line.strip().split("=")
     if not len(line) == 2:
-        ctx.log_err(f"Invalid line in snapshot configuration file: {''.join(line)}")
+        ctx.log_err(
+            f"Invalid line in snapshot configuration file: '{''.join(line)}'. "
+            f"Should be formatted as KEY=VALUE."
+        )
         sys.exit(1)
 
     # If the key has a substring that matches any of the scrub keys, we know
@@ -339,7 +350,7 @@ def validate_name(ctx, name):
 
     if not name.isalnum():
         ctx.log_err(
-            f"Illegal characters in filename (alphanumeric only). Rename and retry"
+            f"Illegal characters in provided filename (alphanumeric only). Rename and retry."
         )
         sys.exit(1)
 
@@ -351,21 +362,23 @@ def check_exists(ctx, name, force):
     to overwrite the existing file.
     """
 
-    if not force:
-        snapshot_file = os.path.abspath(
-            os.path.join(ctx.minipresto_lib_dir, "snapshots", f"{name}.tar.gz")
+    if force:
+        return
+
+    snapshot_file = os.path.abspath(
+        os.path.join(ctx.minipresto_lib_dir, "snapshots", f"{name}.tar.gz")
+    )
+    if os.path.isfile(snapshot_file):
+        response = ctx.prompt_msg(
+            f"Snapshot file {name}.tar.gz already exists. Overwrite? [Y/N]"
         )
-        if os.path.isfile(snapshot_file):
-            response = ctx.prompt_msg(
-                f"Snapshot file {name}.tar.gz already exists. Overwrite? [Y/N]"
-            )
-            if validate_yes_response(response):
-                pass
-            else:
-                ctx.log(f"Opted to skip snapshot")
-                sys.exit(0)
-        else:
+        if validate_yes_response(response):
             pass
+        else:
+            ctx.log(f"Opted to skip snapshot.")
+            sys.exit(0)
+    else:
+        pass
 
 
 @pass_environment

@@ -66,7 +66,7 @@ def cli(ctx, catalog="", security="", env="", docker_native=""):
 
     if all((not catalog_chunk, not security_chunk)):
         ctx.log(
-            f"No catalog or security options received. Provisioning standalone Presto container"
+            f"No catalog or security options received. Provisioning standalone Presto container..."
         )
 
     compose_environment = ComposeEnvironment(ctx, env)
@@ -86,7 +86,7 @@ def cli(ctx, catalog="", security="", env="", docker_native=""):
     containers_to_restart = execute_bootstraps(catalog_yaml_files, security_yaml_files)
     handle_config_properties()
     restart_containers(containers_to_restart)
-    ctx.log(f"Environment provisioning complete")
+    ctx.log(f"Environment provisioning complete.")
 
 
 @pass_environment
@@ -143,7 +143,7 @@ def compose_builder(ctx, docker_native="", compose_env="", *args):
     command.append("up -d")
 
     if docker_native:
-        ctx.vlog(f"Received native Docker Compose options")
+        ctx.vlog(f"Received native Docker Compose options: '{docker_native}'")
         command.extend([" ", docker_native])
 
     return "".join(command)
@@ -221,7 +221,7 @@ def execute_container_bootstrap(
         os.path.dirname(yaml_file), "resources", "bootstrap", bootstrap_basename
     )
     if not os.path.isfile(bootstrap_file):
-        ctx.log_err(f"Bootstrap file does not exist: {bootstrap_file}")
+        ctx.log_err(f"Bootstrap file does not exist at location: {bootstrap_file}")
         sys.exit(1)
 
     # Add executable permissions to bootstrap
@@ -240,10 +240,10 @@ def execute_container_bootstrap(
         container=container,
     )
     if f"{bootstrap_checksum}" in output[0].get("output", ""):
-        ctx.vlog(f"Bootstrap already executed for container {container_name}. Skipping")
+        ctx.vlog(f"Bootstrap already executed in container '{container_name}'. Skipping.")
         return False
 
-    ctx.vlog(f"Executing bootstrap script in container: {container_name}")
+    ctx.vlog(f"Executing bootstrap script in container '{container_name}'...")
     executor.execute_commands(
         commands=[f"docker cp {bootstrap_file} {container_name}:/tmp/",]
     )
@@ -255,7 +255,7 @@ def execute_container_bootstrap(
         container=container,
     )
 
-    ctx.vlog(f"Successfully executed bootstrap script for {container_name}")
+    ctx.vlog(f"Successfully executed bootstrap script in container '{container_name}'.")
     return True
 
 
@@ -266,7 +266,7 @@ def handle_config_properties(ctx):
     warnings for any detected duplicates.
     """
 
-    ctx.vlog("Checking config.properties for duplicate properties")
+    ctx.vlog("Checking Presto config.properties for duplicate properties...")
     executor = CommandExecutor(ctx)
     container = ctx.docker_client.containers.get("presto")
     output = executor.execute_commands(
@@ -278,7 +278,7 @@ def handle_config_properties(ctx):
     config_props = output[0].get("output", "")
     if not config_props:
         ctx.log_err(
-            "Presto config.properties file unable to be read from Presto container"
+            "Presto config.properties file unable to be read from Presto container."
         )
         sys.exit(1)
 
@@ -305,7 +305,7 @@ def handle_config_properties(ctx):
             duplicates.insert(0, config_props[counter])
             duplicates_string = "\n".join(duplicates)
             ctx.log_warn(
-                f"Duplicate Presto configuration properties detected in config.properties:\n{duplicates_string}"
+                f"Duplicate Presto configuration properties detected in config.properties file:\n{duplicates_string}"
             )
         counter = inner_counter
 
@@ -323,11 +323,11 @@ def restart_containers(ctx, containers_to_restart=[]):
     for container in containers_to_restart:
         try:
             container = ctx.docker_client.containers.get(container)
-            ctx.vlog(f"Restarting container: {container.name}")
+            ctx.vlog(f"Restarting container '{container.name}'...")
             container.restart()
         except docker.errors.NotFound as error:
             ctx.log_err(
-                f"Attempting to restart container {container.name}, but the container was not found"
+                f"Attempting to restart container '{container.name}', but the container was not found."
             )
             sys.exit(1)
 
@@ -347,8 +347,8 @@ def check_license(ctx, compose_environment={}):
     if starburst_lic_file:
         if not os.path.isfile(starburst_lic_file):
             ctx.vlog(
-                f"Starburst license not found in {starburst_lic_file}.\n"
-                f"Creating placeholder license in {placeholder_lic_file}"
+                f"Starburst license not found at path: {starburst_lic_file}.\n"
+                f"Creating placeholder license at path: {placeholder_lic_file}"
             )
             with open(placeholder_lic_file, "w") as f:
                 pass
@@ -360,7 +360,7 @@ def check_license(ctx, compose_environment={}):
         f'STARBURST_LIC_PATH="{placeholder_lic_file}" '
     )
     if not os.path.isfile(placeholder_lic_file):
-        ctx.vlog(f"Creating placeholder license in {placeholder_lic_file}")
+        ctx.vlog(f"Creating placeholder license at path: {placeholder_lic_file}")
         with open(placeholder_lic_file, "w") as f:
             pass
     return compose_environment
@@ -393,6 +393,8 @@ def initialize_containers(ctx):
             continue
         else:
             ctx.log_err(
-                f"Command failed with output {output_string} and exit code {output[0].get('return_code', None)}"
+                f"Command failed.\n"
+                f"Output: {output_string}\n"
+                f"Exit code: {output[0].get('return_code', None)}"
             )
             sys.exit(1)

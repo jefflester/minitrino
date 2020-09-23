@@ -53,29 +53,8 @@ To have the browser accept the self-signed certificate, do the following:
 **Safari**: Click on the button **Show Details** and then click the link **visit this website**.
 
 ## Adding a new user to the password file
-1. Open a shell to the LDAP container
-```
-docker exec -it ldap bash
-```
 
-2. Create an LDIF file with the new user information:
+Example with username `jeff` and password `prestoRocks15`
 ```
-cat << EOF > jeff.ldif
-dn: uid=jeff,dc=example,dc=com
-changetype: add
-uid: jeff
-objectClass: inetOrgPerson
-objectClass: organizationalPerson
-objectClass: person
-objectClass: top
-cn: jeff
-sn: jeff
-mail: jeff@example.com
-userPassword: prestoRocks15
-EOF
-```
-
-3. Use the **ldapmodify** tool to add the new user
-```
-ldapmodify -x -D "cn=admin,dc=example,dc=com" -w prestoRocks15 -H ldaps://ldap:636 -f jeff.ldif
+docker exec presto htpasswd -bB -C 10 /usr/lib/presto/etc/password.db jeff prestoRocks15
 ```

@@ -46,3 +46,8 @@ cp /usr/lib/presto/etc/keystore.jks /home/presto/keystore.jks
 keytool -export -alias presto -keystore /home/presto/keystore.jks -rfc -file /home/presto/presto_certificate.cer -storepass prestoRocks15 -noprompt
 keytool -import -v -trustcacerts -alias presto_trust -file /home/presto/presto_certificate.cer -keystore /home/presto/truststore.jks -storepass prestoRocks15 -noprompt
 rm /home/presto/presto_certificate.cer
+
+echo "Setting up password file"
+sudo yum install httpd-tools -y
+htpasswd -cbB -C 10 /usr/lib/presto/etc/password.db alice prestoRocks15
+htpasswd -bB -C 10 /usr/lib/presto/etc/password.db bob prestoRocks15

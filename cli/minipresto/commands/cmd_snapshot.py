@@ -10,10 +10,12 @@ import tarfile
 import fileinput
 
 from minipresto.cli import pass_environment
-from minipresto.commands.core import Modules
-from minipresto.commands.core import check_daemon
-from minipresto.commands.core import validate_yes_response
-from minipresto.commands.core import validate_module_dirs
+from minipresto.exceptions import MiniprestoException
+from minipresto.core import Modules
+from minipresto.core import check_daemon
+from minipresto.core import handle_exception
+from minipresto.core import validate_yes_response
+from minipresto.core import validate_module_dirs
 
 from minipresto.settings import SNAPSHOT_ROOT_FILES
 from minipresto.settings import PROVISION_SNAPSHOT_TEMPLATE
@@ -61,19 +63,27 @@ those secrets with another person.
 def cli(ctx, catalog, security, name, force, no_scrub):
     """Snapshot command for minipresto."""
 
-    validate_name(name)
-    check_exists(name, force)
+    try:
+        validate_name(name)
+        check_exists(name, force)
 
-    if catalog or security:
-        ctx.log(f"Creating snapshot of inactive environment...")
-        snapshot_runner(name, no_scrub, False, catalog, security)
-    else:
-        ctx.log(f"Creating snapshot of active environment...")
-        modules = Modules(ctx)
-        snapshot_runner(name, no_scrub, True, modules.catalog, modules.security)
+        if catalog or security:
+            ctx.log(f"Creating snapshot of inactive environment...")
+            snapshot_runner(name, no_scrub, False, catalog, security)
+        else:
+            ctx.log(f"Creating snapshot of active environment...")
+            modules = Modules(ctx)
+            snapshot_runner(name, no_scrub, True, modules.catalog, modules.security)
 
-    check_complete(name)
-    ctx.log(f"Snapshot complete.")
+        check_complete(name)
+        ctx.log(f"Snapshot complete.")
+
+    except MiniprestoException as e:
+        handle_exception(e)
+
+    except Exception as e:
+        ctx.log_err(f"Error occurred during snapshot: {e}")
+        sys.exit(1)
 
 
 @pass_environment
@@ -124,11 +134,10 @@ def build_snapshot_command(
     if active:
         modules = Modules(ctx)
         if not modules.catalog and not modules.security:
-            ctx.log_err(
+            raise MiniprestoException(
                 f"No running Minipresto containers. To create a snapshot of an inactive environment, "
                 f"you must specify the catalog and security modules. Run --help for more information."
             )
-            sys.exit(1)
         command_string = build_command_string(modules.catalog, modules.security)
     else:
         command_string = build_command_string(catalog, security)
@@ -185,10 +194,9 @@ def create_snapshot_command_file(ctx, command_string="", snapshot_name_dir=""):
             file_dest, st.st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH,
         )
     except Exception as error:
-        ctx.log_err(
+        raise MiniprestoException(
             f"Failed to write to file {file_dest} and apply executable permissions with error: {error}"
         )
-        sys.exit(1)
 
     with open(file_dest, "a") as provision_snapshot_file:
         provision_snapshot_file.write(command_string)
@@ -287,11 +295,10 @@ def scrub_line(ctx, line):
 
     line = line.strip().split("=")
     if not len(line) == 2:
-        ctx.log_err(
+        raise MiniprestoException(
             f"Invalid line in snapshot configuration file: '{''.join(line)}'. "
             f"Should be formatted as KEY=VALUE."
         )
-        sys.exit(1)
 
     # If the key has a substring that matches any of the scrub keys, we know
     # it's an item whose value needs to be scrubbed
@@ -349,10 +356,9 @@ def validate_name(ctx, name):
     """
 
     if not name.isalnum():
-        ctx.log_err(
+        raise MiniprestoException(
             f"Illegal characters in provided filename (alphanumeric only). Rename and retry."
         )
-        sys.exit(1)
 
 
 @pass_environment
@@ -390,5 +396,7 @@ def check_complete(ctx, name):
 
     snapshot_file = os.path.join(ctx.minipresto_lib_dir, "snapshots", f"{name}.tar.gz")
     if not os.path.isfile(snapshot_file):
-        ctx.log_err(f"Snapshot tarball failed to write to {snapshot_file}")
-        sys.exit(1)
+        raise MiniprestoException(
+            f"Snapshot tarball failed to write to {snapshot_file}"
+        )
+

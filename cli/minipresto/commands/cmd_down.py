@@ -4,7 +4,7 @@
 import sys
 import click
 
-from minipresto.commands.core import check_daemon
+from minipresto.core import check_daemon
 from minipresto.cli import pass_environment
 
 from minipresto.settings import RESOURCE_LABEL

@@ -6,8 +6,8 @@ import click
 
 from docker.errors import APIError
 from minipresto.cli import pass_environment
-from minipresto.commands.core import check_daemon
-from minipresto.commands.core import validate_yes_response
+from minipresto.core import check_daemon
+from minipresto.core import validate_yes_response
 
 from minipresto.settings import IMAGE
 from minipresto.settings import VOLUME

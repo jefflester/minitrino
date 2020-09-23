@@ -9,13 +9,14 @@ import docker
 import subprocess
 
 from minipresto.cli import pass_environment
+from minipresto.exceptions import MiniprestoException
 
 from minipresto.settings import RESOURCE_LABEL
 from minipresto.settings import MODULE_LABEL_KEY_ROOT
 from minipresto.settings import MODULE_ROOT
 
 
-class CommandExecutor(object):
+class CommandExecutor:
     def __init__(self, ctx=None):
         """
         Executes commands in the host shell with customized handling of
@@ -60,14 +61,17 @@ class CommandExecutor(object):
             kwargs.get("environment", {})
         )
 
-        cmd_details = []
-        if kwargs.get("container", None):
-            for command in kwargs.get("commands", []):
-                cmd_details = self._execute_in_container(command, **kwargs)
-        else:
-            for command in kwargs.get("commands", []):
-                cmd_details = self._execute_in_shell(command, **kwargs)
-        return cmd_details
+        try:
+            cmd_details = []
+            if kwargs.get("container", None):
+                for command in kwargs.get("commands", []):
+                    cmd_details = self._execute_in_container(command, **kwargs)
+            else:
+                for command in kwargs.get("commands", []):
+                    cmd_details = self._execute_in_shell(command, **kwargs)
+            return cmd_details
+        except MiniprestoException as e:
+            handle_exception(e)
 
     def _execute_in_shell(self, command="", **kwargs):
         """
@@ -96,11 +100,10 @@ class CommandExecutor(object):
                     self.ctx.vlog(output.strip())
         output, _ = process.communicate()
         if process.returncode != 0 and kwargs.get("handle_error", True):
-            self.ctx.log_err(
+            raise MiniprestoException(
                 f"Failed to execute shell command:\n{command}\n"
                 f"Exit code: {process.returncode}"
             )
-            sys.exit(1)
 
         cmd_details.append(
             {
@@ -118,6 +121,11 @@ class CommandExecutor(object):
         """
 
         container = kwargs.get("container", None)
+        if container is None:
+            raise MiniprestoException(
+                "Attempted to execute a command inside of a container, but a container object was not provided."
+            )
+
         self.ctx.vlog(
             f"Preparing to execute command in container '{container.name}':\n{command}"
         )
@@ -144,11 +152,10 @@ class CommandExecutor(object):
             "ExitCode"
         )
         if return_code != 0 and kwargs.get("handle_error", True):
-            self.ctx.log_err(
+            raise MiniprestoException(
                 f"Failed to execute command in container '{container.name}':\n{command}\n"
                 f"Exit code: {return_code}"
             )
-            sys.exit(1)
 
         cmd_details.append(
             {"command": command, "output": output_string, "return_code": return_code}
@@ -186,7 +193,7 @@ class CommandExecutor(object):
         return ansi_regex.sub("", value)
 
 
-class ComposeEnvironment(object):
+class ComposeEnvironment:
     def __init__(self, ctx=None, env=[]):
         """
         Creates a string and a dictionary of environment variables for use by
@@ -208,7 +215,12 @@ class ComposeEnvironment(object):
         - `compose_env_dict`: Dictionary of environment variables.
         """
 
-        self.compose_env_string, self.compose_env_dict = self._get_compose_env(ctx, env)
+        try:
+            self.compose_env_string, self.compose_env_dict = self._get_compose_env(
+                ctx, env
+            )
+        except MiniprestoException as e:
+            handle_exception(e)
 
     def _get_compose_env(self, ctx, env=[]):
         """
@@ -220,8 +232,9 @@ class ComposeEnvironment(object):
 
         env_file = os.path.join(ctx.minipresto_lib_dir, ".env")
         if not os.path.isfile(env_file):
-            ctx.log_err(f"Environment file does not exist at path: {env_file}")
-            sys.exit(1)
+            raise MiniprestoException(
+                f"Environment file does not exist at path: {env_file}"
+            )
 
         env_file_dict = {}
         with open(env_file, "r") as f:
@@ -234,8 +247,9 @@ class ComposeEnvironment(object):
                     env_file_dict[env_variable[0].strip()] = env_variable[1].strip()
 
         if not env_file_dict:
-            ctx.log_err(f"Environment file not loaded properly from path: {env_file}")
-            sys.exit(1)
+            raise MiniprestoException(
+                f"Environment file not loaded properly from path: {env_file}"
+            )
 
         config = ctx.get_config(False)
         try:
@@ -255,10 +269,9 @@ class ComposeEnvironment(object):
             for env_variable in env:
                 env_variable_list = env_variable.split("=")
                 if not len(env_variable_list) == 2:
-                    ctx.log_err(
+                    raise MiniprestoException(
                         f"Invalid environment variable: '{env_variable}'. Should be formatted as KEY=VALUE."
                     )
-                    sys.exit(1)
                 try:
                     del config_dict[env_variable_list[0].strip()]  # remove if present
                 except:
@@ -281,7 +294,7 @@ class ComposeEnvironment(object):
         return "".join(compose_env_list)
 
 
-class Modules(object):
+class Modules:
     def __init__(self, ctx):
         """
         Contains information about running Minipresto modules. If no Minipresto
@@ -316,7 +329,10 @@ class Modules(object):
         check_daemon()
         containers = self._get_running_containers()
         module_label_vals = self._get_module_label_values(containers)
-        catalog, security = self._parse_module_label_values(module_label_vals)
+        try:
+            catalog, security = self._parse_module_label_values(module_label_vals)
+        except MiniprestoException as e:
+            handle_exception(e)
 
         return containers, module_label_vals, catalog, security
 
@@ -364,22 +380,54 @@ class Modules(object):
             elif "security-" in value:
                 security.append(value.strip().replace("security-", ""))
             else:
-                self.ctx.log_err(f"Invalid module label value '{value}'.")
-                sys.exit(1)
+                raise MiniprestoException(f"Invalid module label value '{value}'.")
         return catalog, security
 
 
 @pass_environment
+def handle_exception(ctx, e=MiniprestoException, log_msg=True, sys_exit=True):
+    """
+    Gracefully handles MiniprestoException exceptions.
+
+    Parameters
+    ----------
+    - `e`: The exception object.
+    - `log_msg`: if `True`, the exception message will be logged through
+      Minipresto's error logging function.
+    - `sys_exit`: If `True`, Minipresto will exit with the exception's exit code.
+    """
+
+    if not isinstance(e, MiniprestoException):
+        raise Exception(
+            "Incorrect object type for parameter 'e'. Expected: MiniprestoException"
+        )
+
+    if log_msg:
+        ctx.log_err(e.msg)
+
+    if sys_exit:
+        sys.exit(e.exit_code)
+
+
+@pass_environment
 def check_daemon(ctx):
-    """Checks if the Docker daemon is running."""
+    """
+    Checks if the Docker daemon is running. Raises and handles a
+    MiniprestoException if not.
+    """
 
     try:
-        ctx.docker_client.ping()
-    except:
-        ctx.log_err(
-            f"Error when pinging the Docker server. Is the Docker daemon running?"
-        )
-        sys.exit(1)
+        ping()
+    except MiniprestoException as e:
+        handle_exception(e)
+
+    def ping():
+        try:
+            ctx.docker_client.ping()
+        except:
+            raise MiniprestoException(
+                f"Error when pinging the Docker server. Is the Docker daemon running?"
+            )
 
 
 @pass_environment
@@ -388,6 +436,8 @@ def validate_module_dirs(ctx, module_type="", modules=[]):
     Validates that the directory and Docker Compose .yml exist for each provided
     module. After validation, a list of module directories and YAML file paths
     is returned.
+
+    Raises a MiniprestoException if the module does not exist.
 
     Parameters
     ----------
@@ -406,8 +456,7 @@ def validate_module_dirs(ctx, module_type="", modules=[]):
         yaml_path = os.path.join(module_dir, f"{module}.yml")
 
         if not (os.path.isfile(yaml_path)):
-            ctx.log_err(f"Invalid {module_type} module: '{module}'.")
-            sys.exit(1)
+            raise MiniprestoException(f"Invalid {module_type} module: '{module}'.")
         module_dirs.append(module_dir)
         module_yaml_files.append(yaml_path)
 

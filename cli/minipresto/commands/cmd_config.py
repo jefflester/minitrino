@@ -7,7 +7,7 @@ import click
 import shutil
 
 from minipresto.cli import pass_environment
-from minipresto.commands.core import validate_yes_response
+from minipresto.core import validate_yes_response
 
 from minipresto.settings import CONFIG_TEMPLATE
 

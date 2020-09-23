@@ -44,6 +44,7 @@ You can provision an environment via the `provision` command.
   - `--catalog`: Catalog module to provision. Can be none, one, or many.
   - `--security`: Security module to provision. Can be none, one, or many.
   - `--env`: Add or override environment variables. If any of the variables overlap with variables in the library's `.env` file or the `minipresto.cfg` file, the variable will be overridden with what is provided in `--env`. Can be none, one, or many.
+  - `--no-rollback`: Will not rollback provisioned resources in the event of an error. Defaults to `False`.
   - `--docker-native`: Appends the constructed Compose command with native Docker Compose CLI options. Can be none, one, or many. To use this, simply pass in additional Docker Compose options, i.e. `minipresto provision --docker-native '--remove-orphans --force-recreate'` or `minipresto provision -d --build`. 
     - When passing multiple parameters to this option, the list needs to be space-delimited and surrounded with double or single quotes.
 - If no options are passed in, the CLI will provision a standalone Presto container.

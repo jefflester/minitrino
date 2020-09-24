@@ -34,7 +34,12 @@ def cli(ctx, reset):
 
     if os.path.isfile(ctx.config_file):
         ctx.vlog("Opening existing config file at path: {ctx.config_file}")
-        click.edit(filename=ctx.config_file)
+        click.edit(
+            filename=ctx.config_file,
+            editor=ctx.get_config_value(
+                section="CLI", key="TEXT_EDITOR", warn=False, default=None
+            ),
+        )
     else:
         ctx.vlog(
             "No config file found. Creating template config file and opening for edits..."

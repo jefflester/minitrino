@@ -428,9 +428,8 @@ def rollback_provision(ctx, no_rollback):
             f"Errors occurred during environment provisioning and rollback has been disabled. "
             f"Provisioned resources will remain in an unaltered state."
         )
-        sys.exit(1)  # Exit with non-zero since provisioning failed
-
-    ctx.log_err(
+        return
+    ctx.log_warn(
         f"Rolling back provisioned resources due to "
         f"errors encountered while provisioning the environment."
     )

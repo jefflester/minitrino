@@ -178,7 +178,7 @@ class Environment:
             config.optionxform = str  # Preserve case
             config.read(self.config_file)
             return config
-        elif warn == True:
+        elif warn:
             self.log_warn(
                 f"No minipresto.cfg file found in {self.config_file}. "
                 f"Run 'minipresto config' to reconfigure this file and directory."

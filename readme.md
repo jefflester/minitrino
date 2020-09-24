@@ -166,6 +166,7 @@ Below is a list of all valid environment variables. The majority of these are pa
 
 CLI environment variables:
 - LIB_PATH: the filesystem path of the Minipresto library.
+- TEXT_EDITOR: the text editor to use with the `config` command, e.g. "vi", "nano", etc. Defaults to the shell's default editor.
 
 Docker environment variables:
 - DOCKER_HOST: the host of the Docker daemon. Required if Docker is located anywhere other than localhost.

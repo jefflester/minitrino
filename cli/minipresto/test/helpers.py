@@ -28,6 +28,22 @@ SNAPSHOT_CONFIG_FILE = os.path.join(
 # -----------------------------------------------------------------------------------
 
 
+class MiniprestoResult:
+    def __init__(self, click_result, output, exit_code):
+        """
+        Result class containing information about the result of a Minipresto command.
+        
+        Properties
+        ----------
+        - `click_result`: The unaltered Click Result object.
+        - `output`: Formatted output with newlines removed.
+        - `exit_code`: The exit code of the command.
+        """
+        self.click_result = click_result
+        self.output = output
+        self.exit_code = exit_code
+
+
 def execute_command(command=[], print_output=True, command_input=""):
     """Executes a command through the Click CliRunner."""
 
@@ -40,8 +56,7 @@ def execute_command(command=[], print_output=True, command_input=""):
         print(f"Output of command [minipresto {' '.join(command)}]:\n{result.output}")
 
     # Remove newlines for string assertion consistency
-    result.output = result.output.replace("\n", " ")
-    return result
+    return MiniprestoResult(result, result.output.replace("\n", " "), result.exit_code)
 
 
 def log_success(msg):

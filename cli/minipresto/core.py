@@ -298,8 +298,8 @@ class Modules:
     def __init__(self, ctx):
         """
         Contains information about running Minipresto modules. If no Minipresto
-        containers are running, all properties will be equal to None or an empty
-        type, such as `[]`.
+        containers are running, all properties will be equal to an empty type,
+        such as `[]`.
 
         Parameters
         ----------
@@ -348,7 +348,7 @@ class Modules:
         """Gets all module label values from list of containers."""
 
         if not containers:
-            return None
+            return []
 
         module_label_vals = []
         for container in containers:
@@ -369,7 +369,7 @@ class Modules:
         """
 
         if not module_label_vals:
-            return None, None
+            return [], []
 
         catalog = []
         security = []
@@ -416,11 +416,6 @@ def check_daemon(ctx):
     MiniprestoException if not.
     """
 
-    try:
-        ping()
-    except MiniprestoException as e:
-        handle_exception(e)
-
     def ping():
         try:
             ctx.docker_client.ping()
@@ -428,6 +423,11 @@ def check_daemon(ctx):
             raise MiniprestoException(
                 f"Error when pinging the Docker server. Is the Docker daemon running?"
             )
+
+    try:
+        ping()
+    except MiniprestoException as e:
+        handle_exception(e)
 
 
 @pass_environment
@@ -461,6 +461,27 @@ def validate_module_dirs(ctx, module_type="", modules=[]):
         module_yaml_files.append(yaml_path)
 
     return module_dirs, module_yaml_files
+
+
+def generate_identifier(identifiers=None):
+    """
+    Returns an 'object identifier' string used for creating log messages, e.g.
+    '[ID: 12345] [Name: presto]'.
+
+    Parameters
+    ----------
+    - `identifiers`: Dictionary of "identifier_value": "identifier_key" pairs.
+    """
+
+    if not identifiers:
+        raise MiniprestoException(
+            "Identifiers are required to generate an object identifier."
+        )
+
+    object_identifier = []
+    for key, value in identifiers.items():
+        object_identifier.append(f"[{key}: {value}]")
+    return " ".join(object_identifier)
 
 
 def validate_yes_response(response=""):

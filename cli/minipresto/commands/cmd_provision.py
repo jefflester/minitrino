@@ -15,7 +15,6 @@ import hashlib
 import click
 
 from minipresto.cli import pass_environment
-from minipresto.commands.cmd_down import cli as rollback
 from minipresto.exceptions import MiniprestoException
 
 from minipresto.core import CommandExecutor
@@ -69,8 +68,8 @@ def cli(ctx, catalog, security, env, no_rollback, docker_native):
 
     try:
         catalog_yaml_files, security_yaml_files = validate(catalog, security)
-        catalog_chunk = compose_chunk(catalog, {"module_type": "catalog"})
-        security_chunk = compose_chunk(security, {"module_type": "security"})
+        catalog_chunk = chunk(catalog, {"module_type": "catalog"})
+        security_chunk = chunk(security, {"module_type": "security"})
 
         if all((not catalog_chunk, not security_chunk)):
             ctx.log(
@@ -79,7 +78,7 @@ def cli(ctx, catalog, security, env, no_rollback, docker_native):
 
         compose_environment = ComposeEnvironment(ctx, env)
         compose_environment = check_license(compose_environment)
-        compose_command = compose_builder(
+        compose_command = build_command(
             docker_native,
             compose_environment.compose_env_string,
             catalog_chunk,
@@ -109,17 +108,17 @@ def cli(ctx, catalog, security, env, no_rollback, docker_native):
 
 
 @pass_environment
-def compose_chunk(ctx, items=[], key={}):
+def chunk(ctx, items=[], key={}):
     """
-    Builds docker-compose command chunk for chosen modules. Command chunks are
-    compatible with the docker-compose CLI. Returns a command chunk string.
+    Builds docker-compose command chunk for the chosen modules. Returns a
+    command chunk string.
     """
 
     if not items:
         return ""
 
     module_type = key.get("module_type", "")
-    command_chunk = []
+    chunk = []
 
     for i in range(len(items)):
         compose_path = os.path.abspath(
@@ -133,16 +132,16 @@ def compose_chunk(ctx, items=[], key={}):
         )
 
         compose_path_formatted = f"-f {compose_path} \\\n"
-        command_chunk.append(compose_path_formatted)
+        chunk.append(compose_path_formatted)
 
-    return "".join(command_chunk)
+    return "".join(chunk)
 
 
 @pass_environment
-def compose_builder(ctx, docker_native="", compose_env="", *args):
+def build_command(ctx, docker_native="", compose_env="", *args):
     """
     Builds a formatted docker-compose command for shell execution from provided
-    command chunks. Returns a full docker-compose command string.
+    command chunks. Returns a docker-compose command string.
     """
 
     command = []
@@ -345,7 +344,7 @@ def restart_containers(ctx, containers_to_restart=[]):
             container = ctx.docker_client.containers.get(container)
             ctx.vlog(f"Restarting container '{container.name}'...")
             container.restart()
-        except docker.errors.NotFound as error:
+        except docker.errors.NotFound:
             raise MiniprestoException(
                 f"Attempting to restart container '{container.name}', but the container was not found."
             )
@@ -429,11 +428,16 @@ def rollback_provision(ctx, no_rollback):
             f"Errors occurred during environment provisioning and rollback has been disabled. "
             f"Provisioned resources will remain in an unaltered state."
         )
-        sys.exit(1) # Exit with non-zero since provisioning failed
+        sys.exit(1)  # Exit with non-zero since provisioning failed
 
     ctx.log_err(
         f"Rolling back provisioned resources due to "
         f"errors encountered while provisioning the environment."
     )
 
-    rollback(keep=False)
+    containers = ctx.docker_client.containers.list(
+        filters={"label": RESOURCE_LABEL}, all=True
+    )
+    for container in containers:
+        container.stop()
+        container.remove()

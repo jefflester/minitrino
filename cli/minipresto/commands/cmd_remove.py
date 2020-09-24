@@ -8,6 +8,7 @@ from docker.errors import APIError
 from minipresto.cli import pass_environment
 from minipresto.core import check_daemon
 from minipresto.core import validate_yes_response
+from minipresto.core import generate_identifier
 
 from minipresto.settings import IMAGE
 from minipresto.settings import VOLUME
@@ -39,17 +40,17 @@ def cli(ctx, images, volumes, label, force):
     check_daemon()
 
     if images:
-        remove_items({"item_type": IMAGE}, force, label)
+        remove_items(IMAGE, force, label)
     if volumes:
-        remove_items({"item_type": VOLUME}, force, label)
+        remove_items(VOLUME, force, label)
 
     if all((not images, not volumes)):
         response = ctx.prompt_msg(
             "You are about to all remove minipresto images and volumes. Continue? [Y/N]"
         )
         if validate_yes_response(response):
-            remove_items({"item_type": IMAGE}, force, label)
-            remove_items({"item_type": VOLUME}, force, label)
+            remove_items(IMAGE, force, label)
+            remove_items(VOLUME, force, label)
         else:
             ctx.log(f"Opted to skip resource removal.")
             sys.exit(0)
@@ -58,57 +59,59 @@ def cli(ctx, images, volumes, label, force):
 
 
 @pass_environment
-def remove_items(ctx, key, force, labels=[]):
+def remove_items(ctx, item_type, force, labels=[]):
     """
     Removes Docker items. If no labels are passed in, all minipresto
     resources are removed. If label(s) are passed in, the removal is limited to
     the passed in labels.
     """
 
-    item_type = key.get("item_type", "")
-
     if not labels:
         labels = [RESOURCE_LABEL]
 
+    images = []
+    volumes = []
     for label in labels:
         if item_type == IMAGE:
-            images = ctx.docker_client.images.list(filters={"label": label})
-            for image in images:
-                try:
-                    if force:
-                        ctx.vlog(f"Forcing removal of minipresto image(s)...")
-                        ctx.docker_client.images.remove(
-                            image.short_id, force=True, noprune=False
-                        )
-                        ctx.vlog(
-                            f"{item_type.title()} removed: {image.short_id} {try_get_image_tag(image)}"
-                        )
-                    else:
-                        ctx.docker_client.images.remove(image.short_id)
-                        ctx.vlog(
-                            f"{item_type.title()} removed: {image.short_id} {try_get_image_tag(image)}"
-                        )
-                except APIError as error:
-                    ctx.vlog(
-                        f"Cannot remove image: {image.short_id} {try_get_image_tag(image)}\n"
-                        f"Error from Docker: {error.explanation}"
-                    )
-        elif item_type == VOLUME:
-            volumes = ctx.docker_client.volumes.list(filters={"label": label})
-            for volume in volumes:
-                try:
-                    if force:
-                        ctx.vlog(f"Forcing removal of minipresto volume: {volume.id}")
-                        volume.remove(force=True)
-                        ctx.vlog(f"{item_type.title()} removed: {volume.id}")
-                    else:
-                        volume.remove()
-                        ctx.vlog(f"{item_type.title()} removed: {volume.id}")
-                except APIError as error:
-                    ctx.vlog(
-                        f"Cannot remove volume: {volume.id}\n"
-                        f"Error from Docker: {error.explanation}"
-                    )
+            images.extend(ctx.docker_client.images.list(filters={"label": label}))
+        if item_type == VOLUME:
+            volumes.extend(ctx.docker_client.volumes.list(filters={"label": label}))
+
+    images = list(set(images))
+    for image in images:
+        try:
+            identifier = generate_identifier(
+                {"ID": image.short_id, "Image:Tag": try_get_image_tag(image)}
+            )
+            if force:
+                ctx.docker_client.images.remove(
+                    image.short_id, force=True, noprune=False
+                )
+                ctx.vlog(f"{item_type.title()} removed: {identifier}")
+            else:
+                ctx.docker_client.images.remove(image.short_id)
+                ctx.vlog(f"{item_type.title()} removed: {identifier}")
+        except APIError as e:
+            ctx.vlog(
+                f"Cannot remove image: {identifier}\n"
+                f"Error from Docker: {e.explanation}"
+            )
+
+    volumes = list(set(volumes))
+    for volume in volumes:
+        try:
+            identifier = generate_identifier({"ID": volume.id})
+            if force:
+                volume.remove(force=True)
+                ctx.vlog(f"{item_type.title()} removed: {identifier}")
+            else:
+                volume.remove()
+                ctx.vlog(f"{item_type.title()} removed: {identifier}")
+        except APIError as e:
+            ctx.vlog(
+                f"Cannot remove volume: {identifier}\n"
+                f"Error from Docker: {e.explanation}"
+            )
 
 
 def try_get_image_tag(image):
@@ -117,6 +120,6 @@ def try_get_image_tag(image):
     """
 
     try:
-        return f"| {image.tags[0]}"
+        return image.tags[0]
     except:
         return ""

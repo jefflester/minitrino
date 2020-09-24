@@ -133,12 +133,12 @@ def build_snapshot_command(
 
     if active:
         modules = Modules(ctx)
-        if not modules.catalog and not modules.security:
+        if not modules.containers:
             raise MiniprestoException(
                 f"No running Minipresto containers. To create a snapshot of an inactive environment, "
                 f"you must specify the catalog and security modules. Run --help for more information."
             )
-        command_string = build_command_string(modules.catalog, modules.security)
+        command_string = build_command_string(catalog, security)
     else:
         command_string = build_command_string(catalog, security)
 
@@ -193,9 +193,9 @@ def create_snapshot_command_file(ctx, command_string="", snapshot_name_dir=""):
         os.chmod(
             file_dest, st.st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH,
         )
-    except Exception as error:
+    except Exception as e:
         raise MiniprestoException(
-            f"Failed to write to file {file_dest} and apply executable permissions with error: {error}"
+            f"Failed to write to file {file_dest} and apply executable permissions with error: {e}"
         )
 
     with open(file_dest, "a") as provision_snapshot_file:

@@ -79,7 +79,9 @@ def cli(ctx, catalog, security, name, force, no_scrub):
             snapshot_runner(name, no_scrub, True, modules.catalog, modules.security)
 
         check_complete(name)
-        ctx.log(f"Snapshot complete.")
+        ctx.log(
+            f"Snapshot complete and saved in {os.path.join(ctx.minipresto_lib_dir, 'snapshots')}"
+        )
 
     except MiniprestoException as e:
         handle_exception(e)
@@ -91,16 +93,16 @@ def cli(ctx, catalog, security, name, force, no_scrub):
 @pass_environment
 def prepare_snapshot_dir(ctx, name, active, no_scrub, catalog=[], security=[]):
     """
-    Checks if the snapshot directory exists. If it does, clears
-    files/directories inside of it. If it doesn't, creates it and clones the
-    required project structure. Copies the provisioning command snapshot file
-    for actively environment snapshots.
+    Checks if the snapshot temp directory exists. If it does, clears
+    files/directories inside of it. If it doesn't, (1) creates it and clones the
+    library structure, (2) copies the provisioning command snapshot file for
+    actively environment snapshots.
 
     Returns the absolute path of the named snapshot directory.
     """
 
     if os.path.isdir(ctx.snapshot_dir):
-        ctx.vlog(f"Snapshot directory exists. Removing and recreating...")
+        ctx.vlog(f"Snapshot temp directory exists. Removing and recreating...")
         shutil.rmtree(ctx.snapshot_dir)
         os.mkdir(ctx.snapshot_dir)
     else:
@@ -184,7 +186,7 @@ def create_snapshot_command_file(ctx, command_string="", snapshot_name_dir=""):
     """
 
     file_dest = os.path.join(snapshot_name_dir, "provision-snapshot.sh")
-    ctx.vlog(f"Writing snapshot command to file at path: {file_dest}")
+    ctx.vlog(f"Creating snapshot command to file at path: {file_dest}")
 
     # Create provisioning command snapshot file from template and make it
     # executable

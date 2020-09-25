@@ -27,8 +27,8 @@ class Environment:
         - `verbose`: Indicates whether or not output verbose logs to stdout.
         - `user_home_dir`: The home directory of the current user.
         - `minipresto_user_dir`: The location of the minipresto directory
-          relative to the user home directory. 
-        - `config_file`: The location of the user's configuration file. 
+          relative to the user home directory.
+        - `config_file`: The location of the user's configuration file.
         - `snapshot_dir`: The location of the user's snapshot directory (this is
           essentially a temporary directory, as 'permanent' snapshot tarballs
           are written to the library).
@@ -64,6 +64,13 @@ class Environment:
 
         # Docker clients
         self.docker_client, self.api_client = self._get_docker_clients()
+
+        # Warnings - Should only occur when CLI initializes
+        if not os.path.isfile(self.config_file):
+            self.log_warn(
+                f"No minipresto.cfg file found in {self.config_file}. "
+                f"Run 'minipresto config' to reconfigure this file and directory."
+            )
 
     def log(self, *args):
         """Logs messages to the user's console."""
@@ -133,7 +140,7 @@ class Environment:
         """
         Checks if a minipresto directory exists in the user home directory. If
         it does not, it is created. The path to the minipresto user home
-        directory is returned. 
+        directory is returned.
         """
 
         minipresto_user_dir = os.path.abspath(
@@ -150,9 +157,9 @@ class Environment:
         1. The `-l` / `--lib-path` CLI option sets the library directory for the
            current command.
         2. The `minipresto.cfg` file's configuration sets the library directory
-           if present. 
+           if present.
         3. The CLI root is used to set the library directory and assumes the
-           project is being run out of a cloned repository. 
+           project is being run out of a cloned repository.
         """
 
         lib_dir = self.get_config_value("CLI", "LIB_PATH", False, None)
@@ -162,15 +169,10 @@ class Environment:
             repo_root = Path(os.path.abspath(__file__)).resolve().parents[2]
             return os.path.join(repo_root, "lib")
 
-    def get_config(self, warn=True):
+    def get_config(self):
         """
         Returns an instantiated ConfigParser object from the Minipresto user
         config file.
-
-        Parameters
-        ----------
-        - `warn`: If `True` and the user configuration file does not exist, a
-          warning message will be logged to the user.
         """
 
         if os.path.isfile(self.config_file):
@@ -178,11 +180,6 @@ class Environment:
             config.optionxform = str  # Preserve case
             config.read(self.config_file)
             return config
-        elif warn:
-            self.log_warn(
-                f"No minipresto.cfg file found in {self.config_file}. "
-                f"Run 'minipresto config' to reconfigure this file and directory."
-            )
         return {}
 
     def get_config_value(self, section="", key="", warn=True, default=None):
@@ -201,8 +198,7 @@ class Environment:
         config = self.get_config()
         if config:
             try:
-                config = dict(config.items(section.upper()))
-                value = config.get(key.upper())
+                value = config.get(section, key, fallback=default)
                 return value
             except:
                 if warn:
@@ -210,6 +206,7 @@ class Environment:
                         f"Missing configuration section: [{section}] and/or key: [{key}]"
                     )
                 return default
+        return default
 
     def _get_docker_clients(self):
         """

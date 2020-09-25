@@ -12,6 +12,7 @@ import docker
 import stat
 import yaml
 import hashlib
+import traceback
 import click
 
 from minipresto.cli import pass_environment
@@ -20,6 +21,7 @@ from minipresto.exceptions import MiniprestoException
 from minipresto.core import CommandExecutor
 from minipresto.core import ComposeEnvironment
 from minipresto.core import handle_exception
+from minipresto.core import handle_generic_exception
 from minipresto.core import check_daemon
 from minipresto.core import validate_module_dirs
 
@@ -27,6 +29,7 @@ from minipresto.settings import RESOURCE_LABEL
 from minipresto.settings import MODULE_ROOT
 from minipresto.settings import MODULE_CATALOG
 from minipresto.settings import MODULE_SECURITY
+from minipresto.settings import ETC_PRESTO
 
 
 @click.command("provision", help="""
@@ -68,8 +71,8 @@ def cli(ctx, catalog, security, env, no_rollback, docker_native):
 
     try:
         catalog_yaml_files, security_yaml_files = validate(catalog, security)
-        catalog_chunk = chunk(catalog, {"module_type": "catalog"})
-        security_chunk = chunk(security, {"module_type": "security"})
+        catalog_chunk = chunk(catalog, MODULE_CATALOG)
+        security_chunk = chunk(security, MODULE_SECURITY)
 
         if all((not catalog_chunk, not security_chunk)):
             ctx.log(
@@ -93,6 +96,7 @@ def cli(ctx, catalog, security, env, no_rollback, docker_native):
         containers_to_restart = execute_bootstraps(
             catalog_yaml_files, security_yaml_files
         )
+        containers_to_restart = append_user_config(containers_to_restart)
         handle_config_properties()
         restart_containers(containers_to_restart)
         ctx.log(f"Environment provisioning complete.")
@@ -103,12 +107,11 @@ def cli(ctx, catalog, security, env, no_rollback, docker_native):
 
     except Exception as e:
         rollback_provision(no_rollback)
-        ctx.log_err(f"Error occurred during environment provisioning: {e}")
-        sys.exit(1)
+        handle_generic_exception(e)
 
 
 @pass_environment
-def chunk(ctx, items=[], key={}):
+def chunk(ctx, items=[], module_type=""):
     """
     Builds docker-compose command chunk for the chosen modules. Returns a
     command chunk string.
@@ -117,9 +120,7 @@ def chunk(ctx, items=[], key={}):
     if not items:
         return ""
 
-    module_type = key.get("module_type", "")
     chunk = []
-
     for i in range(len(items)):
         compose_path = os.path.abspath(
             os.path.join(
@@ -130,9 +131,8 @@ def chunk(ctx, items=[], key={}):
                 items[i] + ".yml",
             )
         )
-
         compose_path_formatted = f"-f {compose_path} \\\n"
-        chunk.append(compose_path_formatted)
+        chunk.extend(compose_path_formatted)
 
     return "".join(chunk)
 
@@ -245,7 +245,8 @@ def execute_container_bootstrap(
     # Add executable permissions to bootstrap
     st = os.stat(bootstrap_file)
     os.chmod(
-        bootstrap_file, st.st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH,
+        bootstrap_file,
+        st.st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH,
     )
 
     executor = CommandExecutor(ctx)
@@ -265,7 +266,9 @@ def execute_container_bootstrap(
 
     ctx.vlog(f"Executing bootstrap script in container '{container_name}'...")
     executor.execute_commands(
-        commands=[f"docker cp {bootstrap_file} {container_name}:/tmp/",]
+        commands=[
+            f"docker cp {bootstrap_file} {container_name}:/tmp/",
+        ]
     )
     executor.execute_commands(
         commands=[
@@ -290,7 +293,7 @@ def handle_config_properties(ctx):
     executor = CommandExecutor(ctx)
     container = ctx.docker_client.containers.get("presto")
     output = executor.execute_commands(
-        commands=["cat /usr/lib/presto/etc/config.properties"],
+        commands=[f"cat {ETC_PRESTO}/config.properties"],
         suppress_output=True,
         container=container,
     )
@@ -327,6 +330,69 @@ def handle_config_properties(ctx):
                 f"Duplicate Presto configuration properties detected in config.properties file:\n{duplicates_string}"
             )
         counter = inner_counter
+
+
+@pass_environment
+def append_user_config(ctx, containers_to_restart=[]):
+    """
+    Appends Presto config from minipresto.cfg file if present and if it does not
+    already exist in the Presto container. If anything is appended to the Presto
+    config, the Presto container is added to the restart list if it's not
+    already in the list.
+    """
+
+    presto_config_append = (
+        ctx.get_config_value("PRESTO", "CONFIG", False, "").strip().split("\n")
+    )
+    jvm_config_append = (
+        ctx.get_config_value("PRESTO", "JVM_CONFIG", False, "").strip().split("\n")
+    )
+
+    if not presto_config_append and not jvm_config_append:
+        return containers_to_restart
+
+    ctx.vlog("Appending Presto config from minipresto.cfg to Presto config files...")
+
+    executor = CommandExecutor(ctx)
+    presto_container = ctx.docker_client.containers.get("presto")
+    if not presto_container:
+        raise MiniprestoException(
+            f"Attempting to append Presto configuration in Presto container, "
+            f"but no running Presto container found."
+        )
+
+    current_configs = executor.execute_commands(
+        commands=[
+            f"cat {ETC_PRESTO}/config.properties",
+            f"cat {ETC_PRESTO}/jvm.config",
+        ],
+        container=presto_container,
+    )
+
+    presto_config_current = current_configs[0].get("output", "")
+    jvm_config_current = current_configs[1].get("output", "")
+
+    for config in presto_config_append:
+        if config not in presto_config_current:
+            append_presto_config = (
+                f'bash -c "cat <<EOT >> {ETC_PRESTO}/config.properties\n{config}\nEOT"'
+            )
+            executor.execute_commands(
+                commands=[append_presto_config], container=presto_container
+            )
+    for config in jvm_config_append:
+        if config not in jvm_config_current:
+            append_jvm_config = (
+                f'bash -c "cat <<EOT >> {ETC_PRESTO}/jvm.config\n{config}\nEOT"'
+            )
+            executor.execute_commands(
+                commands=[append_jvm_config], container=presto_container
+            )
+
+    if not "presto" in containers_to_restart:
+        containers_to_restart.append("presto")
+
+    return containers_to_restart
 
 
 @pass_environment
@@ -396,7 +462,6 @@ def initialize_containers(ctx):
             commands=["cat /opt/minipresto/bootstrap_status.txt"],
             suppress_output=True,
             container=container,
-            handle_error=False,
         )
         output_string = output[0].get("output", "").strip()
         if "no such file or directory" in output_string.lower():
@@ -437,6 +502,7 @@ def rollback_provision(ctx, no_rollback):
     containers = ctx.docker_client.containers.list(
         filters={"label": RESOURCE_LABEL}, all=True
     )
+    
     for container in containers:
         container.stop()
         container.remove()

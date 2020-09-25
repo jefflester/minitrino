@@ -7,6 +7,7 @@ import click
 import stat
 import shutil
 import tarfile
+import traceback
 import fileinput
 
 from minipresto.cli import pass_environment
@@ -14,6 +15,7 @@ from minipresto.exceptions import MiniprestoException
 from minipresto.core import Modules
 from minipresto.core import check_daemon
 from minipresto.core import handle_exception
+from minipresto.core import handle_generic_exception
 from minipresto.core import validate_yes_response
 from minipresto.core import validate_module_dirs
 
@@ -44,7 +46,8 @@ Catalog modules to include in the snapshot.
 Security modules to include in the snapshot. 
 """)
 @click.option("-n", "--name", required=True, type=str, help="""
-Basename of the resulting snapshot tarball file.
+Basename of the resulting snapshot tarball file. Allowed characters:
+alphanumerics, hyphens, and underscores.
 """)
 @click.option("-f", "--force", is_flag=True, default=False, help="""
 Skips checking if the resulting tarball file exists (and overrides the file if
@@ -82,8 +85,7 @@ def cli(ctx, catalog, security, name, force, no_scrub):
         handle_exception(e)
 
     except Exception as e:
-        ctx.log_err(f"Error occurred during snapshot: {e}")
-        sys.exit(1)
+        handle_generic_exception(e)
 
 
 @pass_environment
@@ -191,12 +193,11 @@ def create_snapshot_command_file(ctx, command_string="", snapshot_name_dir=""):
             provision_command_file.write(PROVISION_SNAPSHOT_TEMPLATE.lstrip())
         st = os.stat(file_dest)
         os.chmod(
-            file_dest, st.st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH,
+            file_dest,
+            st.st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH,
         )
     except Exception as e:
-        raise MiniprestoException(
-            f"Failed to write to file {file_dest} and apply executable permissions with error: {e}"
-        )
+        handle_generic_exception(e)
 
     with open(file_dest, "a") as provision_snapshot_file:
         provision_snapshot_file.write(command_string)
@@ -206,7 +207,7 @@ def create_snapshot_command_file(ctx, command_string="", snapshot_name_dir=""):
 def clone_lib_dir(ctx, name):
     """
     Clones the library directory structure and necessary top-level files in
-    preparation for copying over module directories. 
+    preparation for copying over module directories.
 
     Returns the absolute path of the named snapshot directory.
     """
@@ -350,15 +351,18 @@ def snapshot_runner(name, no_scrub, active, catalog=[], security=[]):
 
 
 @pass_environment
-def validate_name(ctx, name):
+def validate_name(ctx, name=""):
     """
-    Validates the chosen filename. Requires alphanumeric input.
+    Validates the chosen filename for correct input.
     """
 
-    if not name.isalnum():
-        raise MiniprestoException(
-            f"Illegal characters in provided filename (alphanumeric only). Rename and retry."
-        )
+    for char in name:
+        if all((char != "_", char != "-", not char.isalnum())):
+            raise MiniprestoException(
+                f"Illegal character found in provided filename: '{char}'. "
+                f"Alphanumeric, hyphens, and underscores are allowed. "
+                f"Rename and retry."
+            )
 
 
 @pass_environment
@@ -399,4 +403,3 @@ def check_complete(ctx, name):
         raise MiniprestoException(
             f"Snapshot tarball failed to write to {snapshot_file}"
         )
-

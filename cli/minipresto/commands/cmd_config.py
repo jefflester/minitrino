@@ -33,7 +33,7 @@ def cli(ctx, reset):
         os.mkdir(ctx.minipresto_user_dir)
 
     if os.path.isfile(ctx.config_file):
-        ctx.vlog("Opening existing config file at path: {ctx.config_file}")
+        ctx.vlog(f"Opening existing config file at path: {ctx.config_file}")
         click.edit(
             filename=ctx.config_file,
             editor=ctx.get_config_value(

@@ -6,6 +6,7 @@ import re
 import sys
 import click
 import docker
+import traceback
 import subprocess
 
 from minipresto.cli import pass_environment
@@ -36,8 +37,8 @@ class CommandExecutor:
 
         Parameters
         ----------
-        - `handle_error`: If `False`, errors (non-zero return codes) are not
-          handled by the function.
+        - `trigger_error`: If `False`, errors (non-zero exit codes) from
+          commands will not raise an exception. Defaults to `False`.
         - `environment`: A dictionary of environment variables to pass to the
           subprocess.
         - `commands`: A list of commands that will be executed in the order
@@ -65,10 +66,10 @@ class CommandExecutor:
             cmd_details = []
             if kwargs.get("container", None):
                 for command in kwargs.get("commands", []):
-                    cmd_details = self._execute_in_container(command, **kwargs)
+                    cmd_details.append(self._execute_in_container(command, **kwargs))
             else:
                 for command in kwargs.get("commands", []):
-                    cmd_details = self._execute_in_shell(command, **kwargs)
+                    cmd_details.append(self._execute_in_shell(command, **kwargs))
             return cmd_details
         except MiniprestoException as e:
             handle_exception(e)
@@ -80,7 +81,6 @@ class CommandExecutor:
 
         self.ctx.vlog(f"Preparing to execute command in shell:\n{command}")
 
-        cmd_details = []
         process = subprocess.Popen(
             command,
             shell=True,
@@ -99,20 +99,17 @@ class CommandExecutor:
                     output = self._strip_ansi(str(output))
                     self.ctx.vlog(output.strip())
         output, _ = process.communicate()
-        if process.returncode != 0 and kwargs.get("handle_error", True):
+        if process.returncode != 0 and kwargs.get("trigger_error", False):
             raise MiniprestoException(
                 f"Failed to execute shell command:\n{command}\n"
                 f"Exit code: {process.returncode}"
             )
 
-        cmd_details.append(
-            {
-                "command": command,
-                "output": self._strip_ansi(str(output)),
-                "return_code": process.returncode,
-            }
-        )
-        return cmd_details
+        return {
+            "command": command,
+            "output": self._strip_ansi(str(output)),
+            "return_code": process.returncode,
+        }
 
     def _execute_in_container(self, command="", **kwargs):
         """
@@ -130,7 +127,6 @@ class CommandExecutor:
             f"Preparing to execute command in container '{container.name}':\n{command}"
         )
 
-        cmd_details = []
         exec_handler = self.ctx.api_client.exec_create(
             container.name,
             cmd=command,
@@ -151,16 +147,13 @@ class CommandExecutor:
         return_code = self.ctx.api_client.exec_inspect(exec_handler["Id"]).get(
             "ExitCode"
         )
-        if return_code != 0 and kwargs.get("handle_error", True):
+        if return_code != 0 and kwargs.get("trigger_error", False):
             raise MiniprestoException(
                 f"Failed to execute command in container '{container.name}':\n{command}\n"
                 f"Exit code: {return_code}"
             )
 
-        cmd_details.append(
-            {"command": command, "output": output_string, "return_code": return_code}
-        )
-        return cmd_details
+        return {"command": command, "output": output_string, "return_code": return_code}
 
     def _construct_environment(self, environment={}):
         """
@@ -251,7 +244,7 @@ class ComposeEnvironment:
                 f"Environment file not loaded properly from path: {env_file}"
             )
 
-        config = ctx.get_config(False)
+        config = ctx.get_config()
         try:
             config_dict = dict(config.items("MODULES"))
         except:
@@ -391,7 +384,7 @@ def handle_exception(ctx, e=MiniprestoException, log_msg=True, sys_exit=True):
 
     Parameters
     ----------
-    - `e`: The exception object.
+    - `e`: The MiniprestoException object.
     - `log_msg`: if `True`, the exception message will be logged through
       Minipresto's error logging function.
     - `sys_exit`: If `True`, Minipresto will exit with the exception's exit code.
@@ -404,6 +397,36 @@ def handle_exception(ctx, e=MiniprestoException, log_msg=True, sys_exit=True):
 
     if log_msg:
         ctx.log_err(e.msg)
+
+    if sys_exit:
+        sys.exit(e.exit_code)
+
+
+@pass_environment
+def handle_generic_exception(ctx, e=Exception, log_msg=True, sys_exit=True):
+    """
+    Gracefully handles generic exceptions. Prints a stacktrace if verbose mode
+    is enabled.
+
+    Parameters
+    ----------
+    - `e`: The Exception object.
+    - `log_msg`: if `True`, the exception message will be logged through
+      Minipresto's error logging function.
+    - `sys_exit`: If `True`, Minipresto will exit with the exception's exit
+      code.
+    """
+
+    if not isinstance(e, Exception):
+        raise Exception(
+            "Incorrect object type for parameter 'e'. Expected: Exception"
+        )
+
+    if log_msg:
+        ctx.log_err(e)
+    
+    if ctx.verbose:
+        traceback.print_tb(e.__traceback__)
 
     if sys_exit:
         sys.exit(e.exit_code)

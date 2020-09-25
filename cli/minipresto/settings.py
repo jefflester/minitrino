@@ -14,6 +14,7 @@ MODULE_ROOT = "modules"
 MODULE_CATALOG = "catalog"
 MODULE_SECURITY = "security"
 MODULE_RESOURCES = "resources"
+ETC_PRESTO = "/usr/lib/presto/etc"
 
 # Snapshots
 SNAPSHOT_ROOT_FILES = ["docker-compose.yml", ".env", "Dockerfile"]
@@ -39,6 +40,10 @@ TEXT_EDITOR=
 
 [DOCKER]
 DOCKER_HOST=
+
+[PRESTO]
+CONFIG=
+JVM_CONFIG=
 
 [MODULES]
 STARBURST_LIC_PATH=

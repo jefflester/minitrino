@@ -17,19 +17,19 @@ from minipresto.settings import RESOURCE_LABEL
 
 
 @click.command("remove", help="""
-Removes minipresto resources.
+Removes Minipresto resources.
 """)
 @click.option("-i", "--images", is_flag=True, default=False, help="""
-Removes minipresto images.
+Removes Minipresto images.
 """)
 @click.option("-v", "--volumes", is_flag=True, default=False, help="""
-Removes minipresto volumes.
+Removes Minipresto volumes.
 """)
 @click.option("-l", "--label", type=str, default=[], multiple=True, help="""
 Target specific labels for removal (key-value pair(s)).
 """)
 @click.option("-f", "--force", is_flag=True, default=False, help="""
-Forces the removal of minipresto resources. Normal Docker removal
+Forces the removal of Minipresto resources. Normal Docker removal
 restrictions apply.
 """)
 
@@ -62,7 +62,7 @@ def cli(ctx, images, volumes, label, force):
 @pass_environment
 def remove_items(ctx, item_type, force, labels=[]):
     """
-    Removes Docker items. If no labels are passed in, all minipresto
+    Removes Docker items. If no labels are passed in, all Minipresto
     resources are removed. If label(s) are passed in, the removal is limited to
     the passed in labels.
     """

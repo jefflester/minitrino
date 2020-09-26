@@ -384,7 +384,7 @@ class Modules:
         return containers, module_label_vals, catalog, security
 
     def _get_running_containers(self):
-        """Gets all running minipresto containers."""
+        """Gets all running Minipresto containers."""
 
         containers = self.ctx.docker_client.containers.list(
             filters={"label": RESOURCE_LABEL}

@@ -10,7 +10,7 @@ import minipresto.test.test_snapshot as test_snapshot
 
 
 def main():
-    """minipresto unit test runner."""
+    """Minipresto unit test runner."""
 
     # test_config.main()
     test_daemon_off.main()

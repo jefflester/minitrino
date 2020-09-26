@@ -13,7 +13,7 @@ from minipresto.settings import RESOURCE_LABEL
 
 
 @click.command("down", help="""
-Brings down all running minipresto containers. This command follows the
+Brings down all running Minipresto containers. This command follows the
 behavior of `docker-compose down`, where containers are both stopped and
 removed.
 """)
@@ -25,7 +25,7 @@ Does not remove any containers; instead, they will only be stopped.
 @pass_environment
 def cli(ctx, keep):
     """
-    Down command for minipresto. Exits with a 0 status code if there are no
+    Down command for Minipresto. Exits with a 0 status code if there are no
     running minipresto containers.
     """
 

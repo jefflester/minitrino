@@ -14,17 +14,17 @@ from minipresto.settings import CONFIG_TEMPLATE
 
 
 @click.command("config", help="""
-Sets minipresto user configuration.
+Edits Minipresto user configuration.
 """)
 @click.option("-r", "--reset", is_flag=True, default=False, help="""
-Resets minipresto user configuration directory and creates template config
+Resets Minipresto user configuration directory and creates template config
 file.
 """)
 
 
 @pass_environment
 def cli(ctx, reset):
-    """Config command for minipresto."""
+    """Config command for Minipresto."""
 
     if reset:
         _reset()
@@ -55,7 +55,7 @@ def cli(ctx, reset):
 @pass_environment
 def _reset(ctx):
     """
-    Resets minipresto user configuration directory. If the user configuration
+    Resets Minipresto user configuration directory. If the user configuration
     directory exists, it will prompt the user for approval before overwriting.
     Exits after successful run with a 0 status code.
     """

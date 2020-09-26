@@ -48,13 +48,13 @@ class Environment:
         ----------
         - `verbose`: Indicates whether or not output verbose logs to stdout.
         - `user_home_dir`: The home directory of the current user.
-        - `minipresto_user_dir`: The location of the minipresto directory
+        - `minipresto_user_dir`: The location of the Minipresto directory
           relative to the user home directory.
         - `config_file`: The location of the user's configuration file.
         - `snapshot_dir`: The location of the user's snapshot directory (this is
           essentially a temporary directory, as 'permanent' snapshot tarballs
           are written to the library).
-        - `minipresto_lib_dir`: The location of the minipresto library
+        - `minipresto_lib_dir`: The location of the Minipresto library
           directory.
         - `docker_client`: Docker client of object type `docker.DockerClient`
         - `api_client`: API Docker client of object type `docker.APIClient`
@@ -153,8 +153,8 @@ class Environment:
 
     def _handle_minipresto_user_dir(self):
         """
-        Checks if a minipresto directory exists in the user home directory. If
-        it does not, it is created. The path to the minipresto user home
+        Checks if a Minipresto directory exists in the user home directory. If
+        it does not, it is created. The path to the Minipresto user home
         directory is returned.
         """
 
@@ -167,7 +167,7 @@ class Environment:
 
     def _get_minipresto_lib_dir(self):
         """
-        Determines the directory of the minipresto library. The directory can be
+        Determines the directory of the Minipresto library. The directory can be
         set in three ways (this is also the order of precedence):
         1. The `-l` / `--lib-path` CLI option sets the library directory for the
            current command.
@@ -203,7 +203,7 @@ class Environment:
 
         Parameters
         ----------
-        - `section`: The section of minipresto user config.
+        - `section`: The section of Minipresto user config.
         - `key`: The key for the desired value.
         - `warn`: If `True` and the value is not found, a warning message will
           be logged to the user.

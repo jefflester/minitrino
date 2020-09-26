@@ -29,7 +29,7 @@ def main():
 
 def test_images():
     """
-    Verifies that images with the standard minipresto label applied to them are
+    Verifies that images with the standard Minipresto label applied to them are
     removed.
     """
 
@@ -54,7 +54,7 @@ def test_images():
 
 def test_volumes():
     """
-    Verifies that volumes with the standard minipresto label applied to them are
+    Verifies that volumes with the standard Minipresto label applied to them are
     removed.
     """
 
@@ -155,7 +155,7 @@ def test_multiple_labels():
 
 def test_invalid_label():
     """
-    Verifies that images with the minipresto label applied to them are removed.
+    Verifies that images with the Minipresto label applied to them are removed.
     """
 
     helpers.execute_command(["provision", "--catalog", "test"])
@@ -181,7 +181,7 @@ def test_invalid_label():
 
 def test_all():
     """
-    Verifies that all minipresto resources are removed.
+    Verifies that all Minipresto resources are removed.
     """
 
     helpers.execute_command(["provision", "--catalog", "test"])

@@ -32,7 +32,7 @@ from minipresto.settings import SCRUB_KEYS
 
 
 @click.command("snapshot", help="""
-Creates a snapshot of a minipresto environment. Places a tarball in the
+Creates a snapshot of a Minipresto environment. Places a tarball in the
 Minipresto `lib/snapshots/` directory.
 
 To take a snapshot of an active environment, leave the `--catalog` and

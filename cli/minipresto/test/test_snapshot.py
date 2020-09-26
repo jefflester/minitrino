@@ -37,7 +37,7 @@ def main():
 def test_snapshot_no_directory():
     """
     Verifies that a snapshot can be created when there is no existing snapshots
-    directory in the minipresto user home directory.
+    directory in the Minipresto user home directory.
     """
 
     cleanup()

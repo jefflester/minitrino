@@ -68,13 +68,16 @@ class Environment:
         - `get_config_value()`: Returns a value from the config if present.
         """
 
+        # Warnings
+        self._initial_warnings = []
+
         # Verbose logging
         self.verbose = False
 
         # Paths
         self.user_home_dir = os.path.expanduser("~")
         self.minipresto_user_dir = self._handle_minipresto_user_dir()
-        self.config_file = os.path.join(self.minipresto_user_dir, "minipresto.cfg")
+        self.config_file = self._get_config_file()
         self.snapshot_dir = os.path.join(self.minipresto_user_dir, "snapshots")
 
         # Points to the directory containing minipresto library. Library
@@ -83,14 +86,6 @@ class Environment:
 
         # Docker clients
         self.docker_client, self.api_client = self._get_docker_clients()
-
-        # Warnings - Should only occur when CLI initializes
-        if not os.path.isfile(self.config_file):
-            self.log(
-                f"No minipresto.cfg file found in {self.config_file}. "
-                f"Run 'minipresto config' to reconfigure this file and directory.",
-                level=LogLevel().warn
-            )
 
     def log(self, *args, level=LogLevel().info):
         """
@@ -165,6 +160,21 @@ class Environment:
             os.mkdir(minipresto_user_dir)
         return minipresto_user_dir
 
+    def _get_config_file(self):
+        """
+        Returns the correct filepath for the minipresto.cfg file. Adds to
+        initialization warnings if the file does not exist, but will return the
+        path regardless.
+        """
+
+        config_file = os.path.join(self.minipresto_user_dir, "minipresto.cfg")
+        if not os.path.isfile(config_file):
+            self._initial_warnings.append(
+                f"No minipresto.cfg file found in {config_file}. "
+                f"Run 'minipresto config' to reconfigure this file and directory.",
+            )
+        return config_file
+
     def _get_minipresto_lib_dir(self):
         """
         Determines the directory of the Minipresto library. The directory can be
@@ -219,7 +229,7 @@ class Environment:
                 if warn:
                     self.log(
                         f"Missing configuration section: [{section}] and/or key: [{key}]",
-                        level=LogLevel().warn
+                        level=LogLevel().warn,
                     )
                 return default
         return default
@@ -229,12 +239,35 @@ class Environment:
         Gets DockerClient and APIClient objects. References the DOCKER_HOST
         variable in `minipresto.cfg` and uses for clients if present. Returns a
         tuple of DockerClient and APIClient objects, respectiveley.
+
+        If there is an error fetching the clients, None types will be returned
+        for each client. The lack of clients should be caught by check_daemon()
+        calls that execute in each command that requires an accessible Docker
+        service.
         """
 
-        docker_host = self.get_config_value("DOCKER", "DOCKER_HOST", False, "")
-        docker_client = docker.DockerClient(base_url=docker_host)
-        api_client = docker.APIClient(base_url=docker_host)
-        return docker_client, api_client
+        try:
+            docker_host = self.get_config_value("DOCKER", "DOCKER_HOST", False, "")
+            docker_client = docker.DockerClient(base_url=docker_host)
+            api_client = docker.APIClient(base_url=docker_host)
+            return docker_client, api_client
+        # Daemon is likely not running and will be caught by check_daemon() calls
+        except Exception as e:
+            self._initial_warnings.append(
+                f"Failed to obtain Docker client objects. This is likely because the Docker daemon is not running. "
+                f"If Docker needs to be running, this will be caught by subsequent checks.\nError: {str(e)}"
+            )
+            return None, None
+
+    def _log_initial_warnings(self):
+        """
+        Logs any warnings created during initialization. Should only be called
+        when the CLI is initialized for a command.
+        """
+
+        if not self.verbose:
+            return
+        self.log(*self._initial_warnings, level=LogLevel().warn)
 
 
 pass_environment = click.make_pass_decorator(Environment, ensure=True)
@@ -273,6 +306,7 @@ def cli(ctx, verbose, lib_path):
     """Minipresto command line interface"""
 
     ctx.verbose = verbose
+    ctx._log_initial_warnings()
     if lib_path:
         ctx.minipresto_lib_dir = lib_path
     ctx.log(f"Library path set to: {ctx.minipresto_lib_dir}", level=LogLevel().verbose)

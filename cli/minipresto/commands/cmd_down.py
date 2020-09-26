@@ -4,9 +4,10 @@
 import sys
 import click
 
+from minipresto.cli import LogLevel
+from minipresto.cli import pass_environment
 from minipresto.core import check_daemon
 from minipresto.core import generate_identifier
-from minipresto.cli import pass_environment
 
 from minipresto.settings import RESOURCE_LABEL
 
@@ -35,7 +36,7 @@ def cli(ctx, keep):
     )
 
     if len(containers) == 0:
-        ctx.log(f"No containers to bring down.")
+        ctx.log("No containers to bring down.")
         sys.exit(0)
 
     for container in containers:
@@ -43,13 +44,13 @@ def cli(ctx, keep):
             {"ID": container.short_id, "Name": container.name}
         )
         container.stop()
-        ctx.vlog(f"Stopped container: {identifier}")
+        ctx.log(f"Stopped container: {identifier}", level=LogLevel().verbose)
     if not keep:
         for container in containers:
             identifier = generate_identifier(
                 {"ID": container.short_id, "Name": container.name}
             )
             container.remove()  # Default behavior of Compose is to remove containers
-            ctx.vlog(f"Removed container: {identifier}")
+            ctx.log(f"Removed container: {identifier}", level=LogLevel().verbose)
 
-    ctx.log(f"Brought down all Minipresto containers.")
+    ctx.log("Brought down all Minipresto containers.")

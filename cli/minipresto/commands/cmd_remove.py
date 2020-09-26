@@ -6,6 +6,7 @@ import click
 
 from docker.errors import APIError
 from minipresto.cli import pass_environment
+from minipresto.cli import LogLevel
 from minipresto.core import check_daemon
 from minipresto.core import validate_yes_response
 from minipresto.core import generate_identifier
@@ -87,14 +88,21 @@ def remove_items(ctx, item_type, force, labels=[]):
                 ctx.docker_client.images.remove(
                     image.short_id, force=True, noprune=False
                 )
-                ctx.vlog(f"{item_type.title()} removed: {identifier}")
+                ctx.log(
+                    f"{item_type.title()} removed: {identifier}",
+                    level=LogLevel().verbose,
+                )
             else:
                 ctx.docker_client.images.remove(image.short_id)
-                ctx.vlog(f"{item_type.title()} removed: {identifier}")
+                ctx.log(
+                    f"{item_type.title()} removed: {identifier}",
+                    level=LogLevel().verbose,
+                )
         except APIError as e:
-            ctx.vlog(
+            ctx.log(
                 f"Cannot remove image: {identifier}\n"
-                f"Error from Docker: {e.explanation}"
+                f"Error from Docker: {e.explanation}",
+                level=LogLevel().verbose,
             )
 
     volumes = list(set(volumes))
@@ -103,14 +111,21 @@ def remove_items(ctx, item_type, force, labels=[]):
             identifier = generate_identifier({"ID": volume.id})
             if force:
                 volume.remove(force=True)
-                ctx.vlog(f"{item_type.title()} removed: {identifier}")
+                ctx.log(
+                    f"{item_type.title()} removed: {identifier}",
+                    level=LogLevel().verbose,
+                )
             else:
                 volume.remove()
-                ctx.vlog(f"{item_type.title()} removed: {identifier}")
+                ctx.log(
+                    f"{item_type.title()} removed: {identifier}",
+                    level=LogLevel().verbose,
+                )
         except APIError as e:
-            ctx.vlog(
+            ctx.log(
                 f"Cannot remove volume: {identifier}\n"
-                f"Error from Docker: {e.explanation}"
+                f"Error from Docker: {e.explanation}",
+                level=LogLevel().verbose,
             )
 
 

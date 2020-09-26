@@ -10,6 +10,7 @@ import traceback
 import subprocess
 
 from minipresto.cli import pass_environment
+from minipresto.cli import LogLevel
 from minipresto.exceptions import MiniprestoException
 
 from minipresto.settings import RESOURCE_LABEL
@@ -79,7 +80,10 @@ class CommandExecutor:
         Executes a command in the shell.
         """
 
-        self.ctx.vlog(f"Preparing to execute command in shell:\n{command}")
+        self.ctx.log(
+            f"Preparing to execute command in shell:\n{command}",
+            level=LogLevel().verbose,
+        )
 
         process = subprocess.Popen(
             command,
@@ -91,14 +95,18 @@ class CommandExecutor:
         )
 
         if not kwargs.get("suppress_output", False):
-            while True:  # Stream output
-                output = process.stdout.readline()
-                if output == "" and process.poll() is not None:
+            # Stream the output of the executed command line-by-line.
+            # `universal_newlines=True` ensures output is generated as a string,
+            # so there is no need to decode bytes. The only cleansing we need to
+            # do is to run the string through the `_strip_ansi()` function.
+            while True:
+                output_line = process.stdout.readline()
+                if output_line == "" and process.poll() is not None:
                     break
-                if output:
-                    output = self._strip_ansi(str(output))
-                    self.ctx.vlog(output.strip())
-        output, _ = process.communicate()
+                output_line = self._strip_ansi(output_line)
+                self.ctx.log(output_line, level=LogLevel().verbose)
+
+        output, _ = process.communicate()  # Get full output (stdout + stderr)
         if process.returncode != 0 and kwargs.get("trigger_error", False):
             raise MiniprestoException(
                 f"Failed to execute shell command:\n{command}\n"
@@ -107,7 +115,7 @@ class CommandExecutor:
 
         return {
             "command": command,
-            "output": self._strip_ansi(str(output)),
+            "output": self._strip_ansi(output),
             "return_code": process.returncode,
         }
 
@@ -123,10 +131,12 @@ class CommandExecutor:
                 "Attempted to execute a command inside of a container, but a container object was not provided."
             )
 
-        self.ctx.vlog(
-            f"Preparing to execute command in container '{container.name}':\n{command}"
+        self.ctx.log(
+            f"Preparing to execute command in container '{container.name}':\n{command}",
+            level=LogLevel().verbose,
         )
 
+        # Create exec handler and execute the command
         exec_handler = self.ctx.api_client.exec_create(
             container.name,
             cmd=command,
@@ -134,26 +144,45 @@ class CommandExecutor:
             user=kwargs.get("docker_user", "root"),
         )
 
-        # Executes the command and returns a binary output generator
-        output = self.ctx.api_client.exec_start(exec_handler, stream=True)
-        output_string = ""
+        # `output` is a generator yielding response chunks
+        output_generator = self.ctx.api_client.exec_start(exec_handler, stream=True)
 
-        for line in output:
-            # Stream generator output & decode binary to string
-            line = self._strip_ansi(line.decode().strip())
-            output_string += line
-            if not kwargs.get("suppress_output", False):
-                self.ctx.vlog(line)
+        # Output from generator is returned as bytes, so they need to be decoded
+        # to strings. Additionally, the output is not guaranteed a full line,
+        # but is instead chunks of lines. A newline in the output chunk will
+        # trigger a log dump up to the first newline in the given chunk. The
+        # remainder of the chunk (if any) is stored in `full_line`.
+        output = ""
+        full_line = ""
+        for chunk in output_generator:
+            chunk = self._strip_ansi(chunk.decode())
+            output += chunk
+            chunk = chunk.split("\n", 1)
+            if len(chunk) > 1:  # Indicates newline present
+                full_line += chunk[0]
+                if not kwargs.get("suppress_output", False):
+                    self.ctx.log(full_line, level=LogLevel().verbose)
+                    full_line = ""
+                if chunk[1]:
+                    full_line = chunk[1]
+            else:
+                full_line += chunk[0]
+
+        # Catch lingering full line post-loop
+        if not kwargs.get("suppress_output", False) and full_line:
+            self.ctx.log(full_line, level=LogLevel().verbose)
+
         return_code = self.ctx.api_client.exec_inspect(exec_handler["Id"]).get(
             "ExitCode"
         )
+
         if return_code != 0 and kwargs.get("trigger_error", False):
             raise MiniprestoException(
                 f"Failed to execute command in container '{container.name}':\n{command}\n"
                 f"Exit code: {return_code}"
             )
 
-        return {"command": command, "output": output_string, "return_code": return_code}
+        return {"command": command, "output": output, "return_code": return_code}
 
     def _construct_environment(self, environment={}):
         """
@@ -212,6 +241,7 @@ class ComposeEnvironment:
             self.compose_env_string, self.compose_env_dict = self._get_compose_env(
                 ctx, env
             )
+            self._log_environment_variables(ctx, self.compose_env_dict)
         except MiniprestoException as e:
             handle_exception(e)
 
@@ -222,6 +252,8 @@ class ComposeEnvironment:
         flag. Values from `--env` will override variables from everything else.
         Returns a shell-compatible string of key-value pairs and a dict.
         """
+
+        compose_env_dict = {}
 
         env_file = os.path.join(ctx.minipresto_lib_dir, ".env")
         if not os.path.isfile(env_file):
@@ -244,18 +276,21 @@ class ComposeEnvironment:
                 f"Environment file not loaded properly from path: {env_file}"
             )
 
+        compose_env_dict.update(env_file_dict)
+
         config = ctx.get_config()
         try:
-            config_dict = dict(config.items("MODULES"))
+            user_config_dict = dict(config.items("MODULES"))
         except:
-            ctx.log_warn(
+            ctx.log(
                 f"No MODULES section found in {ctx.config_file}\n"
-                f"To pass environment variables to Minipresto containers, you will need to populate this section."
+                f"To pass environment variables to Minipresto containers, you will need to populate this section.",
+                level=LogLevel().warn,
             )
-            config_dict = {}
+            user_config_dict = {}
 
         # Merge environment file config with Minipresto config
-        config_dict.update(env_file_dict)
+        compose_env_dict.update(user_config_dict)
 
         # Add env variables and override existing if necessary
         if env:
@@ -266,17 +301,16 @@ class ComposeEnvironment:
                         f"Invalid environment variable: '{env_variable}'. Should be formatted as KEY=VALUE."
                     )
                 try:
-                    del config_dict[env_variable_list[0].strip()]  # remove if present
+                    del compose_env_dict[
+                        env_variable_list[0].strip()
+                    ]  # remove if present
                 except:
                     pass
-                config_dict[env_variable_list[0].strip()] = env_variable_list[1].strip()
+                compose_env_dict[env_variable_list[0].strip()] = env_variable_list[
+                    1
+                ].strip()
 
-        environment_formatted = ""
-        for key, value in config_dict.items():
-            environment_formatted += f"{key}: {value}\n"
-        ctx.vlog(f"Registered environment variables:\n{environment_formatted}")
-
-        return self._get_env_string(config_dict), config_dict
+        return self._get_env_string(compose_env_dict), compose_env_dict
 
     def _get_env_string(self, compose_env_dict={}):
         """Returns a string of key-value pairs from a dict."""
@@ -285,6 +319,26 @@ class ComposeEnvironment:
         for key, value in compose_env_dict.items():
             compose_env_list.append(f'{key}="{value}" ')
         return "".join(compose_env_list)
+
+    def _log_environment_variables(self, ctx, compose_env_dict):
+        """Logs environment variables."""
+
+        longest_key = 0
+        for key, value in compose_env_dict.items():
+            if not longest_key:
+                longest_key = len(key)
+            elif len(key) > longest_key:
+                longest_key = len(key)
+
+        environment_formatted = ""
+        for key, value in compose_env_dict.items():
+            environment_formatted += (
+                f"{key}{' ' * (longest_key + 4 - len(key))}{value}\n"
+            )
+        ctx.log(
+            f"Registered environment variables:\n{environment_formatted}",
+            level=LogLevel().verbose,
+        )
 
 
 class Modules:
@@ -396,7 +450,10 @@ def handle_exception(ctx, e=MiniprestoException, log_msg=True, sys_exit=True):
         )
 
     if log_msg:
-        ctx.log_err(e.msg)
+        ctx.log(e.msg, level=LogLevel().error)
+
+    if ctx.verbose:
+        traceback.print_tb(e.__traceback__)
 
     if sys_exit:
         sys.exit(e.exit_code)
@@ -418,18 +475,16 @@ def handle_generic_exception(ctx, e=Exception, log_msg=True, sys_exit=True):
     """
 
     if not isinstance(e, Exception):
-        raise Exception(
-            "Incorrect object type for parameter 'e'. Expected: Exception"
-        )
+        raise Exception("Incorrect object type for parameter 'e'. Expected: Exception")
 
     if log_msg:
-        ctx.log_err(e)
-    
+        ctx.log(str(e), level=LogLevel().error)
+
     if ctx.verbose:
         traceback.print_tb(e.__traceback__)
 
     if sys_exit:
-        sys.exit(e.exit_code)
+        sys.exit(1)
 
 
 @pass_environment

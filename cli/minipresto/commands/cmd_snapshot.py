@@ -11,7 +11,9 @@ import traceback
 import fileinput
 
 from minipresto.cli import pass_environment
+from minipresto.cli import LogLevel
 from minipresto.exceptions import MiniprestoException
+
 from minipresto.core import Modules
 from minipresto.core import check_daemon
 from minipresto.core import handle_exception
@@ -65,7 +67,7 @@ those secrets with another person.
 @pass_environment
 def cli(ctx, catalog, security, name, force, no_scrub):
     """Snapshot command for minipresto."""
-
+    
     try:
         validate_name(name)
         check_exists(name, force)
@@ -102,11 +104,16 @@ def prepare_snapshot_dir(ctx, name, active, no_scrub, catalog=[], security=[]):
     """
 
     if os.path.isdir(ctx.snapshot_dir):
-        ctx.vlog(f"Snapshot temp directory exists. Removing and recreating...")
+        ctx.log(
+            f"Snapshot temp directory exists. Removing and recreating...",
+            level=LogLevel().verbose,
+        )
         shutil.rmtree(ctx.snapshot_dir)
         os.mkdir(ctx.snapshot_dir)
     else:
-        ctx.vlog(f"Snapshot directory does not exist. Creating...")
+        ctx.log(
+            f"Snapshot directory does not exist. Creating...", level=LogLevel().verbose
+        )
         os.mkdir(ctx.snapshot_dir)
 
     snapshot_name_dir = clone_lib_dir(name)
@@ -186,7 +193,10 @@ def create_snapshot_command_file(ctx, command_string="", snapshot_name_dir=""):
     """
 
     file_dest = os.path.join(snapshot_name_dir, "provision-snapshot.sh")
-    ctx.vlog(f"Creating snapshot command to file at path: {file_dest}")
+    ctx.log(
+        f"Creating snapshot command to file at path: {file_dest}",
+        level=LogLevel().verbose,
+    )
 
     # Create provisioning command snapshot file from template and make it
     # executable
@@ -264,8 +274,9 @@ def copy_config_file(ctx, snapshot_name_dir, no_scrub=False):
     if os.path.isfile(ctx.config_file):
         shutil.copy(ctx.config_file, snapshot_name_dir)
     else:
-        ctx.log_warn(
-            f"No user config file at path: {ctx.config_file}. Will not be added to snapshot."
+        ctx.log(
+            f"No user config file at path: {ctx.config_file}. Will not be added to snapshot.",
+            level=LogLevel().warn,
         )
         return
 
@@ -285,8 +296,9 @@ def scrub_config_file(ctx, snapshot_name_dir):
             else:
                 print(line.replace(line, line.rstrip()))
     else:
-        ctx.log_warn(
-            f"No user config file at path: {ctx.config_file}. Nothing to scrub."
+        ctx.log(
+            f"No user config file at path: {ctx.config_file}. Nothing to scrub.",
+            level=LogLevel().warn,
         )
 
 

@@ -7,6 +7,7 @@ import click
 import shutil
 
 from minipresto.cli import pass_environment
+from minipresto.cli import LogLevel
 from minipresto.core import validate_yes_response
 
 from minipresto.settings import CONFIG_TEMPLATE
@@ -33,7 +34,10 @@ def cli(ctx, reset):
         os.mkdir(ctx.minipresto_user_dir)
 
     if os.path.isfile(ctx.config_file):
-        ctx.vlog(f"Opening existing config file at path: {ctx.config_file}")
+        ctx.log(
+            f"Opening existing config file at path: {ctx.config_file}",
+            level=LogLevel().verbose,
+        )
         click.edit(
             filename=ctx.config_file,
             editor=ctx.get_config_value(
@@ -41,8 +45,9 @@ def cli(ctx, reset):
             ),
         )
     else:
-        ctx.vlog(
-            "No config file found. Creating template config file and opening for edits..."
+        ctx.log(
+            "No config file found. Creating template config file and opening for edits...",
+            level=LogLevel().verbose,
         )
         copy_template_and_edit()
 
@@ -65,7 +70,7 @@ def _reset(ctx):
         else:
             ctx.log("Opted to skip recreating .minipresto/ home directory.")
             sys.exit(0)
-    ctx.vlog("Created minipresto configuration directory")
+    ctx.log("Created minipresto configuration directory", level=LogLevel().verbose)
 
     copy_template_and_edit()
     sys.exit(0)

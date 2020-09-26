@@ -16,6 +16,7 @@ import traceback
 import click
 
 from minipresto.cli import pass_environment
+from minipresto.cli import LogLevel
 from minipresto.exceptions import MiniprestoException
 
 from minipresto.core import CommandExecutor
@@ -161,7 +162,10 @@ def build_command(ctx, docker_native="", compose_env="", *args):
     command.append("up -d")
 
     if docker_native:
-        ctx.vlog(f"Received native Docker Compose options: '{docker_native}'")
+        ctx.log(
+            f"Received native Docker Compose options: '{docker_native}'",
+            level=LogLevel().verbose,
+        )
         command.extend([" ", docker_native])
 
     return "".join(command)
@@ -259,12 +263,16 @@ def execute_container_bootstrap(
         container=container,
     )
     if f"{bootstrap_checksum}" in output[0].get("output", ""):
-        ctx.vlog(
-            f"Bootstrap already executed in container '{container_name}'. Skipping."
+        ctx.log(
+            f"Bootstrap already executed in container '{container_name}'. Skipping.",
+            level=LogLevel().verbose,
         )
         return False
 
-    ctx.vlog(f"Executing bootstrap script in container '{container_name}'...")
+    ctx.log(
+        f"Executing bootstrap script in container '{container_name}'...",
+        level=LogLevel().verbose,
+    )
     executor.execute_commands(
         commands=[
             f"docker cp {bootstrap_file} {container_name}:/tmp/",
@@ -278,7 +286,10 @@ def execute_container_bootstrap(
         container=container,
     )
 
-    ctx.vlog(f"Successfully executed bootstrap script in container '{container_name}'.")
+    ctx.log(
+        f"Successfully executed bootstrap script in container '{container_name}'.",
+        level=LogLevel().verbose,
+    )
     return True
 
 
@@ -289,7 +300,10 @@ def handle_config_properties(ctx):
     warnings for any detected duplicates.
     """
 
-    ctx.vlog("Checking Presto config.properties for duplicate properties...")
+    ctx.log(
+        "Checking Presto config.properties for duplicate properties...",
+        level=LogLevel().verbose,
+    )
     executor = CommandExecutor(ctx)
     container = ctx.docker_client.containers.get("presto")
     output = executor.execute_commands(
@@ -326,8 +340,9 @@ def handle_config_properties(ctx):
         if duplicates:
             duplicates.insert(0, config_props[counter])
             duplicates_string = "\n".join(duplicates)
-            ctx.log_warn(
-                f"Duplicate Presto configuration properties detected in config.properties file:\n{duplicates_string}"
+            ctx.log(
+                f"Duplicate Presto configuration properties detected in config.properties file:\n{duplicates_string}",
+                level=LogLevel().warn,
             )
         counter = inner_counter
 
@@ -351,7 +366,10 @@ def append_user_config(ctx, containers_to_restart=[]):
     if not presto_config_append and not jvm_config_append:
         return containers_to_restart
 
-    ctx.vlog("Appending Presto config from minipresto.cfg to Presto config files...")
+    ctx.log(
+        "Appending Presto config from minipresto.cfg to Presto config files...",
+        level=LogLevel().verbose,
+    )
 
     executor = CommandExecutor(ctx)
     presto_container = ctx.docker_client.containers.get("presto")
@@ -408,7 +426,9 @@ def restart_containers(ctx, containers_to_restart=[]):
     for container in containers_to_restart:
         try:
             container = ctx.docker_client.containers.get(container)
-            ctx.vlog(f"Restarting container '{container.name}'...")
+            ctx.log(
+                f"Restarting container '{container.name}'...", level=LogLevel().verbose
+            )
             container.restart()
         except docker.errors.NotFound:
             raise MiniprestoException(
@@ -430,9 +450,10 @@ def check_license(ctx, compose_environment={}):
 
     if starburst_lic_file:
         if not os.path.isfile(starburst_lic_file):
-            ctx.vlog(
+            ctx.log(
                 f"Starburst license not found at path: {starburst_lic_file}.\n"
-                f"Creating placeholder license at path: {placeholder_lic_file}"
+                f"Creating placeholder license at path: {placeholder_lic_file}",
+                level=LogLevel().verbose,
             )
             with open(placeholder_lic_file, "w") as f:
                 pass
@@ -444,7 +465,10 @@ def check_license(ctx, compose_environment={}):
         f'STARBURST_LIC_PATH="{placeholder_lic_file}" '
     )
     if not os.path.isfile(placeholder_lic_file):
-        ctx.vlog(f"Creating placeholder license at path: {placeholder_lic_file}")
+        ctx.log(
+            f"Creating placeholder license at path: {placeholder_lic_file}",
+            level=LogLevel().verbose,
+        )
         with open(placeholder_lic_file, "w") as f:
             pass
     return compose_environment
@@ -489,20 +513,22 @@ def rollback_provision(ctx, no_rollback):
     """
 
     if no_rollback:
-        ctx.log_warn(
+        ctx.log(
             f"Errors occurred during environment provisioning and rollback has been disabled. "
-            f"Provisioned resources will remain in an unaltered state."
+            f"Provisioned resources will remain in an unaltered state.",
+            level=LogLevel().warn,
         )
         return
-    ctx.log_warn(
+    ctx.log(
         f"Rolling back provisioned resources due to "
-        f"errors encountered while provisioning the environment."
+        f"errors encountered while provisioning the environment.",
+        level=LogLevel().warn,
     )
 
     containers = ctx.docker_client.containers.list(
         filters={"label": RESOURCE_LABEL}, all=True
     )
-    
+
     for container in containers:
         container.stop()
         container.remove()

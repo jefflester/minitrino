@@ -11,10 +11,32 @@ from configparser import ConfigParser
 from textwrap import fill
 from shutil import get_terminal_size
 
+from minipresto.exceptions import MiniprestoException
 from minipresto.settings import DEFAULT_INDENT
 
 
 CONTEXT_SETTINGS = dict(auto_envvar_prefix="MINIPRESTO")
+
+
+class LogLevel:
+    def __init__(self):
+        """
+        The level at which to log the message. The setting will affect the
+        prefix color (i.e. the '[i]' in info messages is blue) and the prefix
+        string (the string for the warn level is '[w]').
+
+        Properties
+        ----------
+        - `info`
+        - `warn`
+        - `error`
+        - `verbose`
+        """
+
+        self.info = {"prefix": "[i]  ", "prefix_color": "cyan"}
+        self.warn = {"prefix": "[w]  ", "prefix_color": "yellow"}
+        self.error = {"prefix": "[e]  ", "prefix_color": "red"}
+        self.verbose = {"prefix": "[i]  ", "prefix_color": "cyan", "verbose": True}
 
 
 class Environment:
@@ -40,9 +62,6 @@ class Environment:
         Methods
         -------
         - `log()`: Log messages to the user's console.
-        - `log_warn()`: Log warning messages to the user's console.
-        - `log_err()`: Log error messages to the user's console.
-        - `vlog()`: Log verbose messages to the user's console.
         - `prompt_msg()`: Prints a prompt message and returns the user's input.
         - `get_config()`: Returns an instantiated ConfigParser object from the
           Minipresto user config. file.
@@ -67,49 +86,43 @@ class Environment:
 
         # Warnings - Should only occur when CLI initializes
         if not os.path.isfile(self.config_file):
-            self.log_warn(
+            self.log(
                 f"No minipresto.cfg file found in {self.config_file}. "
-                f"Run 'minipresto config' to reconfigure this file and directory."
+                f"Run 'minipresto config' to reconfigure this file and directory.",
+                level=LogLevel().warn
             )
 
-    def log(self, *args):
-        """Logs messages to the user's console."""
+    def log(self, *args, level=LogLevel().info):
+        """
+        Logs messages to the user's console. Defaults to 'info' log level.
 
-        for arg in args:
-            arg = self._transform_log_msg(arg)
-            if arg:
-                click.echo(f"{click.style('[i]  ', fg='cyan', bold=True)}{arg}")
+        Parameters
+        ----------
+        - `*args`: Messages to log.
+        - `level`: The level of the log message.
+        """
 
-    def log_warn(self, *args):
-        """Logs warning messages to the user's console.."""
+        # Skip verbose messages unless verbose mode is enabled
+        if not self.verbose and level == LogLevel().verbose:
+            return
 
-        for arg in args:
-            arg = self._transform_log_msg(arg)
-            if arg:
-                click.echo(f"{click.style('[w]  ', fg='yellow', bold=True)}{arg}")
-
-    def log_err(self, *args):
-        """Logs error messages to the user's console."""
-
-        for arg in args:
-            arg = self._transform_log_msg(arg)
-            if arg:
-                click.echo(f"{click.style('[e]  ', fg='red', bold=True)}{arg}")
-
-    def vlog(self, *args):
-        """Logs a message only if verbose logging is enabled."""
-
-        if self.verbose:
-            for arg in args:
-                self.log(arg)
+        for msg in args:
+            msg_split = msg.replace("\r", "\n").split("\n")
+            for msg in msg_split:
+                msg = self._transform_log_msg(msg)
+                if not msg:
+                    continue
+                click.echo(
+                    f"{click.style(level.get('prefix', ''), fg=level.get('prefix_color', ''), bold=True)}{msg}"
+                )
 
     def _transform_log_msg(self, msg):
-        try:
-            msg = msg.strip()
-            if not msg:
-                return None
-        except:
-            return None
+        if not isinstance(msg, str):
+            raise MiniprestoException(
+                f"Invalid type given to logger: [{msg}]. Message parameters must be a string."
+            )
+
+        msg = msg.rstrip()
         terminal_width, _ = get_terminal_size()
         msg = msg.replace("\n", f"\n{DEFAULT_INDENT}")
         msg = fill(
@@ -118,6 +131,7 @@ class Environment:
             subsequent_indent=DEFAULT_INDENT,
             replace_whitespace=False,
             break_on_hyphens=False,
+            break_long_words=False,
         )
         return msg
 
@@ -133,7 +147,8 @@ class Environment:
 
         msg = self._transform_log_msg(msg)
         return click.prompt(
-            f"{click.style('[i]  ', fg='cyan', bold=True)}{msg}", type=input_type
+            f"{click.style(LogLevel().info.get('prefix', ''), fg=LogLevel().info.get('prefix_color', ''), bold=True)}{msg}",
+            type=input_type,
         )
 
     def _handle_minipresto_user_dir(self):
@@ -202,8 +217,9 @@ class Environment:
                 return value
             except:
                 if warn:
-                    self.log_warn(
-                        f"Missing configuration section: [{section}] and/or key: [{key}]"
+                    self.log(
+                        f"Missing configuration section: [{section}] and/or key: [{key}]",
+                        level=LogLevel().warn
                     )
                 return default
         return default
@@ -259,4 +275,4 @@ def cli(ctx, verbose, lib_path):
     ctx.verbose = verbose
     if lib_path:
         ctx.minipresto_lib_dir = lib_path
-    ctx.vlog(f"Library path set to: {ctx.minipresto_lib_dir}")
+    ctx.log(f"Library path set to: {ctx.minipresto_lib_dir}", level=LogLevel().verbose)

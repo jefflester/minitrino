@@ -196,7 +196,7 @@ minipresto --help
 # Get command-specific help
 minipresto [COMMAND] --help
 
-# Enable verbose outout
+# Enable verbose output
 minipresto --verbose [COMMAND] # -v works as well
 ```
 
@@ -503,7 +503,7 @@ of the Presto service––see the notes below. Labels should always be applied 
 - Named volumes
 - Images built from a Dockerfile
 
-Labels should be defined in pairs of two. The covention is:
+Labels should be defined in pairs of two. The convention is:
 
 - The standard Minipresto resource label: `com.starburst.tests=minipresto`
 - A module-specific resource label:

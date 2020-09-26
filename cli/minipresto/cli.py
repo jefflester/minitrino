@@ -251,7 +251,6 @@ class Environment:
             docker_client = docker.DockerClient(base_url=docker_host)
             api_client = docker.APIClient(base_url=docker_host)
             return docker_client, api_client
-        # Daemon is likely not running and will be caught by check_daemon() calls
         except Exception as e:
             self._initial_warnings.append(
                 f"Failed to obtain Docker client objects. This is likely because the Docker daemon is not running. "

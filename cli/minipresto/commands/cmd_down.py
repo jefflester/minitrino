@@ -20,10 +20,13 @@ removed.
 @click.option("-k", "--keep", is_flag=True, default=False, help="""
 Does not remove any containers; instead, they will only be stopped.
 """)
+@click.option("--sig-kill", is_flag=True, default=False, help="""
+Stop Minipresto containers without a grace period.
+""")
 
 
 @pass_environment
-def cli(ctx, keep):
+def cli(ctx, sig_kill, keep):
     """
     Down command for Minipresto. Exits with a 0 status code if there are no
     running minipresto containers.
@@ -39,11 +42,20 @@ def cli(ctx, keep):
         ctx.log("No containers to bring down.")
         sys.exit(0)
 
+    if sig_kill:
+        stop_timeout = 1
+        ctx.log(
+            "Stopping Minipresto containers with sig-kill...",
+            level=LogLevel().verbose,
+        )
+    else:
+        stop_timeout = 10
+        
     for container in containers:
         identifier = generate_identifier(
             {"ID": container.short_id, "Name": container.name}
         )
-        container.stop()
+        container.stop(timeout=stop_timeout)
         ctx.log(f"Stopped container: {identifier}", level=LogLevel().verbose)
     if not keep:
         for container in containers:

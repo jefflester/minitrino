@@ -195,7 +195,7 @@ def cleanup():
     """
 
     subprocess.call(f"rm -rf {helpers.SNAPSHOT_FILE}", shell=True)
-    helpers.execute_command(["down"])
+    helpers.execute_command(["down", "--sig-kill"])
 
 
 if __name__ == "__main__":

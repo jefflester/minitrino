@@ -246,7 +246,7 @@ def cleanup():
     Brings down containers and removes resources.
     """
 
-    helpers.execute_command(["down"])
+    helpers.execute_command(["down", "--sig-kill"])
 
 
 if __name__ == "__main__":

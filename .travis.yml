@@ -22,11 +22,10 @@ before_install:
 
 script:
   - |
-    set -euxo pipefail \
-    && pip3 install --editable ./cli/ \
-    && minipresto --help || exit 1 && echo -e '\n' \
-    && source ~/virtualenv/python3.8/bin/activate \
-    && python ./cli/minipresto/test/runner.py 
+    pip3 install --editable ./cli/ && 
+    minipresto --help || exit 1 && echo -e '\n' &&
+    source ~/virtualenv/python3.8/bin/activate &&
+    python ./cli/minipresto/test/runner.py 
 
 after_failure:
   - "Tests failed."

@@ -34,7 +34,7 @@ def test_images():
     """
 
     helpers.execute_command(["provision", "--catalog", "test"])
-    helpers.execute_command(["down"])
+    helpers.execute_command(["down", "--sig-kill"])
     result = helpers.execute_command(["-v", "remove", "--images"])
 
     assert result.exit_code == 0
@@ -59,7 +59,7 @@ def test_volumes():
     """
 
     helpers.execute_command(["provision", "--catalog", "test"])
-    helpers.execute_command(["down"])
+    helpers.execute_command(["down", "--sig-kill"])
     result = helpers.execute_command(["-v", "remove", "--volumes"])
 
     assert result.exit_code == 0
@@ -83,7 +83,7 @@ def test_label():
     """
 
     helpers.execute_command(["provision", "--catalog", "test"])
-    helpers.execute_command(["down"])
+    helpers.execute_command(["down", "--sig-kill"])
     result = helpers.execute_command(
         [
             "-v",
@@ -120,7 +120,7 @@ def test_multiple_labels():
     """
 
     helpers.execute_command(["provision", "--catalog", "test"])
-    helpers.execute_command(["down"])
+    helpers.execute_command(["down", "--sig-kill"])
     result = helpers.execute_command(
         [
             "-v",
@@ -159,7 +159,7 @@ def test_invalid_label():
     """
 
     helpers.execute_command(["provision", "--catalog", "test"])
-    helpers.execute_command(["down"])
+    helpers.execute_command(["down", "--sig-kill"])
     result = helpers.execute_command(
         ["-v", "remove", "--images", "--label", "not-real-label=not-real"]
     )
@@ -185,7 +185,7 @@ def test_all():
     """
 
     helpers.execute_command(["provision", "--catalog", "test"])
-    helpers.execute_command(["down"])
+    helpers.execute_command(["down", "--sig-kill"])
     result = helpers.execute_command(["-v", "remove", "--images", "--volumes"])
 
     assert result.exit_code == 0

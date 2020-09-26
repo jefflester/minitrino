@@ -453,7 +453,7 @@ def handle_exception(ctx, e=MiniprestoException, log_msg=True, sys_exit=True):
         ctx.log(e.msg, level=LogLevel().error)
 
     if ctx.verbose:
-        print(traceback.format_exc())
+        print(f"\n{traceback.format_exc()}")
 
     if sys_exit:
         sys.exit(e.exit_code)
@@ -481,7 +481,7 @@ def handle_generic_exception(ctx, e=Exception, log_msg=True, sys_exit=True):
         ctx.log(str(e), level=LogLevel().error)
 
     if ctx.verbose:
-        print(traceback.format_exc())
+        print(f"\n{traceback.format_exc()}")
 
     if sys_exit:
         sys.exit(1)

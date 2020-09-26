@@ -150,7 +150,7 @@ def build_command(ctx, docker_native="", compose_env="", *args):
         [
             compose_env,
             "\\\n",
-            "docker-compose -f ",
+            "docker-compose --verbose -f ",
             os.path.abspath(os.path.join(ctx.minipresto_lib_dir, "docker-compose.yml")),
             " \\\n",
         ]

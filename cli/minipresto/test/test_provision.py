@@ -192,46 +192,34 @@ def test_build_bootstrap_config_props():
 
 
 def test_license_checks():
-    """Validates correct handling of the Starburst license file checks."""
+    """Validates correct handling of the Starburst license file."""
 
-    placeholder_lic_file = os.path.join(
-        helpers.MINIPRESTO_USER_DIR, "placeholder.license"
-    )
-
-    def remove_placeholder():
-        process = subprocess.Popen(f"rm -rf {placeholder_lic_file}", shell=True,)
-
-    # Non-existent file
-    remove_placeholder()
+    # A real file (not a valid license, though)
+    subprocess.call("touch /tmp/a.license", shell=True)
     result = helpers.execute_command(
-        ["-v", "provision", "--env", "STARBURST_LIC_PATH=/not/a/real/file.txt"]
+        ["-v", "provision", "--env", "STARBURST_LIC_PATH=/tmp/a.license"]
     )
-
     assert result.exit_code == 0
-    assert "Starburst license not found at path" in result.output
-    assert "Creating placeholder" in result.output
+    assert "Starburst license copying to Presto container from" in result.output
     cleanup()
 
-    # No file at all
-    remove_placeholder()
+    # Bad path
     result = helpers.execute_command(
-        ["-v", "provision", "--env", "STARBURST_LIC_PATH="]
+        ["-v", "provision", "--env", "STARBURST_LIC_PATH=/prestoooo/a.license"]
     )
-
     assert result.exit_code == 0
-    assert "Creating placeholder" in result.output
+    assert "No Starburst license. Not copying to Presto container." in result.output
     cleanup()
 
-    # Existing file - placeholder for testing
+    # No variable at all
     result = helpers.execute_command(
-        ["-v", "provision", "--env", f"STARBURST_LIC_PATH={placeholder_lic_file}",]
+        ["-v", "provision"]
     )
-
     assert result.exit_code == 0
-    assert "Creating placeholder" not in result.output
+    assert "No Starburst license. Not copying to Presto container." in result.output
+    cleanup()
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
-    cleanup()
 
 
 def get_containers():

@@ -81,7 +81,7 @@ def cli(ctx, catalog, security, env, no_rollback, docker_native):
             )
 
         compose_environment = ComposeEnvironment(ctx, env)
-        compose_environment = check_license(compose_environment)
+        check_license(compose_environment)
         compose_command = build_command(
             docker_native,
             compose_environment.compose_env_string,
@@ -439,39 +439,28 @@ def restart_containers(ctx, containers_to_restart=[]):
 @pass_environment
 def check_license(ctx, compose_environment={}):
     """
-    Checks for Starburst Data license. If no license, creates a placeholder
-    license and points to it.
+    Checks for Starburst Data license and copies to Presto container if it
+    exists.
     """
 
     starburst_lic_file = compose_environment.compose_env_dict.get(
         "STARBURST_LIC_PATH", ""
     ).strip()
-    placeholder_lic_file = os.path.join(ctx.minipresto_user_dir, "placeholder.license")
 
-    if starburst_lic_file:
-        if not os.path.isfile(starburst_lic_file):
-            ctx.log(
-                f"Starburst license not found at path: {starburst_lic_file}.\n"
-                f"Creating placeholder license at path: {placeholder_lic_file}",
-                level=LogLevel().verbose,
-            )
-            with open(placeholder_lic_file, "w") as f:
-                pass
-        else:
-            return compose_environment
-
-    compose_environment.compose_env_dict["STARBURST_LIC_PATH"] = placeholder_lic_file
-    compose_environment.compose_env_string += (
-        f'STARBURST_LIC_PATH="{placeholder_lic_file}" '
-    )
-    if not os.path.isfile(placeholder_lic_file):
+    if not os.path.isfile(starburst_lic_file):
         ctx.log(
-            f"Creating placeholder license at path: {placeholder_lic_file}",
+            "No Starburst license. Not copying to Presto container.",
             level=LogLevel().verbose,
         )
-        with open(placeholder_lic_file, "w") as f:
-            pass
-    return compose_environment
+
+    command_executor = CommandExecutor(ctx)
+    ctx.log(
+        f"Starburst license copying to Presto container from {starburst_lic_file}",
+        level=LogLevel().verbose,
+    )
+    command_executor.execute_commands(
+        commands=[f"docker cp {starburst_lic_file} {ETC_PRESTO}"]
+    )
 
 
 @pass_environment

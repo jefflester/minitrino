@@ -283,7 +283,7 @@ class ComposeEnvironment:
             user_config_dict = dict(config.items("MODULES"))
         except:
             ctx.log(
-                f"No MODULES section found in {ctx.config_file}\n"
+                f"No 'MODULES' section found in {ctx.config_file}\n"
                 f"To pass environment variables to Minipresto containers, you will need to populate this section.",
                 level=LogLevel().warn,
             )

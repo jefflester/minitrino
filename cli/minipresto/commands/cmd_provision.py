@@ -443,8 +443,8 @@ def check_license(ctx, compose_environment={}):
     exists.
     """
 
-    starburst_lic_file = compose_environment.compose_env_dict.get(
-        "STARBURST_LIC_PATH", ""
+    starburst_lic_file = ctx.get_config_value(
+        "PRESTO", "STARBURST_LIC_PATH", warn=False, default=""
     ).strip()
 
     if not os.path.isfile(starburst_lic_file):

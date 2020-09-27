@@ -7,6 +7,7 @@ import minipresto.test.test_down as test_down
 import minipresto.test.test_provision as test_provision
 import minipresto.test.test_remove as test_remove
 import minipresto.test.test_snapshot as test_snapshot
+import minipresto.test.test_misc as test_misc
 
 
 def main():
@@ -18,6 +19,7 @@ def main():
     test_provision.main()
     test_remove.main()
     test_snapshot.main()
+    test_misc.main()
 
 
 if __name__ == "__main__":

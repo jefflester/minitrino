@@ -22,9 +22,6 @@ MINIPRESTO_LIB_DIR = Path(os.path.abspath(__file__)).resolve().parents[3]
 SNAPSHOT_DIR = os.path.join(MINIPRESTO_LIB_DIR, "lib", "snapshots")
 SNAPSHOT_FILE = os.path.join(SNAPSHOT_DIR, "test.tar.gz")
 MINIPRESTO_USER_SNAPSHOTS_DIR = os.path.join(MINIPRESTO_USER_DIR, "snapshots")
-SNAPSHOT_CONFIG_FILE = os.path.join(
-    MINIPRESTO_USER_SNAPSHOTS_DIR, "test", "minipresto.cfg"
-)
 # -----------------------------------------------------------------------------------
 
 

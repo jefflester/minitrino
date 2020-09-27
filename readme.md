@@ -92,7 +92,8 @@ docker-compose -f docker-compose.yml \
   up -d
 ```
 
-Using the structure of the Minipresto library, it is able to merge multiple Docker Compose files together.
+Using the structure of the Minipresto library, it is able to merge multiple
+Docker Compose files together.
 
 ### Removing Resources
 You can remove resources with the `remove` command.
@@ -150,6 +151,8 @@ You can capture snapshots for both active and inactive environments with the
     provided, active resources will not be captured in the snapshot.
   - `--security`: Security module to snapshot. Can be none, one, or many. If
     provided, active resources will not be captured in the snapshot.
+  - `--directory`: Directory to save the resulting snapshot file in. Defaults to
+    the snapshots directory in the Minipresto library.
   - `--force`: Override a check to see if the resulting snapshot file already
     exists. Defaults to `False`.
   - `--no-scrub`: Overrides the default behavior of scrubbing sensitive data

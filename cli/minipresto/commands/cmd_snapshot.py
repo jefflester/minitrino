@@ -51,6 +51,10 @@ Security modules to include in the snapshot.
 Basename of the resulting snapshot tarball file. Allowed characters:
 alphanumerics, hyphens, and underscores.
 """)
+@click.option("-d", "--directory", type=click.Path(), help="""
+Directory to save the resulting snapshot file in. Defaults to the snapshots
+directory in the Minipresto library.
+""")
 @click.option("-f", "--force", is_flag=True, default=False, help="""
 Skips checking if the resulting tarball file exists (and overrides the file if
 it does exist).
@@ -65,25 +69,39 @@ those secrets with another person.
 
 
 @pass_environment
-def cli(ctx, catalog, security, name, force, no_scrub):
+def cli(ctx, catalog, security, name, directory, force, no_scrub):
     """Snapshot command for minipresto."""
-    
+
     try:
+
+        # The snapshot temp files are saved in ~/.minipresto/snapshots/
+        # regardless of the directory provided. The artifact (tarball) will go
+        # to either the default directory or the user-provided directory.
+
+        # Check that user-provided dir exists
+        if directory and not os.path.isdir(directory):
+            raise MiniprestoException(
+                f"Cannot save snapshot in nonexistent directory: {directory}"
+            )
+
+        if not directory:
+            directory = os.path.join(ctx.minipresto_lib_dir, "snapshots")
+
         validate_name(name)
-        check_exists(name, force)
+        check_exists(name, directory, force)
 
         if catalog or security:
             ctx.log(f"Creating snapshot of inactive environment...")
-            snapshot_runner(name, no_scrub, False, catalog, security)
+            snapshot_runner(name, no_scrub, False, catalog, security, directory)
         else:
             ctx.log(f"Creating snapshot of active environment...")
             modules = Modules(ctx)
-            snapshot_runner(name, no_scrub, True, modules.catalog, modules.security)
+            snapshot_runner(
+                name, no_scrub, True, modules.catalog, modules.security, directory
+            )
 
-        check_complete(name)
-        ctx.log(
-            f"Snapshot complete and saved in {os.path.join(ctx.minipresto_lib_dir, 'snapshots')}"
-        )
+        check_complete(name, directory)
+        ctx.log(f"Snapshot complete and saved at path: {os.path.join(directory, name)}.tar.gz")
 
     except MiniprestoException as e:
         handle_exception(e)
@@ -343,25 +361,24 @@ def copy_module_dirs(snapshot_name_dir, catalog_dirs=[], security_dirs=[]):
 
 
 @pass_environment
-def create_named_tarball(ctx, name, snapshot_name_dir):
+def create_named_tarball(ctx, name, snapshot_name_dir, save_dir):
     """
     Creates a tarball of the named snapshot directory and placed in the
     library's snapshot directory.
     """
 
-    snapshot_dir = os.path.join(ctx.minipresto_lib_dir, "snapshots")
-    with tarfile.open(os.path.join(snapshot_dir, f"{name}.tar.gz"), "w:gz") as tar:
+    with tarfile.open(os.path.join(save_dir, f"{name}.tar.gz"), "w:gz") as tar:
         tar.add(snapshot_name_dir, arcname=os.path.basename(snapshot_name_dir))
 
 
-def snapshot_runner(name, no_scrub, active, catalog=[], security=[]):
+def snapshot_runner(name, no_scrub, active, catalog=[], security=[], directory=""):
     """Executes sequential snapshot command functions."""
 
     catalog_dirs, _ = validate_module_dirs(MODULE_CATALOG, catalog)
     security_dirs, _ = validate_module_dirs(MODULE_SECURITY, security)
     snapshot_name_dir = prepare_snapshot_dir(name, active, no_scrub, catalog, security)
     copy_module_dirs(snapshot_name_dir, catalog_dirs, security_dirs)
-    create_named_tarball(name, snapshot_name_dir)
+    create_named_tarball(name, snapshot_name_dir, directory)
 
 
 @pass_environment
@@ -380,7 +397,7 @@ def validate_name(ctx, name=""):
 
 
 @pass_environment
-def check_exists(ctx, name, force):
+def check_exists(ctx, name, directory, force):
     """
     Checks if the resulting tarball exists. If it exists, the user is prompted
     to overwrite the existing file.
@@ -390,7 +407,7 @@ def check_exists(ctx, name, force):
         return
 
     snapshot_file = os.path.abspath(
-        os.path.join(ctx.minipresto_lib_dir, "snapshots", f"{name}.tar.gz")
+        os.path.join(directory, f"{name}.tar.gz")
     )
     if os.path.isfile(snapshot_file):
         response = ctx.prompt_msg(
@@ -406,13 +423,13 @@ def check_exists(ctx, name, force):
 
 
 @pass_environment
-def check_complete(ctx, name):
+def check_complete(ctx, name, directory):
     """
     Checks if the snapshot completed. If detected as incomplete, exists with a
     non-zero status code.
     """
 
-    snapshot_file = os.path.join(ctx.minipresto_lib_dir, "snapshots", f"{name}.tar.gz")
+    snapshot_file = os.path.join(directory, f"{name}.tar.gz")
     if not os.path.isfile(snapshot_file):
         raise MiniprestoException(
             f"Snapshot tarball failed to write to {snapshot_file}"

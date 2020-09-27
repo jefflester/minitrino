@@ -33,6 +33,7 @@ from minipresto.settings import MODULE_SECURITY
 from minipresto.settings import ETC_PRESTO
 
 
+# fmt: off
 @click.command("provision", help="""
 Provisions an environment based on chosen modules. All options are optional and
 can be left empty. 
@@ -59,6 +60,7 @@ Example: minipresto provision -d --build
 
 Example: minipresto provision -d '--remove-orphans --force-recreate'
 """)
+# fmt: on
 
 
 @pass_environment

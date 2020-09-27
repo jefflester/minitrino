@@ -13,6 +13,7 @@ from minipresto.core import validate_yes_response
 from minipresto.settings import CONFIG_TEMPLATE
 
 
+# fmt: off
 @click.command("config", help="""
 Edits Minipresto user configuration.
 """)
@@ -20,6 +21,7 @@ Edits Minipresto user configuration.
 Resets Minipresto user configuration directory and creates template config
 file.
 """)
+# fmt: on
 
 
 @pass_environment

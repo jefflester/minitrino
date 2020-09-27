@@ -290,6 +290,7 @@ class CLI(click.MultiCommand):
         return mod.cli
 
 
+# fmt: off
 @click.command(cls=CLI, context_settings=CONTEXT_SETTINGS)
 @click.option("-v", "--verbose", is_flag=True, default=False, help="""
 Enables verbose output.
@@ -298,6 +299,7 @@ Enables verbose output.
 type=click.Path(exists=True, file_okay=False, resolve_path=True), help="""
 Changes the command's library path.
 """)
+# fmt: on
 
 
 @pass_environment

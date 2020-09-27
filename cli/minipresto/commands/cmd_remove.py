@@ -16,6 +16,7 @@ from minipresto.settings import VOLUME
 from minipresto.settings import RESOURCE_LABEL
 
 
+# fmt: off
 @click.command("remove", help="""
 Removes Minipresto resources.
 """)
@@ -32,6 +33,7 @@ Target specific labels for removal (key-value pair(s)).
 Forces the removal of Minipresto resources. Normal Docker removal
 restrictions apply.
 """)
+# fmt: on
 
 
 @pass_environment

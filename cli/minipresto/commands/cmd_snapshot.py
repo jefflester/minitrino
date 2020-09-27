@@ -31,6 +31,7 @@ from minipresto.settings import MODULE_RESOURCES
 from minipresto.settings import SCRUB_KEYS
 
 
+# fmt: off
 @click.command("snapshot", help="""
 Creates a snapshot of a Minipresto environment. Places a tarball in the
 Minipresto `lib/snapshots/` directory.
@@ -66,6 +67,7 @@ WARNING: all sensitive information (passwords and keys) will be kept in the
 config file added to the snapshot. Only use this if you are prepared to share
 those secrets with another person.
 """)
+# fmt: on
 
 
 @pass_environment

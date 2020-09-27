@@ -8,9 +8,11 @@ import pkg_resources
 from minipresto.cli import pass_environment
 
 
+# fmt: off
 @click.command("version", help="""
 Display the Minipresto version.
 """)
+# fmt: on
 
 
 @pass_environment

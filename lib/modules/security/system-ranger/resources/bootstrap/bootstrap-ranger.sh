@@ -36,7 +36,7 @@ while [[ "${COUNTER}" -le 36 ]]; do
 done
 set -e
 
-if [[ "${COUNTER}" == 180 ]]; then
+if [[ "${COUNTER}" == 36 ]]; then
    echo "Timeout waiting for Starburst Enterprise Presto service to become available in Ranger Admin. Exiting."
    exit 1
 fi
@@ -186,7 +186,7 @@ curl -i -v -X POST -u admin:prestoRocks15 --header 'Content-Type: application/js
       },
       "schema":{
          "values":[
-            "sf10"
+            "sf300"
          ],
          "isRecursive":false,
          "isExcludes":false

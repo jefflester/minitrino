@@ -52,7 +52,7 @@ def test_invalid_catalog_module():
     """
 
     result = helpers.execute_command(
-        ["-v", "provision", "--catalog", "hive-hms", "not-a-real-module"]
+        ["-v", "provision", "--catalog", "hive-hms", "--catalog", "not-a-real-module"]
     )
 
     assert result.exit_code == 1
@@ -72,7 +72,7 @@ def test_invalid_security_module():
     """
 
     result = helpers.execute_command(
-        ["-v", "provision", "--security", "ldap", "not-a-real-module"]
+        ["-v", "provision", "--security", "ldap", "--security", "not-a-real-module"]
     )
 
     assert result.exit_code == 1
@@ -95,7 +95,7 @@ def test_env():
     )
 
     assert result.exit_code == 0
-    assert "COMPOSE_PROJECT_NAME: test" in result.output
+    assert "COMPOSE_PROJECT_NAME" and "test" in result.output
 
     containers = get_containers()
     assert len(containers) == 1
@@ -178,67 +178,48 @@ def test_build_bootstrap_config_props():
     )
 
     # Ensure bootstrap does not execute again when container boots back up
-    helpers.execute_command(
-        ["-v", "down", "--keep"]
-    )
+    helpers.execute_command(["-v", "down", "--keep"])
     result = helpers.execute_command(
         ["-v", "provision", "--catalog", "test", "-d", "--build"]
     )
 
     assert result.exit_code == 0
-    assert "Bootstrap already executed for container test" in result.output
-    assert "Successfully executed bootstrap script for test" not in result.output
+    assert "Bootstrap already executed in container 'test'" in result.output
+    assert "Successfully executed bootstrap script in container 'test'" not in result.output
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()
 
 
 def test_license_checks():
-    """Validates correct handling of the Starburst license file checks."""
+    """Validates correct handling of the Starburst license file."""
 
-    placeholder_lic_file = os.path.join(
-        helpers.MINIPRESTO_USER_DIR, "placeholder.license"
-    )
-
-    def remove_placeholder():
-        process = subprocess.Popen(f"rm -rf {placeholder_lic_file}", shell=True,)
-
-    # Non-existent file
-    remove_placeholder()
+    # A real file (not a valid license, though)
+    subprocess.call("touch /tmp/a.license", shell=True)
     result = helpers.execute_command(
-        ["-v", "provision", "--env", "STARBURST_LIC_PATH=/not/a/real/file.txt"]
+        ["-v", "provision", "--env", "STARBURST_LIC_PATH=/tmp/a.license"]
     )
-
     assert result.exit_code == 0
-    assert "Starburst license not found in" in result.output
-    assert "Creating placeholder" in result.output
+    assert "Starburst license copying to Presto container from" in result.output
     cleanup()
 
-    # No file at all
-    remove_placeholder()
+    # Bad path
     result = helpers.execute_command(
-        ["-v", "provision", "--env", "STARBURST_LIC_PATH="]
+        ["-v", "provision", "--env", "STARBURST_LIC_PATH=/prestoooo/a.license"]
     )
-
     assert result.exit_code == 0
-    assert "Creating placeholder" in result.output
+    assert "No Starburst license. Not copying to Presto container." in result.output
     cleanup()
 
-    # Existing file - placeholder for testing
+    # No variable at all
     result = helpers.execute_command(
-        [
-            "-v",
-            "provision",
-            "--env",
-            f"STARBURST_LIC_PATH={placeholder_lic_file}",
-        ]
+        ["-v", "provision"]
     )
-
     assert result.exit_code == 0
-    assert "Creating placeholder" not in result.output
+    assert "No Starburst license. Not copying to Presto container." in result.output
+    cleanup()
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
-    cleanup()
 
 
 def get_containers():
@@ -253,7 +234,7 @@ def cleanup():
     Brings down containers and removes resources.
     """
 
-    helpers.execute_command(["down"])
+    helpers.execute_command(["down", "--sig-kill"])
 
 
 if __name__ == "__main__":

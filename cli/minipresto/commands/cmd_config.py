@@ -7,45 +7,57 @@ import click
 import shutil
 
 from minipresto.cli import pass_environment
-from minipresto.commands.core import validate_yes_response
+from minipresto.cli import LogLevel
+from minipresto.core import validate_yes_response
 
 from minipresto.settings import CONFIG_TEMPLATE
 
 
+# fmt: off
 @click.command("config", help="""
-Sets minipresto user configuration.
+Edits Minipresto user configuration.
 """)
 @click.option("-r", "--reset", is_flag=True, default=False, help="""
-Resets minipresto user configuration directory and creates template config
+Resets Minipresto user configuration directory and creates template config
 file.
 """)
+# fmt: on
 
 
 @pass_environment
 def cli(ctx, reset):
-    """Config command for minipresto."""
+    """Config command for Minipresto."""
 
     if reset:
-        __reset()
+        _reset()
 
     if not os.path.isdir(ctx.minipresto_user_dir):
-        ctx.log("No .minipresto directory found. Creating")
+        ctx.log("No .minipresto/ directory found in user's home directory. Creating...")
         os.mkdir(ctx.minipresto_user_dir)
 
     if os.path.isfile(ctx.config_file):
-        ctx.vlog("Opening existing config file")
-        click.edit(filename=ctx.config_file)
+        ctx.log(
+            f"Opening existing config file at path: {ctx.config_file}",
+            level=LogLevel().verbose,
+        )
+        click.edit(
+            filename=ctx.config_file,
+            editor=ctx.get_config_value(
+                section="CLI", key="TEXT_EDITOR", warn=False, default=None
+            ),
+        )
     else:
-        ctx.vlog(
-            "No config file found. Creating template config file and opening for edits"
+        ctx.log(
+            "No config file found. Creating template config file and opening for edits...",
+            level=LogLevel().verbose,
         )
         copy_template_and_edit()
 
 
 @pass_environment
-def __reset(ctx):
+def _reset(ctx):
     """
-    Resets minipresto user configuration directory. If the user configuration
+    Resets Minipresto user configuration directory. If the user configuration
     directory exists, it will prompt the user for approval before overwriting.
     Exits after successful run with a 0 status code.
     """
@@ -53,19 +65,14 @@ def __reset(ctx):
     try:
         os.mkdir(ctx.minipresto_user_dir)
     except:
-        response = click.prompt(
-            ctx.transform_prompt_msg(
-                "Configuration directory exists. Overwrite? [Y/N]"
-            ),
-            type=str,
-        )
+        response = ctx.prompt_msg("Configuration directory exists. Overwrite? [Y/N]")
         if validate_yes_response(response):
             shutil.rmtree(ctx.minipresto_user_dir)
             os.mkdir(ctx.minipresto_user_dir)
         else:
-            ctx.log("Opted to skip recreating configuration directory")
+            ctx.log("Opted to skip recreating .minipresto/ home directory.")
             sys.exit(0)
-    ctx.vlog("Created minipresto configuration directory")
+    ctx.log("Created minipresto configuration directory", level=LogLevel().verbose)
 
     copy_template_and_edit()
     sys.exit(0)

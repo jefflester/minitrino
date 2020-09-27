@@ -22,23 +22,38 @@ MINIPRESTO_LIB_DIR = Path(os.path.abspath(__file__)).resolve().parents[3]
 SNAPSHOT_DIR = os.path.join(MINIPRESTO_LIB_DIR, "lib", "snapshots")
 SNAPSHOT_FILE = os.path.join(SNAPSHOT_DIR, "test.tar.gz")
 MINIPRESTO_USER_SNAPSHOTS_DIR = os.path.join(MINIPRESTO_USER_DIR, "snapshots")
-SNAPSHOT_CONFIG_FILE = os.path.join(
-    MINIPRESTO_USER_SNAPSHOTS_DIR, "test", "minipresto.cfg"
-)
 # -----------------------------------------------------------------------------------
+
+
+class MiniprestoResult:
+    def __init__(self, click_result, output, exit_code):
+        """
+        Result class containing information about the result of a Minipresto command.
+        
+        Properties
+        ----------
+        - `click_result`: The unaltered Click Result object.
+        - `output`: Formatted output with newlines removed.
+        - `exit_code`: The exit code of the command.
+        """
+        self.click_result = click_result
+        self.output = output
+        self.exit_code = exit_code
 
 
 def execute_command(command=[], print_output=True, command_input=""):
     """Executes a command through the Click CliRunner."""
 
     runner = CliRunner()
-    if command_input == "":
+    if not command_input:
         result = runner.invoke(cli, command)
     else:
         result = runner.invoke(cli, command, input=command_input)
     if print_output:
         print(f"Output of command [minipresto {' '.join(command)}]:\n{result.output}")
-    return result
+
+    # Remove newlines for string assertion consistency
+    return MiniprestoResult(result, result.output.replace("\n", " "), result.exit_code)
 
 
 def log_success(msg):
@@ -119,7 +134,7 @@ def make_sample_config():
         f"[CLI]\n"
         f"LIB_PATH=\n"
         f"\n"
-        f"[DOCKER]\n"
+        f"[MODULES]\n"
         f"S3_ACCESS_KEY=example\n"
         f'S3_SECRET_KEY=example\n"',
         shell=True,

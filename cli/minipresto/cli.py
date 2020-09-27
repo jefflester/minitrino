@@ -4,16 +4,39 @@
 import os
 import sys
 import click
+import docker
 
 from pathlib import Path
 from configparser import ConfigParser
 from textwrap import fill
 from shutil import get_terminal_size
 
+from minipresto.exceptions import MiniprestoException
 from minipresto.settings import DEFAULT_INDENT
 
 
 CONTEXT_SETTINGS = dict(auto_envvar_prefix="MINIPRESTO")
+
+
+class LogLevel:
+    def __init__(self):
+        """
+        The level at which to log the message. The setting will affect the
+        prefix color (i.e. the '[i]' in info messages is blue) and the prefix
+        string (the string for the warn level is '[w]').
+
+        Properties
+        ----------
+        - `info`
+        - `warn`
+        - `error`
+        - `verbose`
+        """
+
+        self.info = {"prefix": "[i]  ", "prefix_color": "cyan"}
+        self.warn = {"prefix": "[w]  ", "prefix_color": "yellow"}
+        self.error = {"prefix": "[e]  ", "prefix_color": "red"}
+        self.verbose = {"prefix": "[i]  ", "prefix_color": "cyan", "verbose": True}
 
 
 class Environment:
@@ -25,76 +48,76 @@ class Environment:
         ----------
         - `verbose`: Indicates whether or not output verbose logs to stdout.
         - `user_home_dir`: The home directory of the current user.
-        - `minipresto_user_dir`: The location of the minipresto directory relative
-        to the user home directory. 
-        - `config_file`: The location of the user's configuration file. 
+        - `minipresto_user_dir`: The location of the Minipresto directory
+          relative to the user home directory.
+        - `config_file`: The location of the user's configuration file.
         - `snapshot_dir`: The location of the user's snapshot directory (this is
-        essentially a temporary directory, as 'permanent' snapshot tarballs are
-        written to the library).
-        - `minipresto_lib_dir`: The location of the minipresto library directory.
+          essentially a temporary directory, as 'permanent' snapshot tarballs
+          are written to the library).
+        - `minipresto_lib_dir`: The location of the Minipresto library
+          directory.
+        - `docker_client`: Docker client of object type `docker.DockerClient`
+        - `api_client`: API Docker client of object type `docker.APIClient`
+
+        Methods
+        -------
+        - `log()`: Log messages to the user's console.
+        - `prompt_msg()`: Prints a prompt message and returns the user's input.
+        - `get_config()`: Returns an instantiated ConfigParser object from the
+          Minipresto user config. file.
+        - `get_config_value()`: Returns a value from the config if present.
         """
+
+        # Warnings
+        self._initial_warnings = []
 
         # Verbose logging
         self.verbose = False
 
         # Paths
         self.user_home_dir = os.path.expanduser("~")
-        self.minipresto_user_dir = self.handle_minipresto_user_dir()
-        self.config_file = os.path.join(self.minipresto_user_dir, "minipresto.cfg")
+        self.minipresto_user_dir = self._handle_minipresto_user_dir()
+        self.config_file = self._get_config_file()
         self.snapshot_dir = os.path.join(self.minipresto_user_dir, "snapshots")
 
         # Points to the directory containing minipresto library. Library
         # consists of modules, snapshots, and module parent files
-        self.minipresto_lib_dir = self.get_minipresto_lib_dir()
+        self.minipresto_lib_dir = self._get_minipresto_lib_dir()
 
-    def log(self, *args):
-        """Logs a message."""
+        # Docker clients
+        self.docker_client, self.api_client = self._get_docker_clients()
 
-        for arg in args:
-            arg = self.transform_log_msg(arg)
-            if not arg: return
-            click.echo(
-                click.style(
-                    f"[i]  {click.style(arg, fg='cyan', bold=False)}",
-                    fg="cyan",
-                    bold=True,
+    def log(self, *args, level=LogLevel().info):
+        """
+        Logs messages to the user's console. Defaults to 'info' log level.
+
+        Parameters
+        ----------
+        - `*args`: Messages to log.
+        - `level`: The level of the log message.
+        """
+
+        # Skip verbose messages unless verbose mode is enabled
+        if not self.verbose and level == LogLevel().verbose:
+            return
+
+        for msg in args:
+            msg_split = msg.replace("\r", "\n").split("\n")
+            for msg in msg_split:
+                msg = self._transform_log_msg(msg)
+                if not msg:
+                    continue
+                click.echo(
+                    f"{click.style(level.get('prefix', ''), fg=level.get('prefix_color', ''), bold=True)}{msg}"
                 )
+
+    def _transform_log_msg(self, msg):
+        if not isinstance(msg, str):
+            raise MiniprestoException(
+                f"Invalid type given to logger: [{msg}]. Message parameters must be a string."
             )
 
-    def log_warn(self, *args):
-        """Logs a warning message."""
-
-        for arg in args:
-            arg = self.transform_log_msg(arg)
-            if not arg: return
-            click.echo(
-                click.style(
-                    f"[w]  {click.style(arg, fg='yellow', bold=False)}",
-                    fg="yellow",
-                    bold=True,
-                )
-            )
-
-    def log_err(self, *args):
-        """Logs an error message."""
-
-        for arg in args:
-            arg = self.transform_log_msg(arg)
-            if not arg: return
-            click.echo(
-                click.style(f"[e]  {click.style(arg, fg='red')}", fg="red", bold=True,)
-            )
-
-    def vlog(self, *args):
-        """Logs a message only if verbose logging is enabled."""
-
-        if self.verbose:
-            for arg in args:
-                self.log(arg)
-
-    def transform_log_msg(self, msg):
-        if msg.strip() == "":
-            return None
+        msg = msg.rstrip()
         terminal_width, _ = get_terminal_size()
         msg = msg.replace("\n", f"\n{DEFAULT_INDENT}")
         msg = fill(
@@ -102,21 +125,32 @@ class Environment:
             terminal_width,
             subsequent_indent=DEFAULT_INDENT,
             replace_whitespace=False,
+            break_on_hyphens=False,
+            break_long_words=False,
         )
         return msg
 
-    def transform_prompt_msg(self, msg):
-        return click.style(
-            f"[i]  {click.style(self.transform_log_msg(msg), fg='cyan', bold=False)}",
-            fg="cyan",
-            bold=True,
+    def prompt_msg(self, msg="", input_type=str):
+        """
+        Prints a prompt message and returns the user's input.
+
+        Parameters
+        ----------
+        - `msg`: The prompt message
+        - `input_type`: The object type to check the input for
+        """
+
+        msg = self._transform_log_msg(msg)
+        return click.prompt(
+            f"{click.style(LogLevel().info.get('prefix', ''), fg=LogLevel().info.get('prefix_color', ''), bold=True)}{msg}",
+            type=input_type,
         )
 
-    def handle_minipresto_user_dir(self):
+    def _handle_minipresto_user_dir(self):
         """
-        Checks if a minipresto directory exists in the user home directory. If
-        it does not, it is created. The path to the minipresto user home
-        directory is returned. 
+        Checks if a Minipresto directory exists in the user home directory. If
+        it does not, it is created. The path to the Minipresto user home
+        directory is returned.
         """
 
         minipresto_user_dir = os.path.abspath(
@@ -126,54 +160,113 @@ class Environment:
             os.mkdir(minipresto_user_dir)
         return minipresto_user_dir
 
-    def get_minipresto_lib_dir(self):
+    def _get_config_file(self):
         """
-        Determines the directory of the minipresto library. The directory can be
+        Returns the correct filepath for the minipresto.cfg file. Adds to
+        initialization warnings if the file does not exist, but will return the
+        path regardless.
+        """
+
+        config_file = os.path.join(self.minipresto_user_dir, "minipresto.cfg")
+        if not os.path.isfile(config_file):
+            self._initial_warnings.append(
+                f"No minipresto.cfg file found in {config_file}. "
+                f"Run 'minipresto config' to reconfigure this file and directory.",
+            )
+        return config_file
+
+    def _get_minipresto_lib_dir(self):
+        """
+        Determines the directory of the Minipresto library. The directory can be
         set in three ways (this is also the order of precedence):
         1. The `-l` / `--lib-path` CLI option sets the library directory for the
            current command.
         2. The `minipresto.cfg` file's configuration sets the library directory
-           if present. 
+           if present.
         3. The CLI root is used to set the library directory and assumes the
-           project is being run out of a cloned repository. 
+           project is being run out of a cloned repository.
         """
 
-        lib_dir = self.get_config_value("CLI", "LIB_PATH")
-        if lib_dir is not None and lib_dir != "":
+        lib_dir = self.get_config_value("CLI", "LIB_PATH", False, None)
+        if lib_dir:
             return lib_dir
         else:
             repo_root = Path(os.path.abspath(__file__)).resolve().parents[2]
             return os.path.join(repo_root, "lib")
 
-    def get_config(self, warn=True):
-        """Reads minipresto config."""
+    def get_config(self):
+        """
+        Returns an instantiated ConfigParser object from the Minipresto user
+        config file.
+        """
 
         if os.path.isfile(self.config_file):
             config = ConfigParser()
             config.optionxform = str  # Preserve case
             config.read(self.config_file)
             return config
-        elif warn == True:
-            self.log_warn(
-                f"No minipresto.cfg file found in {self.config_file}. "
-                f"Run 'minipresto config' to reconfigure this file and directory."
-            )
         return {}
 
-    def get_config_value(self, section, key):
-        """Returns a value from the config if present."""
+    def get_config_value(self, section="", key="", warn=True, default=None):
+        """
+        Returns a value from the config if present.
+
+        Parameters
+        ----------
+        - `section`: The section of Minipresto user config.
+        - `key`: The key for the desired value.
+        - `warn`: If `True` and the value is not found, a warning message will
+          be logged to the user.
+        - `default`: The return value if the value is not found.
+        """
 
         config = self.get_config()
         if config:
             try:
-                config = dict(config.items(section.upper()))
-                value = config.get(key.upper())
+                value = config.get(section, key, fallback=default)
                 return value
             except:
-                self.log_warn(
-                    f"Missing configuration section: [{section}] and/or key: [{key}]"
-                )
-                return None
+                if warn:
+                    self.log(
+                        f"Missing configuration section: [{section}] and/or key: [{key}]",
+                        level=LogLevel().warn,
+                    )
+                return default
+        return default
+
+    def _get_docker_clients(self):
+        """
+        Gets DockerClient and APIClient objects. References the DOCKER_HOST
+        variable in `minipresto.cfg` and uses for clients if present. Returns a
+        tuple of DockerClient and APIClient objects, respectiveley.
+
+        If there is an error fetching the clients, None types will be returned
+        for each client. The lack of clients should be caught by check_daemon()
+        calls that execute in each command that requires an accessible Docker
+        service.
+        """
+
+        try:
+            docker_host = self.get_config_value("DOCKER", "DOCKER_HOST", False, "")
+            docker_client = docker.DockerClient(base_url=docker_host)
+            api_client = docker.APIClient(base_url=docker_host)
+            return docker_client, api_client
+        except Exception as e:
+            self._initial_warnings.append(
+                f"Failed to obtain Docker client objects. This is likely because the Docker daemon is not running. "
+                f"If Docker needs to be running, this will be caught by subsequent checks.\nError: {str(e)}"
+            )
+            return None, None
+
+    def _log_initial_warnings(self):
+        """
+        Logs any warnings created during initialization. Should only be called
+        when the CLI is initialized for a command.
+        """
+
+        if not self.verbose:
+            return
+        self.log(*self._initial_warnings, level=LogLevel().warn)
 
 
 pass_environment = click.make_pass_decorator(Environment, ensure=True)
@@ -197,6 +290,7 @@ class CLI(click.MultiCommand):
         return mod.cli
 
 
+# fmt: off
 @click.command(cls=CLI, context_settings=CONTEXT_SETTINGS)
 @click.option("-v", "--verbose", is_flag=True, default=False, help="""
 Enables verbose output.
@@ -205,6 +299,7 @@ Enables verbose output.
 type=click.Path(exists=True, file_okay=False, resolve_path=True), help="""
 Changes the command's library path.
 """)
+# fmt: on
 
 
 @pass_environment
@@ -212,6 +307,7 @@ def cli(ctx, verbose, lib_path):
     """Minipresto command line interface"""
 
     ctx.verbose = verbose
+    ctx._log_initial_warnings()
     if lib_path:
         ctx.minipresto_lib_dir = lib_path
-    ctx.vlog(f"Library path set to: {ctx.minipresto_lib_dir}")
+    ctx.log(f"Library path set to: {ctx.minipresto_lib_dir}", level=LogLevel().verbose)

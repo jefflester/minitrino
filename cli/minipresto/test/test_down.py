@@ -41,10 +41,11 @@ def test_no_containers():
 def test_running_containers():
     """
     Verifies that the down command works when multiple containers are running.
+    This also verifies the --sig-kill option works.
     """
 
     helpers.execute_command(["-v", "provision", "--catalog", "test"])
-    result = helpers.execute_command(["-v", "down"])
+    result = helpers.execute_command(["-v", "down", "--sig-kill"])
 
     assert result.exit_code == 0
     assert all(
@@ -92,7 +93,7 @@ def cleanup():
     Stops/removes containers.
     """
 
-    helpers.execute_command(["-v", "down"])
+    helpers.execute_command(["-v", "down", "--sig-kill"])
 
 
 if __name__ == "__main__":

@@ -1,6 +1,5 @@
 version: "3.7"
 services:
-
   presto:
     environment:
       S3_ENDPOINT: "${S3_ENDPOINT}"
@@ -9,7 +8,7 @@ services:
       REGION: "${REGION}"
     volumes:
       - "./modules/catalog/hive-hms/resources/presto/hive_hms.properties:/usr/lib/presto/etc/catalog/hive_hms.properties"
-  
+
   postgres-hive-hms:
     image: "postgres:${POSTGRES_HIVE_HMS_VER}"
     container_name: "postgres-hive-hms"
@@ -18,10 +17,10 @@ services:
       - "com.starburst.tests.module.hive-hms=catalog-hive-hms"
     user: "postgres"
     env_file:
-      - "./modules/catalog/hive-hms/resources/hms/postgres.env"
+      - "./modules/catalog/hive-hms/resources/postgres/postgres.env"
     volumes:
       - "postgres-hive-hms-data:/var/lib/postgresql/data"
-  
+
   metastore:
     image: "starburstdata/hive-metastore-unsecured"
     container_name: "metastore"
@@ -34,13 +33,20 @@ services:
       - "./modules/catalog/hive-hms/resources/hms/hms.env"
     volumes:
       - "./modules/resources/wait-for-it.sh:/etc/boot/wait-for-it.sh"
-    command: ["./etc/boot/wait-for-it.sh" , "postgres-hive-hms:5432" , "--strict" , "--timeout=60" , "--" , "./opt/bin/start-hive-metastore.sh"]
+    command:
+      [
+        "./etc/boot/wait-for-it.sh",
+        "postgres-hive-hms:5432",
+        "--strict",
+        "--timeout=60",
+        "--",
+        "./opt/bin/start-hive-metastore.sh",
+      ]
     ports:
       - "9083:9083"
-  
+
 volumes:
   postgres-hive-hms-data:
     labels:
       - "com.starburst.tests=minipresto"
       - "com.starburst.tests.module.hive-hms=catalog-hive-hms"
-  

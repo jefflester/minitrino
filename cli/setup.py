@@ -4,8 +4,8 @@
 from setuptools import setup
 
 setup(
-    name="minipresto",
-    version="1.0",
+    name="Minipresto",
+    version="0.0",
     packages=["minipresto", "minipresto.commands"],
     include_package_data=True,
     install_requires=["click", "colorama", "docker", "pyyaml",],

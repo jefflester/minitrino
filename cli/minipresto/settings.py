@@ -14,6 +14,7 @@ MODULE_ROOT = "modules"
 MODULE_CATALOG = "catalog"
 MODULE_SECURITY = "security"
 MODULE_RESOURCES = "resources"
+ETC_PRESTO = "/usr/lib/presto/etc"
 
 # Snapshots
 SNAPSHOT_ROOT_FILES = ["docker-compose.yml", ".env", "Dockerfile"]
@@ -35,10 +36,17 @@ SCRUB_KEYS = [
 CONFIG_TEMPLATE = """
 [CLI]
 LIB_PATH=
+TEXT_EDITOR=
 
 [DOCKER]
-STARBURST_LIC_PATH=
+DOCKER_HOST=
 
+[PRESTO]
+STARBURST_LIC_PATH=
+CONFIG=
+JVM_CONFIG=
+
+[MODULES]
 S3_ENDPOINT=s3.region.amazonaws.com
 S3_ACCESS_KEY=
 S3_SECRET_KEY=

@@ -445,9 +445,19 @@ def check_license(ctx, compose_environment={}):
     exists.
     """
 
-    starburst_lic_file = ctx.get_config_value(
-        "PRESTO", "STARBURST_LIC_PATH", warn=False, default=""
-    ).strip()
+    # Check if added from `--env` option (will only be in the compose env if
+    # added - it is not a [MODULES] section variable, so it is not added to the
+    # dict by default)
+    # 
+    # TODO: Multipurpose ComposeEnvironment for this exact
+    # reason. 
+    starburst_lic_file = compose_environment.compose_env_dict.get("STARBURST_LIC_PATH", "")
+
+    # Check config file
+    if not starburst_lic_file:
+        starburst_lic_file = ctx.get_config_value(
+            "PRESTO", "STARBURST_LIC_PATH", warn=False, default=""
+        ).strip()
 
     if not os.path.isfile(starburst_lic_file):
         ctx.log(

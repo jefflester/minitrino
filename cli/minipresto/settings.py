@@ -70,10 +70,14 @@ SNOWFLAKE_JDBC_STAGE_SCHEMA=
 PROVISION_SNAPSHOT_TEMPLATE = """
 #!/usr/bin/env bash
 
-# ------------------------------------------------------------------------------
-# Below is the exact command used to provision the snapshotted environment. Run
-# this command in your terminal to reproduce the exact state of the environment.
-# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------
+# Below is the exact command used to provision the snapshotted environment. Run this 
+# command in your terminal to reproduce the exact state of the environment.
+#
+# If you need config data from the snapshot's 'minipresto.cfg' file, you will either 
+# need to copy it from the snapshot directory to '~./minipresto/minipresto.cfg' or 
+# individually copy the needed configs to your existing 'minipresto.cfg' file. 
+# ------------------------------------------------------------------------------------
 
 
 """

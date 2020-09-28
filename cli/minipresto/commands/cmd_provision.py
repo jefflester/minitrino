@@ -454,6 +454,7 @@ def check_license(ctx, compose_environment={}):
             "No Starburst license. Not copying to Presto container.",
             level=LogLevel().verbose,
         )
+        return
 
     command_executor = CommandExecutor(ctx)
     ctx.log(

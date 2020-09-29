@@ -89,7 +89,7 @@ http-server.https.keystore.path=/usr/lib/presto/etc/ssl/keystore.jks
 http-server.https.keystore.key=prestoRocks15
 EOT
 
-echo "Adding truststore in ${SSL_DIR}..."
+echo "Adding keystore and truststore in ${SSL_DIR}..."
 keytool -export \
 	-alias presto \
 	-keystore "${SSL_DIR}"/keystore.jks \

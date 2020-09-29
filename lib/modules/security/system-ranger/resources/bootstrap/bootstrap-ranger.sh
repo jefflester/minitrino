@@ -186,7 +186,7 @@ curl -i -v -X POST -u admin:prestoRocks15 --header 'Content-Type: application/js
       },
       "schema":{
          "values":[
-            "sf300"
+            "sf1"
          ],
          "isRecursive":false,
          "isExcludes":false

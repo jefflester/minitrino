@@ -15,5 +15,9 @@ services:
     labels:
       - "com.starburst.tests=minipresto"
       - "com.starburst.tests.module=presto"
+    # Uncomment this to enable the volume mount. The variable should point to a
+    # valid SEP license. 
+    volumes:
+      - "${STARBURST_LIC_PATH}:/usr/lib/presto/etc/starburstdata.license:ro"
     ports:
       - "8080:8080"

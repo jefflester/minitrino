@@ -83,7 +83,6 @@ def cli(ctx, catalog, security, env, no_rollback, docker_native):
             )
 
         compose_environment = ComposeEnvironment(ctx, env)
-        check_license(compose_environment)
         compose_command = build_command(
             docker_native,
             compose_environment.compose_env_string,
@@ -263,6 +262,7 @@ def execute_container_bootstrap(
         commands=["cat /opt/minipresto/bootstrap_status.txt"],
         suppress_output=True,
         container=container,
+        trigger_error=False
     )
     if f"{bootstrap_checksum}" in output[0].get("output", ""):
         ctx.log(
@@ -439,44 +439,6 @@ def restart_containers(ctx, containers_to_restart=[]):
 
 
 @pass_environment
-def check_license(ctx, compose_environment={}):
-    """
-    Checks for Starburst Data license and copies to Presto container if it
-    exists.
-    """
-
-    # Check if added from `--env` option (will only be in the compose env if
-    # added - it is not a [MODULES] section variable, so it is not added to the
-    # dict by default)
-    # 
-    # TODO: Multipurpose ComposeEnvironment for this exact
-    # reason. 
-    starburst_lic_file = compose_environment.compose_env_dict.get("STARBURST_LIC_PATH", "")
-
-    # Check config file
-    if not starburst_lic_file:
-        starburst_lic_file = ctx.get_config_value(
-            "PRESTO", "STARBURST_LIC_PATH", warn=False, default=""
-        ).strip()
-
-    if not os.path.isfile(starburst_lic_file):
-        ctx.log(
-            "No Starburst license. Not copying to Presto container.",
-            level=LogLevel().verbose,
-        )
-        return
-
-    command_executor = CommandExecutor(ctx)
-    ctx.log(
-        f"Starburst license copying to Presto container from {starburst_lic_file}",
-        level=LogLevel().verbose,
-    )
-    command_executor.execute_commands(
-        commands=[f"docker cp {starburst_lic_file} {ETC_PRESTO}"]
-    )
-
-
-@pass_environment
 def initialize_containers(ctx):
     """
     Initializes each container with /opt/minipresto/bootstrap_status.txt
@@ -488,6 +450,7 @@ def initialize_containers(ctx):
             commands=["cat /opt/minipresto/bootstrap_status.txt"],
             suppress_output=True,
             container=container,
+            trigger_error=False
         )
         output_string = output[0].get("output", "").strip()
         if "no such file or directory" in output_string.lower():

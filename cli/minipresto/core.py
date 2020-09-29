@@ -39,7 +39,7 @@ class CommandExecutor:
         Parameters
         ----------
         - `trigger_error`: If `False`, errors (non-zero exit codes) from
-          commands will not raise an exception. Defaults to `False`.
+          commands will not raise an exception. Defaults to `True`.
         - `environment`: A dictionary of environment variables to pass to the
           subprocess.
         - `commands`: A list of commands that will be executed in the order
@@ -63,17 +63,15 @@ class CommandExecutor:
             kwargs.get("environment", {})
         )
 
-        try:
-            cmd_details = []
-            if kwargs.get("container", None):
-                for command in kwargs.get("commands", []):
-                    cmd_details.append(self._execute_in_container(command, **kwargs))
-            else:
-                for command in kwargs.get("commands", []):
-                    cmd_details.append(self._execute_in_shell(command, **kwargs))
-            return cmd_details
-        except MiniprestoException as e:
-            handle_exception(e)
+        cmd_details = []
+        if kwargs.get("container", None):
+            for command in kwargs.get("commands", []):
+                cmd_details.append(self._execute_in_container(command, **kwargs))
+        else:
+            for command in kwargs.get("commands", []):
+                cmd_details.append(self._execute_in_shell(command, **kwargs))
+        return cmd_details
+
 
     def _execute_in_shell(self, command="", **kwargs):
         """
@@ -107,7 +105,7 @@ class CommandExecutor:
                 self.ctx.log(output_line, level=LogLevel().verbose)
 
         output, _ = process.communicate()  # Get full output (stdout + stderr)
-        if process.returncode != 0 and kwargs.get("trigger_error", False):
+        if process.returncode != 0 and kwargs.get("trigger_error", True):
             raise MiniprestoException(
                 f"Failed to execute shell command:\n{command}\n"
                 f"Exit code: {process.returncode}"
@@ -176,7 +174,7 @@ class CommandExecutor:
             "ExitCode"
         )
 
-        if return_code != 0 and kwargs.get("trigger_error", False):
+        if return_code != 0 and kwargs.get("trigger_error", True):
             raise MiniprestoException(
                 f"Failed to execute command in container '{container.name}':\n{command}\n"
                 f"Exit code: {return_code}"

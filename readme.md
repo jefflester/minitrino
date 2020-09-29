@@ -95,6 +95,22 @@ docker-compose -f docker-compose.yml \
 Using the structure of the Minipresto library, it is able to merge multiple
 Docker Compose files together.
 
+#### Using Licensed Starburst Features
+Note that if you are using licensed features, you will need to provide a path to
+a valid Starburst license. This can be set via `minipresto config` or provided
+via the `--env` option at command runtime. The variable for this is
+`STARBURST_LIC_PATH`. 
+
+Additionally, you need to uncomment the volume mount in the library's root
+`docker-compose.yml` file:
+
+```yaml
+  # Uncomment this to enable the volume mount. The variable should point to a
+  # valid SEP license. 
+  volumes:
+    - "${STARBURST_LIC_PATH}:/usr/lib/presto/etc/starburstdata.license:ro"
+```
+
 ### Removing Resources
 You can remove resources with the `remove` command.
 
@@ -581,7 +597,7 @@ We can now shell into the `presto` container and run some tests:
 
 ```
 docker exec -it presto bash 
-presto
+presto-cli
 presto> show catalogs;
 ```
 

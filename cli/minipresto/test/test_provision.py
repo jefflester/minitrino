@@ -21,12 +21,11 @@ def main():
     test_env()
     test_invalid_env()
     test_build_bootstrap_config_props()
-    test_license_checks()
 
 
 def test_standalone():
     """
-    Verifies that a standalone Presto container is provisioned when no options 
+    Verifies that a standalone Presto container is provisioned when no options
     are passed in.
     """
 
@@ -47,7 +46,7 @@ def test_standalone():
 
 def test_invalid_catalog_module():
     """
-    Verifies that a non-zero status code is returned when attempting to 
+    Verifies that a non-zero status code is returned when attempting to
     provision an invalid catalog module.
     """
 
@@ -67,7 +66,7 @@ def test_invalid_catalog_module():
 
 def test_invalid_security_module():
     """
-    Verifies that a non-zero status code is returned when attempting to 
+    Verifies that a non-zero status code is returned when attempting to
     provision an invalid security module.
     """
 
@@ -185,41 +184,13 @@ def test_build_bootstrap_config_props():
 
     assert result.exit_code == 0
     assert "Bootstrap already executed in container 'test'" in result.output
-    assert "Successfully executed bootstrap script in container 'test'" not in result.output
+    assert (
+        "Successfully executed bootstrap script in container 'test'"
+        not in result.output
+    )
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()
-
-
-def test_license_checks():
-    """Validates correct handling of the Starburst license file."""
-
-    # A real file (not a valid license, though)
-    subprocess.call("touch /tmp/a.license", shell=True)
-    result = helpers.execute_command(
-        ["-v", "provision", "--env", "STARBURST_LIC_PATH=/tmp/a.license"]
-    )
-    assert result.exit_code == 0
-    assert "Starburst license copying to Presto container from" in result.output
-    cleanup()
-
-    # Bad path
-    result = helpers.execute_command(
-        ["-v", "provision", "--env", "STARBURST_LIC_PATH=/prestoooo/a.license"]
-    )
-    assert result.exit_code == 0
-    assert "No Starburst license. Not copying to Presto container." in result.output
-    cleanup()
-
-    # No variable at all
-    result = helpers.execute_command(
-        ["-v", "provision"]
-    )
-    assert result.exit_code == 0
-    assert "No Starburst license. Not copying to Presto container." in result.output
-    cleanup()
-
-    helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
 
 
 def get_containers():

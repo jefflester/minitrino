@@ -5,6 +5,7 @@ services:
     volumes:
       - "./modules/security/ldap/resources/presto/password-authenticator.properties:/usr/lib/presto/etc/password-authenticator.properties"
       - "./modules/security/ldap/resources/ldap/ldap-users:/usr/lib/presto/etc/ldap-users"
+      - "~/.minipresto/ssl:/usr/lib/presto/etc/ssl"
     environment:
       MINIPRESTO_BOOTSTRAP: "bootstrap-presto.sh"
     links:

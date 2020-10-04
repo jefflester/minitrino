@@ -4,13 +4,10 @@
 import sys
 import click
 
-from docker.errors import APIError
-from minipresto.cli import pass_environment
-from minipresto.cli import LogLevel
-from minipresto.core import check_daemon
-from minipresto.core import validate_yes_response
-from minipresto.core import generate_identifier
+import minipresto.cli
+import minipresto.utils as utils
 
+from docker.errors import APIError
 from minipresto.settings import IMAGE
 from minipresto.settings import VOLUME
 from minipresto.settings import RESOURCE_LABEL
@@ -26,7 +23,7 @@ Removes Minipresto images.
 @click.option("-v", "--volumes", is_flag=True, default=False, help="""
 Removes Minipresto volumes.
 """)
-@click.option("-l", "--label", type=str, default=[], multiple=True, help="""
+@click.option("-l", "--label", "labels", type=str, default=[], multiple=True, help="""
 Target specific labels for removal (key-value pair(s)).
 """)
 @click.option("-f", "--force", is_flag=True, default=False, help="""
@@ -36,35 +33,35 @@ restrictions apply.
 # fmt: on
 
 
-@pass_environment
-def cli(ctx, images, volumes, label, force):
-    """Remove command for minipresto."""
+@utils.exception_handler
+@minipresto.cli.pass_environment
+def cli(ctx, images, volumes, labels, force):
+    """Remove command for Minipresto."""
 
-    check_daemon()
+    utils.check_daemon()
 
-    if images:
-        remove_items(IMAGE, force, label)
-    if volumes:
-        remove_items(VOLUME, force, label)
-
-    if all((not images, not volumes)):
-        response = ctx.prompt_msg(
+    if all((not images, not volumes, not labels)) or all((images, volumes, not labels)):
+        response = ctx.logger.prompt_msg(
             "You are about to all remove minipresto images and volumes. Continue? [Y/N]"
         )
-        if validate_yes_response(response):
-            remove_items(IMAGE, force, label)
-            remove_items(VOLUME, force, label)
+        if utils.validate_yes(response):
+            remove_items(IMAGE, force)
+            remove_items(VOLUME, force)
         else:
-            ctx.log(f"Opted to skip resource removal.")
+            ctx.logger.log(f"Opted to skip resource removal.")
             sys.exit(0)
 
-    ctx.log(f"Removal complete.")
+    if images:
+        remove_items(IMAGE, force, labels)
+    if volumes:
+        remove_items(VOLUME, force, labels)
+
+    ctx.logger.log(f"Removal complete.")
 
 
 @pass_environment
 def remove_items(ctx, item_type, force, labels=[]):
-    """
-    Removes Docker items. If no labels are passed in, all Minipresto
+    """Removes Docker items. If no labels are passed in, all Minipresto
     resources are removed. If label(s) are passed in, the removal is limited to
     the passed in labels.
     """
@@ -83,57 +80,48 @@ def remove_items(ctx, item_type, force, labels=[]):
     images = list(set(images))
     for image in images:
         try:
-            identifier = generate_identifier(
+            identifier = utils.generate_identifier(
                 {"ID": image.short_id, "Image:Tag": try_get_image_tag(image)}
             )
             if force:
                 ctx.docker_client.images.remove(
                     image.short_id, force=True, noprune=False
                 )
-                ctx.log(
-                    f"{item_type.title()} removed: {identifier}",
-                    level=LogLevel().verbose,
-                )
             else:
-                ctx.docker_client.images.remove(image.short_id)
-                ctx.log(
-                    f"{item_type.title()} removed: {identifier}",
-                    level=LogLevel().verbose,
-                )
+                ctx.docker_client.images.remove(image.short_id) 
+            ctx.logger.log(
+                f"{item_type.title()} removed: {identifier}",
+                level=ctx.logger.verbose,
+            )
         except APIError as e:
-            ctx.log(
+            ctx.logger.log(
                 f"Cannot remove image: {identifier}\n"
                 f"Error from Docker: {e.explanation}",
-                level=LogLevel().verbose,
+                level=ctx.logger.verbose,
             )
 
     volumes = list(set(volumes))
     for volume in volumes:
         try:
-            identifier = generate_identifier({"ID": volume.id})
+            identifier = utils.generate_identifier({"ID": volume.id})
             if force:
                 volume.remove(force=True)
-                ctx.log(
-                    f"{item_type.title()} removed: {identifier}",
-                    level=LogLevel().verbose,
-                )
             else:
                 volume.remove()
-                ctx.log(
-                    f"{item_type.title()} removed: {identifier}",
-                    level=LogLevel().verbose,
-                )
+            ctx.logger.log(
+                f"{item_type.title()} removed: {identifier}",
+                level=ctx.logger.verbose,
+            )
         except APIError as e:
-            ctx.log(
+            ctx.logger.log(
                 f"Cannot remove volume: {identifier}\n"
                 f"Error from Docker: {e.explanation}",
-                level=LogLevel().verbose,
+                level=ctx.logger.verbose,
             )
 
 
 def try_get_image_tag(image):
-    """
-    Tries to get an image tag. If there is no tag, returns an empty string.
+    """Tries to get an image tag. If there is no tag, returns an empty string.
     """
 
     try:

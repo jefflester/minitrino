@@ -1,11 +1,10 @@
 #!usr/bin/env/python3
 # -*- coding: utf-8 -*-
 
-import sys
 import click
 import pkg_resources
-
-from minipresto.cli import pass_environment
+import minipresto.cli
+import minipresto.utils as utils
 
 
 # fmt: off
@@ -15,9 +14,10 @@ Display the Minipresto version.
 # fmt: on
 
 
-@pass_environment
+@utils.exception_handler
+@minipresto.cli.pass_environment
 def cli(ctx):
     """Version command for Minipresto."""
 
     version = pkg_resources.require("Minipresto")[0].version
-    ctx.log(f"Minipresto version: {version}")
+    ctx.logger.log(f"Minipresto version: {version}")

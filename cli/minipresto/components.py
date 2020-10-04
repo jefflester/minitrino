@@ -1,0 +1,727 @@
+#!usr/bin/env/python3
+# -*- coding: utf-8 -*-
+
+import os
+import json
+import minipresto.utils as utils
+import minipresto.errors as err
+
+
+class Environment:
+    """CLI environment––provides context and core controls that are globally
+    accessible in command scripts. This class should not be instantiated from
+    anywhere but the CLI's entrypoint, as it depends on user-provided inputs.
+
+    ### Public Attributes (Interactive)
+    - `logger`: A `minipresto.utils.Logger` object.
+    - `env`: An `EnvironmentVariables` object containing all CLI environment
+        variables, subdivided by sections when possible.
+    - `modules`: A `Modules` object containing metadata about Minipresto
+      modules.
+    - `cmd_executor`: A `CommandExecutor` object to execute shell commands in
+      the host shell and inside containers.
+    - `docker_client`: A `docker.DockerClient` object.
+    - `api_client`: A `docker.APIClient` object.
+
+    ### Public Attributes (Static)
+    - `verbose`: If `True`, logs flagged as verbose to are sent to stdout.
+    - `user_home_dir`: The home directory of the current user.
+    - `minipresto_user_dir`: The location of the Minipresto directory relative
+      to the user home directory (~/.minipresto/).
+    - `config_file`: The location of the user's minipresto.cfg file.
+    - `snapshot_dir`: The location of the user's snapshot directory (this is
+        essentially a temporary directory, as 'permanent' snapshot tarballs are
+        written to the library or user-specified directory).
+    - `minipresto_lib_dir`: The location of the Minipresto library.
+    """
+
+    import docker
+    from pathlib import Path
+
+    @utils.exception_handler
+    def __init__(self):
+
+        # Paths
+        self.user_home_dir = os.path.expanduser("~")
+        self.minipresto_user_dir = self._handle_minipresto_user_dir()
+        self.config_file = self._get_config_file()
+        self.snapshot_dir = os.path.join(self.minipresto_user_dir, "snapshots")
+        self.minipresto_lib_dir = self._get_minipresto_lib_dir()
+
+        # Attributes that depend on user input prior to being set
+        self.verbose = False
+        self._user_env = []
+
+        self.logger = utils.Logger()
+        self.env = EnvironmentVariables
+        self.modules = Modules
+        self.cmd_executor = CommandExecutor
+        self.docker_client = docker.DockerClient
+        self.api_client = docker.APIClient
+
+    @utils.exception_handler
+    def _user_init(self, verbose=False, user_env=[]):
+        """Initialize attributes that depend on user-provided input (or lack
+        thereof)."""
+
+        self.verbose = verbose
+        self._user_env = user_env
+
+        self.logger = utils.Logger(self.verbose)
+        self.env = EnvironmentVariables(self)
+        self.modules = Modules(self)
+        self.cmd_executor = CommandExecutor(self)
+        self._get_docker_clients()
+
+        env_lib_dir = self.env.get_var("LIB_PATH", "")
+        if env_lib_dir:
+            self.minipresto_lib_dir = env_lib_dir
+
+        if not os.path.isdir(self.minipresto_lib_dir):
+            raise err.UserError(
+                "You must provide a path to a compatible Minipresto library.",
+                """You can point to a Minipresto library a few different
+                ways.\n(1) You can set the 'LIB_PATH' variable in your
+                Minipresto config via the command 'minipresto config'--this
+                should be placed under the '[CLI]' section.\n(2) For e.g.,
+                'minipresto -e LIB_PATH=<path/to/lib> ...' for any command; this
+                will set the library path for the runtime of the command.\n(3)
+                If you are running Minipresto out of a cloned repo, the library
+                path will be automatically detected without the need to perform
+                either of the above.""",
+            )
+
+    def _handle_minipresto_user_dir(self):
+        """Checks if a Minipresto directory exists in the user home directory.
+        If it does not, it is created. The path to the Minipresto user home
+        directory is returned.
+        """
+
+        minipresto_user_dir = os.path.abspath(
+            os.path.join(self.user_home_dir, ".minipresto")
+        )
+        if not os.path.isdir(minipresto_user_dir):
+            os.mkdir(minipresto_user_dir)
+        return minipresto_user_dir
+
+    def _get_config_file(self):
+        """Returns the correct filepath for the minipresto.cfg file. Adds to
+        initialization warnings if the file does not exist, but will return the
+        path regardless.
+        """
+
+        config_file = os.path.join(self.minipresto_user_dir, "minipresto.cfg")
+        if not os.path.isfile(config_file):
+            self.logger.log(
+                f"No minipresto.cfg file found in {config_file}. "
+                f"Run 'minipresto config' to reconfigure this file and directory.",
+                level=self.logger.warn,
+            )
+        return config_file
+
+    def _get_minipresto_lib_dir(self):
+        """Determines the directory of the Minipresto library. The directory can
+        be set in three ways (this is the order of precedence):
+        1. Passing `LIB_PATH` to the CLI's `--env` option sets the library
+           directory for the current command.
+        2. The `minipresto.cfg` file's `LIB_PATH` variable sets the library
+           directory if present.
+        3. The CLI root is used to set the library directory and assumes the
+           project is being run out of a cloned repository.
+        """
+
+        # The default is repo root. The check for the LIB_PATH variable happens
+        # in _user_init() once called by the CLI's entrypoint, as this is
+        # dependent on user-provided env variables. The final library path is
+        # checked in the _user_init() method.
+
+        repo_root = Path(os.path.abspath(__file__)).resolve().parents[3]
+        return os.path.join(repo_root, "lib")
+
+    def _get_docker_clients(self):
+        """Gets DockerClient and APIClient objects. References the DOCKER_HOST
+        variable in `minipresto.cfg` and uses for clients if present. Returns a
+        tuple of DockerClient and APIClient objects, respectiveley.
+
+        If there is an error fetching the clients, None types will be returned
+        for each client. The lack of clients should be caught by check_daemon()
+        calls that execute in each command that requires an accessible Docker
+        service.
+        """
+
+        try:
+            docker_host = self.env.get_var("DOCKER_HOST", "")
+            docker_client = docker.DockerClient(base_url=docker_host)
+            api_client = docker.APIClient(base_url=docker_host)
+            self.docker_client, self.api_client = docker_client, api_client
+        except Exception as e:
+            return None, None
+
+
+class EnvironmentVariables:
+    """Gathers all Minipresto variables into a single source of truth.
+
+    ### Parameters
+    - `ctx`: Instantiated Environment object (with user input already accounted
+      for).
+
+    ### Public Attributes
+    - `env`: Dictionary containing all environment variables.
+
+    ### Public Methods
+    - `get_var()`: Gets an environment variable from a specific section and key.
+    - `get_section()`: Gets a a section from the environment variable dict.
+
+    ### Usage
+    ```python
+    # ctx object has an instantiated EnvironmentVariables object
+    env_variable = ctx.env.get_var("STARBURST_VER", "338-e")
+    env_section = ctx.env.get_section("MODULES")
+    ```
+    """
+
+    from configparser import ConfigParser
+
+    @utils.exception_handler
+    def __init__(self, ctx=None):
+
+        if not ctx:
+            utils.handle_missing_param(locals().keys(), __init__.__name__)
+
+        self.ctx = ctx
+        self.env = {}
+
+        self._parse_minipresto_config()
+        self._parse_library_env()
+        self._parse_user_env()
+
+    @utils.exception_handler
+    def get_var(self, key="", default=None):
+        """Gets and returns a variable from a section of the environment
+        variables. Since it is assumed there will not be duplicate environment
+        variables between sections, the first-match is returned.
+
+        ### Parameters
+        - `key`: The key to search for.
+        - `default` The default value to return if the key is not found.
+        """
+
+        if not key:
+            utils.handle_missing_param(["key"], self.get_var.__name__)
+
+        for section_k, section_v in self.env.items():
+            if isinstance(section_v, dict):
+                for section_dict_k, section_dict_v in section_v.items():
+                    if section_dict_k.upper() == key.upper():
+                        return section_dict_v
+        return default
+
+    @utils.exception_handler
+    def get_section(self, section=""):
+        """Gets and returns a section from the environment variables. If the
+        section doesn't exist, an empty dict is returned.
+
+        ### Parameters
+        - `section`: The section to return, if it exists.
+        """
+
+        if not section:
+            utils.handle_missing_param(locals().keys(), self.get_section.__name__)
+
+        return self.env.get(section.upper(), {})
+
+    def _parse_minipresto_config(self):
+        """Parses the Minipresto config file and adds it to the env
+        dictionary."""
+
+        if not os.path.isfile(self.ctx.config_file):
+            return
+
+        # Catch this and provide a useful message, as it can be tricky to track
+        # down otherwise
+        try:
+            config = ConfigParser()
+            config.optionxform = str  # Preserve case
+            config.read(self.ctx.config_file)
+            for section in config.sections():
+                if not self.env.get(section, False):
+                    # Account for empty section
+                    self.env[section] = {}
+                for k, v in config.items(section):
+                    self.env[section][k] = v
+        except Exception as e:
+            utils.handle_exception(
+                e,
+                additional_msg=f"Failed to parse config file: {self.ctx.config_file}",
+            )
+
+    def _parse_library_env(self):
+        """Parses the Minipresto library's root `.env` file. All config from
+        this file is added to the 'MODULES' section of the environment
+        dictionary since this file explicitly defines the versions of the module
+        services."""
+
+        env_file = os.path.join(self.ctx.minipresto_lib_dir, ".env")
+        if not os.path.isfile(env_file):
+            raise err.MiniprestoError(
+                f"Library '.env' file does not exist at path: {env_file}"
+            )
+
+        # Check if modules section was added from Minipresto config file parsing
+        section = self.env.get("MODULES", None)
+        if not isinstance(section, dict):
+            self.env["MODULES"] = {}
+
+        with open(env_file, "r") as f:
+            for env_var in f:
+                env_var = env_var.strip()
+                if not env_var:
+                    continue
+                env_var = env_var.split("=")
+                if len(env_var) == 2:
+                    # Add variable to modules section
+                    self.env["MODULES"][env_var[0].strip()] = env_var[1].strip()
+                else:
+                    raise err.UserError(
+                        f"Invalid environment variable: '{'='.join(env_var)}' in {env_file}.",
+                        f"Environment variables should be formatted as 'KEY=VALUE', "
+                        f"e.g. '--env STARBURST_VER=338-e.0'.",
+                    )
+
+    def _parse_user_env(self):
+        """Parses user-provided environment variables for the current
+        command."""
+
+        if not self.ctx._user_env:
+            return
+
+        user_env_dict = {}
+        for env_var in self.ctx._user_env:
+            env_var = env_var.split("=")
+            if not len(env_var) == 2:
+                raise err.UserError(
+                    f"Invalid environment variable: '{'='.join(env_var)}'.",
+                    f"Environment variables should be formatted as 'KEY=VALUE', "
+                    f"e.g. '--env STARBURST_VER=338-e.0'.",
+                )
+            user_env_dict[env_var[0].strip()] = env_var[1].strip()
+
+        # Loop through user-provided environment variables and check for matches
+        # in each section dict. If the variable key in the section dict, it
+        # needs to be identified and replaced with the user's `--env` value,
+        # effectively overriding the original value.
+        #
+        # We build a new dict to prevent issues with changing dict size while
+        # iterating.
+        #
+        # Any variable keys that do not match with an existing key will be added
+        # to the section dict, EXTRA.
+
+        delete_keys = []
+        new_dict = {}
+
+        for user_k, user_v in user_env_dict.items():
+            for section_k, section_v in self.env.items():
+                if not isinstance(section_v, dict):
+                    raise err.MiniprestoError(
+                        f"Invalid environment dictionary. Expected sub-dictionaries. "
+                        f"Received dictionary:\n"
+                        f"{json.dumps(self.env, indent=2)}"
+                    )
+
+                if user_k in section_v:
+                    new_dict[section_k] = {}
+                    delete_keys.append(user_k)
+                    for section_dict_k, section_dict_v in section_v.items():
+                        if user_k == section_dict_k:
+                            new_dict[section_k][user_k] = user_v
+                        else:
+                            new_dict[section_k][section_dict_k] = section_dict_v
+                else:
+                    new_dict[section_k] = section_v
+        self.env = new_dict
+
+        for delete_key in delete_keys:
+            del user_env_dict[delete_key]
+
+        if user_env_dict:
+            for k, v in user_env_dict.items():
+                self.env["EXTRA"] = {}
+                self.env["EXTRA"][k] = v
+
+
+class Modules:
+    """Contains information about all valid Minipresto modules.
+
+    ### Parameters
+    - `ctx`: Instantiated Environment object (with user input already accounted
+      for).
+
+    ### Public Attributes
+    - `modules`: A dictionary of module information.
+
+    ### Public Methods
+    - `get_running_modules()`: Returns a dictionary with the same information as
+      the `modules` attribute, but includes Docker labels and container objects
+      tied to the module.
+    """
+
+    import yaml
+
+    from minipresto.settings import RESOURCE_LABEL
+    from minipresto.settings import MODULE_LABEL_KEY_ROOT
+    from minipresto.settings import MODULE_ROOT
+    from minipresto.settings import MODULE_SECURITY
+    from minipresto.settings import MODULE_CATALOG
+
+    @utils.exception_handler
+    def __init__(self, ctx=None):
+
+        if not ctx:
+            utils.handle_missing_param(locals().keys(), __init__.__name__)
+
+        self.ctx = ctx
+        self.modules = {}
+        self._load_modules()
+
+    @utils.exception_handler
+    def get_running_modules(self):
+        """Returns dict of running modules (includes container objects and
+        Docker labels).
+        """
+
+        utils.check_daemon(self.ctx.docker_client)
+        containers = self.ctx.docker_client.containers.list(
+            filters={"label": RESOURCE_LABEL}
+        )
+
+        if not containers:
+            return {}
+
+        names = []
+        label_sets = []
+        for container in containers:
+            label_set = {}
+            for k, v in container.labels.items():
+                if "catalog-" in v:
+                    names.append(v.lower().strip().replace("catalog-", ""))
+                elif "security-" in v:
+                    names.append(v.lower().strip().replace("security-", ""))
+                else:
+                    raise err.UserError(
+                        f"Invalid label '{k}={v}' for container '{container.name}'.",
+                        f"Check this module's 'docker-compose.yml' file and ensure you are "
+                        f"following the documentation on labels.",
+                    )
+                label_set[k] = v
+            label_sets.append(label_set)
+
+        running = {}
+        for name, label_set, container in zip(names, label_sets, containers):
+            if not isinstance(self.modules.get(name), dict):
+                raise err.UserError(
+                    f"Module '{name}' is running, but it is not found "
+                    f"in the library. Was it deleted, or are you pointing "
+                    f"Minipresto to the wrong location?"
+                )
+            if not running.get(name, False):
+                running[name] = self.modules[name]
+            if not running.get("labels", False):
+                running_modules[name]["labels"] = label_set
+            if not running.get(name).get("containers", False):
+                running_modules[name]["containers"] = [container]
+            else:
+                running[name]["containers"].append(container)
+
+        return running
+
+    def _load_modules(self):
+        """Loads module data during instantiation."""
+
+        self.ctx.logger.log("Loading modules...", level=self.ctx.logger.verbose)
+
+        modules_dir = os.path.join(self.ctx.minipresto_lib_dir, MODULE_ROOT)
+        if not os.path.isdir(modules_dir):
+            raise err.MiniprestoError(
+                f"Path is not a directory: {modules_dir}\n"
+                f"Are you pointing to a compatible Minipresto library?"
+            )
+
+        # Loop through both catalog and security modules
+        sections = [
+            os.path.join(modules_dir, MODULE_CATALOG),
+            os.path.join(modules_dir, MODULE_SECURITY),
+        ]
+
+        for section_dir in sections:
+            for _dir in os.listdir(section_dir):
+                module_dir = os.path.join(section_dir, _dir)
+
+                if not os.path.isdir(module_dir):
+                    self.ctx.logger.log(
+                        f"Skipping file (expected a directory, not a file) "
+                        f"at path: {module_dir}",
+                        level=self.ctx.logger.verbose,
+                    )
+                    continue
+
+                # List inner-module files
+                module_files = os.listdir(module_dir)
+
+                yaml_basename = f"{os.path.basename(module_dir)}.yml"
+                if not yaml_basename in module_files:
+                    raise err.MiniprestoError(
+                        f"Missing Docker Compose file in module directory {_dir}. "
+                        f"Expected file to be present: {yaml_basename}"
+                    )
+
+                # Module dir and YAML exist, add to modules
+                module_name = os.path.basename(module_dir)
+                self.modules[module_name] = {}
+                self.modules[module_name]["type"] = os.path.basename(section_dir)
+                self.modules[module_name]["module_dir"] = module_dir
+
+                # Add YAML file path
+                yaml_file = os.path.join(module_dir, yaml_basename)
+                self.modules[module_name]["yaml_file"] = yaml_file
+
+                # Add YAML dict
+                with open(yaml_file) as f:
+                    self.modules[module_name]["yaml_dict"] = yaml.load(
+                        f, Loader=yaml.FullLoader
+                    )
+
+                # Get metadata.json if present
+                json_basename = "metadata.json"
+                json_file = os.path.join(module_dir, json_basename)
+                metadata = {}
+                if os.path.isfile(json_file):
+                    with open(json_file) as f:
+                        metadata = json.load(f)
+                else:
+                    self.ctx.logger.log(
+                        f"No JSON metadata file for {module_name}. "
+                        f"Will not load metadata for module.",
+                        level=self.ctx.logger.verbose,
+                    )
+
+                self.modules[module_name]["description"] = metadata.get(
+                    "description", "No module description provided."
+                )
+                self.modules[module_name]["incompatible_modules"] = metadata.get(
+                    "incompatible_modules", []
+                )
+
+
+class CommandExecutor:
+    """Executes commands in the host shell/host containers with customized
+    handling of stdout/stderr output.
+
+    ### Parameters
+    - `ctx`: Instantiated Environment object (with user input already accounted
+      for).
+
+    ### Public Attributes
+    - `output`: The output of the previous run of `execute_commands()`.
+
+    ### Public Methods
+    - `execute_commands()`: Executes commands in the user's shell or inside of a
+        container.
+    """
+
+    import re
+    import subprocess
+
+    @utils.exception_handler
+    def __init__(self, ctx=None):
+
+        if not ctx:
+            utils.handle_missing_param(locals().keys(), __init__.__name__)
+
+        self.ctx = ctx
+        self.output = []
+
+    @utils.exception_handler
+    def execute_commands(self, *args, **kwargs):
+        """Executes commands in the user's shell or inside of a container.
+        Returns output as well as stores the output in the `output` attribute.
+
+        ### Parameters
+        - `args`: Commands that will be executed in the order provided.
+
+        Keyword Arguments:
+
+        - `trigger_error`: If `False`, errors (non-zero exit codes) from
+          executed commands will not raise an exception. Defaults to `True`.
+        - `environment`: A dictionary of environment variables to pass to the
+          subprocess or container.
+        - `suppress_output`: If `True`, output to stdout from the executed
+          command will be suppressed.
+        - `container`: A Docker container object. If passed in, the command will
+          be executed through the Docker SDK instead of the subprocess module.
+        - `docker_user`: The user to execute the command as in the Docker
+          container (default: `root`).
+
+        ### Return Values
+        - A list of dicts with each dict containing the following keys:
+            - `command`: the original command passed to the function
+            - `output`: the combined output of stdout and stderr
+            - `return_code`: the return code of the command
+        """
+
+        kwargs["environment"] = self._construct_environment(
+            kwargs.get("environment", {})
+        )
+
+        if kwargs.get("container", None):
+            for command in args:
+                self._execute_in_container(command, **kwargs)
+        else:
+            for command in args:
+                self._execute_in_shell(command, **kwargs)
+
+        return self.output
+
+    def _execute_in_shell(self, command="", **kwargs):
+        """Executes a command in the host shell."""
+
+        self.ctx.logger.log(
+            f"Executing command in shell:\n{command}",
+            level=self.ctx.logger.verbose,
+        )
+
+        process = subprocess.Popen(
+            command,
+            shell=True,
+            env=kwargs.get("environment", {}),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True,
+        )
+
+        if not kwargs.get("suppress_output", False):
+            # Stream the output of the executed command line-by-line.
+            # `universal_newlines=True` ensures output is generated as a string,
+            # so there is no need to decode bytes. The only cleansing we need to
+            # do is to run the string through the `_strip_ansi()` function.
+            while True:
+                output_line = process.stdout.readline()
+                if output_line == "" and process.poll() is not None:
+                    break
+                output_line = self._strip_ansi(output_line)
+                self.ctx.logger.log(output_line, level=ctx.logger.verbose)
+
+        output, _ = process.communicate()  # Get full output (stdout + stderr)
+        if process.returncode != 0 and kwargs.get("trigger_error", True):
+            raise err.MiniprestoError(
+                f"Failed to execute shell command:\n{command}\n"
+                f"Exit code: {process.returncode}"
+            )
+
+        self.output.append(
+            {
+                "command": command,
+                "output": self._strip_ansi(output),
+                "return_code": process.returncode,
+            }
+        )
+
+    def _execute_in_container(self, command="", **kwargs):
+        """Executes a command inside of a container through the Docker SDK
+        (similar to `docker exec`).
+        """
+
+        container = kwargs.get("container", None)
+        if container is None:
+            raise err.MiniprestoError(
+                f"Attempted to execute a command inside of a "
+                f"container, but a container object was not provided."
+            )
+
+        self.ctx.logger.log(
+            f"Executing command in container '{container.name}':\n{command}",
+            level=ctx.logger.verbose,
+        )
+
+        # Create exec handler and execute the command
+        exec_handler = self.ctx.api_client.exec_create(
+            container.name,
+            cmd=command,
+            environment=kwargs.get("environment", {}),
+            privileged=True,
+            user=kwargs.get("docker_user", "root"),
+        )
+
+        # `output` is a generator that yields response chunks
+        output_generator = self.ctx.api_client.exec_start(exec_handler, stream=True)
+
+        # Output from the generator is returned as bytes, so they need to be
+        # decoded to strings. Response chunks are not guaranteed to be full
+        # lines. A newline in the output chunk will trigger a log dump of the
+        # current `full_line` up to the first newline in the current chunk. The
+        # remainder of the chunk (if any) resets the `full_line` var, then log
+        # dumped when the next newline is received.
+
+        output = ""
+        full_line = ""
+        for chunk in output_generator:
+            chunk = self._strip_ansi(chunk.decode())
+            output += chunk
+            chunk = chunk.split("\n", 1)
+            if len(chunk) > 1:  # Indicates newline present
+                full_line += chunk[0]
+                if not kwargs.get("suppress_output", False):
+                    self.ctx.logger.log(full_line, level=ctx.logger.verbose)
+                    full_line = ""
+                if chunk[1]:
+                    full_line = chunk[1]
+            else:
+                full_line += chunk[0]
+
+        # Catch lingering full line post-loop
+        if not kwargs.get("suppress_output", False) and full_line:
+            self.ctx.logger.log(full_line, level=ctx.logger.verbose)
+
+        # Get the exit code
+        return_code = self.ctx.api_client.exec_inspect(exec_handler["Id"]).get(
+            "ExitCode"
+        )
+
+        if return_code != 0 and kwargs.get("trigger_error", True):
+            raise err.MiniprestoError(
+                f"Failed to execute command in container '{container.name}':\n{command}\n"
+                f"Exit code: {return_code}"
+            )
+
+        self.output.append(
+            {"command": command, "output": output, "return_code": return_code}
+        )
+
+    def _construct_environment(self, environment={}):
+        """Merges provided environment dictionary with user's shell environment
+        variables.
+        """
+
+        # Remove conflicting keys from host environment; Minipresto environment
+        # variables take precendance
+        host_environment = os.environ.copy()
+        if environment:
+            delete_keys = []
+            for host_key, host_value in host_environment.items():
+                for key, value in environment.items():
+                    if key == host_key:
+                        delete_keys.append(host_key)
+            for delete_key in delete_keys:
+                del host_environment[delete_key]
+
+        # Merge environment argument with copy of existing environment
+        environment.update(host_environment)
+        return environment
+
+    def _strip_ansi(self, value=""):
+        """Strips ANSI escape sequences from strings."""
+
+        # Strip ANSI codes before Click so that our logging helpers
+        # know if it's an empty string or not.
+        ansi_regex = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+        return ansi_regex.sub("", value)

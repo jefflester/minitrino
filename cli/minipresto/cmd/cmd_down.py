@@ -4,10 +4,9 @@
 import sys
 import click
 
-from minipresto.cli import LogLevel
-from minipresto.cli import pass_environment
-from minipresto.core import check_daemon
-from minipresto.core import generate_identifier
+import minipresto.cli
+import minipresto.utils as utils
+import minipresto.errors as err
 
 from minipresto.settings import RESOURCE_LABEL
 
@@ -27,44 +26,46 @@ Stop Minipresto containers without a grace period.
 # fmt: on
 
 
-@pass_environment
+@utils.exception_handler
+@minipresto.cli.pass_environment
 def cli(ctx, sig_kill, keep):
-    """
-    Down command for Minipresto. Exits with a 0 status code if there are no
+    """Down command for Minipresto. Exits with a 0 status code if there are no
     running minipresto containers.
     """
 
-    check_daemon()
-
+    utils.check_daemon(ctx.docker_client)
     containers = ctx.docker_client.containers.list(
         filters={"label": RESOURCE_LABEL}, all=True
     )
 
     if len(containers) == 0:
-        ctx.log("No containers to bring down.")
+        ctx.logger.log("No containers to bring down.")
         sys.exit(0)
 
     if sig_kill:
         stop_timeout = 1
-        ctx.log(
+        ctx.logger.log(
             "Stopping Minipresto containers with sig-kill...",
-            level=LogLevel().verbose,
+            level=ctx.logger.verbose,
         )
     else:
         stop_timeout = 10
-        
+
+    # Stop    
     for container in containers:
-        identifier = generate_identifier(
+        identifier = utils.generate_identifier(
             {"ID": container.short_id, "Name": container.name}
         )
         container.stop(timeout=stop_timeout)
-        ctx.log(f"Stopped container: {identifier}", level=LogLevel().verbose)
+        ctx.logger.log(f"Stopped container: {identifier}", level=ctx.logger.verbose)
+    
+    # Remove
     if not keep:
         for container in containers:
-            identifier = generate_identifier(
+            identifier = utils.generate_identifier(
                 {"ID": container.short_id, "Name": container.name}
             )
-            container.remove()  # Default behavior of Compose is to remove containers
-            ctx.log(f"Removed container: {identifier}", level=LogLevel().verbose)
+            container.remove() 
+            ctx.logger.log(f"Removed container: {identifier}", level=ctx.logger.verbose)
 
-    ctx.log("Brought down all Minipresto containers.")
+    ctx.logger.log("Brought down all Minipresto containers.")

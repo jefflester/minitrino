@@ -1,8 +1,14 @@
 #!usr/bin/env/python3
 # -*- coding: utf-8 -*-
 
+import sys
+import traceback
 import minipresto.errors as err
+
 from click import echo, style, prompt
+from textwrap import fill
+from shutil import get_terminal_size
+from minipresto.settings import DEFAULT_INDENT
 
 
 class Logger:
@@ -29,10 +35,6 @@ class Logger:
     - `prompt_msg()`: Logs a prompt message and returns the user's input.
     """
 
-    from textwrap import fill
-    from shutil import get_terminal_size
-    from minipresto.settings import DEFAULT_INDENT
-
     def __init__(self, log_verbose=False):
 
         self.info = {"prefix": "[i]  ", "prefix_color": "cyan"}
@@ -42,13 +44,15 @@ class Logger:
 
         self._log_verbose = log_verbose
 
-    def log(self, *args, level=None):
+    def log(self, *args, level=None, split_lines=True):
         """Logs messages to the user's console. Defaults to 'info' log level.
 
         ### Parameters
         - `*args`: Messages to log.
         - `level`: The level of the log message (info, warn, error, and
           verbose).
+        - `split_lines`: If `True`, newlines will be split and logged as an
+          individual message.
         """
 
         if not level:
@@ -65,7 +69,12 @@ class Logger:
                 raise err.MiniprestoError(
                     f"A string is required for {self.log.__name__}."
                 )
-            msgs = msg.replace("\r", "\n").split("\n")
+
+            if split_lines:
+                msgs = msg.replace("\r", "\n").split("\n")
+            else:
+                msgs = [msg.replace("\r", "\n")]
+
             for msg in msgs:
                 msg = self._format(msg)
                 if not msg:
@@ -135,9 +144,6 @@ def handle_exception(error=Exception, additional_msg="", skip_traceback=False):
       otherwise.
     """
 
-    import sys
-    import traceback
-
     if isinstance(error, err.UserError):
         error_msg = error.msg
         exit_code = error.exit_code
@@ -157,13 +163,14 @@ def handle_exception(error=Exception, additional_msg="", skip_traceback=False):
     logger = Logger()
     logger.log(additional_msg, error_msg, level=logger.error)
     if not skip_traceback:
-        echo(f"\n{traceback.print_tb()}", err=True)
+        echo(f"\n{traceback.print_tb(error.__traceback__)}", err=True)
 
     sys.exit(exit_code)
 
 
 def exception_handler(func):
     """A decorator that handles unhandled exceptions. Why? A few reasons.
+
     1. Functions still have the liberty to do try/catch and perform
        inner-function exception handling how they wish.
     2. Functions that catch exceptions which need specialized handling can

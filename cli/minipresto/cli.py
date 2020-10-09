@@ -46,7 +46,7 @@ new ones if they don't exist.
 
 @pass_environment
 def cli(ctx, verbose, env):
-    """CLI entrypoint."""
+    """Minipresto command line interface."""
 
     ctx._user_init(verbose, env)
     ctx.logger.log(

@@ -18,7 +18,7 @@ behavior of `docker-compose down`, where containers are both stopped and
 removed.
 """)
 @click.option("-k", "--keep", is_flag=True, default=False, help="""
-Does not remove any containers; instead, they will only be stopped.
+Does not remove containers; instead, containers will only be stopped.
 """)
 @click.option("--sig-kill", is_flag=True, default=False, help="""
 Stop Minipresto containers without a grace period.

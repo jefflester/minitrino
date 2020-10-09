@@ -1,16 +1,31 @@
 #!usr/bin/env/python3
 # -*- coding: utf-8 -*-
 
+
 import os
 import json
+import re
+import yaml
+import docker
+import subprocess
+
+from pathlib import Path
+from configparser import ConfigParser
+
 import minipresto.utils as utils
 import minipresto.errors as err
 
+from minipresto.settings import RESOURCE_LABEL
+from minipresto.settings import MODULE_LABEL_KEY_ROOT
+from minipresto.settings import MODULE_ROOT
+from minipresto.settings import MODULE_SECURITY
+from minipresto.settings import MODULE_CATALOG
+
 
 class Environment:
-    """CLI environment––provides context and core controls that are globally
-    accessible in command scripts. This class should not be instantiated from
-    anywhere but the CLI's entrypoint, as it depends on user-provided inputs.
+    """Provides context and core controls that are globally accessible in
+    command scripts. This class should not be instantiated from anywhere but the
+    CLI's entrypoint, as it depends on user-provided inputs.
 
     ### Public Attributes (Interactive)
     - `logger`: A `minipresto.utils.Logger` object.
@@ -34,9 +49,6 @@ class Environment:
         written to the library or user-specified directory).
     - `minipresto_lib_dir`: The location of the Minipresto library.
     """
-
-    import docker
-    from pathlib import Path
 
     @utils.exception_handler
     def __init__(self):
@@ -135,7 +147,7 @@ class Environment:
         # dependent on user-provided env variables. The final library path is
         # checked in the _user_init() method.
 
-        repo_root = Path(os.path.abspath(__file__)).resolve().parents[3]
+        repo_root = Path(os.path.abspath(__file__)).resolve().parents[2]
         return os.path.join(repo_root, "lib")
 
     def _get_docker_clients(self):
@@ -179,8 +191,6 @@ class EnvironmentVariables:
     env_section = ctx.env.get_section("MODULES")
     ```
     """
-
-    from configparser import ConfigParser
 
     @utils.exception_handler
     def __init__(self, ctx=None):
@@ -366,14 +376,6 @@ class Modules:
       tied to the module.
     """
 
-    import yaml
-
-    from minipresto.settings import RESOURCE_LABEL
-    from minipresto.settings import MODULE_LABEL_KEY_ROOT
-    from minipresto.settings import MODULE_ROOT
-    from minipresto.settings import MODULE_SECURITY
-    from minipresto.settings import MODULE_CATALOG
-
     @utils.exception_handler
     def __init__(self, ctx=None):
 
@@ -500,7 +502,7 @@ class Modules:
                         metadata = json.load(f)
                 else:
                     self.ctx.logger.log(
-                        f"No JSON metadata file for {module_name}. "
+                        f"No JSON metadata file for module '{module_name}'. "
                         f"Will not load metadata for module.",
                         level=self.ctx.logger.verbose,
                     )
@@ -521,16 +523,10 @@ class CommandExecutor:
     - `ctx`: Instantiated Environment object (with user input already accounted
       for).
 
-    ### Public Attributes
-    - `output`: The output of the previous run of `execute_commands()`.
-
     ### Public Methods
     - `execute_commands()`: Executes commands in the user's shell or inside of a
         container.
     """
-
-    import re
-    import subprocess
 
     @utils.exception_handler
     def __init__(self, ctx=None):
@@ -539,7 +535,6 @@ class CommandExecutor:
             utils.handle_missing_param(locals().keys(), __init__.__name__)
 
         self.ctx = ctx
-        self.output = []
 
     @utils.exception_handler
     def execute_commands(self, *args, **kwargs):
@@ -573,14 +568,15 @@ class CommandExecutor:
             kwargs.get("environment", {})
         )
 
+        output = []
         if kwargs.get("container", None):
             for command in args:
-                self._execute_in_container(command, **kwargs)
+                output.append(self._execute_in_container(command, **kwargs))
         else:
             for command in args:
-                self._execute_in_shell(command, **kwargs)
+                output.append(self._execute_in_shell(command, **kwargs))
 
-        return self.output
+        return output
 
     def _execute_in_shell(self, command="", **kwargs):
         """Executes a command in the host shell."""
@@ -588,6 +584,7 @@ class CommandExecutor:
         self.ctx.logger.log(
             f"Executing command in shell:\n{command}",
             level=self.ctx.logger.verbose,
+            split_lines=False,
         )
 
         process = subprocess.Popen(
@@ -609,7 +606,7 @@ class CommandExecutor:
                 if output_line == "" and process.poll() is not None:
                     break
                 output_line = self._strip_ansi(output_line)
-                self.ctx.logger.log(output_line, level=ctx.logger.verbose)
+                self.ctx.logger.log(output_line, level=self.ctx.logger.verbose)
 
         output, _ = process.communicate()  # Get full output (stdout + stderr)
         if process.returncode != 0 and kwargs.get("trigger_error", True):
@@ -618,13 +615,11 @@ class CommandExecutor:
                 f"Exit code: {process.returncode}"
             )
 
-        self.output.append(
-            {
-                "command": command,
-                "output": self._strip_ansi(output),
-                "return_code": process.returncode,
-            }
-        )
+        return {
+            "command": command,
+            "output": self._strip_ansi(output),
+            "return_code": process.returncode,
+        }
 
     def _execute_in_container(self, command="", **kwargs):
         """Executes a command inside of a container through the Docker SDK
@@ -640,7 +635,8 @@ class CommandExecutor:
 
         self.ctx.logger.log(
             f"Executing command in container '{container.name}':\n{command}",
-            level=ctx.logger.verbose,
+            level=self.ctx.logger.verbose,
+            split_lines=False,
         )
 
         # Create exec handler and execute the command
@@ -671,7 +667,7 @@ class CommandExecutor:
             if len(chunk) > 1:  # Indicates newline present
                 full_line += chunk[0]
                 if not kwargs.get("suppress_output", False):
-                    self.ctx.logger.log(full_line, level=ctx.logger.verbose)
+                    self.ctx.logger.log(full_line, level=self.ctx.logger.verbose)
                     full_line = ""
                 if chunk[1]:
                     full_line = chunk[1]
@@ -680,7 +676,7 @@ class CommandExecutor:
 
         # Catch lingering full line post-loop
         if not kwargs.get("suppress_output", False) and full_line:
-            self.ctx.logger.log(full_line, level=ctx.logger.verbose)
+            self.ctx.logger.log(full_line, level=self.ctx.logger.verbose)
 
         # Get the exit code
         return_code = self.ctx.api_client.exec_inspect(exec_handler["Id"]).get(
@@ -693,9 +689,7 @@ class CommandExecutor:
                 f"Exit code: {return_code}"
             )
 
-        self.output.append(
-            {"command": command, "output": output, "return_code": return_code}
-        )
+        return {"command": command, "output": output, "return_code": return_code}
 
     def _construct_environment(self, environment={}):
         """Merges provided environment dictionary with user's shell environment

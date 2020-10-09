@@ -29,7 +29,7 @@ def test_standalone():
     are passed in.
     """
 
-    result = helpers.execute_command(["-v", "--env", "LIB_PATH=jeff/lol", "--env", "IDIOT==jeff", "provision"])
+    result = helpers.execute_command(["-v", "provision"])
 
     assert result.exit_code == 0
     assert "Provisioning standalone" in result.output

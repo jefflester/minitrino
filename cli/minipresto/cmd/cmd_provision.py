@@ -11,7 +11,7 @@ import stat
 import hashlib
 import click
 
-import minipresto.cli 
+import minipresto.cli
 import minipresto.utils as utils
 import minipresto.errors as err
 
@@ -49,12 +49,11 @@ Example: minipresto provision -d '--remove-orphans --force-recreate'
 @utils.exception_handler
 @minipresto.cli.pass_environment
 def cli(ctx, modules, no_rollback, docker_native):
-    """
-    Provision command for Minipresto. If the resulting docker-compose command is
-    unsuccessful, the function exits with a non-zero status code.
+    """Provision command for Minipresto. If the resulting docker-compose command
+    is unsuccessful, the function exits with a non-zero status code.
     """
 
-    utils.check_daemon()
+    utils.check_daemon(ctx.docker_client)
 
     if not modules:
         ctx.logger.log(
@@ -63,39 +62,39 @@ def cli(ctx, modules, no_rollback, docker_native):
         )
     else:
         for module in modules:
-            if not ctx.module.get(module, False):
+            if not ctx.modules.get(module, False):
                 raise err.UserError(
                     f"Invalid module: '{module}'. It was not found "
                     f"in the Minipresto library at {ctx.minipresto_lib_dir}"
                 )
 
-    cmd_chunk = chunk(modules)
+    try:
+        cmd_chunk = chunk(modules)
 
-    # Module env variables shared with compose should be from the modules
-    # section of environment variables and any extra variables provided by the
-    # user that didn't fit into any other section
-    
-    compose_env = ctx.env.get_section("MODULES", {}).update(ctx.env.get_section("EXTRA"))
-    compose_cmd = build_command(docker_native, compose_env, chunk)
+        # Module env variables shared with compose should be from the modules
+        # section of environment variables and any extra variables provided by the
+        # user that didn't fit into any other section
+        
+        compose_env = ctx.env.get_section("MODULES")
+        compose_env.update(ctx.env.get_section("EXTRA"))
+        compose_cmd = build_command(docker_native, compose_env, cmd_chunk)
 
-    ctx.executor.execute_commands(
-        environment=compose_env, commands=[compose_cmd]
-    )
+        ctx.cmd_executor.execute_commands(compose_cmd, environment=compose_env)
+        initialize_containers()
 
-    initialize_containers()
+        containers_to_restart = execute_bootstraps(modules)
+        containers_to_restart = append_user_config(containers_to_restart)
+        handle_config_properties()
+        restart_containers(containers_to_restart)
+        ctx.logger.log(f"Environment provisioning complete.")
 
-
-    containers_to_restart = execute_bootstraps(
-        catalog_yaml_files, security_yaml_files
-    )
-    containers_to_restart = append_user_config(containers_to_restart)
-    handle_config_properties()
-    restart_containers(containers_to_restart)
-    ctx.logger.log(f"Environment provisioning complete.")
+    except Exception as e:
+        rollback_provision(no_rollback)
+        utils.handle_exception(e)
 
 
 @minipresto.cli.pass_environment
-def chunk(ctx, modules):
+def chunk(ctx, modules=[]):
     """Builds docker-compose command chunk for the chosen modules. Returns a
     command chunk string.
     """
@@ -139,66 +138,47 @@ def build_command(ctx, docker_native="", compose_env={}, chunk=""):
     return "".join(cmd)
 
 
-def validate(catalog=[], security=[]):
-    """
-    Validates module input and ensures that the chosen modules map to a valid
-    directory and YAML file.
-
-    Returns file paths to passed in catalog and security modules.
-    """
-
-    _, catalog_yaml_files = validate_module_dirs(MODULE_CATALOG, catalog)
-    _, security_yaml_files = validate_module_dirs(MODULE_SECURITY, security)
-    return catalog_yaml_files, security_yaml_files
-
-
 @minipresto.cli.pass_environment
-def execute_bootstraps(ctx, catalog_yaml_files=[], security_yaml_files=[]):
-    """
-    Executes bootstrap script for each container that has one––bootstrap scripts
-    will only execute once the container is fully running to prevent conflicts
-    with procedures executing as part of the container's entrypoint. After each
-    script executes, the relevant container is added to a restart list.
+def execute_bootstraps(ctx, modules=[]):
+    """Executes bootstrap script for each container that has one––bootstrap
+    scripts will only execute once the container is fully running to prevent
+    conflicts with procedures executing as part of the container's entrypoint.
+    After each script executes, the relevant container is added to a restart
+    list.
 
     Returns a list of containers names which had bootstrap scripts executed
     inside of them.
     """
 
-    yaml_files = catalog_yaml_files + security_yaml_files
     services = []
-    for yaml_file in yaml_files:
-        with open(yaml_file) as f:
-            yaml_dict = yaml.load(f, Loader=yaml.FullLoader)
-            yaml_dict = yaml_dict.get("services")
-            if yaml_dict is None:
-                raise err.MiniprestoError(
-                    f"Invalid Docker Compose YAML file (no 'services' section found): {yaml_file}"
-                )
-            for service in yaml_dict.items():
-                services.append([service, yaml_file])
+    for module in modules:
+        yaml_file = ctx.modules.get(module, {}).get('yaml_file', '')
+        module_services = ctx.modules.get(module, {}).get("yaml_dict", {}).get("services", {})
+        if not module_services:
+            raise err.MiniprestoError(
+                f"Invalid Docker Compose YAML file (no 'services' section found): {yaml_file}"
+            )
+        for service_key, service_dict in module_services.items():
+            services.append(service_key, service_dict, yaml_file)
 
     containers = []
     for service in services:
-        service_dict = service[0]
-        env_vars = service_dict[1].get("environment")
-        if env_vars is not None:
-            bootstrap = env_vars.get("MINIPRESTO_BOOTSTRAP")
-            if bootstrap is None:
-                continue
-            container_name = service_dict[1].get("container_name")
-            if container_name is None:
-                container_name = service_dict[0]
-            if execute_container_bootstrap(bootstrap, container_name, service[1]):
-                containers.append(container_name)
+        bootstrap = service[1].get("environment", {}).get("MINIPRESTO_BOOTSTRAP")
+        if bootstrap is None:
+            continue
+        container_name = service.get("container_name")
+        if container_name is None:
+            # If there is not container name, the service name becomes the name
+            # of the container
+            container_name = service[0]
+        if execute_container_bootstrap(bootstrap, container_name, service[2]):
+            containers.append(container_name)
     return containers
 
 
 @minipresto.cli.pass_environment
-def execute_container_bootstrap(
-    ctx, bootstrap_basename="", container_name="", yaml_file=""
-):
-    """
-    Executes a single bootstrap inside a container. If the
+def execute_container_bootstrap(ctx, bootstrap="", container_name="", yaml_file=""):
+    """Executes a single bootstrap inside a container. If the
     `/opt/minipresto/bootstrap_status.txt` file has the same checksum as the
     bootstrap script that is about to be executed, the boostrap script is
     skipped.
@@ -207,11 +187,12 @@ def execute_container_bootstrap(
     """
 
     bootstrap_file = os.path.join(
-        os.path.dirname(yaml_file), "resources", "bootstrap", bootstrap_basename
+        os.path.dirname(yaml_file), "resources", "bootstrap", bootstrap
     )
     if not os.path.isfile(bootstrap_file):
-        raise err.MiniprestoError(
-            f"Bootstrap file does not exist at location: {bootstrap_file}"
+        raise err.UserError(
+            f"Bootstrap file does not exist at location: {bootstrap_file}",
+            "Check this module in the library to ensure the bootstrap script is present."
         )
 
     # Add executable permissions to bootstrap
@@ -221,12 +202,11 @@ def execute_container_bootstrap(
         st.st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH,
     )
 
-    executor = CommandExecutor(ctx)
     bootstrap_checksum = hashlib.md5(open(bootstrap_file, "rb").read()).hexdigest()
     container = ctx.docker_client.containers.get(container_name)
 
-    output = executor.execute_commands(
-        commands=["cat /opt/minipresto/bootstrap_status.txt"],
+    output = ctx.cmd_executor.execute_commands(
+        "cat /opt/minipresto/bootstrap_status.txt",
         suppress_output=True,
         container=container,
         trigger_error=False
@@ -242,16 +222,10 @@ def execute_container_bootstrap(
         f"Executing bootstrap script in container '{container_name}'...",
         level=ctx.logger.verbose,
     )
-    executor.execute_commands(
-        commands=[
-            f"docker cp {bootstrap_file} {container_name}:/tmp/",
-        ]
-    )
-    executor.execute_commands(
-        commands=[
-            f"/tmp/{os.path.basename(bootstrap_file)}",
-            f'bash -c "echo {bootstrap_checksum} >> /opt/minipresto/bootstrap_status.txt"',
-        ],
+    ctx.cmd_executor.execute_commands(f"docker cp {bootstrap_file} {container_name}:/tmp/")
+    ctx.cmd_executor.execute_commands(
+        f"/tmp/{os.path.basename(bootstrap_file)}",
+        f'bash -c "echo {bootstrap_checksum} >> /opt/minipresto/bootstrap_status.txt"',
         container=container,
     )
 
@@ -264,8 +238,7 @@ def execute_container_bootstrap(
 
 @minipresto.cli.pass_environment
 def handle_config_properties(ctx):
-    """
-    Checks for duplicates in the Presto config.properties file and issues
+    """Checks for duplicates in the Presto config.properties file and logs
     warnings for any detected duplicates.
     """
 
@@ -273,10 +246,9 @@ def handle_config_properties(ctx):
         "Checking Presto config.properties for duplicate properties...",
         level=ctx.logger.verbose,
     )
-    executor = CommandExecutor(ctx)
     container = ctx.docker_client.containers.get("presto")
-    output = executor.execute_commands(
-        commands=[f"cat {ETC_PRESTO}/config.properties"],
+    output = ctx.cmd_executor.execute_commands(
+        f"cat {ETC_PRESTO}/config.properties",
         suppress_output=True,
         container=container,
     )
@@ -289,50 +261,45 @@ def handle_config_properties(ctx):
 
     config_props = config_props.strip().split("\n")
     config_props.sort()
-    counter = 0
-    while counter < len(config_props):
-        config_prop = config_props[counter]
-        config_prop = config_prop.strip().split("=")
-        key = config_prop[0].strip()
 
-        inner_counter = counter + 1
-        duplicates = []
-        while inner_counter < len(config_props):
-            check_config_prop = config_props[inner_counter].strip().split("=")
-            check_key = check_config_prop[0].strip()
-            if key == check_key:
-                duplicates.append(config_props[inner_counter])
-                inner_counter += 1
-            else:
-                break
-
-        if duplicates:
-            duplicates.insert(0, config_props[counter])
+    duplicates = []
+    for i, prop in enumerate(config_props):
+        prop = prop.strip().split("=")
+        try:
+            next_prop = config_props[i+1].strip().split("=")
+        except:
+            next_prop = [""]
+        if prop[0].strip() == next_prop[0].strip():
+            duplicates.extend(["".join(prop), "".join(next_prop)])
+        elif duplicates:
+            duplicates = set(duplicates)
             duplicates_string = "\n".join(duplicates)
             ctx.logger.log(
-                f"Duplicate Presto configuration properties detected in config.properties file:\n{duplicates_string}",
+                f"Duplicate Presto configuration properties detected in "
+                f"config.properties file:\n{duplicates_string}",
                 level=ctx.logger.warn,
+                split_lines=False
             )
-        counter = inner_counter
+            duplicates = []
 
 
 @minipresto.cli.pass_environment
 def append_user_config(ctx, containers_to_restart=[]):
-    """
-    Appends Presto config from minipresto.cfg file if present and if it does not
-    already exist in the Presto container. If anything is appended to the Presto
-    config, the Presto container is added to the restart list if it's not
+    """Appends Presto config from minipresto.cfg file if present and if it does
+    not already exist in the Presto container. If anything is appended to the
+    Presto config, the Presto container is added to the restart list if it's not
     already in the list.
     """
 
-    presto_config_append = (
-        ctx.get_config_value("PRESTO", "CONFIG", False, "").strip().split("\n")
-    )
-    jvm_config_append = (
-        ctx.get_config_value("PRESTO", "JVM_CONFIG", False, "").strip().split("\n")
-    )
+    user_presto_config = (ctx.env.get_var("CONFIG", ""))
+    if user_presto_config:
+        user_presto_config = user_presto_config.strip().split("\n")
 
-    if not presto_config_append and not jvm_config_append:
+    user_jvm_config = (ctx.env.get_var("JVM_CONFIG", ""))
+    if user_jvm_config:
+        user_jvm_config = user_jvm_config.strip().split("\n")
+
+    if not user_presto_config and not user_jvm_config:
         return containers_to_restart
 
     ctx.logger.log(
@@ -340,7 +307,6 @@ def append_user_config(ctx, containers_to_restart=[]):
         level=ctx.logger.verbose,
     )
 
-    executor = CommandExecutor(ctx)
     presto_container = ctx.docker_client.containers.get("presto")
     if not presto_container:
         raise err.MiniprestoError(
@@ -348,33 +314,27 @@ def append_user_config(ctx, containers_to_restart=[]):
             f"but no running Presto container found."
         )
 
-    current_configs = executor.execute_commands(
-        commands=[
-            f"cat {ETC_PRESTO}/config.properties",
-            f"cat {ETC_PRESTO}/jvm.config",
-        ],
+    current_configs = ctx.cmd_executor.execute_commands(
+        f"cat {ETC_PRESTO}/config.properties",
+        f"cat {ETC_PRESTO}/jvm.config",
         container=presto_container,
     )
 
-    presto_config_current = current_configs[0].get("output", "")
-    jvm_config_current = current_configs[1].get("output", "")
+    current_presto_config = current_configs[0].get("output", "")
+    current_jvm_config = current_configs[1].get("output", "")
 
-    for config in presto_config_append:
-        if config not in presto_config_current:
-            append_presto_config = (
-                f'bash -c "cat <<EOT >> {ETC_PRESTO}/config.properties\n{config}\nEOT"'
-            )
-            executor.execute_commands(
-                commands=[append_presto_config], container=presto_container
-            )
-    for config in jvm_config_append:
-        if config not in jvm_config_current:
-            append_jvm_config = (
-                f'bash -c "cat <<EOT >> {ETC_PRESTO}/jvm.config\n{config}\nEOT"'
-            )
-            executor.execute_commands(
-                commands=[append_jvm_config], container=presto_container
-            )
+    def add_configs(configs, filename):
+        for config in configs:
+            if config not in current_presto_config:
+                append_presto_config = (
+                    f'bash -c "cat <<EOT >> {ETC_PRESTO}/{filename}\n{config}\nEOT"'
+                )
+                ctx.cmd_executor.execute_commands(
+                    append_presto_config, container=presto_container
+                )
+    
+    add_configs(user_presto_config, "config.properties")
+    add_configs(user_jvm_config, "jvm.config")
 
     if not "presto" in containers_to_restart:
         containers_to_restart.append("presto")
@@ -411,19 +371,17 @@ def initialize_containers(ctx):
 
     containers = ctx.docker_client.containers.list(filters={"label": RESOURCE_LABEL})
     for container in containers:
-        output = ctx.executor.execute_commands(
-            commands=["cat /opt/minipresto/bootstrap_status.txt"],
+        output = ctx.cmd_executor.execute_commands(
+            "cat /opt/minipresto/bootstrap_status.txt",
             suppress_output=True,
             container=container,
             trigger_error=False
         )
         output_string = output[0].get("output", "").strip()
         if "no such file or directory" in output_string.lower():
-            ctx.executor.execute_commands(
-                commands=[
-                    "mkdir -p /opt/minipresto/",
-                    "touch /opt/minipresto/bootstrap_status.txt",
-                ],
+            ctx.cmd_executor.execute_commands(
+                "mkdir -p /opt/minipresto/",
+                "touch /opt/minipresto/bootstrap_status.txt",
                 container=container,
             )
         elif output[0].get("return_code", None) == 0:
@@ -438,9 +396,7 @@ def initialize_containers(ctx):
 
 @minipresto.cli.pass_environment
 def rollback_provision(ctx, no_rollback):
-    """
-    Rolls back the provisioning command in the event of an error.
-    """
+    """Rolls back the provisioning command in the event of an error."""
 
     if no_rollback:
         ctx.logger.log(

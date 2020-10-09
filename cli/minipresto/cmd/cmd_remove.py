@@ -38,7 +38,7 @@ restrictions apply.
 def cli(ctx, images, volumes, labels, force):
     """Remove command for Minipresto."""
 
-    utils.check_daemon()
+    utils.check_daemon(ctx.docker_client)
 
     if all((not images, not volumes, not labels)) or all((images, volumes, not labels)):
         response = ctx.logger.prompt_msg(
@@ -59,7 +59,7 @@ def cli(ctx, images, volumes, labels, force):
     ctx.logger.log(f"Removal complete.")
 
 
-@pass_environment
+@minipresto.cli.pass_environment
 def remove_items(ctx, item_type, force, labels=[]):
     """Removes Docker items. If no labels are passed in, all Minipresto
     resources are removed. If label(s) are passed in, the removal is limited to

@@ -188,6 +188,9 @@ def execute_container_bootstrap(ctx, bootstrap="", container_name="", yaml_file=
     Returns `False` if the script is not executed and `True` if it is.
     """
 
+    if any((not bootstrap, not container_name, not yaml_file)):
+        raise utils.handle_missing_param(list(locals().keys()))
+
     bootstrap_file = os.path.join(
         os.path.dirname(yaml_file), "resources", "bootstrap", bootstrap
     )

@@ -145,6 +145,9 @@ def handle_exception(error=Exception, additional_msg="", skip_traceback=False):
       otherwise.
     """
 
+    if not isinstance(error, Exception):
+        raise handle_missing_param(["error"])
+
     if isinstance(error, err.UserError):
         error_msg = error.msg
         exit_code = error.exit_code

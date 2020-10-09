@@ -327,6 +327,7 @@ class EnvironmentVariables:
         # Any variable keys that do not match with an existing key will be added
         # to the section dict, EXTRA.
 
+        # TODO: Clean up this algorithm 
         delete_keys = []
         new_dict = {}
 

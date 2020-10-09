@@ -11,7 +11,7 @@ class MiniprestoError(Exception):
 
     def __init__(self, msg=""):
         if not msg:
-            utils.handle_missing_param(locals().keys(), __init__.__name__)
+            raise utils.handle_missing_param(list(locals().keys()))
         super().__init__(msg)
         self.msg = msg
 
@@ -32,7 +32,7 @@ class UserError(MiniprestoError):
 
     def __init__(self, msg="", hint_msg=""):
         if not msg:
-            utils.handle_missing_param("msg", __init__.__name__)
+            raise utils.handle_missing_param("msg")
         if hint_msg:
             super().__init__(f"User error: {msg}\nHint: {hint_msg}")
         else:

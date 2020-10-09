@@ -196,7 +196,7 @@ class EnvironmentVariables:
     def __init__(self, ctx=None):
 
         if not ctx:
-            utils.handle_missing_param(locals().keys(), __init__.__name__)
+            raise utils.handle_missing_param(list(locals().keys()))
 
         self.ctx = ctx
         self.env = {}
@@ -217,7 +217,7 @@ class EnvironmentVariables:
         """
 
         if not key:
-            utils.handle_missing_param(["key"], self.get_var.__name__)
+            raise utils.handle_missing_param(["key"])
 
         for section_k, section_v in self.env.items():
             if isinstance(section_v, dict):
@@ -236,7 +236,7 @@ class EnvironmentVariables:
         """
 
         if not section:
-            utils.handle_missing_param(locals().keys(), self.get_section.__name__)
+            raise utils.handle_missing_param(list(locals().keys()))
 
         return self.env.get(section.upper(), {})
 
@@ -380,7 +380,7 @@ class Modules:
     def __init__(self, ctx=None):
 
         if not ctx:
-            utils.handle_missing_param(locals().keys(), __init__.__name__)
+            raise utils.handle_missing_param(list(locals().keys()))
 
         self.ctx = ctx
         self.data = {}
@@ -533,7 +533,7 @@ class CommandExecutor:
     def __init__(self, ctx=None):
 
         if not ctx:
-            utils.handle_missing_param(locals().keys(), __init__.__name__)
+            raise utils.handle_missing_param(list(locals().keys()))
 
         self.ctx = ctx
 

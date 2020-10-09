@@ -63,18 +63,19 @@ class Logger:
             return
 
         for msg in args:
+            # Ensure the message is a string
             try:
                 msg = str(msg)
             except:
                 raise err.MiniprestoError(
                     f"A string is required for {self.log.__name__}."
                 )
-
+            # Don't split lines if told not to
             if split_lines:
                 msgs = msg.replace("\r", "\n").split("\n")
             else:
                 msgs = [msg.replace("\r", "\n")]
-
+            # Log each message
             for msg in msgs:
                 msg = self._format(msg)
                 if not msg:
@@ -93,7 +94,7 @@ class Logger:
         """
 
         if not msg:
-            handle_missing_param(["msg"], self.prompt_msg.__name__)
+            raise handle_missing_param(["msg"])
 
         try:
             msg = str(msg)
@@ -163,7 +164,8 @@ def handle_exception(error=Exception, additional_msg="", skip_traceback=False):
     logger = Logger()
     logger.log(additional_msg, error_msg, level=logger.error)
     if not skip_traceback:
-        echo(f"\n{traceback.print_tb(error.__traceback__)}", err=True)
+        echo() # Force a newline
+        echo(f"{traceback.print_tb(error.__traceback__)}", err=True)
 
     sys.exit(exit_code)
 
@@ -192,31 +194,28 @@ def exception_handler(func):
 
 
 @exception_handler
-def handle_missing_param(params=[], name=""):
+def handle_missing_param(params=[]):
     """Handles missing parameters required for function calls. This should be
     used to signal a programmatic error, not a user error.
 
     ### Parameters
     - `params`: List of parameter names that are required.
-    - `name`: Name of the function.
 
     ### Usage
     ```python
     # All params are required
     if not param:
-        handle_missing_param(locals().keys(), my_func.__name__)
+        raise handle_missing_param(list(locals().keys()))
     # Two params are required
     if not param:
-        handle_missing_param(["module", "path"], my_func.__name__)
+        raise handle_missing_param(["module", "path"])
     ```
     """
 
-    if not params or not name:
-        handle_missing_param(locals().keys(), handle_missing_param.__name__)
+    if not params:
+        raise handle_missing_param(list(locals().keys()))
 
-    raise err.MiniprestoError(
-        f"Parameters {params} required to execute function {name}."
-    )
+    return err.MiniprestoError(f"Parameters {params} required to execute function.")
 
 
 @exception_handler
@@ -255,7 +254,7 @@ def generate_identifier(identifiers=None):
     """
 
     if not identifiers:
-        handle_missing_param(locals().keys(), generate_identifier.__name__)
+        raise handle_missing_param(list(locals().keys()))
 
     identifier = []
     for key, value in identifiers.items():

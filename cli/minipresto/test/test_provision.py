@@ -51,7 +51,7 @@ def test_invalid_catalog_module():
     """
 
     result = helpers.execute_command(
-        ["-v", "provision", "--catalog", "hive-hms", "--catalog", "not-a-real-module"]
+        ["-v", "provision", "--catalog", "hive-s3", "--catalog", "not-a-real-module"]
     )
 
     assert result.exit_code == 1

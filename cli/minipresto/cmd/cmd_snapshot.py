@@ -84,7 +84,7 @@ def cli(ctx, modules, name, directory, force, no_scrub):
         ctx.logger.log(f"Creating snapshot of specified modules...")
         snapshot_runner(name, no_scrub, False, modules, directory)
     else:
-        modules = ctx.modules.get_running_modules()
+        modules = ctx.modules.data.get_running_modules()
         if not modules:
             raise err.UserError(
                 f"No running Minipresto modules to snapshot.",
@@ -335,8 +335,8 @@ def copy_module_dirs(ctx, snapshot_name_dir, modules=[]):
     """Copies module directories into the named snapshot directory."""
 
     for module in modules:
-        module_dir = ctx.modules.get(module, "").get("module_dir", "")
-        module_type = ctx.modules.get(module, "").get("type", "")
+        module_dir = ctx.modules.data.get(module, "").get("module_dir", "")
+        module_type = ctx.modules.data.get(module, "").get("type", "")
         dest_dir = os.path.join(
             os.path.join(snapshot_name_dir, LIB, MODULE_ROOT, module_type),
             os.path.basename(module_dir)

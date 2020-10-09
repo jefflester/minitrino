@@ -35,4 +35,5 @@ class UserError(MiniprestoError):
             utils.handle_missing_param("msg", __init__.__name__)
         if hint_msg:
             super().__init__(f"User error: {msg}\nHint: {hint_msg}")
-        super().__init__(f"User error: {msg}")
+        else:
+            super().__init__(f"User error: {msg}")

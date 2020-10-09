@@ -24,7 +24,7 @@ def main():
         module_name="elasticsearch",
     )
 
-    # Hive-HMS
+    # Hive-S3
     ModuleTest(
         {
             "command": "presto-cli --execute 'show catalogs'",
@@ -35,10 +35,10 @@ def main():
             "expected_output": ["default"],
         },
         module_type=MODULE_CATALOG,
-        module_name="hive-hms",
+        module_name="hive-s3",
     )
 
-    # Hive-HMS-Minio
+    # Hive-Minio
     ModuleTest(
         {
             "command": "presto-cli --execute 'show catalogs'",
@@ -49,7 +49,7 @@ def main():
             "expected_output": ["default"],
         },
         module_type=MODULE_CATALOG,
-        module_name="hive-hms-minio",
+        module_name="hive-minio",
     )
 
     # MySQL

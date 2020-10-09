@@ -1,0 +1,4 @@
+{
+    "description": "Creates a Hive catalog using MinIO for object storage and Postgres as a backend metastore DB.",
+    "incompatible_modules": []
+}

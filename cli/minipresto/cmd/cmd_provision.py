@@ -62,7 +62,7 @@ def cli(ctx, modules, no_rollback, docker_native):
         )
     else:
         for module in modules:
-            if not ctx.modules.get(module, False):
+            if not ctx.modules.data.get(module, False):
                 raise err.UserError(
                     f"Invalid module: '{module}'. It was not found "
                     f"in the Minipresto library at {ctx.minipresto_lib_dir}"
@@ -74,7 +74,7 @@ def cli(ctx, modules, no_rollback, docker_native):
         # Module env variables shared with compose should be from the modules
         # section of environment variables and any extra variables provided by the
         # user that didn't fit into any other section
-        
+
         compose_env = ctx.env.get_section("MODULES")
         compose_env.update(ctx.env.get_section("EXTRA"))
         compose_cmd = build_command(docker_native, compose_env, cmd_chunk)
@@ -101,8 +101,8 @@ def chunk(ctx, modules=[]):
 
     chunk = []
     for mod in modules:
-         yaml_file = ctx.modules.get(mod, "").get("yaml_file", "")
-         chunk.extend(f"-f {yaml_file} \\\n")
+        yaml_file = ctx.modules.data.get(mod, "").get("yaml_file", "")
+        chunk.extend(f"-f {yaml_file} \\\n")
     return "".join(chunk)
 
 
@@ -124,8 +124,8 @@ def build_command(ctx, docker_native="", compose_env={}, chunk=""):
             "docker-compose -f ",
             os.path.join(ctx.minipresto_lib_dir, "docker-compose.yml"),
             " \\\n",
-            chunk, # Module YAML paths
-            "up -d"
+            chunk,  # Module YAML paths
+            "up -d",
         ]
     )
 
@@ -152,14 +152,16 @@ def execute_bootstraps(ctx, modules=[]):
 
     services = []
     for module in modules:
-        yaml_file = ctx.modules.get(module, {}).get('yaml_file', '')
-        module_services = ctx.modules.get(module, {}).get("yaml_dict", {}).get("services", {})
+        yaml_file = ctx.modules.data.get(module, {}).get("yaml_file", "")
+        module_services = (
+            ctx.modules.data.get(module, {}).get("yaml_dict", {}).get("services", {})
+        )
         if not module_services:
             raise err.MiniprestoError(
                 f"Invalid Docker Compose YAML file (no 'services' section found): {yaml_file}"
             )
         for service_key, service_dict in module_services.items():
-            services.append(service_key, service_dict, yaml_file)
+            services.append([service_key, service_dict, yaml_file])
 
     containers = []
     for service in services:
@@ -192,7 +194,7 @@ def execute_container_bootstrap(ctx, bootstrap="", container_name="", yaml_file=
     if not os.path.isfile(bootstrap_file):
         raise err.UserError(
             f"Bootstrap file does not exist at location: {bootstrap_file}",
-            "Check this module in the library to ensure the bootstrap script is present."
+            "Check this module in the library to ensure the bootstrap script is present.",
         )
 
     # Add executable permissions to bootstrap
@@ -209,7 +211,7 @@ def execute_container_bootstrap(ctx, bootstrap="", container_name="", yaml_file=
         "cat /opt/minipresto/bootstrap_status.txt",
         suppress_output=True,
         container=container,
-        trigger_error=False
+        trigger_error=False,
     )
     if f"{bootstrap_checksum}" in output[0].get("output", ""):
         ctx.logger.log(
@@ -222,7 +224,9 @@ def execute_container_bootstrap(ctx, bootstrap="", container_name="", yaml_file=
         f"Executing bootstrap script in container '{container_name}'...",
         level=ctx.logger.verbose,
     )
-    ctx.cmd_executor.execute_commands(f"docker cp {bootstrap_file} {container_name}:/tmp/")
+    ctx.cmd_executor.execute_commands(
+        f"docker cp {bootstrap_file} {container_name}:/tmp/"
+    )
     ctx.cmd_executor.execute_commands(
         f"/tmp/{os.path.basename(bootstrap_file)}",
         f'bash -c "echo {bootstrap_checksum} >> /opt/minipresto/bootstrap_status.txt"',
@@ -266,7 +270,7 @@ def handle_config_properties(ctx):
     for i, prop in enumerate(config_props):
         prop = prop.strip().split("=")
         try:
-            next_prop = config_props[i+1].strip().split("=")
+            next_prop = config_props[i + 1].strip().split("=")
         except:
             next_prop = [""]
         if prop[0].strip() == next_prop[0].strip():
@@ -278,7 +282,7 @@ def handle_config_properties(ctx):
                 f"Duplicate Presto configuration properties detected in "
                 f"config.properties file:\n{duplicates_string}",
                 level=ctx.logger.warn,
-                split_lines=False
+                split_lines=False,
             )
             duplicates = []
 
@@ -291,11 +295,11 @@ def append_user_config(ctx, containers_to_restart=[]):
     already in the list.
     """
 
-    user_presto_config = (ctx.env.get_var("CONFIG", ""))
+    user_presto_config = ctx.env.get_var("CONFIG", "")
     if user_presto_config:
         user_presto_config = user_presto_config.strip().split("\n")
 
-    user_jvm_config = (ctx.env.get_var("JVM_CONFIG", ""))
+    user_jvm_config = ctx.env.get_var("JVM_CONFIG", "")
     if user_jvm_config:
         user_jvm_config = user_jvm_config.strip().split("\n")
 
@@ -332,7 +336,7 @@ def append_user_config(ctx, containers_to_restart=[]):
                 ctx.cmd_executor.execute_commands(
                     append_presto_config, container=presto_container
                 )
-    
+
     add_configs(user_presto_config, "config.properties")
     add_configs(user_jvm_config, "jvm.config")
 
@@ -375,7 +379,7 @@ def initialize_containers(ctx):
             "cat /opt/minipresto/bootstrap_status.txt",
             suppress_output=True,
             container=container,
-            trigger_error=False
+            trigger_error=False,
         )
         output_string = output[0].get("output", "").strip()
         if "no such file or directory" in output_string.lower():

@@ -1,4 +1,4 @@
-# Hive-HMS-Minio Module
+# Hive-Minio Module
 This module uses Minio as a local implementation of S3 object storage. You can write data to this service, and the files will be written to your machine. You can read more about Minio [here](https://docs.min.io/docs/minio-docker-quickstart-guide.html). This module also uses a Hive metastore container along with a Postgres container for the metastore's backend storage.
 
 You can access the Minio UI at `http://localhost:9000` with `access-key` and `secret-key` for credentials. 

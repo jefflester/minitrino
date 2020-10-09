@@ -75,8 +75,8 @@ You can provision an environment via the `provision` command.
 Sample `provision` commands:
 
 ```bash
-minipresto provision --catalog hive-hms --catalog elasticsearch --security ldap --docker-native '--build --force-recreate'
-minipresto provision -c hive-hms -c elasticsearch -s ldap
+minipresto provision --catalog hive-s3 --catalog elasticsearch --security ldap --docker-native '--build --force-recreate'
+minipresto provision -c hive-s3 -c elasticsearch -s ldap
 minipresto provision --env STARBURST_VER=332-e.6
 ```
 
@@ -87,7 +87,7 @@ shell. The commands look like:
 ENV_VAR_1=SOMETHING ENV_VAR_2=SOMETHING ENV_VAR_3=${ENV_VAR_3} ... \
 docker-compose -f docker-compose.yml \
   -f modules/catalog/elasticsearch/elasticsearch.yml \
-  -f modules/catalog/hive-hms/hive-hms.yml \
+  -f modules/catalog/hive-s3/hive-s3.yml \
   -f modules/security/ldap/ldap.yml \
   up -d
 ```
@@ -187,7 +187,7 @@ Sample `snapshot` commands:
 minipresto snapshot --name t-2533
 
 # Take a snapshot of an inactive environment
-minipresto snapshot -n super-sweet-env -c hive-hms -c elasticsearch -s ldap
+minipresto snapshot -n super-sweet-env -c hive-s3 -c elasticsearch -s ldap
 ```
 
 ### Manage Configuration
@@ -536,7 +536,7 @@ limit its extract to those modules' directories. The naming convention for this
 label is as follows:
 
 In Compose files where multiple services are defined, all services should be
-labeled with the same label sets (see `hive-hms.yml` for an example).
+labeled with the same label sets (see `hive-s3.yml` for an example).
 
 In general, we always want to apply labels to:
 

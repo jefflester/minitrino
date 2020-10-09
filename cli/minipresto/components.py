@@ -368,7 +368,7 @@ class Modules:
       for).
 
     ### Public Attributes
-    - `modules`: A dictionary of module information.
+    - `data`: A dictionary of module information.
 
     ### Public Methods
     - `get_running_modules()`: Returns a dictionary with the same information as
@@ -383,7 +383,7 @@ class Modules:
             utils.handle_missing_param(locals().keys(), __init__.__name__)
 
         self.ctx = ctx
-        self.modules = {}
+        self.data = {}
         self._load_modules()
 
     @utils.exception_handler
@@ -420,14 +420,14 @@ class Modules:
 
         running = {}
         for name, label_set, container in zip(names, label_sets, containers):
-            if not isinstance(self.modules.get(name), dict):
+            if not isinstance(self.data.get(name), dict):
                 raise err.UserError(
                     f"Module '{name}' is running, but it is not found "
                     f"in the library. Was it deleted, or are you pointing "
                     f"Minipresto to the wrong location?"
                 )
             if not running.get(name, False):
-                running[name] = self.modules[name]
+                running[name] = self.data[name]
             if not running.get("labels", False):
                 running_modules[name]["labels"] = label_set
             if not running.get(name).get("containers", False):
@@ -472,24 +472,25 @@ class Modules:
 
                 yaml_basename = f"{os.path.basename(module_dir)}.yml"
                 if not yaml_basename in module_files:
-                    raise err.MiniprestoError(
+                    raise err.UserError(
                         f"Missing Docker Compose file in module directory {_dir}. "
-                        f"Expected file to be present: {yaml_basename}"
+                        f"Expected file to be present: {yaml_basename}",
+                        hint_msg="Check this module in your library to ensure it is properly constructed.",
                     )
 
                 # Module dir and YAML exist, add to modules
                 module_name = os.path.basename(module_dir)
-                self.modules[module_name] = {}
-                self.modules[module_name]["type"] = os.path.basename(section_dir)
-                self.modules[module_name]["module_dir"] = module_dir
+                self.data[module_name] = {}
+                self.data[module_name]["type"] = os.path.basename(section_dir)
+                self.data[module_name]["module_dir"] = module_dir
 
                 # Add YAML file path
                 yaml_file = os.path.join(module_dir, yaml_basename)
-                self.modules[module_name]["yaml_file"] = yaml_file
+                self.data[module_name]["yaml_file"] = yaml_file
 
                 # Add YAML dict
                 with open(yaml_file) as f:
-                    self.modules[module_name]["yaml_dict"] = yaml.load(
+                    self.data[module_name]["yaml_dict"] = yaml.load(
                         f, Loader=yaml.FullLoader
                     )
 
@@ -507,10 +508,10 @@ class Modules:
                         level=self.ctx.logger.verbose,
                     )
 
-                self.modules[module_name]["description"] = metadata.get(
+                self.data[module_name]["description"] = metadata.get(
                     "description", "No module description provided."
                 )
-                self.modules[module_name]["incompatible_modules"] = metadata.get(
+                self.data[module_name]["incompatible_modules"] = metadata.get(
                     "incompatible_modules", []
                 )
 

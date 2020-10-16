@@ -50,8 +50,7 @@ Example: minipresto provision -d '--remove-orphans --force-recreate'
 @minipresto.cli.pass_environment
 def cli(ctx, modules, no_rollback, docker_native):
     """Provision command for Minipresto. If the resulting docker-compose command
-    is unsuccessful, the function exits with a non-zero status code.
-    """
+    is unsuccessful, the function exits with a non-zero status code."""
 
     utils.check_daemon(ctx.docker_client)
 
@@ -84,7 +83,7 @@ def cli(ctx, modules, no_rollback, docker_native):
 
         containers_to_restart = execute_bootstraps(modules)
         containers_to_restart = append_user_config(containers_to_restart)
-        handle_config_properties()
+        check_dup_configs()
         restart_containers(containers_to_restart)
         ctx.logger.log(f"Environment provisioning complete.")
 
@@ -96,8 +95,7 @@ def cli(ctx, modules, no_rollback, docker_native):
 @minipresto.cli.pass_environment
 def chunk(ctx, modules=[]):
     """Builds docker-compose command chunk for the chosen modules. Returns a
-    command chunk string.
-    """
+    command chunk string."""
 
     chunk = []
     for mod in modules:
@@ -109,8 +107,7 @@ def chunk(ctx, modules=[]):
 @minipresto.cli.pass_environment
 def build_command(ctx, docker_native="", compose_env={}, chunk=""):
     """Builds a formatted docker-compose command for shell execution. Returns a
-    docker-compose command string.
-    """
+    docker-compose command string."""
 
     cmd = []
     compose_env_string = ""
@@ -147,8 +144,7 @@ def execute_bootstraps(ctx, modules=[]):
     list.
 
     Returns a list of containers names which had bootstrap scripts executed
-    inside of them.
-    """
+    inside of them."""
 
     services = []
     for module in modules:
@@ -168,7 +164,7 @@ def execute_bootstraps(ctx, modules=[]):
         bootstrap = service[1].get("environment", {}).get("MINIPRESTO_BOOTSTRAP")
         if bootstrap is None:
             continue
-        container_name = service.get("container_name")
+        container_name = service[1].get("container_name")
         if container_name is None:
             # If there is not container name, the service name becomes the name
             # of the container
@@ -185,8 +181,7 @@ def execute_container_bootstrap(ctx, bootstrap="", container_name="", yaml_file=
     bootstrap script that is about to be executed, the boostrap script is
     skipped.
 
-    Returns `False` if the script is not executed and `True` if it is.
-    """
+    Returns `False` if the script is not executed and `True` if it is."""
 
     if any((not bootstrap, not container_name, not yaml_file)):
         raise utils.handle_missing_param(list(locals().keys()))
@@ -244,59 +239,59 @@ def execute_container_bootstrap(ctx, bootstrap="", container_name="", yaml_file=
 
 
 @minipresto.cli.pass_environment
-def handle_config_properties(ctx):
-    """Checks for duplicates in the Presto config.properties file and logs
-    warnings for any detected duplicates.
-    """
+def check_dup_configs(ctx):
+    """Checks for duplicate configs in Presto config files (jvm.config and
+    config.properties)."""
 
-    ctx.logger.log(
-        "Checking Presto config.properties for duplicate properties...",
-        level=ctx.logger.verbose,
-    )
-    container = ctx.docker_client.containers.get("presto")
-    output = ctx.cmd_executor.execute_commands(
-        f"cat {ETC_PRESTO}/config.properties",
-        suppress_output=True,
-        container=container,
-    )
-
-    config_props = output[0].get("output", "")
-    if not config_props:
-        raise err.MiniprestoError(
-            "Presto config.properties file unable to be read from Presto container."
+    check_files = ["config.properties", "jvm.config"]
+    for check_file in check_files:
+        ctx.logger.log(
+            f"Checking Presto {check_file} for duplicate properties...",
+            level=ctx.logger.verbose,
+        )
+        container = ctx.docker_client.containers.get("presto")
+        output = ctx.cmd_executor.execute_commands(
+            f"cat {ETC_PRESTO}/{check_file}",
+            suppress_output=True,
+            container=container,
         )
 
-    config_props = config_props.strip().split("\n")
-    config_props.sort()
-
-    duplicates = []
-    for i, prop in enumerate(config_props):
-        prop = prop.strip().split("=")
-        try:
-            next_prop = config_props[i + 1].strip().split("=")
-        except:
-            next_prop = [""]
-        if prop[0].strip() == next_prop[0].strip():
-            duplicates.extend(["".join(prop), "".join(next_prop)])
-        elif duplicates:
-            duplicates = set(duplicates)
-            duplicates_string = "\n".join(duplicates)
-            ctx.logger.log(
-                f"Duplicate Presto configuration properties detected in "
-                f"config.properties file:\n{duplicates_string}",
-                level=ctx.logger.warn,
-                split_lines=False,
+        configs = output[0].get("output", "")
+        if not configs:
+            raise err.MiniprestoError(
+                f"Presto {check_file} file unable to be read from Presto container."
             )
-            duplicates = []
+
+        configs = configs.strip().split("\n")
+        configs.sort()
+
+        duplicates = []
+        for i, config in enumerate(configs):
+            config = config.strip().split("=")
+            try:
+                next_config = configs[i + 1].strip().split("=")
+            except:
+                next_config = [""]
+            if config[0].strip() == next_config[0].strip():
+                duplicates.extend(["".join(config), "".join(next_config)])
+            elif duplicates:
+                duplicates = set(duplicates)
+                duplicates_string = "\n".join(duplicates)
+                ctx.logger.log(
+                    f"Duplicate Presto configuration properties detected in "
+                    f"{check_file} file:\n{duplicates_string}",
+                    level=ctx.logger.warn,
+                    split_lines=False,
+                )
+                duplicates = []
 
 
 @minipresto.cli.pass_environment
 def append_user_config(ctx, containers_to_restart=[]):
-    """Appends Presto config from minipresto.cfg file if present and if it does
-    not already exist in the Presto container. If anything is appended to the
-    Presto config, the Presto container is added to the restart list if it's not
-    already in the list.
-    """
+    """Appends Presto config from minipresto.cfg file. If the config is not
+    present, it is added. If it exists, it is replaced. If anything changes in
+    the Presto config, the Presto container is added to the restart list if it's
+    not already in the list."""
 
     user_presto_config = ctx.env.get_var("CONFIG", "")
     if user_presto_config:
@@ -318,7 +313,7 @@ def append_user_config(ctx, containers_to_restart=[]):
     if not presto_container:
         raise err.MiniprestoError(
             f"Attempting to append Presto configuration in Presto container, "
-            f"but no running Presto container found."
+            f"but no running Presto container was found."
         )
 
     current_configs = ctx.cmd_executor.execute_commands(
@@ -327,21 +322,38 @@ def append_user_config(ctx, containers_to_restart=[]):
         container=presto_container,
     )
 
-    current_presto_config = current_configs[0].get("output", "")
-    current_jvm_config = current_configs[1].get("output", "")
+    current_presto_config = current_configs[0].get("output", "").strip().split("\n")
+    current_jvm_config = current_configs[1].get("output", "").strip().split("\n")
 
-    def add_configs(configs, filename):
-        for config in configs:
-            if config not in current_presto_config:
-                append_presto_config = (
-                    f'bash -c "cat <<EOT >> {ETC_PRESTO}/{filename}\n{config}\nEOT"'
-                )
-                ctx.cmd_executor.execute_commands(
-                    append_presto_config, container=presto_container
-                )
+    def append_configs(user_configs, current_configs, filename):
 
-    add_configs(user_presto_config, "config.properties")
-    add_configs(user_jvm_config, "jvm.config")
+        # If there is an overlapping config key, replace it with the user
+        # config. If there is not overlapping config key, append it to the
+        # current config list.
+        for user_config in user_configs:
+            user_config = user_config.strip().split("=")
+            for i, current_config in enumerate(current_configs):
+                current_config = current_config.strip().split("=")
+                if user_config[0] == current_config[0]:
+                    current_configs[i] = "=".join(user_config)
+                    break
+                if (
+                    i + 1 == len(current_configs)
+                    and not "=".join(user_config) in current_configs
+                ):
+                    current_configs.append("=".join(user_config))
+
+        # Replace existing file with new values
+        ctx.cmd_executor.execute_commands(f"rm {ETC_PRESTO}/{filename}")
+
+        for current_config in current_configs:
+            append_config = (
+                f'bash -c "cat <<EOT >> {ETC_PRESTO}/{filename}\n{current_config}\nEOT"'
+            )
+            ctx.cmd_executor.execute_commands(append_config, container=presto_container)
+
+    append_configs(user_presto_config, current_presto_config, "config.properties")
+    append_configs(user_jvm_config, current_jvm_config, "jvm.config")
 
     if not "presto" in containers_to_restart:
         containers_to_restart.append("presto")

@@ -71,7 +71,7 @@ def cli(ctx, modules, name, directory, force, no_scrub):
     if directory and not os.path.isdir(directory):
         raise err.UserError(
             f"Cannot save snapshot in nonexistent directory: {directory}",
-            "Pick any directory that exists, and this will work."
+            "Pick any directory that exists, and this will work.",
         )
 
     if not directory:
@@ -84,20 +84,21 @@ def cli(ctx, modules, name, directory, force, no_scrub):
         ctx.logger.log(f"Creating snapshot of specified modules...")
         snapshot_runner(name, no_scrub, False, modules, directory)
     else:
-        modules = ctx.modules.data.get_running_modules()
+        modules = ctx.modules.get_running_modules()
         if not modules:
             raise err.UserError(
                 f"No running Minipresto modules to snapshot.",
                 f"To take a snapshot of modules whether they are active "
-                f"or not, specify the modules via the `--module` option."
+                f"or not, specify the modules via the `--module` option.",
             )
         ctx.logger.log(f"Creating snapshot of active environment...")
-        snapshot_runner(
-            name, no_scrub, True, list(modules.keys()), directory
-        )
+        snapshot_runner(name, no_scrub, True, list(modules.keys()), directory)
 
     check_complete(name, directory)
-    ctx.logger.log(f"Snapshot complete and saved at path: {os.path.join(directory, name)}.tar.gz")
+    ctx.logger.log(
+        f"Snapshot complete and saved at path: {os.path.join(directory, name)}.tar.gz"
+    )
+
 
 @minipresto.cli.pass_environment
 def validate_name(ctx, name):
@@ -108,22 +109,19 @@ def validate_name(ctx, name):
             raise err.UserError(
                 f"Illegal character found in provided filename: '{char}'. ",
                 f"Alphanumeric, hyphens, and underscores are allowed. "
-                f"Rename and retry."
+                f"Rename and retry.",
             )
 
 
 @minipresto.cli.pass_environment
 def check_exists(ctx, name, directory, force):
     """Checks if the resulting tarball exists. If it exists, the user is
-    prompted to overwrite the existing file.
-    """
+    prompted to overwrite the existing file."""
 
     if force:
         return
 
-    snapshot_file = os.path.abspath(
-        os.path.join(directory, f"{name}.tar.gz")
-    )
+    snapshot_file = os.path.abspath(os.path.join(directory, f"{name}.tar.gz"))
     if os.path.isfile(snapshot_file):
         response = ctx.logger.prompt_msg(
             f"Snapshot file {name}.tar.gz already exists. Overwrite? [Y/N]"
@@ -134,6 +132,7 @@ def check_exists(ctx, name, directory, force):
             ctx.logger.log(f"Opted to skip snapshot.")
             sys.exit(0)
 
+
 @minipresto.cli.pass_environment
 def prepare_snapshot_dir(ctx, name, active, no_scrub, modules):
     """Checks if the snapshot temp directory exists. If it does, clears
@@ -141,8 +140,7 @@ def prepare_snapshot_dir(ctx, name, active, no_scrub, modules):
     library structure, (2) adds a Bash file that can be executed to spin up the
     environment as it was snapshotted.
 
-    Returns the absolute path of the named snapshot directory.
-    """
+    Returns the absolute path of the named snapshot directory."""
 
     if os.path.isdir(ctx.snapshot_dir):
         ctx.logger.log(
@@ -167,8 +165,7 @@ def prepare_snapshot_dir(ctx, name, active, no_scrub, modules):
 @minipresto.cli.pass_environment
 def build_snapshot_command(ctx, snapshot_name_dir, modules=[], active=True):
     """Builds a basic shell command that can be used to provision an environment
-    with the minipresto CLI. Used for snapshot purposes.
-    """
+    with the minipresto CLI. Used for snapshot purposes."""
 
     command_string = build_command_string(modules)
     create_snapshot_command_file(command_string, snapshot_name_dir)
@@ -177,8 +174,7 @@ def build_snapshot_command(ctx, snapshot_name_dir, modules=[], active=True):
 @minipresto.cli.pass_environment
 def build_command_string(ctx, modules=[]):
     """Builds a command string that can be used to create an environment with
-    the designated modules.
-    """
+    the designated modules."""
 
     option_string = ""
 
@@ -200,8 +196,7 @@ def build_command_string(ctx, modules=[]):
 def create_snapshot_command_file(ctx, command_string="", snapshot_name_dir=""):
     """Creates an .sh file in the minipresto directory for usage by the snapshot
     command. This way, a similar command used to provision the environment is
-    preserved.
-    """
+    preserved."""
 
     file_dest = os.path.join(snapshot_name_dir, "provision-snapshot.sh")
     ctx.logger.log(
@@ -231,8 +226,7 @@ def clone_lib_dir(ctx, name):
     """Clones the library directory structure and necessary top-level files in
     preparation for copying over module directories.
 
-    Returns the absolute path of the named snapshot directory.
-    """
+    Returns the absolute path of the named snapshot directory."""
 
     snapshot_name_dir = os.path.join(ctx.snapshot_dir, name)
     os.makedirs(os.path.join(snapshot_name_dir, LIB, MODULE_ROOT, MODULE_CATALOG))
@@ -260,8 +254,7 @@ def clone_lib_dir(ctx, name):
 @minipresto.cli.pass_environment
 def handle_copy_config_file(ctx, snapshot_name_dir, no_scrub):
     """Handles the copying of the user config file to the named snapshot
-    directory. Calls `scrub_config_file()` if `no_scrub` is True.
-    """
+    directory. Calls `scrub_config_file()` if `no_scrub` is True."""
 
     if no_scrub:
         response = ctx.logger.prompt_msg(
@@ -339,7 +332,7 @@ def copy_module_dirs(ctx, snapshot_name_dir, modules=[]):
         module_type = ctx.modules.data.get(module, "").get("type", "")
         dest_dir = os.path.join(
             os.path.join(snapshot_name_dir, LIB, MODULE_ROOT, module_type),
-            os.path.basename(module_dir)
+            os.path.basename(module_dir),
         )
         shutil.copytree(module_dir, dest_dir)
 
@@ -347,8 +340,7 @@ def copy_module_dirs(ctx, snapshot_name_dir, modules=[]):
 @minipresto.cli.pass_environment
 def create_named_tarball(ctx, name, snapshot_name_dir, save_dir):
     """Creates a tarball of the named snapshot directory and placed in the
-    library's snapshot directory.
-    """
+    library's snapshot directory."""
 
     with tarfile.open(os.path.join(save_dir, f"{name}.tar.gz"), "w:gz") as tar:
         tar.add(snapshot_name_dir, arcname=os.path.basename(snapshot_name_dir))
@@ -365,8 +357,7 @@ def snapshot_runner(name, no_scrub, active, modules=[], directory=""):
 @minipresto.cli.pass_environment
 def check_complete(ctx, name, directory):
     """Checks if the snapshot completed. If detected as incomplete, exists with
-    a non-zero status code.
-    """
+    a non-zero status code."""
 
     snapshot_file = os.path.join(directory, f"{name}.tar.gz")
     if not os.path.isfile(snapshot_file):

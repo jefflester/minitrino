@@ -1,6 +1,11 @@
 #!usr/bin/env/python3
 # -*- coding: utf-8 -*-
 
+# 1. Test with no Minipresto directory
+# 2. Test with no Minipresto config file (ensure template is created)
+# 3. Test reset w/ existing config dir and file (ensure template is created)
+# 4. Test editing an invalid config file
+
 import os
 import subprocess
 import minipresto.test.helpers as helpers
@@ -22,10 +27,8 @@ def main():
 
 
 def test_reset_no_directory():
-    """
-    Verifies that a configuration directory and config file are created with
-    config --reset.
-    """
+    """Verifies that a configuration directory and config file are created with
+    config --reset."""
 
     subprocess.call(f"rm -rf {helpers.minipresto_user_dir}", shell=True)
     return_code = subprocess.call("minipresto config --reset", shell=True)
@@ -38,11 +41,9 @@ def test_reset_no_directory():
 
 
 def test_reset_with_directory():
-    """
-    Verifies that the configuration directory is only removed and restored with
-    the user's approval. This is a valid test case for both 'yes' and 'no'
-    responses.
-    """
+    """Verifies that the configuration directory is only removed and restored
+    with the user's approval. This is a valid test case for both 'yes' and 'no'
+    responses."""
 
     subprocess.call(f"mkdir {helpers.minipresto_user_dir}", shell=True)
     return_code = subprocess.call(f"minipresto config --reset", shell=True)
@@ -54,12 +55,10 @@ def test_reset_with_directory():
 
 
 def test_edit_invalid_config():
-    """
-    Verifies that an error is not thrown if the config is 'invalid' (such as a
-    missing section or value required to perform an action). This is because
+    """Verifies that an error is not thrown if the config is 'invalid' (such as
+    a missing section or value required to perform an action). This is because
     there is default behavior built in, and all major functions should still
-    work without a valid configuration file. 
-    """
+    work without a valid configuration file."""
 
     subprocess.call(f"rm -rf {helpers.minipresto_user_dir}", shell=True)
     subprocess.call(f"mkdir {helpers.minipresto_user_dir}", shell=True)
@@ -70,9 +69,7 @@ def test_edit_invalid_config():
 
 
 def test_edit_valid_config():
-    """
-    Verifies that the user can edit an existing configuration file.
-    """
+    """Verifies that the user can edit an existing configuration file."""
 
     subprocess.call(f"rm -rf {helpers.minipresto_user_dir}", shell=True)
     subprocess.call(f"mkdir {helpers.minipresto_user_dir}", shell=True)

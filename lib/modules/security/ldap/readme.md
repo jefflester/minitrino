@@ -11,7 +11,7 @@ and **event-logger**, but is mutually-exclusive of the **password-file** module.
 To provision this module, run:
 
 ```shell
-minipresto provision --security ldap
+minipresto provision --module ldap
 ```
 
 ## Default Usernames and Passwords

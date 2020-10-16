@@ -20,10 +20,8 @@ def main():
 
 
 def test_no_containers():
-    """
-    Verifies that the down command functions appropriately when no containers
-    are running.
-    """
+    """Verifies that the down command functions appropriately when no containers
+    are running."""
 
     result = helpers.execute_command(["-v", "down"])
 
@@ -39,12 +37,10 @@ def test_no_containers():
 
 
 def test_running_containers():
-    """
-    Verifies that the down command works when multiple containers are running.
-    This also verifies the --sig-kill option works.
-    """
+    """Verifies that the down command works when multiple containers are
+    running. This also verifies the --sig-kill option works."""
 
-    helpers.execute_command(["-v", "provision", "--catalog", "test"])
+    helpers.execute_command(["-v", "provision", "--module", "test"])
     result = helpers.execute_command(["-v", "down", "--sig-kill"])
 
     assert result.exit_code == 0
@@ -66,11 +62,9 @@ def test_running_containers():
 
 
 def test_keep():
-    """
-    Verifies that the `--keep` flag works as expected.
-    """
+    """Verifies that the `--keep` flag works as expected."""
 
-    helpers.execute_command(["-v", "provision", "--catalog", "test"])
+    helpers.execute_command(["-v", "provision", "--module", "test"])
     result = helpers.execute_command(["-v", "down", "--keep"])
 
     assert "Stopped container" in result.output
@@ -89,9 +83,7 @@ def test_keep():
 
 
 def cleanup():
-    """
-    Stops/removes containers.
-    """
+    """Stops/removes containers."""
 
     helpers.execute_command(["-v", "down", "--sig-kill"])
 

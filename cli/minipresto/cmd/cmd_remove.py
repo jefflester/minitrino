@@ -63,8 +63,7 @@ def cli(ctx, images, volumes, labels, force):
 def remove_items(ctx, item_type, force, labels=[]):
     """Removes Docker items. If no labels are passed in, all Minipresto
     resources are removed. If label(s) are passed in, the removal is limited to
-    the passed in labels.
-    """
+    the passed in labels."""
 
     if not labels:
         labels = [RESOURCE_LABEL]
@@ -88,7 +87,7 @@ def remove_items(ctx, item_type, force, labels=[]):
                     image.short_id, force=True, noprune=False
                 )
             else:
-                ctx.docker_client.images.remove(image.short_id) 
+                ctx.docker_client.images.remove(image.short_id)
             ctx.logger.log(
                 f"{item_type.title()} removed: {identifier}",
                 level=ctx.logger.verbose,
@@ -121,8 +120,7 @@ def remove_items(ctx, item_type, force, labels=[]):
 
 
 def try_get_image_tag(image):
-    """Tries to get an image tag. If there is no tag, returns an empty string.
-    """
+    """Tries to get an image tag. If there is no tag, returns an empty string."""
 
     try:
         return image.tags[0]

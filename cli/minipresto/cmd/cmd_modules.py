@@ -4,6 +4,7 @@
 import click
 import pkg_resources
 import minipresto.cli
+import minipresto.errors as err
 import minipresto.utils as utils
 
 
@@ -26,8 +27,10 @@ def cli(ctx, modules):
         for module in modules:
             module_dict = ctx.modules.data.get(module, {})
             if not module_dict:
-                ctx.logger.log(f"Invalid module: {module}", level=ctx.logger.error)
-                continue
+                raise err.UserError(
+                    f"Invalid module: {module}",
+                    "Ensure the module you're referencing is in the Minipresto library.",
+                )
             log_info(module, module_dict)
     else:
         for module_key, module_dict in ctx.modules.data.items():
@@ -36,6 +39,8 @@ def cli(ctx, modules):
 
 @minipresto.cli.pass_environment
 def log_info(ctx, module_name="", module_dict={}):
+    """Logs module metadata to the user's terminal."""
+
     description = module_dict.get("description", "")
     incompatible_modules = module_dict.get("incompatible_modules", [])
     ctx.logger.log(

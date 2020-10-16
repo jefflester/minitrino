@@ -13,9 +13,8 @@ from minipresto.settings import RESOURCE_LABEL
 
 # fmt: off
 @click.command("down", help="""
-Brings down all running Minipresto containers. This command follows the
-behavior of `docker-compose down`, where containers are both stopped and
-removed.
+Brings down all running Minipresto containers. This command follows the behavior
+of `docker-compose down` where containers are both stopped and removed.
 """)
 @click.option("-k", "--keep", is_flag=True, default=False, help="""
 Does not remove containers; instead, containers will only be stopped.
@@ -30,8 +29,7 @@ Stop Minipresto containers without a grace period.
 @minipresto.cli.pass_environment
 def cli(ctx, sig_kill, keep):
     """Down command for Minipresto. Exits with a 0 status code if there are no
-    running minipresto containers.
-    """
+    running minipresto containers."""
 
     utils.check_daemon(ctx.docker_client)
     containers = ctx.docker_client.containers.list(
@@ -51,21 +49,21 @@ def cli(ctx, sig_kill, keep):
     else:
         stop_timeout = 10
 
-    # Stop    
+    # Stop
     for container in containers:
         identifier = utils.generate_identifier(
             {"ID": container.short_id, "Name": container.name}
         )
         container.stop(timeout=stop_timeout)
         ctx.logger.log(f"Stopped container: {identifier}", level=ctx.logger.verbose)
-    
+
     # Remove
     if not keep:
         for container in containers:
             identifier = utils.generate_identifier(
                 {"ID": container.short_id, "Name": container.name}
             )
-            container.remove() 
+            container.remove()
             ctx.logger.log(f"Removed container: {identifier}", level=ctx.logger.verbose)
 
     ctx.logger.log("Brought down all Minipresto containers.")

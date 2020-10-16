@@ -32,8 +32,7 @@ class Logger:
 
     ### Public Methods
     - `log()`: Logs a message to the user's terminal.
-    - `prompt_msg()`: Logs a prompt message and returns the user's input.
-    """
+    - `prompt_msg()`: Logs a prompt message and returns the user's input."""
 
     def __init__(self, log_verbose=False):
 
@@ -51,9 +50,12 @@ class Logger:
         - `*args`: Messages to log.
         - `level`: The level of the log message (info, warn, error, and
           verbose).
-        - `split_lines`: If `True`, newlines will be split and logged as an
-          individual message.
-        """
+        - `split_lines`: If `True`, each line logged to the terminal will have a
+          styled prefix. If `False`, the log message's first line will have a
+          prefix, and all other lines following will not. Use to logically group
+          log messages.
+        - `stream`: If `True`, the logger will not apply a prefix to each line
+          streamed to the console."""
 
         if not level:
             level = self.info
@@ -70,28 +72,28 @@ class Logger:
                 raise err.MiniprestoError(
                     f"A string is required for {self.log.__name__}."
                 )
-            # Don't split lines if told not to
-            if split_lines:
-                msgs = msg.replace("\r", "\n").split("\n")
-            else:
-                msgs = [msg.replace("\r", "\n")]
+            msgs = msg.replace("\r", "\n").split("\n")
             # Log each message
-            for msg in msgs:
+            for i, msg in enumerate(msgs):
                 msg = self._format(msg)
                 if not msg:
                     continue
-                styled_prefix = style(
-                    level.get("prefix", ""), fg=level.get("prefix_color", ""), bold=True
-                )
-                echo(f"{styled_prefix}{msg}")
+                if not split_lines and i > 0:
+                    msg_prefix = DEFAULT_INDENT
+                else:
+                    msg_prefix = style(
+                        level.get("prefix", ""),
+                        fg=level.get("prefix_color", ""),
+                        bold=True,
+                    )
+                echo(f"{msg_prefix}{msg}")
 
     def prompt_msg(self, msg="", input_type=str):
         """Logs a prompt message and returns the user's input.
 
         ### Parameters
         - `msg`: The prompt message
-        - `input_type`: The object type to check the input for
-        """
+        - `input_type`: The object type to check the input for"""
 
         if not msg:
             raise handle_missing_param(["msg"])
@@ -142,8 +144,7 @@ def handle_exception(error=Exception, additional_msg="", skip_traceback=False):
       message to the log.
     - `skip_traceback`: If `True`, the traceback will not be printed to the
       user's terminal. Defaults to `True` for user errors, but it is `False`
-      otherwise.
-    """
+      otherwise."""
 
     if not isinstance(error, Exception):
         raise handle_missing_param(["error"])
@@ -167,8 +168,8 @@ def handle_exception(error=Exception, additional_msg="", skip_traceback=False):
     logger = Logger()
     logger.log(additional_msg, error_msg, level=logger.error)
     if not skip_traceback:
-        echo() # Force a newline
-        echo(f"{traceback.print_tb(error.__traceback__)}", err=True)
+        echo()  # Force a newline
+        echo(f"{traceback.format_exc()}", err=True)
 
     sys.exit(exit_code)
 
@@ -183,9 +184,8 @@ def exception_handler(func):
     3. For all other generic exceptions and unhandled exceptions, they will be
        siphoned to the handle_exception() utility.
 
-    This is especially useful when used with main/runner functions, public class
-    methods, and constructors.
-    """
+    This is especially useful when used with main/runner functions and class
+    constructors."""
 
     def wrapper(*args, **kwargs):
         try:
@@ -212,8 +212,7 @@ def handle_missing_param(params=[]):
     # Two params are required
     if not param:
         raise handle_missing_param(["module", "path"])
-    ```
-    """
+    ```"""
 
     if not params:
         raise handle_missing_param(list(locals().keys()))
@@ -224,20 +223,16 @@ def handle_missing_param(params=[]):
 @exception_handler
 def check_daemon(docker_client):
     """Checks if the Docker daemon is running. If an exception is thrown, it is
-    handled.
-    """
+    handled."""
 
     try:
         docker_client.ping()
     except Exception as e:
-        if "is the docker daemon running" in str(e).lower():
-            # User did not start their Daemon
-            raise err.UserError(
-                "Error when pinging the Docker server. Is the Docker daemon running?",
-                "You may need to initialize your Docker daemon.",
-            )
-        else:
-            raise e
+        raise err.UserError(
+            f"Error when pinging the Docker server. Is the Docker daemon running?\n"
+            f"Error from Docker: {str(e)}",
+            "You may need to initialize your Docker daemon.",
+        )
 
 
 @exception_handler
@@ -253,8 +248,7 @@ def generate_identifier(identifiers=None):
     identifier = generate_identifier(
         {"ID": container.short_id, "Name": container.name}
     ) # Will Spit out -> "[ID: 12345] [Name: presto]"
-    ```
-    """
+    ```"""
 
     if not identifiers:
         raise handle_missing_param(list(locals().keys()))

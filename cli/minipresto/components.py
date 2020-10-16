@@ -47,8 +47,7 @@ class Environment:
     - `snapshot_dir`: The location of the user's snapshot directory (this is
         essentially a temporary directory, as 'permanent' snapshot tarballs are
         written to the library or user-specified directory).
-    - `minipresto_lib_dir`: The location of the Minipresto library.
-    """
+    - `minipresto_lib_dir`: The location of the Minipresto library."""
 
     @utils.exception_handler
     def __init__(self):
@@ -106,8 +105,7 @@ class Environment:
     def _handle_minipresto_user_dir(self):
         """Checks if a Minipresto directory exists in the user home directory.
         If it does not, it is created. The path to the Minipresto user home
-        directory is returned.
-        """
+        directory is returned."""
 
         minipresto_user_dir = os.path.abspath(
             os.path.join(self.user_home_dir, ".minipresto")
@@ -119,8 +117,7 @@ class Environment:
     def _get_config_file(self):
         """Returns the correct filepath for the minipresto.cfg file. Adds to
         initialization warnings if the file does not exist, but will return the
-        path regardless.
-        """
+        path regardless."""
 
         config_file = os.path.join(self.minipresto_user_dir, "minipresto.cfg")
         if not os.path.isfile(config_file):
@@ -139,8 +136,7 @@ class Environment:
         2. The `minipresto.cfg` file's `LIB_PATH` variable sets the library
            directory if present.
         3. The CLI root is used to set the library directory and assumes the
-           project is being run out of a cloned repository.
-        """
+           project is being run out of a cloned repository."""
 
         # The default is repo root. The check for the LIB_PATH variable happens
         # in _user_init() once called by the CLI's entrypoint, as this is
@@ -158,8 +154,7 @@ class Environment:
         If there is an error fetching the clients, None types will be returned
         for each client. The lack of clients should be caught by check_daemon()
         calls that execute in each command that requires an accessible Docker
-        service.
-        """
+        service."""
 
         try:
             docker_host = self.env.get_var("DOCKER_HOST", "")
@@ -189,8 +184,7 @@ class EnvironmentVariables:
     # ctx object has an instantiated EnvironmentVariables object
     env_variable = ctx.env.get_var("STARBURST_VER", "338-e")
     env_section = ctx.env.get_section("MODULES")
-    ```
-    """
+    ```"""
 
     @utils.exception_handler
     def __init__(self, ctx=None):
@@ -204,8 +198,8 @@ class EnvironmentVariables:
         self._parse_minipresto_config()
         self._parse_library_env()
         self._parse_user_env()
+        self._log_env_vars()
 
-    @utils.exception_handler
     def get_var(self, key="", default=None):
         """Gets and returns a variable from a section of the environment
         variables. Since it is assumed there will not be duplicate environment
@@ -213,8 +207,7 @@ class EnvironmentVariables:
 
         ### Parameters
         - `key`: The key to search for.
-        - `default` The default value to return if the key is not found.
-        """
+        - `default` The default value to return if the key is not found."""
 
         if not key:
             raise utils.handle_missing_param(["key"])
@@ -226,14 +219,12 @@ class EnvironmentVariables:
                         return section_dict_v
         return default
 
-    @utils.exception_handler
     def get_section(self, section=""):
         """Gets and returns a section from the environment variables. If the
         section doesn't exist, an empty dict is returned.
 
         ### Parameters
-        - `section`: The section to return, if it exists.
-        """
+        - `section`: The section to return, if it exists."""
 
         if not section:
             raise utils.handle_missing_param(list(locals().keys()))
@@ -325,40 +316,41 @@ class EnvironmentVariables:
         # iterating.
         #
         # Any variable keys that do not match with an existing key will be added
-        # to the section dict, EXTRA.
+        # to the section dict "EXTRA".
 
-        # TODO: Clean up this algorithm 
-        delete_keys = []
         new_dict = {}
-
-        for user_k, user_v in user_env_dict.items():
-            for section_k, section_v in self.env.items():
-                if not isinstance(section_v, dict):
-                    raise err.MiniprestoError(
-                        f"Invalid environment dictionary. Expected sub-dictionaries. "
-                        f"Received dictionary:\n"
-                        f"{json.dumps(self.env, indent=2)}"
-                    )
-
+        for section_k, section_v in self.env.items():
+            if not isinstance(section_v, dict):
+                raise err.MiniprestoError(
+                    f"Invalid environment dictionary. Expected nested dictionaries. "
+                    f"Received dictionary:\n"
+                    f"{json.dumps(self.env, indent=2)}"
+                )
+            delete_keys = []
+            for user_k, user_v in user_env_dict.items():
                 if user_k in section_v:
-                    new_dict[section_k] = {}
+                    if new_dict.get(section_k, None) is None:
+                        new_dict[section_k] = section_v
+                    new_dict[section_k][user_k] = user_v
                     delete_keys.append(user_k)
-                    for section_dict_k, section_dict_v in section_v.items():
-                        if user_k == section_dict_k:
-                            new_dict[section_k][user_k] = user_v
-                        else:
-                            new_dict[section_k][section_dict_k] = section_dict_v
                 else:
                     new_dict[section_k] = section_v
-        self.env = new_dict
-
-        for delete_key in delete_keys:
-            del user_env_dict[delete_key]
+            for delete_key in delete_keys:
+                del user_env_dict[delete_key]
 
         if user_env_dict:
             for k, v in user_env_dict.items():
                 self.env["EXTRA"] = {}
                 self.env["EXTRA"][k] = v
+
+    def _log_env_vars(self):
+        """Logs environment variables."""
+
+        self.ctx.logger.log(
+            f"Registered environment variables:\n{json.dumps(self.env, indent=2)}",
+            level=self.ctx.logger.verbose,
+            split_lines=False,
+        )
 
 
 class Modules:
@@ -374,8 +366,7 @@ class Modules:
     ### Public Methods
     - `get_running_modules()`: Returns a dictionary with the same information as
       the `modules` attribute, but includes Docker labels and container objects
-      tied to the module.
-    """
+      tied to the module."""
 
     @utils.exception_handler
     def __init__(self, ctx=None):
@@ -387,11 +378,9 @@ class Modules:
         self.data = {}
         self._load_modules()
 
-    @utils.exception_handler
     def get_running_modules(self):
         """Returns dict of running modules (includes container objects and
-        Docker labels).
-        """
+        Docker labels)."""
 
         utils.check_daemon(self.ctx.docker_client)
         containers = self.ctx.docker_client.containers.list(
@@ -527,8 +516,7 @@ class CommandExecutor:
 
     ### Public Methods
     - `execute_commands()`: Executes commands in the user's shell or inside of a
-        container.
-    """
+        container."""
 
     @utils.exception_handler
     def __init__(self, ctx=None):
@@ -538,7 +526,6 @@ class CommandExecutor:
 
         self.ctx = ctx
 
-    @utils.exception_handler
     def execute_commands(self, *args, **kwargs):
         """Executes commands in the user's shell or inside of a container.
         Returns output as well as stores the output in the `output` attribute.
@@ -563,18 +550,19 @@ class CommandExecutor:
         - A list of dicts with each dict containing the following keys:
             - `command`: the original command passed to the function
             - `output`: the combined output of stdout and stderr
-            - `return_code`: the return code of the command
-        """
-
-        kwargs["environment"] = self._construct_environment(
-            kwargs.get("environment", {})
-        )
+            - `return_code`: the return code of the command"""
 
         output = []
         if kwargs.get("container", None):
+            kwargs["environment"] = self._construct_environment(
+                kwargs.get("environment", {}), kwargs.get("container", None)
+            )
             for command in args:
                 output.append(self._execute_in_container(command, **kwargs))
         else:
+            kwargs["environment"] = self._construct_environment(
+                kwargs.get("environment", {})
+            )
             for command in args:
                 output.append(self._execute_in_shell(command, **kwargs))
 
@@ -625,8 +613,7 @@ class CommandExecutor:
 
     def _execute_in_container(self, command="", **kwargs):
         """Executes a command inside of a container through the Docker SDK
-        (similar to `docker exec`).
-        """
+        (similar to `docker exec`)."""
 
         container = kwargs.get("container", None)
         if container is None:
@@ -693,14 +680,27 @@ class CommandExecutor:
 
         return {"command": command, "output": output, "return_code": return_code}
 
-    def _construct_environment(self, environment={}):
+    def _construct_environment(self, environment={}, container=None):
         """Merges provided environment dictionary with user's shell environment
-        variables.
-        """
+        variables. For shell execution, the host environment will be set to the
+        existing variables in the host environment. For container execution, the
+        host environment will be set to the container's existing environment
+        variables."""
 
         # Remove conflicting keys from host environment; Minipresto environment
         # variables take precendance
-        host_environment = os.environ.copy()
+
+        if not container:
+            host_environment = os.environ.copy()
+        else:
+            host_environment_list = self.ctx.api_client.inspect_container(container.id)[
+                "Config"
+            ]["Env"]
+            host_environment = {}
+            for env_var in host_environment_list:
+                env_var = env_var.split("=")
+                host_environment[env_var[0].strip()] = env_var[1].strip()
+
         if environment:
             delete_keys = []
             for host_key, host_value in host_environment.items():

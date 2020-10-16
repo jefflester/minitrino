@@ -27,15 +27,15 @@ MINIPRESTO_USER_SNAPSHOTS_DIR = os.path.join(MINIPRESTO_USER_DIR, "snapshots")
 
 class MiniprestoResult:
     def __init__(self, click_result, output, exit_code):
-        """
-        Result class containing information about the result of a Minipresto command.
-        
-        Properties
+        """Result class containing information about the result of a Minipresto
+        command.
+
+        Attributes
         ----------
         - `click_result`: The unaltered Click Result object.
         - `output`: Formatted output with newlines removed.
-        - `exit_code`: The exit code of the command.
-        """
+        - `exit_code`: The exit code of the command."""
+        
         self.click_result = click_result
         self.output = output
         self.exit_code = exit_code
@@ -128,9 +128,8 @@ def stop_docker_daemon():
 def make_sample_config():
     """Creates a sample config file."""
 
-    config_file = os.path.join(MINIPRESTO_USER_DIR, "minipresto.cfg")
     subprocess.call(
-        f'bash -c "cat << EOF > {config_file}\n'
+        f'bash -c "cat << EOF > {CONFIG_FILE}\n'
         f"[CLI]\n"
         f"LIB_PATH=\n"
         f"\n"

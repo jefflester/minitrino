@@ -47,15 +47,13 @@ def main():
 
 
 def test_snapshot_no_directory():
-    """
-    Verifies that a snapshot can be created when there is no existing snapshots
-    directory in the Minipresto user home directory.
-    """
+    """Verifies that a snapshot can be created when there is no existing
+    snapshots directory in the Minipresto user home directory."""
 
     cleanup()
     subprocess.call(f"rm -rf {helpers.MINIPRESTO_USER_SNAPSHOTS_DIR}", shell=True)
     result = helpers.execute_command(
-        ["-v", "snapshot", "--name", "test", "--catalog", "test"],
+        ["-v", "snapshot", "--name", "test", "--module", "test"],
         command_input="y\n",
     )
 
@@ -65,10 +63,8 @@ def test_snapshot_no_directory():
 
 
 def test_snapshot_active_env():
-    """
-    Verifies that a snapshot can be successfully created from an active
-    environment.
-    """
+    """Verifies that a snapshot can be successfully created from an active
+    environment."""
 
     cleanup()
     helpers.execute_command(["provision"])
@@ -84,14 +80,12 @@ def test_snapshot_active_env():
 
 
 def test_snapshot_inactive_env():
-    """
-    Verifies that a snapshot can be successfully created from an inactive
-    environment.
-    """
+    """Verifies that a snapshot can be successfully created from an inactive
+    environment."""
 
     cleanup()
     result = helpers.execute_command(
-        ["-v", "snapshot", "--name", "test", "--catalog", "test"],
+        ["-v", "snapshot", "--name", "test", "--module", "test"],
         command_input="y\n",
     )
 
@@ -102,14 +96,12 @@ def test_snapshot_inactive_env():
 
 
 def test_valid_name():
-    """
-    Tests that all valid characters can be present and succeed for a given
-    snapshot name.
-    """
+    """Tests that all valid characters can be present and succeed for a given
+    snapshot name."""
 
     cleanup()
     result = helpers.execute_command(
-        ["-v", "snapshot", "--name", "my-test_123", "--catalog", "test"],
+        ["-v", "snapshot", "--name", "my-test_123", "--module", "test"],
         command_input="y\n",
     )
 
@@ -122,14 +114,12 @@ def test_valid_name():
 
 
 def test_invalid_name():
-    """
-    Tests that all valid characters can be present and succeed for a given
-    snapshot name.
-    """
+    """Tests that all valid characters can be present and succeed for a given
+    snapshot name."""
 
     cleanup()
     result = helpers.execute_command(
-        ["-v", "snapshot", "--name", "##.my-test?", "--catalog", "test"],
+        ["-v", "snapshot", "--name", "##.my-test?", "--module", "test"],
         command_input="y\n",
     )
 
@@ -140,9 +130,8 @@ def test_invalid_name():
 
 
 def test_specific_directory():
-    """
-    Tests that the snapshot file can be saved in a user-specified directory.
-    """
+    """Tests that the snapshot file can be saved in a user-specified
+    directory."""
 
     cleanup()
     result = helpers.execute_command(
@@ -151,7 +140,7 @@ def test_specific_directory():
             "snapshot",
             "--name",
             "test",
-            "--catalog",
+            "--module",
             "test",
             "--directory",
             "/tmp/",
@@ -168,9 +157,7 @@ def test_specific_directory():
 
 
 def test_specific_directory_invalid():
-    """
-    Tests that the snapshot file cannot be saved in an invalid directory.
-    """
+    """Tests that the snapshot file cannot be saved in an invalid directory."""
 
     cleanup()
     result = helpers.execute_command(
@@ -179,7 +166,7 @@ def test_specific_directory_invalid():
             "snapshot",
             "--name",
             "test",
-            "--catalog",
+            "--module",
             "test",
             "--directory",
             "/tmppp/",
@@ -192,11 +179,9 @@ def test_specific_directory_invalid():
 
 
 def test_command_snapshot_file():
-    """
-    Verifies that an environment can be provisioned from a snapshot command file
-    (these are written when a snapshot is created so that other users can easily
-    reproduce the environment).
-    """
+    """Verifies that an environment can be provisioned from a snapshot command
+    file (these are written when a snapshot is created so that other users can
+    easily reproduce the environment)."""
 
     command_snapshot_file = os.path.join(
         helpers.MINIPRESTO_USER_SNAPSHOTS_DIR, "test", "provision-snapshot.sh"
@@ -218,13 +203,11 @@ def test_command_snapshot_file():
 
 
 def test_force():
-    """
-    Verifies that the user can override the check to see if the resulting
-    tarball exists.
-    """
+    """Verifies that the user can override the check to see if the resulting
+    tarball exists."""
 
     result = helpers.execute_command(
-        ["-v", "snapshot", "--name", "test", "--catalog", "test", "--force"],
+        ["-v", "snapshot", "--name", "test", "--module", "test", "--force"],
         command_input="y\n",
     )
 
@@ -236,14 +219,12 @@ def test_force():
 
 
 def test_no_scrub():
-    """
-    Verifies that the user config file is retained in full when scrubbing is
-    disabled.
-    """
+    """Verifies that the user config file is retained in full when scrubbing is
+    disabled."""
 
     helpers.make_sample_config()
     result = helpers.execute_command(
-        ["-v", "snapshot", "--name", "test", "--catalog", "test", "--no-scrub"],
+        ["-v", "snapshot", "--name", "test", "--module", "test", "--no-scrub"],
         True,
         command_input="y\n",
     )
@@ -257,14 +238,12 @@ def test_no_scrub():
 
 
 def test_scrub():
-    """
-    Verifies that sensitive data in user config file is scrubbed when scrubbing
-    is enabled.
-    """
+    """Verifies that sensitive data in user config file is scrubbed when
+    scrubbing is enabled."""
 
     helpers.make_sample_config()
     result = helpers.execute_command(
-        ["-v", "snapshot", "--name", "test", "--catalog", "test"], command_input="y\n"
+        ["-v", "snapshot", "--name", "test", "--module", "test"], command_input="y\n"
     )
 
     run_assertions(result)
@@ -303,9 +282,7 @@ def run_assertions(
 
 
 def cleanup(snapshot_name="test"):
-    """
-    Removes test snapshot tarball and turns off running resources.
-    """
+    """Removes test snapshot tarball and turns off running resources."""
 
     if not snapshot_name == "test":
         subprocess.call(

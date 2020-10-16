@@ -25,8 +25,7 @@ class UserError(MiniprestoError):
     ### Parameters
     - `msg`: The message to log, and the raised exception's message.
     - `hint_msg`: User hint (optional). Should help the user figure out how to
-      solve the problem.
-    """
+      solve the problem."""
 
     exit_code = 2
 

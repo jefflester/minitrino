@@ -86,12 +86,13 @@ def cli(ctx, modules, name, directory, force, no_scrub):
     else:
         modules = ctx.modules.get_running_modules()
         if not modules:
-            raise err.UserError(
-                f"No running Minipresto modules to snapshot.",
-                f"To take a snapshot of modules whether they are active "
-                f"or not, specify the modules via the `--module` option.",
+            ctx.logger.log(
+                f"No running Minipresto modules to snapshot. Snapshotting "
+                f"Presto module and nothing else.",
+                level=ctx.logger.verbose
             )
-        ctx.logger.log(f"Creating snapshot of active environment...")
+        else:
+            ctx.logger.log(f"Creating snapshot of active environment...")
         snapshot_runner(name, no_scrub, True, list(modules.keys()), directory)
 
     check_complete(name, directory)
@@ -308,15 +309,9 @@ def scrub_config_file(ctx, snapshot_name_dir):
 def scrub_line(ctx, line):
     """Scrubs a line from a snapshot config file. Returns the scrubbed line."""
 
-    line = line.strip().split("=")
-    if not len(line) == 2:
-        raise err.UserError(
-            f"Invalid line in Minipresto configuration file: '{''.join(line)}'. "
-            f"Should be formatted as KEY=VALUE."
-        )
-
     # If the key has a substring that matches any of the scrub keys, we know
     # it's an item whose value needs to be scrubbed
+    line = utils.parse_key_value_pair(line, err_type=err.UserError)
     if any(item in line[0].lower() for item in SCRUB_KEYS):
         line[1] = "*" * 20
 

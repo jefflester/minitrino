@@ -3,6 +3,7 @@
 
 # TODO: Test docker host
 # TODO: Test symlink paths
+# TODO: Test invalid/nonexistant library path
 
 import minipresto.test.helpers as helpers
 
@@ -76,7 +77,7 @@ def test_multiple_env():
             "--env",
             "STARBURST_VER=338-e.1",
             "--env",
-            "PRESTO=is_awesome",
+            "PRESTO=is=awesome",
             "version",
         ]
     )
@@ -86,7 +87,7 @@ def test_multiple_env():
         (
             '"COMPOSE_PROJECT_NAME": "test"' in result.output,
             '"STARBURST_VER": "338-e.1"' in result.output,
-            '"PRESTO": "is_awesome"' in result.output,
+            '"PRESTO": "is=awesome"' in result.output,
         )
     )
 
@@ -98,11 +99,18 @@ def test_invalid_env():
     with a non-zero status code."""
 
     result = helpers.execute_command(
-        ["-v", "--env", "COMPOSE_PROJECT_NAME===test", "version"]
+        ["-v", "--env", "COMPOSE_PROJECT_NAMEtest", "version"]
     )
 
     assert result.exit_code == 2
-    assert "Invalid environment variable" in result.output
+    assert "Invalid key-value pair" in result.output
+
+    result = helpers.execute_command(
+        ["-v", "--env", "=", "version"]
+    )
+
+    assert result.exit_code == 2
+    assert "Invalid key-value pair" in result.output
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
 

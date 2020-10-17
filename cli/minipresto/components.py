@@ -52,13 +52,6 @@ class Environment:
     @utils.exception_handler
     def __init__(self):
 
-        # Paths
-        self.user_home_dir = os.path.expanduser("~")
-        self.minipresto_user_dir = self._handle_minipresto_user_dir()
-        self.config_file = self._get_config_file()
-        self.snapshot_dir = os.path.join(self.minipresto_user_dir, "snapshots")
-        self.minipresto_lib_dir = self._get_minipresto_lib_dir()
-
         # Attributes that depend on user input prior to being set
         self.verbose = False
         self._user_env = []
@@ -69,6 +62,13 @@ class Environment:
         self.cmd_executor = CommandExecutor
         self.docker_client = docker.DockerClient
         self.api_client = docker.APIClient
+
+        # Paths
+        self.user_home_dir = os.path.expanduser("~")
+        self.minipresto_user_dir = self._handle_minipresto_user_dir()
+        self.config_file = self._get_config_file()
+        self.snapshot_dir = os.path.join(self.minipresto_user_dir, "snapshots")
+        self.minipresto_lib_dir = self._get_minipresto_lib_dir()
 
     @utils.exception_handler
     def _user_init(self, verbose=False, user_env=[]):
@@ -275,19 +275,9 @@ class EnvironmentVariables:
 
         with open(env_file, "r") as f:
             for env_var in f:
-                env_var = env_var.strip()
-                if not env_var:
-                    continue
-                env_var = env_var.split("=")
-                if len(env_var) == 2:
-                    # Add variable to modules section
-                    self.env["MODULES"][env_var[0].strip()] = env_var[1].strip()
-                else:
-                    raise err.UserError(
-                        f"Invalid environment variable: '{'='.join(env_var)}' in {env_file}.",
-                        f"Environment variables should be formatted as 'KEY=VALUE', "
-                        f"e.g. '--env STARBURST_VER=338-e.0'.",
-                    )
+                env_var = utils.parse_key_value_pair(env_var, err_type=err.UserError)
+                if env_var is None: continue
+                self.env["MODULES"][env_var[0]] = env_var[1]
 
     def _parse_user_env(self):
         """Parses user-provided environment variables for the current
@@ -298,14 +288,8 @@ class EnvironmentVariables:
 
         user_env_dict = {}
         for env_var in self.ctx._user_env:
-            env_var = env_var.split("=")
-            if not len(env_var) == 2:
-                raise err.UserError(
-                    f"Invalid environment variable: '{'='.join(env_var)}'.",
-                    f"Environment variables should be formatted as 'KEY=VALUE', "
-                    f"e.g. '--env STARBURST_VER=338-e.0'.",
-                )
-            user_env_dict[env_var[0].strip()] = env_var[1].strip()
+            env_var = utils.parse_key_value_pair(env_var, err_type=err.UserError)
+            user_env_dict[env_var[0]] = env_var[1]
 
         # Loop through user-provided environment variables and check for matches
         # in each section dict. If the variable key in the section dict, it
@@ -349,7 +333,6 @@ class EnvironmentVariables:
         self.ctx.logger.log(
             f"Registered environment variables:\n{json.dumps(self.env, indent=2)}",
             level=self.ctx.logger.verbose,
-            split_lines=False,
         )
 
 
@@ -400,12 +383,14 @@ class Modules:
                 elif "security-" in v:
                     names.append(v.lower().strip().replace("security-", ""))
                 else:
-                    raise err.UserError(
-                        f"Invalid label '{k}={v}' for container '{container.name}'.",
+                    continue
+                label_set[k] = v
+            if not label_set and container.name != "presto":
+                raise err.UserError(
+                        f"Missing Minipresto labels for container '{container.name}'.",
                         f"Check this module's 'docker-compose.yml' file and ensure you are "
                         f"following the documentation on labels.",
                     )
-                label_set[k] = v
             label_sets.append(label_set)
 
         running = {}
@@ -419,9 +404,9 @@ class Modules:
             if not running.get(name, False):
                 running[name] = self.data[name]
             if not running.get("labels", False):
-                running_modules[name]["labels"] = label_set
+                running[name]["labels"] = label_set
             if not running.get(name).get("containers", False):
-                running_modules[name]["containers"] = [container]
+                running[name]["containers"] = [container]
             else:
                 running[name]["containers"].append(container)
 
@@ -574,7 +559,6 @@ class CommandExecutor:
         self.ctx.logger.log(
             f"Executing command in shell:\n{command}",
             level=self.ctx.logger.verbose,
-            split_lines=False,
         )
 
         process = subprocess.Popen(
@@ -591,12 +575,20 @@ class CommandExecutor:
             # `universal_newlines=True` ensures output is generated as a string,
             # so there is no need to decode bytes. The only cleansing we need to
             # do is to run the string through the `_strip_ansi()` function.
+
+            if not kwargs.get("suppress_output", False):
+                self.ctx.logger.log(
+                    "Command Output:", level=self.ctx.logger.verbose
+                )
+
             while True:
                 output_line = process.stdout.readline()
                 if output_line == "" and process.poll() is not None:
                     break
                 output_line = self._strip_ansi(output_line)
-                self.ctx.logger.log(output_line, level=self.ctx.logger.verbose)
+                self.ctx.logger.log(
+                    output_line, level=self.ctx.logger.verbose, stream=True
+                )
 
         output, _ = process.communicate()  # Get full output (stdout + stderr)
         if process.returncode != 0 and kwargs.get("trigger_error", True):
@@ -625,7 +617,6 @@ class CommandExecutor:
         self.ctx.logger.log(
             f"Executing command in container '{container.name}':\n{command}",
             level=self.ctx.logger.verbose,
-            split_lines=False,
         )
 
         # Create exec handler and execute the command
@@ -647,6 +638,11 @@ class CommandExecutor:
         # remainder of the chunk (if any) resets the `full_line` var, then log
         # dumped when the next newline is received.
 
+        if not kwargs.get("suppress_output", False):
+            self.ctx.logger.log(
+                "Command Output:", level=self.ctx.logger.verbose
+            )
+
         output = ""
         full_line = ""
         for chunk in output_generator:
@@ -656,7 +652,9 @@ class CommandExecutor:
             if len(chunk) > 1:  # Indicates newline present
                 full_line += chunk[0]
                 if not kwargs.get("suppress_output", False):
-                    self.ctx.logger.log(full_line, level=self.ctx.logger.verbose)
+                    self.ctx.logger.log(
+                        full_line, level=self.ctx.logger.verbose, stream=True
+                    )
                     full_line = ""
                 if chunk[1]:
                     full_line = chunk[1]
@@ -665,7 +663,7 @@ class CommandExecutor:
 
         # Catch lingering full line post-loop
         if not kwargs.get("suppress_output", False) and full_line:
-            self.ctx.logger.log(full_line, level=self.ctx.logger.verbose)
+            self.ctx.logger.log(full_line, level=self.ctx.logger.verbose, stream=True)
 
         # Get the exit code
         return_code = self.ctx.api_client.exec_inspect(exec_handler["Id"]).get(
@@ -698,8 +696,8 @@ class CommandExecutor:
             ]["Env"]
             host_environment = {}
             for env_var in host_environment_list:
-                env_var = env_var.split("=")
-                host_environment[env_var[0].strip()] = env_var[1].strip()
+                env_var = utils.parse_key_value_pair(env_var)
+                host_environment[env_var[0]] = env_var[1]
 
         if environment:
             delete_keys = []

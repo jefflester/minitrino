@@ -6,6 +6,7 @@
 
 import os
 import docker
+import time
 import subprocess
 import minipresto.test.helpers as helpers
 
@@ -18,10 +19,12 @@ from minipresto.settings import RESOURCE_LABEL
 def main():
     helpers.log_status(__file__)
     helpers.start_docker_daemon()
+    cleanup()
     test_standalone()
     test_invalid_module()
     test_docker_native()
     test_valid_user_config()
+    test_duplicate_config_props()
 
 
 def test_standalone():
@@ -68,7 +71,7 @@ def test_docker_native():
     This function also calls the bootstrap script test functions."""
 
     result = helpers.execute_command(
-        ["-v", "provision", "--module", "test", "--docker-native", "build"]
+        ["-v", "provision", "--module", "test", "--docker-native", "--build"]
     )
 
     containers = get_containers()
@@ -118,9 +121,7 @@ def test_bootstrap_re_execute():
     """Ensures that bootstrap scripts do not execute if they have already
     executed."""
 
-    result = helpers.execute_command(
-        ["-v", "provision", "--module", "test", "--docker-native", "build"]
-    )
+    result = helpers.execute_command(["-v", "provision", "--module", "test"])
 
     assert result.exit_code == 0
     assert all(
@@ -135,45 +136,35 @@ def test_bootstrap_re_execute():
 
 def test_valid_user_config():
     """Ensures that valid, user-defined Presto/JVM config can be successfully
-    appended to Presto config files.
+    appended to Presto config files."""
 
-    This function also calls the function that checks for the effectiveness of
-    the duplicate config checker."""
-
-    user_config = """
-    [PRESTO]
-    CONFIG=
-        query.max-stage-count=85
-        query.max-execution-time=1h
-    JVM_CONFIG=
-        -Xmx=2G
-        -Xms=1G
-        -Xms=1G
-    """
-
-    subprocess.call(
-        f'bash -c "cat << EOF > {helpers.CONFIG_FILE}\n' f"{user_config}",
-        shell=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+    result = helpers.execute_command(
+        [
+            "-v",
+            "--env",
+            "CONFIG=query.max-stage-count=85\nquery.max-execution-time=1h",
+            "--env",
+            "JVM_CONFIG=-Xmx2G\n-Xms1G",
+            "provision",
+            "--module",
+            "test",
+        ]
     )
-
-    result = helpers.execute_command(["-v", "provision", "--module", "test"])
 
     assert result.exit_code == 0
     assert (
-        "Appending Presto config from minipresto.cfg to Presto config files"
+        "Appending Presto config from minipresto.cfg file to Presto container config"
         in result.output
     )
 
     jvm_config = subprocess.Popen(
-        f"docker exec -i test cat /usr/lib/presto/etc/jvm.config",
+        f"docker exec -i presto cat /usr/lib/presto/etc/jvm.config",
         shell=True,
         stdout=subprocess.PIPE,
         universal_newlines=True,
     )
     presto_config = subprocess.Popen(
-        f"docker exec -i test cat /usr/lib/presto/etc/config.properties",
+        f"docker exec -i presto cat /usr/lib/presto/etc/config.properties",
         shell=True,
         stdout=subprocess.PIPE,
         universal_newlines=True,
@@ -182,33 +173,63 @@ def test_valid_user_config():
     jvm_config, _ = jvm_config.communicate()
     presto_config, _ = presto_config.communicate()
 
-    assert all(("-Xmx=2G", "-Xms=1G")) in jvm_config
-    assert (
-        all(("query.max-stage-count=85", "query.max-execution-time=1h"))
-        in presto_config
+    assert all(("-Xmx2G" in jvm_config, "-Xms1G" in jvm_config))
+    assert all(
+        (
+            "query.max-stage-count=85" in presto_config,
+            "query.max-execution-time=1h" in presto_config,
+        )
     )
-
-    test_duplicate_config_props(result)
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()
 
 
-def test_duplicate_config_props(result):
+def test_duplicate_config_props():
     """Ensures that duplicate configuration properties in Presto are logged as a
     warning to the user."""
 
+    helpers.execute_command(["-v", "provision"])
+
+    cmd_chunk = "$'query.max-stage-count=85\nquery.max-stage-count=100\nquery.max-execution-time=1h\nquery.max-execution-time=2h'"
+    subprocess.Popen(
+        f'docker exec -i presto sh -c "echo {cmd_chunk} >> /usr/lib/presto/etc/config.properties"',
+        shell=True,
+        stdout=subprocess.PIPE,
+        universal_newlines=True,
+    )
+
+    cmd_chunk = "$'-Xms1G\n-Xms1G'"
+    subprocess.Popen(
+        f'docker exec -i presto sh -c "echo {cmd_chunk} >> /usr/lib/presto/etc/jvm.config"',
+        shell=True,
+        stdout=subprocess.PIPE,
+        universal_newlines=True,
+    )
+
+    # Hard stop to allow commands to process
+    time.sleep(2)
+
+    helpers.execute_command(["-v", "down", "--sig-kill", "--keep"])
+    result = helpers.execute_command(["-v", "provision"])
+
     assert all(
         (
-            "Duplicate Presto configuration properties detected in config.properties",
-            "query.max-stage-count=85",
-            "query.max-execution-time=1h",
-            "Duplicate Presto configuration properties detected in jvm.config",
-            "-Xms=1G" in result.output,
+            "Duplicate Presto configuration properties detected in config.properties"
+            in result.output,
+            "query.max-stage-count=85" in result.output,
+            "query.max-stage-count=100" in result.output,
+            "query.max-execution-time=1h" in result.output,
+            "query.max-execution-time=2h" in result.output,
+            "Duplicate Presto configuration properties detected in jvm.config"
+            in result.output,
+            "-Xms1G" in result.output,
+            "-Xms1G" in result.output,
         )
     )
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
+    cleanup()
 
 
 def get_containers():

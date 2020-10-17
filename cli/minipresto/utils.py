@@ -43,17 +43,13 @@ class Logger:
 
         self._log_verbose = log_verbose
 
-    def log(self, *args, level=None, split_lines=True):
+    def log(self, *args, level=None, stream=False):
         """Logs messages to the user's console. Defaults to 'info' log level.
 
         ### Parameters
         - `*args`: Messages to log.
         - `level`: The level of the log message (info, warn, error, and
           verbose).
-        - `split_lines`: If `True`, each line logged to the terminal will have a
-          styled prefix. If `False`, the log message's first line will have a
-          prefix, and all other lines following will not. Use to logically group
-          log messages.
         - `stream`: If `True`, the logger will not apply a prefix to each line
           streamed to the console."""
 
@@ -78,7 +74,7 @@ class Logger:
                 msg = self._format(msg)
                 if not msg:
                     continue
-                if not split_lines and i > 0:
+                if stream or i > 0:
                     msg_prefix = DEFAULT_INDENT
                 else:
                     msg_prefix = style(
@@ -235,7 +231,6 @@ def check_daemon(docker_client):
         )
 
 
-@exception_handler
 def generate_identifier(identifiers=None):
     """Returns an 'object identifier' string used for creating log messages,
     e.g. '[ID: 12345] [Name: presto]'.
@@ -259,7 +254,48 @@ def generate_identifier(identifiers=None):
     return " ".join(identifier)
 
 
-@exception_handler
+def parse_key_value_pair(key_value_pair, err_type=err.MiniprestoError):
+    """Parses a key-value pair in string form and returns the resulting pair as
+    both a 2-element list. If the string cannot be split by "=", a
+    MiniprestoError is raised.
+
+    ### Parameters
+    - `key_value_pair`: A string formatted as a key-value pair, i.e.
+      `"PRESTO=338-e.0"`.
+    - `err_type`: The exception to raise if an "=" delimiter is not in the
+      key-value pair. Defaults to `MiniprestoError`.
+
+    ### Return Values
+    - A list `[k, v]`, but will return `None` if the stripped input is an empty
+      string.
+    """
+
+    # Return None of empty string or special char (i.e. '\n')
+    key_value_pair = key_value_pair.strip()
+    if not key_value_pair:
+        return None
+
+    key_value_pair = key_value_pair.split("=", 1)
+    err_msg = (
+        f"Invalid key-value pair: '{'='.join(key_value_pair)}'. "
+        f"Key-value pairs should be formatted as 'KEY=VALUE'"
+    )
+
+    # Raise an error if the key has no value
+    if not key_value_pair[0]:
+        raise err_type(err_msg)
+
+    if isinstance(key_value_pair, list):
+        for i in range(len(key_value_pair)):
+            key_value_pair[i] = key_value_pair[i].strip()
+        if not key_value_pair[0]:
+            raise err_type(err_msg)
+    if not len(key_value_pair) == 2:
+        raise err_type(err_msg)
+
+    return key_value_pair
+
+
 def validate_yes(response=""):
     """Validates 'yes' user input."""
 

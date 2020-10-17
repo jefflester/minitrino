@@ -35,7 +35,7 @@ def test_valid_module():
     result = helpers.execute_command(["-v", "modules", "--module", "test"])
 
     assert result.exit_code == 0
-    assert all(("Module: test", "Test module")) in result.output
+    assert all(("Module: test" in result.output, "Test module" in result.output))
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
 
@@ -47,8 +47,12 @@ def test_all_modules():
     result = helpers.execute_command(["-v", "modules"])
 
     assert result.exit_code == 0
-    assert (
-        all(("Module: test", "Description:", "Incompatible Modules:")) in result.output
+    assert all(
+        (
+            "Module: test",
+            "Description:" in result.output,
+            "Incompatible Modules:" in result.output,
+        )
     )
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)

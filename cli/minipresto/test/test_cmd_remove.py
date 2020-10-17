@@ -176,7 +176,9 @@ def test_all():
 
     helpers.execute_command(["provision", "--module", "test"])
     helpers.execute_command(["down", "--sig-kill"])
-    result = helpers.execute_command(["-v", "remove", "--images", "--volumes"])
+    result = helpers.execute_command(
+        ["-v", "remove", "--images", "--volumes"], command_input="y\n"
+    )
 
     assert result.exit_code == 0
     assert all(("Volume removed:" in result.output, "Image removed:" in result.output))
@@ -203,7 +205,7 @@ def test_remove_dependent_resources_running():
     removed."""
 
     helpers.execute_command(["provision", "--module", "test"])
-    result = helpers.execute_command(["-v", "remove", "--images", "--volumes"])
+    result = helpers.execute_command(["-v", "remove", "--images", "--volumes"], command_input="y\n")
 
     assert result.exit_code == 0
     assert all(

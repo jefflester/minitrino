@@ -34,6 +34,7 @@ def main():
     helpers.log_status(__file__)
     helpers.start_docker_daemon()
     test_snapshot_no_directory()
+    test_snapshot_standalone()
     test_snapshot_active_env()
     test_snapshot_inactive_env()
     test_valid_name()
@@ -67,7 +68,7 @@ def test_snapshot_active_env():
     environment."""
 
     cleanup()
-    helpers.execute_command(["provision"])
+    helpers.execute_command(["-v", "provision", "--module", "test"])
     result = helpers.execute_command(
         ["-v", "snapshot", "--name", "test"],
         command_input="y\n",
@@ -75,6 +76,21 @@ def test_snapshot_active_env():
 
     run_assertions(result, False)
     assert "Creating snapshot of active environment" in result.output
+
+    helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
+
+
+def test_snapshot_standalone():
+    """Verifies that a the standlone Presto module can be snapshotted."""
+
+    cleanup()
+    result = helpers.execute_command(
+        ["-v", "snapshot", "--name", "test"],
+        command_input="y\n",
+    )
+
+    run_assertions(result, False)
+    assert "Snapshotting Presto module and nothing else" in result.output
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
 
@@ -90,7 +106,7 @@ def test_snapshot_inactive_env():
     )
 
     run_assertions(result)
-    assert "Creating snapshot of inactive environment" in result.output
+    assert "Creating snapshot of specified modules" in result.output
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
 
@@ -106,7 +122,7 @@ def test_valid_name():
     )
 
     run_assertions(result, snapshot_name="my-test_123")
-    assert "Creating snapshot of inactive environment" in result.output
+    assert "Creating snapshot of specified modules" in result.output
 
     cleanup(snapshot_name="my-test_123")
 
@@ -123,7 +139,7 @@ def test_invalid_name():
         command_input="y\n",
     )
 
-    assert result.exit_code == 1
+    assert result.exit_code == 2
     assert "Illegal character found in provided filename" in result.output
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
@@ -149,7 +165,7 @@ def test_specific_directory():
     )
 
     run_assertions(result, True, check_path=os.path.join(os.sep, "tmp"))
-    assert "Creating snapshot of inactive environment" in result.output
+    assert "Creating snapshot of specified modules" in result.output
 
     subprocess.call("rm -rf /tmp/test.tar.gz", shell=True)
 
@@ -212,7 +228,7 @@ def test_force():
     )
 
     run_assertions(result)
-    assert "Creating snapshot of inactive environment" in result.output
+    assert "Creating snapshot of specified modules" in result.output
 
     cleanup()
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
@@ -278,7 +294,7 @@ def run_assertions(
     assert os.path.isfile(os.path.join(check_path, f"{snapshot_name}.tar.gz"))
 
     with open(command_snapshot_file) as f:
-        assert "minipresto -v --lib-path" in f.read()
+        assert "minipresto -v --env LIB_PATH=" in f.read()
 
 
 def cleanup(snapshot_name="test"):

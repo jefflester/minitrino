@@ -47,5 +47,4 @@ def log_info(ctx, module_name="", module_dict={}):
         f"Module: {module_name}\n"
         f"Description: {description}\n"
         f"Incompatible Modules: {incompatible_modules}",
-        split_lines=False,
     )

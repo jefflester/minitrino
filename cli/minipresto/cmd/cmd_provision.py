@@ -241,12 +241,17 @@ def execute_container_bootstrap(ctx, bootstrap="", container_name="", yaml_file=
 @minipresto.cli.pass_environment
 def check_dup_configs(ctx):
     """Checks for duplicate configs in Presto config files (jvm.config and
-    config.properties)."""
+    config.properties). This is a safety check for modules that may improperly
+    modify these files.
+
+    Duplicates will only be registered for JVM config if the configs are
+    identical. For config.properties, duplicates will be registered if there are
+    multiple overlapping property keys."""
 
     check_files = ["config.properties", "jvm.config"]
     for check_file in check_files:
         ctx.logger.log(
-            f"Checking Presto {check_file} for duplicate properties...",
+            f"Checking Presto {check_file} for duplicate configs...",
             level=ctx.logger.verbose,
         )
         container = ctx.docker_client.containers.get("presto")
@@ -266,24 +271,51 @@ def check_dup_configs(ctx):
         configs.sort()
 
         duplicates = []
-        for i, config in enumerate(configs):
-            config = config.strip().split("=")
-            try:
-                next_config = configs[i + 1].strip().split("=")
-            except:
-                next_config = [""]
-            if config[0].strip() == next_config[0].strip():
-                duplicates.extend(["".join(config), "".join(next_config)])
-            elif duplicates:
-                duplicates = set(duplicates)
-                duplicates_string = "\n".join(duplicates)
-                ctx.logger.log(
-                    f"Duplicate Presto configuration properties detected in "
-                    f"{check_file} file:\n{duplicates_string}",
-                    level=ctx.logger.warn,
-                    split_lines=False,
-                )
-                duplicates = []
+        if check_file == "config.properties":
+            for i, config in enumerate(configs):
+                if config.startswith("#"):
+                    continue
+                config = utils.parse_key_value_pair(config, err_type=err.UserError)
+                if config is None:
+                    continue
+                if i + 1 != len(configs):
+                    next_config = utils.parse_key_value_pair(
+                        configs[i + 1], err_type=err.UserError
+                    )
+                    if config[0] == next_config[0]:
+                        duplicates.extend(["=".join(config), "=".join(next_config)])
+                else:
+                    next_config = [""]
+                if config[0] == next_config[0]:
+                    duplicates.extend(["=".join(config), "=".join(next_config)])
+                elif duplicates:
+                    duplicates = set(duplicates)
+                    duplicates_string = "\n".join(duplicates)
+                    ctx.logger.log(
+                        f"Duplicate Presto configuration properties detected in "
+                        f"{check_file} file:\n{duplicates_string}",
+                        level=ctx.logger.warn,
+                    )
+                    duplicates = []
+        else:  # JVM config
+            for i, config in enumerate(configs):
+                config = config.strip()
+                if config.startswith("#") or not config:
+                    continue
+                if i + 1 != len(configs):
+                    next_config = configs[i + 1].strip()
+                else:
+                    next_config = ""
+                if config == next_config:
+                    duplicates.extend([config, next_config])
+                elif duplicates:
+                    duplicates_string = "\n".join(duplicates)
+                    ctx.logger.log(
+                        f"Duplicate Presto configuration properties detected in "
+                        f"{check_file} file:\n{duplicates_string}",
+                        level=ctx.logger.warn,
+                    )
+                    duplicates = []
 
 
 @minipresto.cli.pass_environment
@@ -305,7 +337,7 @@ def append_user_config(ctx, containers_to_restart=[]):
         return containers_to_restart
 
     ctx.logger.log(
-        "Appending Presto config from minipresto.cfg to Presto config files...",
+        "Appending Presto config from minipresto.cfg file to Presto container config...",
         level=ctx.logger.verbose,
     )
 
@@ -320,6 +352,7 @@ def append_user_config(ctx, containers_to_restart=[]):
         f"cat {ETC_PRESTO}/config.properties",
         f"cat {ETC_PRESTO}/jvm.config",
         container=presto_container,
+        suppress_output=True,
     )
 
     current_presto_config = current_configs[0].get("output", "").strip().split("\n")
@@ -330,21 +363,54 @@ def append_user_config(ctx, containers_to_restart=[]):
         # If there is an overlapping config key, replace it with the user
         # config. If there is not overlapping config key, append it to the
         # current config list.
-        for user_config in user_configs:
-            user_config = user_config.strip().split("=")
-            for i, current_config in enumerate(current_configs):
-                current_config = current_config.strip().split("=")
-                if user_config[0] == current_config[0]:
-                    current_configs[i] = "=".join(user_config)
-                    break
-                if (
-                    i + 1 == len(current_configs)
-                    and not "=".join(user_config) in current_configs
-                ):
-                    current_configs.append("=".join(user_config))
+
+        if filename == "config.properties":
+            for user_config in user_configs:
+                user_config = utils.parse_key_value_pair(
+                    user_config, err_type=err.UserError
+                )
+                if user_config is None:
+                    continue
+                for i, current_config in enumerate(current_configs):
+                    if current_config.startswith("#"):
+                        continue
+                    current_config = utils.parse_key_value_pair(
+                        current_config, err_type=err.UserError
+                    )
+                    if current_config is None:
+                        continue
+                    if user_config[0] == current_config[0]:
+                        current_configs[i] = "=".join(user_config)
+                        break
+                    if (
+                        i + 1 == len(current_configs)
+                        and not "=".join(user_config) in current_configs
+                    ):
+                        current_configs.append("=".join(user_config))
+        else:
+            for user_config in user_configs:
+                user_config = user_config.strip()
+                if not user_config:
+                    continue
+                for i, current_config in enumerate(current_configs):
+                    if current_config.startswith("#"):
+                        continue
+                    current_config = current_config.strip()
+                    if not current_config:
+                        continue
+                    if user_config == current_config:
+                        current_configs[i] = user_config
+                        break
+                    if (
+                        i + 1 == len(current_configs)
+                        and not user_config in current_configs
+                    ):
+                        current_configs.append(user_config)
 
         # Replace existing file with new values
-        ctx.cmd_executor.execute_commands(f"rm {ETC_PRESTO}/{filename}")
+        ctx.cmd_executor.execute_commands(
+            f"rm {ETC_PRESTO}/{filename}", container=presto_container
+        )
 
         for current_config in current_configs:
             append_config = (

@@ -61,7 +61,7 @@ class Logger:
             return
 
         for msg in args:
-            # Ensure the message is a string
+            # Ensure the message can be a string
             try:
                 msg = str(msg)
             except:
@@ -173,14 +173,14 @@ def handle_exception(error=Exception, additional_msg="", skip_traceback=False):
 def exception_handler(func):
     """A decorator that handles unhandled exceptions. Why? A few reasons.
 
-    1. Functions still have the liberty to do try/catch and perform
+    1. Inner functions still have the liberty to do try/catch and perform
        inner-function exception handling how they wish.
     2. Functions that catch exceptions which need specialized handling can
        manually invoke the handle_exception() utility.
     3. For all other generic exceptions and unhandled exceptions, they will be
        siphoned to the handle_exception() utility.
 
-    This is especially useful when used with main/runner functions and class
+    This is especially useful when decorating main/runner functions and class
     constructors."""
 
     def wrapper(*args, **kwargs):
@@ -297,7 +297,8 @@ def parse_key_value_pair(key_value_pair, err_type=err.MiniprestoError):
 
 
 def validate_yes(response=""):
-    """Validates 'yes' user input."""
+    """Validates 'yes' user input. Returns `True` if a 'yes' input is
+    detected."""
 
     response = response.replace(" ", "")
     if response.lower() == "y" or response.lower() == "yes":

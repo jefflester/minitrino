@@ -25,7 +25,7 @@ from minipresto.settings import SCRUB_KEYS
 
 # fmt: off
 @click.command("snapshot", help="""
-Creates a snapshot of a Minipresto environment. Places a tarball in the
+Create a snapshot of a Minipresto environment. A tarball is placed in the
 Minipresto `lib/snapshots/` directory.
 
 To take a snapshot of an active environment, leave the `--module` and option out
@@ -46,13 +46,12 @@ Directory to save the resulting snapshot file in. Defaults to the snapshots
 directory in the Minipresto library.
 """)
 @click.option("-f", "--force", is_flag=True, default=False, help="""
-Skips checking if the resulting tarball file exists (and overrides the file if
-it does exist).
+Overwrite the file if it already exists.
 """)
 @click.option("--no-scrub", is_flag=True, default=False, help="""
-Prevents the scrubbing of sensitive data from user config.
+Do not scrub sensitive data from user config file.
 
-WARNING: all sensitive information (passwords and keys) will be kept in the
+WARNING: all sensitive information (passwords and keys) will be kept in the user
 config file added to the snapshot. Only use this if you are prepared to share
 those secrets with another person.
 """)
@@ -89,7 +88,7 @@ def cli(ctx, modules, name, directory, force, no_scrub):
             ctx.logger.log(
                 f"No running Minipresto modules to snapshot. Snapshotting "
                 f"Presto module and nothing else.",
-                level=ctx.logger.verbose
+                level=ctx.logger.verbose,
             )
         else:
             ctx.logger.log(f"Creating snapshot of active environment...")

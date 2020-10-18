@@ -15,6 +15,8 @@ def main():
     test_invalid_module()
     test_valid_module()
     test_all_modules()
+    test_json()
+    test_running()
 
 
 def test_invalid_module():
@@ -55,6 +57,37 @@ def test_all_modules():
         )
     )
 
+    helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
+
+
+def test_json():
+    """Ensures the `module` command can output module metadata in JSON
+    format."""
+
+    result = helpers.execute_command(["-v", "modules", "--module", "test", "--json"])
+
+    assert result.exit_code == 0
+    assert all(('"type": "catalog"' in result.output, '"test":' in result.output))
+
+    helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
+
+
+def test_running():
+    """Ensures the `module` command can output metadata for running modules."""
+
+    result = helpers.execute_command(["-v", "provision", "--module", "test"])
+    result = helpers.execute_command(["-v", "modules", "--json", "--running"])
+
+    assert result.exit_code == 0
+    assert all(
+        (
+            '"type": "catalog"' in result.output,
+            '"type": "catalog"' in result.output,
+            '"containers":' in result.output,
+        )
+    )
+
+    helpers.execute_command(["-v", "down", "--sig-kill"])
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
 
 

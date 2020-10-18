@@ -15,20 +15,20 @@ from minipresto.settings import RESOURCE_LABEL
 
 # fmt: off
 @click.command("remove", help="""
-Removes Minipresto resources.
+Remove Minipresto resources.
 """)
 @click.option("-i", "--images", is_flag=True, default=False, help="""
-Removes Minipresto images.
+Remove Minipresto images.
 """)
 @click.option("-v", "--volumes", is_flag=True, default=False, help="""
-Removes Minipresto volumes.
+Remove Minipresto container volumes.
 """)
 @click.option("-l", "--label", "labels", type=str, default=[], multiple=True, help="""
-Target specific labels for removal (key-value pair(s)).
+Target specific labels for removal (format: key-value pair(s)).
 """)
 @click.option("-f", "--force", is_flag=True, default=False, help="""
-Forces the removal of Minipresto resources. Normal Docker removal
-restrictions apply.
+Force the removal of Minipresto resources. Normal Docker removal restrictions
+apply.
 """)
 # fmt: on
 

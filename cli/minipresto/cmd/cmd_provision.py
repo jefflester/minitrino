@@ -26,7 +26,7 @@ from docker.errors import NotFound
 
 # fmt: off
 @click.command("provision", help="""
-Provisions an environment based on chosen modules. All options are optional and
+Provision an environment based on specified modules. All options are optional and
 can be left empty. 
 """)
 @click.option("-m", "--module", "modules", default=[], type=str, multiple=True, help="""
@@ -36,14 +36,16 @@ A specific module to provision.
 Do not rollback provisioned resources in the event of an error.
 """)
 @click.option("-d", "--docker-native", default="", type=str, help="""
-Appends native docker-compose commands to the built docker-compose command. Run
-`docker-compose up --help` to see all available options.
+Appends native docker-compose commands to the generated docker-compose shell
+command. Run `docker-compose up --help` to see all available options.
 
-Example: minipresto provision -d --build
+Example: minipresto provision --docker-native --build
 
-Example: minipresto provision -d '--remove-orphans --force-recreate'
+Example: minipresto provision --docker-native '--remove-orphans
+--force-recreate'
 """)
 # fmt: on
+
 
 
 @utils.exception_handler
@@ -156,10 +158,12 @@ def execute_bootstraps(ctx, modules=[]):
             raise err.MiniprestoError(
                 f"Invalid Docker Compose YAML file (no 'services' section found): {yaml_file}"
             )
+        # Get all services defined in YAML file
         for service_key, service_dict in module_services.items():
             services.append([service_key, service_dict, yaml_file])
 
     containers = []
+    # Get all container names for each service
     for service in services:
         bootstrap = service[1].get("environment", {}).get("MINIPRESTO_BOOTSTRAP")
         if bootstrap is None:
@@ -205,12 +209,14 @@ def execute_container_bootstrap(ctx, bootstrap="", container_name="", yaml_file=
     bootstrap_checksum = hashlib.md5(open(bootstrap_file, "rb").read()).hexdigest()
     container = ctx.docker_client.containers.get(container_name)
 
+    # Check if this script has already been executed
     output = ctx.cmd_executor.execute_commands(
         "cat /opt/minipresto/bootstrap_status.txt",
         suppress_output=True,
         container=container,
         trigger_error=False,
     )
+
     if f"{bootstrap_checksum}" in output[0].get("output", ""):
         ctx.logger.log(
             f"Bootstrap already executed in container '{container_name}'. Skipping.",
@@ -222,9 +228,12 @@ def execute_container_bootstrap(ctx, bootstrap="", container_name="", yaml_file=
         f"Executing bootstrap script in container '{container_name}'...",
         level=ctx.logger.verbose,
     )
+
     ctx.cmd_executor.execute_commands(
         f"docker cp {bootstrap_file} {container_name}:/tmp/"
     )
+
+    # Record executed file checksum
     ctx.cmd_executor.execute_commands(
         f"/tmp/{os.path.basename(bootstrap_file)}",
         f'bash -c "echo {bootstrap_checksum} >> /opt/minipresto/bootstrap_status.txt"',
@@ -235,6 +244,7 @@ def execute_container_bootstrap(ctx, bootstrap="", container_name="", yaml_file=
         f"Successfully executed bootstrap script in container '{container_name}'.",
         level=ctx.logger.verbose,
     )
+    
     return True
 
 

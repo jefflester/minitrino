@@ -192,8 +192,8 @@ class EnvironmentVariables:
         if not ctx:
             raise utils.handle_missing_param(list(locals().keys()))
 
-        self.ctx = ctx
         self.env = {}
+        self._ctx = ctx
 
         self._parse_minipresto_config()
         self._parse_library_env()
@@ -235,7 +235,7 @@ class EnvironmentVariables:
         """Parses the Minipresto config file and adds it to the env
         dictionary."""
 
-        if not os.path.isfile(self.ctx.config_file):
+        if not os.path.isfile(self._ctx.config_file):
             return
 
         # Catch this and provide a useful message, as it can be tricky to track
@@ -243,7 +243,7 @@ class EnvironmentVariables:
         try:
             config = ConfigParser()
             config.optionxform = str  # Preserve case
-            config.read(self.ctx.config_file)
+            config.read(self._ctx.config_file)
             for section in config.sections():
                 if not self.env.get(section, False):
                     # Account for empty section
@@ -253,7 +253,7 @@ class EnvironmentVariables:
         except Exception as e:
             utils.handle_exception(
                 e,
-                additional_msg=f"Failed to parse config file: {self.ctx.config_file}",
+                additional_msg=f"Failed to parse config file: {self._ctx.config_file}",
             )
 
     def _parse_library_env(self):
@@ -262,7 +262,7 @@ class EnvironmentVariables:
         dictionary since this file explicitly defines the versions of the module
         services."""
 
-        env_file = os.path.join(self.ctx.minipresto_lib_dir, ".env")
+        env_file = os.path.join(self._ctx.minipresto_lib_dir, ".env")
         if not os.path.isfile(env_file):
             raise err.MiniprestoError(
                 f"Library '.env' file does not exist at path: {env_file}"
@@ -276,18 +276,19 @@ class EnvironmentVariables:
         with open(env_file, "r") as f:
             for env_var in f:
                 env_var = utils.parse_key_value_pair(env_var, err_type=err.UserError)
-                if env_var is None: continue
+                if env_var is None:
+                    continue
                 self.env["MODULES"][env_var[0]] = env_var[1]
 
     def _parse_user_env(self):
         """Parses user-provided environment variables for the current
         command."""
 
-        if not self.ctx._user_env:
+        if not self._ctx._user_env:
             return
 
         user_env_dict = {}
-        for env_var in self.ctx._user_env:
+        for env_var in self._ctx._user_env:
             env_var = utils.parse_key_value_pair(env_var, err_type=err.UserError)
             user_env_dict[env_var[0]] = env_var[1]
 
@@ -323,16 +324,16 @@ class EnvironmentVariables:
                 del user_env_dict[delete_key]
 
         if user_env_dict:
+            self.env["EXTRA"] = {}
             for k, v in user_env_dict.items():
-                self.env["EXTRA"] = {}
                 self.env["EXTRA"][k] = v
 
     def _log_env_vars(self):
         """Logs environment variables."""
 
-        self.ctx.logger.log(
+        self._ctx.logger.log(
             f"Registered environment variables:\n{json.dumps(self.env, indent=2)}",
-            level=self.ctx.logger.verbose,
+            level=self._ctx.logger.verbose,
         )
 
 
@@ -357,25 +358,31 @@ class Modules:
         if not ctx:
             raise utils.handle_missing_param(list(locals().keys()))
 
-        self.ctx = ctx
         self.data = {}
+        self._ctx = ctx
         self._load_modules()
 
     def get_running_modules(self):
         """Returns dict of running modules (includes container objects and
         Docker labels)."""
 
-        utils.check_daemon(self.ctx.docker_client)
-        containers = self.ctx.docker_client.containers.list(
+        utils.check_daemon(self._ctx.docker_client)
+        containers = self._ctx.docker_client.containers.list(
             filters={"label": RESOURCE_LABEL}
         )
 
         if not containers:
             return {}
 
+        # Remove Presto container since it isn't a module
+        for i, container in enumerate(containers):
+            if container.name == "presto":
+                del containers[i]
+                continue
+
         names = []
         label_sets = []
-        for container in containers:
+        for i, container in enumerate(containers):
             label_set = {}
             for k, v in container.labels.items():
                 if "catalog-" in v:
@@ -387,10 +394,10 @@ class Modules:
                 label_set[k] = v
             if not label_set and container.name != "presto":
                 raise err.UserError(
-                        f"Missing Minipresto labels for container '{container.name}'.",
-                        f"Check this module's 'docker-compose.yml' file and ensure you are "
-                        f"following the documentation on labels.",
-                    )
+                    f"Missing Minipresto labels for container '{container.name}'.",
+                    f"Check this module's 'docker-compose.yml' file and ensure you are "
+                    f"following the documentation on labels.",
+                )
             label_sets.append(label_set)
 
         running = {}
@@ -415,9 +422,9 @@ class Modules:
     def _load_modules(self):
         """Loads module data during instantiation."""
 
-        self.ctx.logger.log("Loading modules...", level=self.ctx.logger.verbose)
+        self._ctx.logger.log("Loading modules...", level=self._ctx.logger.verbose)
 
-        modules_dir = os.path.join(self.ctx.minipresto_lib_dir, MODULE_ROOT)
+        modules_dir = os.path.join(self._ctx.minipresto_lib_dir, MODULE_ROOT)
         if not os.path.isdir(modules_dir):
             raise err.MiniprestoError(
                 f"Path is not a directory: {modules_dir}\n"
@@ -435,10 +442,10 @@ class Modules:
                 module_dir = os.path.join(section_dir, _dir)
 
                 if not os.path.isdir(module_dir):
-                    self.ctx.logger.log(
+                    self._ctx.logger.log(
                         f"Skipping file (expected a directory, not a file) "
                         f"at path: {module_dir}",
-                        level=self.ctx.logger.verbose,
+                        level=self._ctx.logger.verbose,
                     )
                     continue
 
@@ -477,10 +484,10 @@ class Modules:
                     with open(json_file) as f:
                         metadata = json.load(f)
                 else:
-                    self.ctx.logger.log(
+                    self._ctx.logger.log(
                         f"No JSON metadata file for module '{module_name}'. "
                         f"Will not load metadata for module.",
-                        level=self.ctx.logger.verbose,
+                        level=self._ctx.logger.verbose,
                     )
 
                 self.data[module_name]["description"] = metadata.get(
@@ -509,7 +516,7 @@ class CommandExecutor:
         if not ctx:
             raise utils.handle_missing_param(list(locals().keys()))
 
-        self.ctx = ctx
+        self._ctx = ctx
 
     def execute_commands(self, *args, **kwargs):
         """Executes commands in the user's shell or inside of a container.
@@ -556,9 +563,9 @@ class CommandExecutor:
     def _execute_in_shell(self, command="", **kwargs):
         """Executes a command in the host shell."""
 
-        self.ctx.logger.log(
+        self._ctx.logger.log(
             f"Executing command in shell:\n{command}",
-            level=self.ctx.logger.verbose,
+            level=self._ctx.logger.verbose,
         )
 
         process = subprocess.Popen(
@@ -576,18 +583,19 @@ class CommandExecutor:
             # so there is no need to decode bytes. The only cleansing we need to
             # do is to run the string through the `_strip_ansi()` function.
 
-            if not kwargs.get("suppress_output", False):
-                self.ctx.logger.log(
-                    "Command Output:", level=self.ctx.logger.verbose
-                )
-
+            started_stream = False
             while True:
                 output_line = process.stdout.readline()
                 if output_line == "" and process.poll() is not None:
                     break
                 output_line = self._strip_ansi(output_line)
-                self.ctx.logger.log(
-                    output_line, level=self.ctx.logger.verbose, stream=True
+                if not started_stream:
+                    self._ctx.logger.log(
+                        "Command Output:", level=self._ctx.logger.verbose
+                    )
+                    started_stream = True
+                self._ctx.logger.log(
+                    output_line, level=self._ctx.logger.verbose, stream=True
                 )
 
         output, _ = process.communicate()  # Get full output (stdout + stderr)
@@ -614,13 +622,13 @@ class CommandExecutor:
                 f"container, but a container object was not provided."
             )
 
-        self.ctx.logger.log(
+        self._ctx.logger.log(
             f"Executing command in container '{container.name}':\n{command}",
-            level=self.ctx.logger.verbose,
+            level=self._ctx.logger.verbose,
         )
 
         # Create exec handler and execute the command
-        exec_handler = self.ctx.api_client.exec_create(
+        exec_handler = self._ctx.api_client.exec_create(
             container.name,
             cmd=command,
             environment=kwargs.get("environment", {}),
@@ -629,7 +637,7 @@ class CommandExecutor:
         )
 
         # `output` is a generator that yields response chunks
-        output_generator = self.ctx.api_client.exec_start(exec_handler, stream=True)
+        output_generator = self._ctx.api_client.exec_start(exec_handler, stream=True)
 
         # Output from the generator is returned as bytes, so they need to be
         # decoded to strings. Response chunks are not guaranteed to be full
@@ -638,13 +646,9 @@ class CommandExecutor:
         # remainder of the chunk (if any) resets the `full_line` var, then log
         # dumped when the next newline is received.
 
-        if not kwargs.get("suppress_output", False):
-            self.ctx.logger.log(
-                "Command Output:", level=self.ctx.logger.verbose
-            )
-
         output = ""
         full_line = ""
+        started_stream = False
         for chunk in output_generator:
             chunk = self._strip_ansi(chunk.decode())
             output += chunk
@@ -652,8 +656,13 @@ class CommandExecutor:
             if len(chunk) > 1:  # Indicates newline present
                 full_line += chunk[0]
                 if not kwargs.get("suppress_output", False):
-                    self.ctx.logger.log(
-                        full_line, level=self.ctx.logger.verbose, stream=True
+                    if not started_stream:
+                        self._ctx.logger.log(
+                            "Command Output:", level=self._ctx.logger.verbose
+                        )
+                        started_stream = True
+                    self._ctx.logger.log(
+                        full_line, level=self._ctx.logger.verbose, stream=True
                     )
                     full_line = ""
                 if chunk[1]:
@@ -663,10 +672,10 @@ class CommandExecutor:
 
         # Catch lingering full line post-loop
         if not kwargs.get("suppress_output", False) and full_line:
-            self.ctx.logger.log(full_line, level=self.ctx.logger.verbose, stream=True)
+            self._ctx.logger.log(full_line, level=self._ctx.logger.verbose, stream=True)
 
         # Get the exit code
-        return_code = self.ctx.api_client.exec_inspect(exec_handler["Id"]).get(
+        return_code = self._ctx.api_client.exec_inspect(exec_handler["Id"]).get(
             "ExitCode"
         )
 
@@ -691,9 +700,9 @@ class CommandExecutor:
         if not container:
             host_environment = os.environ.copy()
         else:
-            host_environment_list = self.ctx.api_client.inspect_container(container.id)[
-                "Config"
-            ]["Env"]
+            host_environment_list = self._ctx.api_client.inspect_container(
+                container.id
+            )["Config"]["Env"]
             host_environment = {}
             for env_var in host_environment_list:
                 env_var = utils.parse_key_value_pair(env_var)

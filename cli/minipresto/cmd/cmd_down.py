@@ -13,7 +13,7 @@ from minipresto.settings import RESOURCE_LABEL
 
 # fmt: off
 @click.command("down", help="""
-Brings down all running Minipresto containers. This command follows the behavior
+Bring down running Minipresto containers. This command follows the behavior
 of `docker-compose down` where containers are both stopped and removed.
 """)
 @click.option("-k", "--keep", is_flag=True, default=False, help="""

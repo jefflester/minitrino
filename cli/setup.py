@@ -5,10 +5,15 @@ from setuptools import setup
 
 setup(
     name="Minipresto",
-    version="0.0",
+    version="1.0",
     packages=["minipresto", "minipresto.cmd"],
     include_package_data=True,
-    install_requires=["click", "colorama", "docker", "pyyaml",],
+    install_requires=[
+        "click",
+        "colorama",
+        "docker",
+        "pyyaml",
+    ],
     entry_points="""
         [console_scripts]
         minipresto=minipresto.cli:cli

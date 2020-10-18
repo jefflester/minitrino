@@ -14,7 +14,7 @@ from minipresto.settings import CONFIG_TEMPLATE
 
 # fmt: off
 @click.command("config", help="""
-Edit Minipresto user configuration.
+Edit the Minipresto user configuration file.
 """)
 @click.option("-r", "--reset", is_flag=True, default=False, help="""
 Resets Minipresto user configuration directory and creates template config

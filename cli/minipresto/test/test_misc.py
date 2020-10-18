@@ -24,6 +24,7 @@ def main():
             "--name",
             "test",
         ],  # Applicable only when snapshotting active environment
+        ["-v", "modules", "--running"],
     )
     test_env()
     test_multiple_env()
@@ -33,6 +34,8 @@ def main():
 def test_daemon_off_all(*args):
     """Verifies that each Minipresto command properly exits properly if the
     Docker daemon is off or unresponsive."""
+
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     def run_daemon_assertions(result):
         """Runs standard assertions."""
@@ -55,6 +58,8 @@ def test_daemon_off_all(*args):
 def test_env():
     """Verifies that an environment variable can be successfully passed in."""
 
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
+
     result = helpers.execute_command(
         ["-v", "--env", "COMPOSE_PROJECT_NAME=test", "version"]
     )
@@ -68,6 +73,8 @@ def test_env():
 def test_multiple_env():
     """Verifies that multiple environment variables can be successfully passed
     in."""
+
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     result = helpers.execute_command(
         [
@@ -98,6 +105,8 @@ def test_invalid_env():
     """Verifies that an invalid environment variable will cause the CLI to exit
     with a non-zero status code."""
 
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
+
     result = helpers.execute_command(
         ["-v", "--env", "COMPOSE_PROJECT_NAMEtest", "version"]
     )
@@ -105,22 +114,12 @@ def test_invalid_env():
     assert result.exit_code == 2
     assert "Invalid key-value pair" in result.output
 
-    result = helpers.execute_command(
-        ["-v", "--env", "=", "version"]
-    )
+    result = helpers.execute_command(["-v", "--env", "=", "version"])
 
     assert result.exit_code == 2
     assert "Invalid key-value pair" in result.output
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
-
-
-def test_docker_host():
-    """Validates you can connect to another Docker host."""
-
-
-def test_symlink_paths():
-    """Ensures Minipresto can find paths from symlinks."""
 
 
 if __name__ == "__main__":

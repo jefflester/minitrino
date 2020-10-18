@@ -32,6 +32,8 @@ def test_images():
     """Verifies that images with the standard Minipresto label applied to them
     are removed."""
 
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
+
     helpers.execute_command(["provision", "--module", "test"])
     helpers.execute_command(["down", "--sig-kill"])
     result = helpers.execute_command(["-v", "remove", "--images"])
@@ -55,6 +57,8 @@ def test_volumes():
     """Verifies that volumes with the standard Minipresto label applied to them
     are removed."""
 
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
+
     helpers.execute_command(["provision", "--module", "test"])
     helpers.execute_command(["down", "--sig-kill"])
     result = helpers.execute_command(["-v", "remove", "--volumes"])
@@ -76,6 +80,8 @@ def test_volumes():
 
 def test_label():
     """Verifies that only images with the given label are removed."""
+
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     helpers.execute_command(["provision", "--module", "test"])
     helpers.execute_command(["down", "--sig-kill"])
@@ -111,6 +117,8 @@ def test_label():
 
 def test_multiple_labels():
     """Verifies that images with any of the given labels are removed."""
+
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     helpers.execute_command(["provision", "--module", "test"])
     helpers.execute_command(["down", "--sig-kill"])
@@ -150,6 +158,8 @@ def test_invalid_label():
     """Verifies that images with the Minipresto label applied to them are
     removed."""
 
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
+
     helpers.execute_command(["provision", "--module", "test"])
     helpers.execute_command(["down", "--sig-kill"])
     result = helpers.execute_command(
@@ -173,6 +183,8 @@ def test_invalid_label():
 
 def test_all():
     """Verifies that all Minipresto resources are removed."""
+
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     helpers.execute_command(["provision", "--module", "test"])
     helpers.execute_command(["down", "--sig-kill"])
@@ -203,6 +215,8 @@ def test_all():
 def test_remove_dependent_resources_running():
     """Verifies that a dependent resources (tied to active containers) cannot be
     removed."""
+
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     helpers.execute_command(["provision", "--module", "test"])
     result = helpers.execute_command(["-v", "remove", "--images", "--volumes"], command_input="y\n")
@@ -235,6 +249,8 @@ def test_remove_dependent_resources_running():
 def test_remove_dependent_resources_stopped():
     """Verifies that a dependent resources (tied to stopped containers) cannot
     be removed."""
+
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     helpers.execute_command(["provision", "--module", "test"])
     subprocess.call("docker stop test", shell=True)
@@ -283,6 +299,8 @@ def test_remove_dependent_resources_force():
     be removed if tied to any container, whether it is active or stopped. This
     is a Docker-level restriction."""
 
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
+
     helpers.execute_command(["provision", "--module", "test"])
     subprocess.call("docker stop test", shell=True)
     result = helpers.execute_command(
@@ -324,6 +342,8 @@ def assert_docker_resource_count(*args):
     - `resource_type`: Resource type (container, volume, image)
     - `label`: Label to filter by
     - `expected_count`: The expected length of the returned list"""
+
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     for arg in args:
         resource_type = arg.get("resource_type", None)

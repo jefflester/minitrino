@@ -51,6 +51,8 @@ def test_snapshot_no_directory():
     """Verifies that a snapshot can be created when there is no existing
     snapshots directory in the Minipresto user home directory."""
 
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
+
     cleanup()
     subprocess.call(f"rm -rf {helpers.MINIPRESTO_USER_SNAPSHOTS_DIR}", shell=True)
     result = helpers.execute_command(
@@ -66,6 +68,8 @@ def test_snapshot_no_directory():
 def test_snapshot_active_env():
     """Verifies that a snapshot can be successfully created from an active
     environment."""
+
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     cleanup()
     helpers.execute_command(["-v", "provision", "--module", "test"])
@@ -83,6 +87,8 @@ def test_snapshot_active_env():
 def test_snapshot_standalone():
     """Verifies that a the standlone Presto module can be snapshotted."""
 
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
+
     cleanup()
     result = helpers.execute_command(
         ["-v", "snapshot", "--name", "test"],
@@ -90,7 +96,7 @@ def test_snapshot_standalone():
     )
 
     run_assertions(result, False)
-    assert "Snapshotting Presto module and nothing else" in result.output
+    assert "Snapshotting Presto resources only" in result.output
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
 
@@ -98,6 +104,8 @@ def test_snapshot_standalone():
 def test_snapshot_inactive_env():
     """Verifies that a snapshot can be successfully created from an inactive
     environment."""
+
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     cleanup()
     result = helpers.execute_command(
@@ -114,6 +122,8 @@ def test_snapshot_inactive_env():
 def test_valid_name():
     """Tests that all valid characters can be present and succeed for a given
     snapshot name."""
+
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     cleanup()
     result = helpers.execute_command(
@@ -133,6 +143,8 @@ def test_invalid_name():
     """Tests that all valid characters can be present and succeed for a given
     snapshot name."""
 
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
+
     cleanup()
     result = helpers.execute_command(
         ["-v", "snapshot", "--name", "##.my-test?", "--module", "test"],
@@ -148,6 +160,8 @@ def test_invalid_name():
 def test_specific_directory():
     """Tests that the snapshot file can be saved in a user-specified
     directory."""
+
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     cleanup()
     result = helpers.execute_command(
@@ -175,6 +189,8 @@ def test_specific_directory():
 def test_specific_directory_invalid():
     """Tests that the snapshot file cannot be saved in an invalid directory."""
 
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
+
     cleanup()
     result = helpers.execute_command(
         [
@@ -199,6 +215,8 @@ def test_command_snapshot_file():
     file (these are written when a snapshot is created so that other users can
     easily reproduce the environment)."""
 
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
+
     command_snapshot_file = os.path.join(
         helpers.MINIPRESTO_USER_SNAPSHOTS_DIR, "test", "provision-snapshot.sh"
     )
@@ -222,6 +240,8 @@ def test_force():
     """Verifies that the user can override the check to see if the resulting
     tarball exists."""
 
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
+
     result = helpers.execute_command(
         ["-v", "snapshot", "--name", "test", "--module", "test", "--force"],
         command_input="y\n",
@@ -237,6 +257,8 @@ def test_force():
 def test_no_scrub():
     """Verifies that the user config file is retained in full when scrubbing is
     disabled."""
+
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     helpers.make_sample_config()
     result = helpers.execute_command(
@@ -256,6 +278,8 @@ def test_no_scrub():
 def test_scrub():
     """Verifies that sensitive data in user config file is scrubbed when
     scrubbing is enabled."""
+
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     helpers.make_sample_config()
     result = helpers.execute_command(

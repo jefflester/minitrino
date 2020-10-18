@@ -18,6 +18,8 @@ def main():
 def test_version():
     """Tests for correct version output."""
 
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
+
     result = helpers.execute_command(["version"])
     assert pkg_resources.require("Minipresto")[0].version in result.output
 

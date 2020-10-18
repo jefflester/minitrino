@@ -87,7 +87,7 @@ def cli(ctx, modules, name, directory, force, no_scrub):
         if not modules:
             ctx.logger.log(
                 f"No running Minipresto modules to snapshot. Snapshotting "
-                f"Presto module and nothing else.",
+                f"Presto resources only.",
                 level=ctx.logger.verbose,
             )
         else:

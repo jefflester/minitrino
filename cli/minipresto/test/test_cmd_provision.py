@@ -31,6 +31,8 @@ def test_standalone():
     """Verifies that a standalone Presto container is provisioned when no
     options are passed in."""
 
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
+
     result = helpers.execute_command(["-v", "provision"])
 
     assert result.exit_code == 0
@@ -49,6 +51,8 @@ def test_standalone():
 def test_invalid_module():
     """Verifies that a non-zero status code is returned when attempting to
     provision an invalid module."""
+
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     result = helpers.execute_command(
         ["-v", "provision", "--module", "hive-s3", "--module", "not-a-real-module"]
@@ -70,6 +74,8 @@ def test_docker_native():
 
     This function also calls the bootstrap script test functions."""
 
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
+
     result = helpers.execute_command(
         ["-v", "provision", "--module", "test", "--docker-native", "--build"]
     )
@@ -87,6 +93,8 @@ def test_docker_native():
 
 def test_bootstrap_script(result):
     """Ensures that bootstrap scripts properly execute in containers."""
+
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     assert all(
         (
@@ -121,6 +129,8 @@ def test_bootstrap_re_execute():
     """Ensures that bootstrap scripts do not execute if they have already
     executed."""
 
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
+
     result = helpers.execute_command(["-v", "provision", "--module", "test"])
 
     assert result.exit_code == 0
@@ -137,6 +147,8 @@ def test_bootstrap_re_execute():
 def test_valid_user_config():
     """Ensures that valid, user-defined Presto/JVM config can be successfully
     appended to Presto config files."""
+
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     result = helpers.execute_command(
         [
@@ -188,6 +200,8 @@ def test_valid_user_config():
 def test_duplicate_config_props():
     """Ensures that duplicate configuration properties in Presto are logged as a
     warning to the user."""
+
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     helpers.execute_command(["-v", "provision"])
 

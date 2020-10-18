@@ -23,6 +23,8 @@ def test_invalid_module():
     """Ensures Minipresto exists with a user error if an invalid module name is
     provided."""
 
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
+
     result = helpers.execute_command(["-v", "modules", "--module", "not-a-real-module"])
 
     assert result.exit_code == 2
@@ -33,6 +35,8 @@ def test_invalid_module():
 
 def test_valid_module():
     """Ensures the `module` command works when providing a valid module name."""
+
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     result = helpers.execute_command(["-v", "modules", "--module", "test"])
 
@@ -45,6 +49,8 @@ def test_valid_module():
 def test_all_modules():
     """Ensures that all module metadata is printed to the console if a module
     name is not passed to the command."""
+
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     result = helpers.execute_command(["-v", "modules"])
 
@@ -64,6 +70,8 @@ def test_json():
     """Ensures the `module` command can output module metadata in JSON
     format."""
 
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
+
     result = helpers.execute_command(["-v", "modules", "--module", "test", "--json"])
 
     assert result.exit_code == 0
@@ -74,6 +82,8 @@ def test_json():
 
 def test_running():
     """Ensures the `module` command can output metadata for running modules."""
+
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     result = helpers.execute_command(["-v", "provision", "--module", "test"])
     result = helpers.execute_command(["-v", "modules", "--json", "--running"])

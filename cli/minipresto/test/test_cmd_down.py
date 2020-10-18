@@ -23,6 +23,8 @@ def test_no_containers():
     """Verifies that the down command functions appropriately when no containers
     are running."""
 
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
+
     result = helpers.execute_command(["-v", "down"])
 
     assert result.exit_code == 0
@@ -39,6 +41,8 @@ def test_no_containers():
 def test_running_containers():
     """Verifies that the down command works when multiple containers are
     running. This also verifies the --sig-kill option works."""
+
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     helpers.execute_command(["-v", "provision", "--module", "test"])
     result = helpers.execute_command(["-v", "down", "--sig-kill"])
@@ -63,6 +67,8 @@ def test_running_containers():
 
 def test_keep():
     """Verifies that the `--keep` flag works as expected."""
+
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     helpers.execute_command(["-v", "provision", "--module", "test"])
     result = helpers.execute_command(["-v", "down", "--keep"])

@@ -343,8 +343,6 @@ def assert_docker_resource_count(*args):
     - `label`: Label to filter by
     - `expected_count`: The expected length of the returned list"""
 
-    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
-
     for arg in args:
         resource_type = arg.get("resource_type", None)
         label = arg.get("label", None)

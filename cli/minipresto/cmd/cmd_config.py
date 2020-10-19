@@ -40,17 +40,15 @@ def cli(ctx, reset):
             f"Opening existing config file at path: {ctx.config_file}",
             level=ctx.logger.verbose,
         )
-        click.edit(
-            filename=ctx.config_file,
-            editor=ctx.env.get_var(key="TEXT_EDITOR", default=None),
-        )
+        edit_file()
     else:
         ctx.logger.log(
             f"No config file found at path: {ctx.config_file}. "
             f"Creating template config file and opening for edits...",
             level=ctx.logger.verbose,
         )
-        copy_template_and_edit()
+        write_template()
+        edit_file()
 
 
 @minipresto.cli.pass_environment
@@ -77,14 +75,33 @@ def _reset(ctx):
     ctx.logger.log(
         "Created Minipresto configuration directory", level=ctx.logger.verbose
     )
-    copy_template_and_edit()
+    write_template()
+    edit_file()
     sys.exit(0)
 
 
 @minipresto.cli.pass_environment
-def copy_template_and_edit(ctx):
-    """Copies the configuration template and opens the file for edits."""
+def write_template(ctx):
+    """Writes configuration template."""
 
     with open(ctx.config_file, "w") as config_file:
         config_file.write(CONFIG_TEMPLATE.lstrip())
-    click.edit(filename=ctx.config_file)
+
+    editor = ctx.env.get_var(key="TEXT_EDITOR", default=None)
+    if not editor:
+        editor = None
+
+
+@minipresto.cli.pass_environment
+def edit_file(ctx):
+    """Gets the editor from user configuration and passes to the Click edit
+    function if the value is present."""
+
+    editor = ctx.env.get_var(key="TEXT_EDITOR", default=None)
+    if not editor:
+        editor = None
+
+    click.edit(
+        filename=ctx.config_file,
+        editor=editor,
+    )

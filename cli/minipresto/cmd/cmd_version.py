@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import click
-import pkg_resources
 import minipresto.cli
 import minipresto.utils as utils
 
@@ -19,5 +18,5 @@ Display the Minipresto version.
 def cli(ctx):
     """Version command for Minipresto."""
 
-    version = pkg_resources.require("Minipresto")[0].version
+    version = utils.get_cli_ver()
     ctx.logger.log(f"Minipresto version: {version}")

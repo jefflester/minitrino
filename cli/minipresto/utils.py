@@ -1,8 +1,10 @@
 #!usr/bin/env/python3
 # -*- coding: utf-8 -*-
 
+import os
 import sys
 import traceback
+import pkg_resources
 import minipresto.errors as err
 
 from click import echo, style, prompt
@@ -192,7 +194,6 @@ def exception_handler(func):
     return wrapper
 
 
-@exception_handler
 def handle_missing_param(params=[]):
     """Handles missing parameters required for function calls. This should be
     used to signal a programmatic error, not a user error.
@@ -216,7 +217,6 @@ def handle_missing_param(params=[]):
     return err.MiniprestoError(f"Parameters {params} required to execute function.")
 
 
-@exception_handler
 def check_daemon(docker_client):
     """Checks if the Docker daemon is running. If an exception is thrown, it is
     handled."""
@@ -267,8 +267,7 @@ def parse_key_value_pair(key_value_pair, err_type=err.MiniprestoError):
 
     ### Return Values
     - A list `[k, v]`, but will return `None` if the stripped input is an empty
-      string.
-    """
+      string."""
 
     # Return None of empty string or special char (i.e. '\n')
     key_value_pair = key_value_pair.strip()
@@ -294,6 +293,30 @@ def parse_key_value_pair(key_value_pair, err_type=err.MiniprestoError):
         raise err_type(err_msg)
 
     return key_value_pair
+
+
+def get_cli_ver():
+    """Returns the version of the Minipresto CLI."""
+
+    return pkg_resources.require("Minipresto")[0].version
+
+
+def get_lib_ver(library_path=""):
+    """Returns the version of the Minipresto library.
+
+    ### Parameters
+    - `library_path`: The Minipresto library directory."""
+
+    version_file = os.path.join(library_path, "version")
+    try:
+        with open(version_file, "r") as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    return line
+            return "NOT FOUND"
+    except:
+        return "NOT FOUND"
 
 
 def validate_yes(response=""):

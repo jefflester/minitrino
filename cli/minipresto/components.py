@@ -1,7 +1,6 @@
 #!usr/bin/env/python3
 # -*- coding: utf-8 -*-
 
-
 import os
 import json
 import re
@@ -9,7 +8,6 @@ import yaml
 import docker
 import subprocess
 
-from pathlib import Path
 from configparser import ConfigParser
 
 import minipresto.utils as utils
@@ -68,39 +66,88 @@ class Environment:
         self.minipresto_user_dir = self._handle_minipresto_user_dir()
         self.config_file = self._get_config_file()
         self.snapshot_dir = os.path.join(self.minipresto_user_dir, "snapshots")
-        self.minipresto_lib_dir = self._get_minipresto_lib_dir()
+        self.minipresto_lib_dir = ""
 
     @utils.exception_handler
-    def _user_init(self, verbose=False, user_env=[]):
-        """Initialize attributes that depend on user-provided input (or lack
-        thereof)."""
+    def _user_init(self, verbose=False, user_env=[], skip_lib=False):
+        """Initialize attributes that depend on user-provided input."""
 
+        # Update static attributes
         self.verbose = verbose
         self._user_env = user_env
 
+        # Instantiate/update interactive attributes
         self.logger = utils.Logger(self.verbose)
         self.env = EnvironmentVariables(self)
-        self.modules = Modules(self)
+
+        # Skip the library-related procedures if the command doesn't require any
+        # information about the library
+        if not skip_lib:
+
+            # Determine the directory of the Minipresto library. The directory
+            # can be set in four ways (this is the order of precedence):
+            # 1. Passing `LIB_PATH` to the CLI's `--env` option sets the library
+            #    directory for the current command.
+            # 2. The `minipresto.cfg` file's `LIB_PATH` variable sets the
+            #    library directory if present.
+            # 3. The path `~/.minipresto/lib/` is used as the default lib path
+            #    if the `LIB_PATH` var is not found.
+            # 4. As a last resort, Minipresto will check to see if the library
+            #    exists in relation to the positioning of the `components.py`
+            #    file and assumes the project is being run out of a cloned
+            #    repository.
+
+            env_lib_dir = self.env.get_var("LIB_PATH", "")
+            if env_lib_dir:
+                self.minipresto_lib_dir = env_lib_dir
+            elif os.path.isdir(os.path.join(self.minipresto_user_dir, "lib")):
+                self.minipresto_lib_dir = os.path.join(self.minipresto_user_dir, "lib")
+            else:  # Use repo root, fail if this doesn't exist
+                cwd = os.path.dirname(os.path.realpath(__file__))
+                self.minipresto_lib_dir = os.path.join(cwd, "..", "..", "lib")
+
+            if not os.path.isdir(self.minipresto_lib_dir):
+                raise err.UserError(
+                    "You must provide a path to a compatible Minipresto library.",
+                    f"You can point to a Minipresto library a few different "
+                    f"ways:\n(1) You can set the 'LIB_PATH' variable in your "
+                    f"Minipresto config via the command 'minipresto config'--this "
+                    f"should be placed under the '[CLI]' section.\n(2) You can "
+                    f"pass in 'LIB_PATH' as an environment variable for the current "
+                    f"command, e.g. 'minipresto -e LIB_PATH=<path/to/lib> ...'\n"
+                    f"(3) If the above variable is not found, Minipresto will check "
+                    f"if '~/.minipresto/lib/' is a valid directory.\n(4) "
+                    f"If you are running Minipresto out of a cloned repo, the library "
+                    f"path will be automatically detected without the need to perform "
+                    f"any of the above.",
+                )
+
+            self.logger.log(
+                f"Library path set to: {self.minipresto_lib_dir}",
+                level=self.logger.verbose,
+            )
+
+            # Now that we know where the library is, we can try to parse the env
+            # file and obtain all of the modules
+            self.env._parse_library_env()
+            self.modules = Modules(self)
+
+        self.env._log_env_vars()
         self.cmd_executor = CommandExecutor(self)
         self._get_docker_clients()
 
-        env_lib_dir = self.env.get_var("LIB_PATH", "")
-        if env_lib_dir:
-            self.minipresto_lib_dir = env_lib_dir
-
-        if not os.path.isdir(self.minipresto_lib_dir):
-            raise err.UserError(
-                "You must provide a path to a compatible Minipresto library.",
-                """You can point to a Minipresto library a few different
-                ways.\n(1) You can set the 'LIB_PATH' variable in your
-                Minipresto config via the command 'minipresto config'--this
-                should be placed under the '[CLI]' section.\n(2) For e.g.,
-                'minipresto -e LIB_PATH=<path/to/lib> ...' for any command; this
-                will set the library path for the runtime of the command.\n(3)
-                If you are running Minipresto out of a cloned repo, the library
-                path will be automatically detected without the need to perform
-                either of the above.""",
-            )
+        # Warn the user if the library and CLI vers don't match
+        if not skip_lib:
+            cli_ver = utils.get_cli_ver()
+            lib_ver = utils.get_lib_ver(self.minipresto_lib_dir)
+            if cli_ver != lib_ver:
+                self.logger.log(
+                    f"CLI version {cli_ver} and library version {lib_ver} "
+                    f"do not match. You can update the Minipresto library "
+                    f"version to match the CLI version by running 'minipresto "
+                    f"lib_install'.",
+                    level=self.logger.warn,
+                )
 
     def _handle_minipresto_user_dir(self):
         """Checks if a Minipresto directory exists in the user home directory.
@@ -127,24 +174,6 @@ class Environment:
                 level=self.logger.warn,
             )
         return config_file
-
-    def _get_minipresto_lib_dir(self):
-        """Determines the directory of the Minipresto library. The directory can
-        be set in three ways (this is the order of precedence):
-        1. Passing `LIB_PATH` to the CLI's `--env` option sets the library
-           directory for the current command.
-        2. The `minipresto.cfg` file's `LIB_PATH` variable sets the library
-           directory if present.
-        3. The CLI root is used to set the library directory and assumes the
-           project is being run out of a cloned repository."""
-
-        # The default is repo root. The check for the LIB_PATH variable happens
-        # in _user_init() once called by the CLI's entrypoint, as this is
-        # dependent on user-provided env variables. The final library path is
-        # checked in the _user_init() method.
-
-        repo_root = Path(os.path.abspath(__file__)).resolve().parents[2]
-        return os.path.join(repo_root, "lib")
 
     def _get_docker_clients(self):
         """Gets DockerClient and APIClient objects. References the DOCKER_HOST
@@ -196,9 +225,7 @@ class EnvironmentVariables:
         self._ctx = ctx
 
         self._parse_minipresto_config()
-        self._parse_library_env()
         self._parse_user_env()
-        self._log_env_vars()
 
     def get_var(self, key="", default=None):
         """Gets and returns a variable from a section of the environment

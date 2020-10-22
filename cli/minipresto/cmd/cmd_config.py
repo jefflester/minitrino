@@ -17,8 +17,10 @@ from minipresto.settings import CONFIG_TEMPLATE
 Edit the Minipresto user configuration file.
 """)
 @click.option("-r", "--reset", is_flag=True, default=False, help="""
-Resets Minipresto user configuration directory and creates template config
-file.
+Reset the Minipresto user configuration directory and create a new config file.
+
+WARNING: This will remove your configuration file (if it exists) and replace it
+with a template.
 """)
 # fmt: on
 
@@ -61,7 +63,7 @@ def _reset(ctx):
         os.mkdir(ctx.minipresto_user_dir)
     except:
         response = ctx.logger.prompt_msg(
-            "Configuration directory exists. Overwrite? [Y/N]"
+            f"Configuration directory exists. Overwrite? [Y/N]"
         )
         if utils.validate_yes(response):
             rmtree(ctx.minipresto_user_dir)

@@ -15,6 +15,7 @@ MODULE_CATALOG = "catalog"
 MODULE_SECURITY = "security"
 MODULE_RESOURCES = "resources"
 ETC_PRESTO = "/usr/lib/presto/etc"
+LIB_INDEPENDENT_CMDS = ["lib_install"]
 
 # Snapshots
 SNAPSHOT_ROOT_FILES = ["docker-compose.yml", ".env", "Dockerfile"]

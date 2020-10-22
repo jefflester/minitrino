@@ -14,7 +14,7 @@ locally.
   - [Removing Resources](#removing-resources)
   - [Shutting Down Environments](shutting-down-environments)
   - [Taking Environment Snapshots](#taking-environment-snapshots)
-  - [Manage Configuration](#manage-configuration)
+  - [Manage User Configuration](#manage-user-configuration)
   - [Top-Level CLI Options](#top-level-cli-options)
   - [Minipresto Library](#Minipresto-library)
   - [Environment Variables](#environment-variables)
@@ -29,11 +29,18 @@ locally.
 - Docker Compose 1.26.2+
 - Python 3.6+
 - Pip
-- Unix OS
+- Linux or Mac OS
 
 -----
 
 ## Installation
+
+### End Users
+Minipresto is available on PyPy and the library is available for public download
+on S3. To install the Minipresto CLI, run `pip install minipresto`. To install
+the library, run `minipresto lib --install`.
+
+### Developers
 In the project's root, run `./install.sh` to install the Minipresto CLI. If you
 encounter errors during installation, run `sudo -H ./install.sh -v`.
 
@@ -43,29 +50,40 @@ encounter errors during installation, run `sudo -H ./install.sh -v`.
 Minipresto is built with [Click](https://click.palletsprojects.com/en/7.x/), a
 popular, open-source toolkit used to build Python-based CLIs.
 
-Minipresto commands are documented below. Note that many command options can be
-specified with a shorthand alternative, which is the first letter of each
-option, i.e. `--catalog` can be `-c`.
+All Minipresto commands/options are documented below. Note that many command
+options can be specified with a shorthand alternative, which is the first letter
+of each option, i.e. `--catalog` can be `-c`.
 
 ### Provisioning Environments
 You can provision an environment via the `provision` command.
 
-- `provision`: Executes a `docker-compose` command and brings up an environment. 
-  - `--catalog`: Catalog module to provision. Can be none, one, or many.
-  - `--security`: Security module to provision. Can be none, one, or many.
-  - `--env`: Add or override environment variables. If any of the variables
-    overlap with variables in the library's `.env` file or the `minipresto.cfg`
-    file, the variable will be overridden with what is provided in `--env`. Can
-    be none, one, or many.
-  - `--no-rollback`: Will not rollback provisioned resources in the event of an
-    error. Defaults to `False`.
-  - `--docker-native`: Appends the constructed Compose command with native
-    Docker Compose CLI options. Can be none, one, or many. To use this, simply
-    pass in additional Docker Compose options, i.e. `minipresto provision
-    --docker-native '--remove-orphans --force-recreate'` or `minipresto
-    provision -d --build`. 
-    - When passing multiple parameters to this option, the list needs to be
-      space-delimited and surrounded with double or single quotes.
+```
+Usage: minipresto provision [OPTIONS]
+
+  Provision an environment based on specified modules. All options are
+  optional and can be left empty.
+
+Options:
+  -m, --module TEXT         A specific module to provision.
+  -n, --no-rollback         Do not rollback provisioned resources in the event
+                            of an error.
+
+  -d, --docker-native TEXT  Appends native docker-compose commands to the
+                            generated docker-compose shell command. Run
+                            `docker-compose up --help` to see all available
+                            options.
+                            
+                            Example: minipresto provision --docker-native
+                            --build
+                            
+                            Example: minipresto provision --docker-native '--
+                            remove-orphans --force-recreate'
+
+  --help                    Show this message and exit.
+```
+
+Notes:
+
 - If no options are passed in, the CLI will provision a standalone Presto
   container.
 - The command cannot currently be used to append additional modules to an active
@@ -75,13 +93,13 @@ You can provision an environment via the `provision` command.
 Sample `provision` commands:
 
 ```bash
-minipresto provision --catalog hive-s3 --catalog elasticsearch --security ldap --docker-native '--build --force-recreate'
-minipresto provision -c hive-s3 -c elasticsearch -s ldap
-minipresto provision --env STARBURST_VER=332-e.6
+minipresto provision --module hive-s3 --module elasticsearch --module ldap --docker-native '--build --force-recreate'
+minipresto provision -m hive-s3 -m elasticsearch -m ldap
+minipresto --env STARBURST_VER=332-e.6 provision
 ```
 
-This command constructs a Docker Compose command and executes it in the host
-shell. The commands look like:
+The `provision` command constructs a Docker Compose command and executes it in
+the host shell. The commands look like:
 
 ```bash
 ENV_VAR_1=SOMETHING ENV_VAR_2=SOMETHING ENV_VAR_3=${ENV_VAR_3} ... \
@@ -96,9 +114,9 @@ Using the structure of the Minipresto library, it is able to merge multiple
 Docker Compose files together.
 
 #### Using Licensed Starburst Features
-Note that if you are using licensed features, you will need to provide a path to
-a valid Starburst license. This can be set via `minipresto config` or provided
-via the `--env` option at command runtime. The variable for this is
+If you are using licensed features, you will need to provide a path to a valid
+Starburst license. This can be set via `minipresto config` or provided via the
+`--env` option at command runtime. The variable for this is
 `STARBURST_LIC_PATH`. 
 
 Additionally, you need to uncomment the volume mount in the library's root
@@ -114,17 +132,27 @@ Additionally, you need to uncomment the volume mount in the library's root
 ### Removing Resources
 You can remove resources with the `remove` command.
 
-- `remove`: Removes any persistent resources associated with Minipresto
-  environments. If no options are selected, **all** Minipresto resources are
-  removed.
-  - `--images`: Limit the removal to Minipresto images. 
-  - `--volumes`: Limit the removal to Minipresto volumes. 
-  - `--label`: Target a specific label for removal (requires a valid key-value
-    pair). Can be used in combination with other options. Can be none, one, or
-    many. Each label will be treated as a separate target for removal. 
-  - `--force`: Forces the removal of Minipresto resources. Defaults to `False`.
+```
+Usage: minipresto remove [OPTIONS]
+
+  Remove Minipresto resources.
+
+Options:
+  -i, --images      Remove Minipresto images.
+  -v, --volumes     Remove Minipresto container volumes.
+  -l, --label TEXT  Target specific labels for removal (format: key-value
+                    pair(s)).
+
+  -f, --force       Force the removal of Minipresto resources. Normal Docker
+                    removal restrictions apply.
+
+  --help            Show this message and exit.
+```
+
+Notes:
+
 - Named volumes tied to any *existing* container cannot be forcibly removed,
-  neither by Minipresto nor by the Docker CLI.
+  neither by Minipresto nor by the Docker CLI/SDK.
 - Images tied to stopped containers can be forcibly removed, but any image tied
   to a running container cannot be forcibly removed, neither by Minipresto nor
   by the Docker CLI.
@@ -140,11 +168,20 @@ This will only remove volumes associated to the Postgres catalog module.
 ### Shutting Down Environments
 You can shut down an active environment with the `down` command.
 
-- `down`: Stops and removes all running Minipresto containers (exactly what
-  `docker-compose down` does).
-  - `--keep`: Prevents the removal of containers. With this flag, containers
-    will only be stopped, preserving any unnamed container volumes (therefore
-    keeping filesystem changes). Defaults to `False`.
+```
+Usage: minipresto down [OPTIONS]
+
+  Bring down running Minipresto containers. This command follows the
+  behavior of `docker-compose down` where containers are both stopped and
+  removed.
+
+Options:
+  -k, --keep  Does not remove containers; instead, containers will only be
+              stopped.
+
+  --sig-kill  Stop Minipresto containers without a grace period.
+  --help      Show this message and exit.
+```
 
 Sample `down` command:
 
@@ -156,24 +193,41 @@ minipresto -v down
 You can capture snapshots for both active and inactive environments with the
 `snapshot` command. 
 
-- `snapshot`: Creates a tarball of the resources required to recreate an
-  environment. This can apply to active environments where the running modules'
-  files are collected. It can also apply to an inactive environment where the
-  modules are specified with the `--catalog` and `--security` options. The
-  tarball is placed in the library's `snapshots/` directory by default.
-  - `--name`: Name of the resulting tarball file (required). Name must consist
-    of alphanumeric, hyphen, and underscore characters.
-  - `--catalog`: Catalog module to snapshot. Can be none, one, or many. If
-    provided, active resources will not be captured in the snapshot.
-  - `--security`: Security module to snapshot. Can be none, one, or many. If
-    provided, active resources will not be captured in the snapshot.
-  - `--directory`: Directory to save the resulting snapshot file in. Defaults to
-    the snapshots directory in the Minipresto library.
-  - `--force`: Override a check to see if the resulting snapshot file already
-    exists. Defaults to `False`.
-  - `--no-scrub`: Overrides the default behavior of scrubbing sensitive data
-    (access keys and passwords) from the user's `minipresto.cfg` file. Defaults
-    to `False`.
+```
+Usage: minipresto snapshot [OPTIONS]
+
+  Create a snapshot of a Minipresto environment. A tarball is placed in the
+  Minipresto `lib/snapshots/` directory.
+
+  To take a snapshot of an active environment, leave the `--module` and
+  option out of the command.
+
+  To take a snapshot of modules whether they are active or not, specify the
+  modules via the `--module` option.
+
+Options:
+  -m, --module TEXT     A specific module to snapshot.
+  -n, --name TEXT       Basename of the resulting snapshot tarball file.
+                        Allowed characters: alphanumerics, hyphens, and
+                        underscores.  [required]
+
+  -d, --directory PATH  Directory to save the resulting snapshot file in.
+                        Defaults to the snapshots directory in the Minipresto
+                        library.
+
+  -f, --force           Overwrite the file if it already exists.
+  --no-scrub            Do not scrub sensitive data from user config file.
+
+                        WARNING: all sensitive information (passwords and
+                        keys) will be kept in the user config file added to
+                        the snapshot. Only use this if you are prepared to
+                        share those secrets with another person.
+
+  --help                Show this message and exit.
+```
+
+Notes: 
+
 - Minipresto records the original `provision` command and places it in the
   snapshot file as `provision-snapshot.sh`; this can be directly executed. This
   makes it easier for others to reuse the environment and provision it
@@ -186,49 +240,69 @@ Sample `snapshot` commands:
 # called `snapshot-t2533.tar.gz` in the library's `snapshots/` directory):
 minipresto snapshot --name t-2533
 
-# Take a snapshot of an inactive environment
-minipresto snapshot -n super-sweet-env -c hive-s3 -c elasticsearch -s ldap
+# Take a snapshot of specific modules:
+minipresto snapshot -n super-cool-env -m hive-s3 -m elasticsearch -m ldap
 ```
 
-### Manage Configuration
+### Manage User Configuration
 You can manage Minipresto configuration with the `config` command. 
 
-- `config`: Manages configuration. Executing the command opens an existing
-  configuration file for edits or creates a templated configuration file if it
-  doesn't already exist. The text editor defaults to your shell's default, but
-  this can be changed via the `TEXT_EDITOR` config.
-  - `--reset`: Recreates the user home `~/.minipresto/` directory and creates a
-    templated configuration file. Defaults to `False`.
+```
+Usage: minipresto config [OPTIONS]
+
+  Edit the Minipresto user configuration file.
+
+Options:
+  -r, --reset  Reset the Minipresto user configuration directory and create a
+               new config file.
+
+               WARNING: This will remove your configuration file (if it
+               exists) and replace it with a template.
+
+  --help       Show this message and exit.
+```
 
 ### Top-Level CLI Options
 You can get help, enable verbose output, and change the runtime library
 directory for any command. 
 
-- `--help`: Displays a help menu for a specific command or for the entire CLI. 
-- `--verbose`: Logs verbose output. Can be useful for debugging purposes.
-- `--lib-path`: Changes the library directory for the command.
+```
+Usage: minipresto [OPTIONS] COMMAND [ARGS]...
 
-```bash
-# Get overall help
-minipresto --help
+  Welcome to the Minipresto command line interface.
 
-# Get command-specific help
-minipresto [COMMAND] --help
+  To report issues and ask questions, please file a GitHub issue and apply a
+  descriptive label at the GitHub repository:
+  https://github.com/jefflester/minipresto
 
-# Enable verbose output
-minipresto --verbose [COMMAND] # -v works as well
+Options:
+  -v, --verbose   Enable verbose output.
+  -e, --env TEXT  Add or override environment variables.
+
+                  Environment variables are sourced from the Minipresto
+                  library's root '.env' file as well as the user config file
+                  in '~/.minipresto/minipresto.cfg'. Variables supplied by
+                  this option will override values from either of those
+                  sources. The variables will also be passed to the
+                  environment of the shell executing commands during the
+                  'provision' command.
+
+  --help          Show this message and exit.
 ```
 
 ### Minipresto Library
-Minipresto should always point to a compatible library with the expected
-structure. The library directory can be set one of three ways, listed below in
+The Minipresto CLI should always point to a compatible library with the expected
+structure. The library directory can be set one of four ways, listed below in
 the order of precedence:
 
-1. The `--lib-dir` CLI option sets the library directory for the current
-   command.
-2. The `minipresto.cfg` configuration file sets the library directory via the
-   `LIB_PATH` config. 
-3. The CLI source code is used to set the library directory and assumes the
+1. Passing `LIB_PATH` to the CLI's `--env` option sets the library directory for
+   the current command.
+2. The `minipresto.cfg` file's `LIB_PATH` variable sets the library directory if
+   present.
+3. The path `~/.minipresto/lib/` is used as the default lib path if the
+   `LIB_PATH` var is not found.
+4. As a last resort, Minipresto will check to see if the library exists in
+   relation to the positioning of the `components.py` file and assumes the
    project is being run out of a cloned repository.
 
 If you not running out of a cloned repository, it is advisable to provide a

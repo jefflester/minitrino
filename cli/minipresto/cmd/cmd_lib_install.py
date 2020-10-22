@@ -62,11 +62,12 @@ def cli(ctx, version):
         level=ctx.logger.verbose,
     )
 
-    lib_dir = os.path.join(ctx.minipresto_user_dir, version, "lib")
+    file_basename = f"minipresto-{version}"
+    lib_dir = os.path.join(ctx.minipresto_user_dir, file_basename, "lib")
     ctx.cmd_executor.execute_commands(
-        f"tar -xzvf {tarball}",
+        f"tar -xzvf {tarball} -C {ctx.minipresto_user_dir}",
         f"mv {lib_dir} {ctx.minipresto_user_dir}",
-        f"rm -rf {tarball} {os.path.join(ctx.minipresto_user_dir, version)}",
+        f"rm -rf {tarball} {os.path.join(ctx.minipresto_user_dir, file_basename)}",
     )
 
     # Check that the library is present

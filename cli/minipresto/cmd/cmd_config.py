@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import os
-import sys
 import click
 
 import minipresto.cli
@@ -17,7 +16,8 @@ from minipresto.settings import CONFIG_TEMPLATE
 Edit the Minipresto user configuration file.
 """)
 @click.option("-r", "--reset", is_flag=True, default=False, help="""
-Reset the Minipresto user configuration directory and create a new config file.
+Reset the Minipresto user configuration file and create a new config file from a
+template.
 
 WARNING: This will remove your configuration file (if it exists) and replace it
 with a template.
@@ -30,19 +30,23 @@ with a template.
 def cli(ctx, reset):
     """Config command for Minipresto."""
 
-    if reset:
-        _reset()
-
     if not os.path.isdir(ctx.minipresto_user_dir):
         ctx.logger.log(f"No {ctx.minipresto_user_dir} directory found. Creating...")
         os.mkdir(ctx.minipresto_user_dir)
 
-    if os.path.isfile(ctx.config_file):
+    if os.path.isfile(ctx.config_file) and not reset:
         ctx.logger.log(
             f"Opening existing config file at path: {ctx.config_file}",
             level=ctx.logger.verbose,
         )
         edit_file()
+    elif os.path.isfile(ctx.config_file) and reset:
+        response = ctx.logger.prompt_msg(f"Configuration file exists. Overwrite? [Y/N]")
+        if utils.validate_yes(response):
+            write_template()
+            edit_file()
+        else:
+            ctx.logger.log(f"Opted out of recreating {ctx.minipresto_user_dir} file.")
     else:
         ctx.logger.log(
             f"No config file found at path: {ctx.config_file}. "
@@ -51,35 +55,6 @@ def cli(ctx, reset):
         )
         write_template()
         edit_file()
-
-
-@minipresto.cli.pass_environment
-def _reset(ctx):
-    """Resets Minipresto user configuration directory. If the user configuration
-    directory exists, it will prompt the user for approval before overwriting.
-    Exits after successful run with a 0 status code."""
-
-    try:
-        os.mkdir(ctx.minipresto_user_dir)
-    except:
-        response = ctx.logger.prompt_msg(
-            f"Configuration directory exists. Overwrite? [Y/N]"
-        )
-        if utils.validate_yes(response):
-            rmtree(ctx.minipresto_user_dir)
-            os.mkdir(ctx.minipresto_user_dir)
-        else:
-            ctx.logger.log(
-                f"Opted out of recreating {ctx.minipresto_user_dir} directory."
-            )
-            sys.exit(0)
-
-    ctx.logger.log(
-        "Created Minipresto configuration directory", level=ctx.logger.verbose
-    )
-    write_template()
-    edit_file()
-    sys.exit(0)
 
 
 @minipresto.cli.pass_environment

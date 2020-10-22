@@ -44,35 +44,57 @@ def cli(ctx, version):
             ctx.logger.log("Opted to skip library installation.")
             sys.exit(0)
 
-    # Download version tarball
+    download_and_extract(version)
+    ctx.logger.log("Library installation complete.")
+
+
+@minipresto.cli.pass_environment
+def download_and_extract(ctx, version=""):
+
     github_uri = f"https://github.com/jefflester/minipresto/archive/{version}.tar.gz"
     tarball = os.path.join(ctx.minipresto_user_dir, f"{version}.tar.gz")
+    file_basename = f"minipresto-{version}"  # filename after unpacking
+    lib_dir = os.path.join(ctx.minipresto_user_dir, file_basename, "lib")
 
-    cmd = f"curl -fsSL {github_uri} > {tarball}"
-    ctx.cmd_executor.execute_commands(cmd)
+    try:
+        # Download the release tarball
+        cmd = f"curl -fsSL {github_uri} > {tarball}"
+        ctx.cmd_executor.execute_commands(cmd)
+        if not os.path.isfile(tarball):
+            raise err.MiniprestoError(
+                f"Failed to download Minipresto library ({tarball} not found)."
+            )
 
-    if not os.path.isfile(tarball):
-        raise err.MiniprestoError(
-            f"Failed to download Minipresto library ({tarball} not found)."
+        # Unpack tarball and copy lib
+        ctx.logger.log(
+            f"Unpacking tarball at {tarball} and copying library...",
+            level=ctx.logger.verbose,
+        )
+        ctx.cmd_executor.execute_commands(
+            f"tar -xzvf {tarball} -C {ctx.minipresto_user_dir}",
+            f"mv {lib_dir} {ctx.minipresto_user_dir}",
         )
 
-    # Unpack tarball and copy lib
-    ctx.logger.log(
-        f"Unpacking tarball at {tarball} and copying library...",
-        level=ctx.logger.verbose,
-    )
+        # Check that the library is present
+        lib_dir = os.path.join(ctx.minipresto_user_dir, "lib")
+        if not os.path.isdir(lib_dir):
+            raise err.MiniprestoError(
+                f"Library failed to install (not found at {lib_dir})"
+            )
 
-    file_basename = f"minipresto-{version}"
-    lib_dir = os.path.join(ctx.minipresto_user_dir, file_basename, "lib")
+        # Cleanup
+        cleanup(tarball, file_basename)
+
+    except Exception as e:
+        cleanup(tarball, file_basename, False)
+        raise err.MiniprestoError(str(e))
+
+
+@minipresto.cli.pass_environment
+def cleanup(ctx, tarball="", file_basename="", trigger_error=True):
+
     ctx.cmd_executor.execute_commands(
-        f"tar -xzvf {tarball} -C {ctx.minipresto_user_dir}",
-        f"mv {lib_dir} {ctx.minipresto_user_dir}",
         f"rm -rf {tarball} {os.path.join(ctx.minipresto_user_dir, file_basename)}",
+        trigger_error=trigger_error,
     )
-
-    # Check that the library is present
-    lib_dir = os.path.join(ctx.minipresto_user_dir, "lib")
-    if not os.path.isdir(lib_dir):
-        raise err.MiniprestoError(f"Library failed to install (not found at {lib_dir})")
-
-    ctx.logger.log("Library installation complete.")
+    

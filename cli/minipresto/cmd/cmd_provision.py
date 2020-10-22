@@ -47,7 +47,6 @@ Example: minipresto provision --docker-native '--remove-orphans
 # fmt: on
 
 
-
 @utils.exception_handler
 @minipresto.cli.pass_environment
 def cli(ctx, modules, no_rollback, docker_native):
@@ -55,6 +54,7 @@ def cli(ctx, modules, no_rollback, docker_native):
     is unsuccessful, the function exits with a non-zero status code."""
 
     utils.check_daemon(ctx.docker_client)
+    check_compatibility(modules)
 
     if not modules:
         ctx.logger.log(
@@ -92,6 +92,27 @@ def cli(ctx, modules, no_rollback, docker_native):
     except Exception as e:
         rollback_provision(no_rollback)
         utils.handle_exception(e)
+
+
+@minipresto.cli.pass_environment
+def check_compatibility(ctx, modules=[]):
+    """Checks if any of the provided modules are mutually exclusive of each
+    other. If they are, a user error is raised."""
+
+    for module in modules:
+        incompatible = ctx.modules.data.get(module, {}).get("incompatible_modules", [])
+        for module_inner in modules:
+            if (module_inner in incompatible) or (
+                incompatible[0] == "*" and len(modules) > 1
+            ):
+                raise err.UserError(
+                    f"Incompatible modules detected. Tried to provision module "
+                    f"'{module_inner}', but found that the module is incompatible "
+                    f"with module '{module}'. Incompatible modules listed for module "
+                    f"'{module}' are: {incompatible}",
+                    f"You can see which modules are incompatible with this module by "
+                    f"running 'minipresto modules -m {module}'",
+                )
 
 
 @minipresto.cli.pass_environment
@@ -244,7 +265,7 @@ def execute_container_bootstrap(ctx, bootstrap="", container_name="", yaml_file=
         f"Successfully executed bootstrap script in container '{container_name}'.",
         level=ctx.logger.verbose,
     )
-    
+
     return True
 
 

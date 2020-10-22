@@ -25,6 +25,7 @@ def main():
     test_docker_native()
     test_valid_user_config()
     test_duplicate_config_props()
+    test_incompatible_modules()
 
 
 def test_standalone():
@@ -205,7 +206,10 @@ def test_duplicate_config_props():
 
     helpers.execute_command(["-v", "provision"])
 
-    cmd_chunk = "$'query.max-stage-count=85\nquery.max-stage-count=100\nquery.max-execution-time=1h\nquery.max-execution-time=2h'"
+    cmd_chunk = (
+        f"$'query.max-stage-count=85\nquery.max-stage-count=100"
+        f"\nquery.max-execution-time=1h\nquery.max-execution-time=2h'"
+    )
     subprocess.Popen(
         f'docker exec -i presto sh -c "echo {cmd_chunk} >> /usr/lib/presto/etc/config.properties"',
         shell=True,
@@ -239,6 +243,25 @@ def test_duplicate_config_props():
             in result.output,
             "-Xms1G" in result.output,
             "-Xms1G" in result.output,
+        )
+    )
+
+    helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
+    cleanup()
+
+
+def test_incompatible_modules():
+    """Verifies that chosen modules are not mutually-exclusive."""
+
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
+
+    result = helpers.execute_command(["-v", "provision", "--module", "ldap"])
+
+    assert result.exit_code == 2
+    assert all(
+        (
+            "Incompatible modules detected" in result.output,
+            "incompatible with module 'ldap'" in result.output,
         )
     )
 

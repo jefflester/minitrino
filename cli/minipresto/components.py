@@ -8,6 +8,7 @@ import yaml
 import docker
 import subprocess
 
+from pathlib import Path
 from configparser import ConfigParser
 
 import minipresto.utils as utils
@@ -103,8 +104,8 @@ class Environment:
             elif os.path.isdir(os.path.join(self.minipresto_user_dir, "lib")):
                 self.minipresto_lib_dir = os.path.join(self.minipresto_user_dir, "lib")
             else:  # Use repo root, fail if this doesn't exist
-                cwd = os.path.dirname(os.path.realpath(__file__))
-                self.minipresto_lib_dir = os.path.join(cwd, "..", "..", "lib")
+                repo_root = Path(os.path.abspath(__file__)).resolve().parents[2]
+                self.minipresto_lib_dir = os.path.join(repo_root, "lib")
 
             if not os.path.isdir(self.minipresto_lib_dir):
                 raise err.UserError(
@@ -169,7 +170,7 @@ class Environment:
         config_file = os.path.join(self.minipresto_user_dir, "minipresto.cfg")
         if not os.path.isfile(config_file):
             self.logger.log(
-                f"No minipresto.cfg file found in {config_file}. "
+                f"No minipresto.cfg file found at {config_file}. "
                 f"Run 'minipresto config' to reconfigure this file and directory.",
                 level=self.logger.warn,
             )

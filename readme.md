@@ -346,8 +346,6 @@ These configs allow the user to set global Presto configuration. Since many
 modules can append to Presto's core files, the supported way to make global
 changes to these files is with these configs.
 
-- STARBURST_LIC_PATH: Required if using licensed Starburst Enterprise Presto
-  features. It can point to any valid license on your filesystem.
 - CONFIG: Configuration for Presto's `config.properties` file. 
 - JVM_CONFIG: Configuration for Presto's `jvm.config` file.
 
@@ -367,6 +365,8 @@ This section sets environment variables passed to containers provisioned by
 Minipresto. Environment variables are only set in a container if it is specified
 in the relevant `docker-compose.yml` file. This supports Presto secrets.
 
+- STARBURST_LIC_PATH: Required if using licensed Starburst Enterprise Presto
+  features. It can point to any valid license on your filesystem.
 - S3_ENDPOINT
 - S3_ACCESS_KEY
 - S3_SECRET_KEY

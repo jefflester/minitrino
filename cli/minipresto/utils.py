@@ -158,7 +158,7 @@ def handle_exception(error=Exception, additional_msg="", skip_traceback=False):
         error_msg = str(error)
         exit_code = 1
     else:
-        raise Exception(
+        raise err.MiniprestoError(
             f"Invalid type given to 'e' parameter of {handle_exception.__name__}. "
             f"Expected an Exception type, but got type {type(error).__name__}"
         )

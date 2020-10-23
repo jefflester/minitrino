@@ -11,20 +11,30 @@ import minipresto.errors as err
 from minipresto.settings import RESOURCE_LABEL
 
 
-# fmt: off
-@click.command("down", help="""
-Bring down running Minipresto containers. This command follows the behavior
-of `docker-compose down` where containers are both stopped and removed.
-""")
-@click.option("-k", "--keep", is_flag=True, default=False, help="""
-Does not remove containers; instead, containers will only be stopped.
-""")
-@click.option("--sig-kill", is_flag=True, default=False, help="""
-Stop Minipresto containers without a grace period.
-""")
-# fmt: on
-
-
+@click.command(
+    "down",
+    help=(
+        """Bring down running Minipresto containers. This command follows the
+        behavior of `docker-compose down` where containers are both stopped and
+        removed."""
+    ),
+)
+@click.option(
+    "-k",
+    "--keep",
+    is_flag=True,
+    default=False,
+    help=(
+        """Does not remove containers; instead, containers will only be
+        stopped."""
+    ),
+)
+@click.option(
+    "--sig-kill",
+    is_flag=True,
+    default=False,
+    help=("""Stop Minipresto containers without a grace period."""),
+)
 @utils.exception_handler
 @minipresto.cli.pass_environment
 def cli(ctx, sig_kill, keep):

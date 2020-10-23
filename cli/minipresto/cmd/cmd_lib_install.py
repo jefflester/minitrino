@@ -11,16 +11,17 @@ import minipresto.errors as err
 import minipresto.utils as utils
 
 
-# fmt: off
-@click.command("lib_install", help="""
-Install the Minipresto library.
-""")
-@click.option("-v", "--version", default="", type=str, help="""
-The version of the library to install. 
-""")
-# fmt: on
-
-
+@click.command(
+    "lib_install",
+    help=("""Install the Minipresto library."""),
+)
+@click.option(
+    "-v",
+    "--version",
+    default="",
+    type=str,
+    help=("""The version of the library to install."""),
+)
 @utils.exception_handler
 @minipresto.cli.pass_environment
 def cli(ctx, version):
@@ -97,4 +98,3 @@ def cleanup(ctx, tarball="", file_basename="", trigger_error=True):
         f"rm -rf {tarball} {os.path.join(ctx.minipresto_user_dir, file_basename)}",
         trigger_error=trigger_error,
     )
-    

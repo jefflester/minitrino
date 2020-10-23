@@ -20,33 +20,54 @@ from minipresto.settings import MODULE_ROOT
 from minipresto.settings import MODULE_CATALOG
 from minipresto.settings import MODULE_SECURITY
 from minipresto.settings import ETC_PRESTO
+from minipresto.settings import PRESTO_CONFIG
+from minipresto.settings import PRESTO_JVM_CONFIG
 
 from docker.errors import NotFound
 
 
-# fmt: off
-@click.command("provision", help="""
-Provision an environment based on specified modules. All options are optional and
-can be left empty. 
-""")
-@click.option("-m", "--module", "modules", default=[], type=str, multiple=True, help="""
-A specific module to provision. 
-""")
-@click.option("-n", "--no-rollback", is_flag=True, default=False, help="""
-Do not rollback provisioned resources in the event of an error.
-""")
-@click.option("-d", "--docker-native", default="", type=str, help="""
-Appends native docker-compose commands to the generated docker-compose shell
-command. Run `docker-compose up --help` to see all available options.
+@click.command(
+    "provision",
+    help=(
+        """Provision an environment based on specified modules. All options are
+        optional and can be left empty."""
+    ),
+)
+@click.option(
+    "-m",
+    "--module",
+    "modules",
+    default=[],
+    type=str,
+    multiple=True,
+    help=("""A specific module to provision."""),
+)
+@click.option(
+    "-n",
+    "--no-rollback",
+    is_flag=True,
+    default=False,
+    help=(
+        """Do not rollback provisioned resources in the event of an
+        error."""
+    ),
+)
+@click.option(
+    "-d",
+    "--docker-native",
+    default="",
+    type=str,
+    help=(
+        """Appends native docker-compose commands to the generated
+        docker-compose shell command. Run `docker-compose up --help` to see all
+        available options.
 
-Example: minipresto provision --docker-native --build
+        Example: minipresto provision --docker-native --build
 
-Example: minipresto provision --docker-native '--remove-orphans
---force-recreate'
-""")
-# fmt: on
-
-
+        Example: minipresto provision --docker-native '--remove-orphans
+        --force-recreate'"""
+    ),
+)
 @utils.exception_handler
 @minipresto.cli.pass_environment
 def cli(ctx, modules, no_rollback, docker_native):
@@ -279,7 +300,7 @@ def check_dup_configs(ctx):
     identical. For config.properties, duplicates will be registered if there are
     multiple overlapping property keys."""
 
-    check_files = ["config.properties", "jvm.config"]
+    check_files = [PRESTO_CONFIG, PRESTO_JVM_CONFIG]
     for check_file in check_files:
         ctx.logger.log(
             f"Checking Presto {check_file} for duplicate configs...",
@@ -302,7 +323,7 @@ def check_dup_configs(ctx):
         configs.sort()
 
         duplicates = []
-        if check_file == "config.properties":
+        if check_file == PRESTO_CONFIG:
             for i, config in enumerate(configs):
                 if config.startswith("#"):
                     continue
@@ -380,8 +401,8 @@ def append_user_config(ctx, containers_to_restart=[]):
         )
 
     current_configs = ctx.cmd_executor.execute_commands(
-        f"cat {ETC_PRESTO}/config.properties",
-        f"cat {ETC_PRESTO}/jvm.config",
+        f"cat {ETC_PRESTO}/{PRESTO_CONFIG}",
+        f"cat {ETC_PRESTO}/{PRESTO_JVM_CONFIG}",
         container=presto_container,
         suppress_output=True,
     )
@@ -395,7 +416,7 @@ def append_user_config(ctx, containers_to_restart=[]):
         # config. If there is not overlapping config key, append it to the
         # current config list.
 
-        if filename == "config.properties":
+        if filename == PRESTO_CONFIG:
             for user_config in user_configs:
                 user_config = utils.parse_key_value_pair(
                     user_config, err_type=err.UserError
@@ -449,8 +470,8 @@ def append_user_config(ctx, containers_to_restart=[]):
             )
             ctx.cmd_executor.execute_commands(append_config, container=presto_container)
 
-    append_configs(user_presto_config, current_presto_config, "config.properties")
-    append_configs(user_jvm_config, current_jvm_config, "jvm.config")
+    append_configs(user_presto_config, current_presto_config, PRESTO_CONFIG)
+    append_configs(user_jvm_config, current_jvm_config, PRESTO_JVM_CONFIG)
 
     if not "presto" in containers_to_restart:
         containers_to_restart.append("presto")

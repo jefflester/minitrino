@@ -11,20 +11,23 @@ from shutil import rmtree
 from minipresto.settings import CONFIG_TEMPLATE
 
 
-# fmt: off
-@click.command("config", help="""
-Edit the Minipresto user configuration file.
-""")
-@click.option("-r", "--reset", is_flag=True, default=False, help="""
-Reset the Minipresto user configuration file and create a new config file from a
-template.
+@click.command(
+    "config",
+    help=("""Edit the Minipresto user configuration file."""),
+)
+@click.option(
+    "-r",
+    "--reset",
+    is_flag=True,
+    default=False,
+    help=(
+        """Reset the Minipresto user configuration file and create a new config
+        file from a template.
 
-WARNING: This will remove your configuration file (if it exists) and replace it
-with a template.
-""")
-# fmt: on
-
-
+        WARNING: This will remove your configuration file (if it exists) and
+        replace it with a template."""
+    ),
+)
 @utils.exception_handler
 @minipresto.cli.pass_environment
 def cli(ctx, reset):

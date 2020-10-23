@@ -13,26 +13,46 @@ from minipresto.settings import VOLUME
 from minipresto.settings import RESOURCE_LABEL
 
 
-# fmt: off
-@click.command("remove", help="""
-Remove Minipresto resources.
-""")
-@click.option("-i", "--images", is_flag=True, default=False, help="""
-Remove Minipresto images.
-""")
-@click.option("-v", "--volumes", is_flag=True, default=False, help="""
-Remove Minipresto container volumes.
-""")
-@click.option("-l", "--label", "labels", type=str, default=[], multiple=True, help="""
-Target specific labels for removal (format: key-value pair(s)).
-""")
-@click.option("-f", "--force", is_flag=True, default=False, help="""
-Force the removal of Minipresto resources. Normal Docker removal restrictions
-apply.
-""")
-# fmt: on
-
-
+@click.command(
+    "remove",
+    help=("""Remove Minipresto resources."""),
+)
+@click.option(
+    "-i",
+    "--images",
+    is_flag=True,
+    default=False,
+    help=("""Remove Minipresto images."""),
+)
+@click.option(
+    "-v",
+    "--volumes",
+    is_flag=True,
+    default=False,
+    help=("""Remove Minipresto container volumes."""),
+)
+@click.option(
+    "-l",
+    "--label",
+    "labels",
+    type=str,
+    default=[],
+    multiple=True,
+    help=(
+        """Target specific labels for removal (format: key-value
+        pair(s))."""
+    ),
+)
+@click.option(
+    "-f",
+    "--force",
+    is_flag=True,
+    default=False,
+    help=(
+        """Force the removal of Minipresto resources. Normal Docker removal
+        restrictions apply."""
+    ),
+)
 @utils.exception_handler
 @minipresto.cli.pass_environment
 def cli(ctx, images, volumes, labels, force):

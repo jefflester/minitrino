@@ -191,7 +191,7 @@ class Environment:
             docker_client = docker.DockerClient(base_url=docker_host)
             api_client = docker.APIClient(base_url=docker_host)
             self.docker_client, self.api_client = docker_client, api_client
-        except Exception as e:
+        except:
             return None, None
 
 
@@ -406,7 +406,6 @@ class Modules:
         for i, container in enumerate(containers):
             if container.name == "presto":
                 del containers[i]
-                continue
 
         names = []
         label_sets = []

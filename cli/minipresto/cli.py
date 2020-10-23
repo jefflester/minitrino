@@ -33,23 +33,31 @@ class CLI(click.MultiCommand):
         return mod.cli
 
 
-# fmt: off
 @click.command(cls=CLI, context_settings=CONTEXT_SETTINGS)
-@click.option("-v", "--verbose", is_flag=True, default=False, help="""
-Enable verbose output.
-""")
-@click.option("-e", "--env", default=[], type=str, multiple=True, help="""
-Add or override environment variables. 
+@click.option(
+    "-v",
+    "--verbose",
+    is_flag=True,
+    default=False,
+    help=("""Enable verbose output."""),
+)
+@click.option(
+    "-e",
+    "--env",
+    default=[],
+    type=str,
+    multiple=True,
+    help=(
+        """Add or override environment variables. 
 
-Environment variables are sourced from the Minipresto library's root '.env' file
-as well as the user config file in '~/.minipresto/minipresto.cfg'. Variables
-supplied by this option will override values from either of those sources. The
-variables will also be passed to the environment of the shell executing commands
-during the 'provision' command.
-""")
-# fmt: on
-
-
+        Environment variables are sourced from the Minipresto library's root
+        '.env' file as well as the user config file in
+        '~/.minipresto/minipresto.cfg'. Variables supplied by this option will
+        override values from either of those sources. The variables will also be
+        passed to the environment of the shell executing commands during the
+        'provision' command."""
+    ),
+)
 @pass_environment
 def cli(ctx, verbose, env):
     """Welcome to the Minipresto command line interface.

@@ -6,13 +6,10 @@ import minipresto.cli
 import minipresto.utils as utils
 
 
-# fmt: off
-@click.command("version", help="""
-Display the Minipresto version.
-""")
-# fmt: on
-
-
+@click.command(
+    "version",
+    help=("""Display the Minipresto version."""),
+)
 @utils.exception_handler
 @minipresto.cli.pass_environment
 def cli(ctx):

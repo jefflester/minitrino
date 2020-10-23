@@ -15,6 +15,8 @@ MODULE_CATALOG = "catalog"
 MODULE_SECURITY = "security"
 MODULE_RESOURCES = "resources"
 ETC_PRESTO = "/usr/lib/presto/etc"
+PRESTO_CONFIG = "config.properties"
+PRESTO_JVM_CONFIG = "jvm.config"
 LIB_INDEPENDENT_CMDS = ["lib_install"]
 
 # Snapshots

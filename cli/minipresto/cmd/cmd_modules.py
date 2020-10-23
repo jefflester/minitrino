@@ -9,22 +9,37 @@ import minipresto.errors as err
 import minipresto.utils as utils
 
 
-# fmt: off
-@click.command("modules", help="""
-Display module metadata.
-""")
-@click.option("-m", "--module", "modules", default=[], type=str, multiple=True, help="""
-A specific module to display metadata for. 
-""")
-@click.option("-j", "--json", "json_format", is_flag=True, default=False, help="""
-Print the resulting metadata in JSON form (shows additional module metadata). 
-""")
-@click.option("-r", "--running", is_flag=True, default=False, help="""
-Print metadata for all running modules. 
-""")
-# fmt: on
-
-
+@click.command(
+    "modules",
+    help=("""Display module metadata."""),
+)
+@click.option(
+    "-m",
+    "--module",
+    "modules",
+    default=[],
+    type=str,
+    multiple=True,
+    help=("""A specific module to display metadata for."""),
+)
+@click.option(
+    "-j",
+    "--json",
+    "json_format",
+    is_flag=True,
+    default=False,
+    help=(
+        """Print the resulting metadata in JSON form (shows additional module
+        metadata)."""
+    ),
+)
+@click.option(
+    "-r",
+    "--running",
+    is_flag=True,
+    default=False,
+    help=("""Print metadata for all running modules."""),
+)
 @utils.exception_handler
 @minipresto.cli.pass_environment
 def cli(ctx, modules, json_format, running):

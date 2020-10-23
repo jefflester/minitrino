@@ -23,41 +23,66 @@ from minipresto.settings import MODULE_RESOURCES
 from minipresto.settings import SCRUB_KEYS
 
 
-# fmt: off
-@click.command("snapshot", help="""
-Create a snapshot of a Minipresto environment. A tarball is placed in the
-Minipresto `lib/snapshots/` directory.
+@click.command(
+    "snapshot",
+    help=(
+        """Create a snapshot of a Minipresto environment. A tarball is placed in
+        the Minipresto `lib/snapshots/` directory.
 
-To take a snapshot of an active environment, leave the `--module` and option out
-of the command. 
+        To take a snapshot of an active environment, leave the `--module` and
+        option out of the command. 
 
-To take a snapshot of modules whether they are active or not, specify the
-modules via the `--module` option.
-""")
-@click.option("-m", "--module", "modules", default=[], type=str, multiple=True, help="""
-A specific module to snapshot. 
-""")
-@click.option("-n", "--name", required=True, type=str, help="""
-Basename of the resulting snapshot tarball file. Allowed characters:
-alphanumerics, hyphens, and underscores.
-""")
-@click.option("-d", "--directory", type=click.Path(), help="""
-Directory to save the resulting snapshot file in. Defaults to the snapshots
-directory in the Minipresto library.
-""")
-@click.option("-f", "--force", is_flag=True, default=False, help="""
-Overwrite the file if it already exists.
-""")
-@click.option("--no-scrub", is_flag=True, default=False, help="""
-Do not scrub sensitive data from user config file.
+        To take a snapshot of modules whether they are active or not, specify
+        the modules via the `--module` option."""
+    ),
+)
+@click.option(
+    "-m",
+    "--module",
+    "modules",
+    default=[],
+    type=str,
+    multiple=True,
+    help=("""A specific module to snapshot."""),
+)
+@click.option(
+    "-n",
+    "--name",
+    required=True,
+    type=str,
+    help=(
+        """Basename of the resulting snapshot tarball file. Allowed characters:
+        alphanumerics, hyphens, and underscores."""
+    ),
+)
+@click.option(
+    "-d",
+    "--directory",
+    type=click.Path(),
+    help=(
+        """Directory to save the resulting snapshot file in. Defaults to the
+        snapshots directory in the Minipresto library."""
+    ),
+)
+@click.option(
+    "-f",
+    "--force",
+    is_flag=True,
+    default=False,
+    help=("""Overwrite the file if it already exists."""),
+)
+@click.option(
+    "--no-scrub",
+    is_flag=True,
+    default=False,
+    help=(
+        """Do not scrub sensitive data from user config file.
 
-WARNING: all sensitive information (passwords and keys) will be kept in the user
-config file added to the snapshot. Only use this if you are prepared to share
-those secrets with another person.
-""")
-# fmt: on
-
-
+        WARNING: all sensitive information (passwords and keys) will be kept in
+        the user config file added to the snapshot. Only use this if you are
+        prepared to share those secrets with another person."""
+    ),
+)
 @utils.exception_handler
 @minipresto.cli.pass_environment
 def cli(ctx, modules, name, directory, force, no_scrub):
@@ -126,9 +151,7 @@ def check_exists(ctx, name, directory, force):
         response = ctx.logger.prompt_msg(
             f"Snapshot file {name}.tar.gz already exists. Overwrite? [Y/N]"
         )
-        if utils.validate_yes(response):
-            pass
-        else:
+        if not utils.validate_yes(response):
             ctx.logger.log(f"Opted to skip snapshot.")
             sys.exit(0)
 

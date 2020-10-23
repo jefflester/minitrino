@@ -10,6 +10,7 @@ import minipresto.errors as err
 from click import echo, style, prompt
 from textwrap import fill
 from shutil import get_terminal_size
+from functools import wraps
 from minipresto.settings import DEFAULT_INDENT
 
 
@@ -185,6 +186,7 @@ def exception_handler(func):
     This is especially useful when decorating main/runner functions and class
     constructors."""
 
+    @wraps(func)
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)

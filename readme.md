@@ -13,7 +13,7 @@ locally.
   - [Top-Level CLI Options](#top-level-cli-options)
   - [Provisioning Environments](#provisioning-environments)
   - [Removing Resources](#removing-resources)
-  - [Shutting Down Environments](shutting-down-environments)
+  - [Shutting Down Environments](#shutting-down-environments)
   - [Taking Environment Snapshots](#taking-environment-snapshots)
   - [Manage User Configuration](#manage-user-configuration)
   - [Install the Library](#install-the-library)
@@ -521,7 +521,7 @@ rules are the same for both catalogs and security modules. The example below
 demonstrates the process of creating a new catalog module for a Postgres
 service.
 
-### Create the Relevant Directory
+### Create the Module Directory
 Create the module's directory in the `lib/modules/catalog/` directory:
 
 ```sh

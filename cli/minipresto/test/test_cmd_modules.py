@@ -57,7 +57,7 @@ def test_all_modules():
     assert result.exit_code == 0
     assert all(
         (
-            "Module: test",
+            "Module: test" in result.output,
             "Description:" in result.output,
             "Incompatible Modules:" in result.output,
         )
@@ -85,7 +85,7 @@ def test_running():
 
     helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    result = helpers.execute_command(["-v", "provision", "--module", "test"])
+    helpers.execute_command(["-v", "provision", "--module", "test"])
     result = helpers.execute_command(["-v", "modules", "--json", "--running"])
 
     assert result.exit_code == 0

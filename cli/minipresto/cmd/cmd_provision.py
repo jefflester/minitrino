@@ -122,6 +122,8 @@ def check_compatibility(ctx, modules=[]):
 
     for module in modules:
         incompatible = ctx.modules.data.get(module, {}).get("incompatible_modules", [])
+        if not incompatible:
+            continue
         for module_inner in modules:
             if (module_inner in incompatible) or (
                 incompatible[0] == "*" and len(modules) > 1

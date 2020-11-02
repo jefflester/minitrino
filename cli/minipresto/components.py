@@ -273,10 +273,13 @@ class EnvironmentVariables:
             config.optionxform = str  # Preserve case
             config.read(self._ctx.config_file)
             for section in config.sections():
-                if not self.env.get(section, False):
-                    # Account for empty section
-                    self.env[section] = {}
                 for k, v in config.items(section):
+                    # Skip if the key exists in any section
+                    if self.get_var(k, False):
+                        continue
+                    # Account for empty section
+                    if not self.env.get(section, False):
+                        self.env[section] = {}
                     self.env[section][k] = v
         except Exception as e:
             utils.handle_exception(
@@ -306,6 +309,9 @@ class EnvironmentVariables:
                 env_var = utils.parse_key_value_pair(env_var, err_type=err.UserError)
                 if env_var is None:
                     continue
+                # Skip if the key exists in any section
+                if self.get_var(env_var[0], False):
+                    continue
                 self.env["MODULES"][env_var[0]] = env_var[1]
 
     def _parse_user_env(self):
@@ -321,7 +327,7 @@ class EnvironmentVariables:
             user_env_dict[env_var[0]] = env_var[1]
 
         # Loop through user-provided environment variables and check for matches
-        # in each section dict. If the variable key in the section dict, it
+        # in each section dict. If the variable key is in the section dict, it
         # needs to be identified and replaced with the user's `--env` value,
         # effectively overriding the original value.
         #

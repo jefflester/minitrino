@@ -2,8 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # TODO: Test docker host
-# TODO: Test symlink paths
-# TODO: Test invalid/nonexistant library path
+# TODO: Test symlink paths (should work with os.environ() registered in subproc)
 
 import minipresto.test.helpers as helpers
 
@@ -29,6 +28,7 @@ def main():
     test_env()
     test_multiple_env()
     test_invalid_env()
+    test_invalid_lib()
 
 
 def test_daemon_off_all(*args):
@@ -118,6 +118,29 @@ def test_invalid_env():
 
     assert result.exit_code == 2
     assert "Invalid key-value pair" in result.output
+
+    helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
+
+
+def test_invalid_lib():
+    """Verifies that Minipresto exists with a user error if pointing to an
+    invalid library."""
+
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
+
+    # Real directory, but ain't a real library
+    result = helpers.execute_command(["-v", "--env", "LIB_PATH=/tmp/", "version"])
+
+    assert result.exit_code == 2
+    assert "Are you pointing to a valid library" in result.output
+
+    # Fake directory
+    result = helpers.execute_command(
+        ["-v", "--env", "LIB_PATH=/gucci-is-overrated/", "version"]
+    )
+
+    assert result.exit_code == 2
+    assert "You must provide a path to a compatible Minipresto library" in result.output
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
 

@@ -295,8 +295,10 @@ class EnvironmentVariables:
 
         env_file = os.path.join(self._ctx.minipresto_lib_dir, ".env")
         if not os.path.isfile(env_file):
-            raise err.MiniprestoError(
-                f"Library '.env' file does not exist at path: {env_file}"
+            raise err.UserError(
+                f"Library '.env' file does not exist at path: {env_file}",
+                f"Are you pointing to a valid library, and is the .env file "
+                f"present in that library?"
             )
 
         # Check if modules section was added from Minipresto config file parsing
@@ -460,7 +462,7 @@ class Modules:
         modules_dir = os.path.join(self._ctx.minipresto_lib_dir, MODULE_ROOT)
         if not os.path.isdir(modules_dir):
             raise err.MiniprestoError(
-                f"Path is not a directory: {modules_dir}\n"
+                f"Path is not a directory: {modules_dir}. "
                 f"Are you pointing to a compatible Minipresto library?"
             )
 

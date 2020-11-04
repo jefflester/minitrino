@@ -39,7 +39,7 @@ locally.
 ## Installation
 
 ### End Users
-Minipresto is available on PyPy and the library is available for public download
+Minipresto is available on PyPI and the library is available for public download
 on GitHub. To install the Minipresto CLI, run `pip install minipresto`. To
 install the library, run `minipresto lib_install`.
 

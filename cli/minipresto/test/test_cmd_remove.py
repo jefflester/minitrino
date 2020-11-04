@@ -219,7 +219,9 @@ def test_remove_dependent_resources_running():
     helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     helpers.execute_command(["provision", "--module", "test"])
-    result = helpers.execute_command(["-v", "remove", "--images", "--volumes"], command_input="y\n")
+    result = helpers.execute_command(
+        ["-v", "remove", "--images", "--volumes"], command_input="y\n"
+    )
 
     assert result.exit_code == 0
     assert all(

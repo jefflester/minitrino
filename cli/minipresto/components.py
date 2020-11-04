@@ -298,7 +298,7 @@ class EnvironmentVariables:
             raise err.UserError(
                 f"Library '.env' file does not exist at path: {env_file}",
                 f"Are you pointing to a valid library, and is the .env file "
-                f"present in that library?"
+                f"present in that library?",
             )
 
         # Check if modules section was added from Minipresto config file parsing

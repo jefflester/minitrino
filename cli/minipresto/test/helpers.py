@@ -35,7 +35,7 @@ class MiniprestoResult:
         - `click_result`: The unaltered Click Result object.
         - `output`: Formatted output with newlines removed.
         - `exit_code`: The exit code of the command."""
-        
+
         self.click_result = click_result
         self.output = output
         self.exit_code = exit_code

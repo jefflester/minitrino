@@ -58,7 +58,7 @@ def test_reset_with_directory():
     start_time = time.time()
     end_time = 2.0
     output = ""
-    while (time.time() - start_time <= end_time):
+    while time.time() - start_time <= end_time:
         process = subprocess.Popen(
             "minipresto -v config --reset",
             shell=True,
@@ -74,9 +74,6 @@ def test_reset_with_directory():
         if time.time() >= end_time:
             process.terminate()
             break
-
-
-
 
     process = subprocess.Popen(
         "minipresto -v config --reset",

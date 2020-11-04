@@ -6,7 +6,7 @@ from setuptools import setup
 
 setup(
     name="Minipresto",
-    version="0.0.0",
+    version="1.0.0",
     description=(
         f"A command line tool that makes it easy to run "
         f"modular Presto environments locally.",

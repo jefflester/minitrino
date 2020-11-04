@@ -255,13 +255,16 @@ def test_incompatible_modules():
 
     helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    result = helpers.execute_command(["-v", "provision", "--module", "ldap"])
+    result = helpers.execute_command(
+        ["-v", "provision", "--module", "ldap", "--module", "test"]
+    )
 
     assert result.exit_code == 2
     assert all(
         (
             "Incompatible modules detected" in result.output,
-            "incompatible with module 'ldap'" in result.output,
+            "incompatible with module" in result.output,
+            "ldap" in result.output,
         )
     )
 

@@ -23,6 +23,7 @@ locally.
 - [Minipresto Configuration File](#minipresto-configuration-file)
 - [Project Structure](#project-structure)
 - [Adding New Modules (Tutorial)](#adding-new-modules-tutorial)
+- [Reporting Bugs and Contributing](#reporting-bugs-and-contributing)
 
 -----
 
@@ -836,3 +837,24 @@ query.max-stage-count=105
 query.max-execution-time=1h
 EOT
 ```
+
+-----
+
+## Reporting Bugs and Contributing
+To report bugs, please file a GitHub issue on the [Minipresto
+repository](https://github.com/jefflester/minipresto). Bug reports should:
+
+- Contain any relevant log messages (if the bug is tied to a command, running
+  with the `-v` flag will make debugging easier)
+- Describe what the expected outcome is 
+- Describe the proposed code fix (optional)
+
+Contributors have two options:
+
+1. Fork the repository, then make a PR to merge your changes
+2. If you have been added as a contributor, you can go with the method above or
+   you can create a feature branch, then submit a PR for that feature branch
+   when it is ready to be merged. 
+
+In either case, please provide a comprehensive description of your changes with
+the PR.

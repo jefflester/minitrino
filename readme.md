@@ -23,6 +23,7 @@ locally.
 - [Minipresto Configuration File](#minipresto-configuration-file)
 - [Project Structure](#project-structure)
 - [Adding New Modules (Tutorial)](#adding-new-modules-tutorial)
+- [Troubleshooting](#troubleshooting)
 - [Reporting Bugs and Contributing](#reporting-bugs-and-contributing)
 
 -----
@@ -476,7 +477,6 @@ lib
 │                   ├── event-listener.properties
 │                   └── postgres_event_logger.properties
 ├── snapshots
-│   └── .gitkeep
 └── version
 ```
 
@@ -837,6 +837,25 @@ query.max-stage-count=105
 query.max-execution-time=1h
 EOT
 ```
+
+-----
+
+## Troubleshooting
+
+- If you experience issues executing a Minipresto command, re-run it with the
+  `-v` option for verbose output. This will often reveal the issue
+- If you experience an issue with a particular Docker container, consider
+  running these commands:
+  - `docker logs <container>`: Print the logs for a given container to the
+    terminal
+  - `docker ps`: Show all running Docker containers and associated statistics
+- If you experience issues with a library module, check that that module is
+  structured correctly according to the [module
+  tutorial](#adding-new-modules-tutorial)
+
+If none of these troubleshooting tips help to resolve your issue, [please file a
+GitHub issue](#reporting-bugs-and-contributing) and provide as much information
+as possible.
 
 -----
 

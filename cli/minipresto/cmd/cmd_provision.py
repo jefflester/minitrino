@@ -75,6 +75,7 @@ def cli(ctx, modules, no_rollback, docker_native):
     is unsuccessful, the function exits with a non-zero status code."""
 
     utils.check_daemon(ctx.docker_client)
+    modules = append_running_modules(modules)
     check_compatibility(modules)
 
     if not modules:
@@ -113,6 +114,30 @@ def cli(ctx, modules, no_rollback, docker_native):
     except Exception as e:
         rollback_provision(no_rollback)
         utils.handle_exception(e)
+
+
+@minipresto.cli.pass_environment
+def append_running_modules(ctx, modules=[]):
+    """Checks if any modules are already running. If they are, they are appended
+    to the provided modules list and the updated list is returned."""
+
+    ctx.logger.log("Checking for running modules...", level=ctx.logger.verbose)
+    running_modules_dict = ctx.modules.get_running_modules()
+    running_modules_list = []
+
+    for module in running_modules_dict:
+        running_modules_list.append(module)
+
+    if running_modules_list:
+        ctx.logger.log(
+            f"Identified the following running modules: {running_modules_list}. "
+            f"Appending the running module list to the list of modules to provsion.",
+            level=ctx.logger.verbose,
+        )
+
+    modules = list(modules)
+    modules.extend(running_modules_list)
+    return list(set(modules))
 
 
 @minipresto.cli.pass_environment

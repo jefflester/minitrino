@@ -26,6 +26,7 @@ def main():
     test_valid_user_config()
     test_duplicate_config_props()
     test_incompatible_modules()
+    test_provision_append()
 
 
 def test_standalone():
@@ -267,6 +268,23 @@ def test_incompatible_modules():
             "ldap" in result.output,
         )
     )
+
+    helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
+    cleanup()
+
+
+def test_provision_append():
+    """Verifies that modules can be appended to already-running environments."""
+
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
+
+    helpers.execute_command(["-v", "provision", "--module", "test"])
+    result = helpers.execute_command(["-v", "provision", "--module", "postgres"])
+    containers = get_containers()
+
+    assert result.exit_code == 0
+    assert "Identified the following running modules" in result.output
+    assert len(containers) == 3  # presto, test, and postgres
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()

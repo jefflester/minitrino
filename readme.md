@@ -551,8 +551,12 @@ connection-password=prestoRocks15
 EOF"
 ```
 
+-----
+
 **Note**: Passwords should always be `prestoRocks15` for consistency throughout
 modules. 
+
+-----
 
 ### Add the Docker Compose YAML
 In `lib/modules/catalog/postgres/`, add a Docker Compose file:

@@ -64,8 +64,9 @@ def cli(ctx, sig_kill, keep):
         identifier = utils.generate_identifier(
             {"ID": container.short_id, "Name": container.name}
         )
-        container.stop(timeout=stop_timeout)
-        ctx.logger.log(f"Stopped container: {identifier}", level=ctx.logger.verbose)
+        if container.status == "running":
+            container.stop(timeout=stop_timeout)
+            ctx.logger.log(f"Stopped container: {identifier}", level=ctx.logger.verbose)
 
     # Remove
     if not keep:

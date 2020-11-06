@@ -167,7 +167,7 @@ def test_valid_user_config():
 
     assert result.exit_code == 0
     assert (
-        "Appending Presto config from minipresto.cfg file to Presto container config"
+        "Appending user-defined Presto config to Presto container config"
         in result.output
     )
 

@@ -9,6 +9,7 @@
 import os
 import stat
 import hashlib
+import time
 import click
 
 import minipresto.cli
@@ -416,7 +417,7 @@ def append_user_config(ctx, containers_to_restart=[]):
         return containers_to_restart
 
     ctx.logger.log(
-        "Appending Presto config from minipresto.cfg file to Presto container config...",
+        "Appending user-defined Presto config to Presto container config...",
         level=ctx.logger.verbose,
     )
 
@@ -426,6 +427,29 @@ def append_user_config(ctx, containers_to_restart=[]):
             f"Attempting to append Presto configuration in Presto container, "
             f"but no running Presto container was found."
         )
+
+    ctx.logger.log(
+        "Checking Presto server status before updating configs...",
+        level=ctx.logger.verbose,
+    )
+    retry = 0
+    while retry <= 30:
+        logs = presto_container.logs().decode()
+        if "======== SERVER STARTED ========" in logs:
+            break
+        elif presto_container.status != "running":
+            raise err.MiniprestoError(
+                f"Presto container stopped running. Inspect the container logs if the "
+                f"container is still available. If the container was rolled back, rerun "
+                f"the command with the '--no-rollback' option, then inspect the logs."
+            )
+        else:
+            ctx.logger.log(
+                "Presto server has not started. Waiting one second and trying again...",
+                level=ctx.logger.verbose,
+            )
+            time.sleep(1)
+            retry += 1
 
     current_configs = ctx.cmd_executor.execute_commands(
         f"cat {ETC_PRESTO}/{PRESTO_CONFIG}",

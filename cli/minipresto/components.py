@@ -11,9 +11,8 @@ import subprocess
 from pathlib import Path
 from configparser import ConfigParser
 
-import minipresto.utils as utils
-import minipresto.errors as err
-
+from minipresto import utils
+from minipresto import errors as err
 from minipresto.settings import RESOURCE_LABEL
 from minipresto.settings import MODULE_LABEL_KEY_ROOT
 from minipresto.settings import MODULE_ROOT

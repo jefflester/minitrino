@@ -2,18 +2,17 @@
 # -*- coding: utf-8 -*-
 
 import os
+from pathlib import Path
 from setuptools import setup
 
+HERE = Path(os.path.abspath(__file__)).resolve().parents[1]
+README = (HERE / "readme.md").read_text()
+
 setup(
-    name="Minipresto",
+    name="minipresto",
     version="1.0.0",
-    description=(
-        f"A command line tool that makes it easy to run "
-        f"modular Presto environments locally.",
-    ),
-    long_description=os.path.join(
-        "..", os.path.dirname(os.path.abspath(__file__)), "readme.md"
-    ),
+    description="A command line tool that makes it easy to run modular Presto environments locally.",
+    long_description=README,
     long_description_content_type="text/markdown",
     url="https://github.com/jefflester/minipresto",
     author="Jeff Lester",
@@ -24,14 +23,15 @@ setup(
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: OS Independent",
     ],
+    keyword="presto, docker, minipresto",
     python_requires=">=3.6",
     packages=["minipresto", "minipresto.cmd"],
     include_package_data=True,
     install_requires=[
-        "click",
+        "click==7.1.2",
         "colorama",
-        "docker",
-        "pyyaml",
+        "docker==4.2.1",
+        "PyYAML",
     ],
     entry_points={"console_scripts": ["minipresto=minipresto.cli:cli"]},
 )

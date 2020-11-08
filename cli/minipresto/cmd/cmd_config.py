@@ -4,11 +4,11 @@
 import os
 import click
 
-import minipresto.cli
-import minipresto.utils as utils
+from minipresto.cli import pass_environment
+from minipresto import utils
+from minipresto.settings import CONFIG_TEMPLATE
 
 from shutil import rmtree
-from minipresto.settings import CONFIG_TEMPLATE
 
 
 @click.command(
@@ -29,7 +29,7 @@ from minipresto.settings import CONFIG_TEMPLATE
     ),
 )
 @utils.exception_handler
-@minipresto.cli.pass_environment
+@pass_environment
 def cli(ctx, reset):
     """Config command for Minipresto."""
 
@@ -60,7 +60,7 @@ def cli(ctx, reset):
         edit_file()
 
 
-@minipresto.cli.pass_environment
+@pass_environment
 def write_template(ctx):
     """Writes configuration template."""
 
@@ -72,7 +72,7 @@ def write_template(ctx):
         editor = None
 
 
-@minipresto.cli.pass_environment
+@pass_environment
 def edit_file(ctx):
     """Gets the editor from user configuration and passes to the Click edit
     function if the value is present."""

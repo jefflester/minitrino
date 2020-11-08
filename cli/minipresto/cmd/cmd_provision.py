@@ -12,10 +12,9 @@ import hashlib
 import time
 import click
 
-import minipresto.cli
-import minipresto.utils as utils
-import minipresto.errors as err
-
+from minipresto.cli import pass_environment
+from minipresto import utils
+from minipresto import errors as err
 from minipresto.settings import RESOURCE_LABEL
 from minipresto.settings import MODULE_ROOT
 from minipresto.settings import MODULE_CATALOG
@@ -70,7 +69,7 @@ from docker.errors import NotFound
     ),
 )
 @utils.exception_handler
-@minipresto.cli.pass_environment
+@pass_environment
 def cli(ctx, modules, no_rollback, docker_native):
     """Provision command for Minipresto. If the resulting docker-compose command
     is unsuccessful, the function exits with a non-zero status code."""
@@ -117,7 +116,7 @@ def cli(ctx, modules, no_rollback, docker_native):
         utils.handle_exception(e)
 
 
-@minipresto.cli.pass_environment
+@pass_environment
 def append_running_modules(ctx, modules=[]):
     """Checks if any modules are already running. If they are, they are appended
     to the provided modules list and the updated list is returned."""
@@ -141,7 +140,7 @@ def append_running_modules(ctx, modules=[]):
     return list(set(modules))
 
 
-@minipresto.cli.pass_environment
+@pass_environment
 def check_compatibility(ctx, modules=[]):
     """Checks if any of the provided modules are mutually exclusive of each
     other. If they are, a user error is raised."""
@@ -164,7 +163,7 @@ def check_compatibility(ctx, modules=[]):
                 )
 
 
-@minipresto.cli.pass_environment
+@pass_environment
 def chunk(ctx, modules=[]):
     """Builds docker-compose command chunk for the chosen modules. Returns a
     command chunk string."""
@@ -176,7 +175,7 @@ def chunk(ctx, modules=[]):
     return "".join(chunk)
 
 
-@minipresto.cli.pass_environment
+@pass_environment
 def build_command(ctx, docker_native="", compose_env={}, chunk=""):
     """Builds a formatted docker-compose command for shell execution. Returns a
     docker-compose command string."""
@@ -207,7 +206,7 @@ def build_command(ctx, docker_native="", compose_env={}, chunk=""):
     return "".join(cmd)
 
 
-@minipresto.cli.pass_environment
+@pass_environment
 def execute_bootstraps(ctx, modules=[]):
     """Executes bootstrap script for each container that has one––bootstrap
     scripts will only execute once the container is fully running to prevent
@@ -248,7 +247,7 @@ def execute_bootstraps(ctx, modules=[]):
     return containers
 
 
-@minipresto.cli.pass_environment
+@pass_environment
 def execute_container_bootstrap(ctx, bootstrap="", container_name="", yaml_file=""):
     """Executes a single bootstrap inside a container. If the
     `/opt/minipresto/bootstrap_status.txt` file has the same checksum as the
@@ -318,7 +317,7 @@ def execute_container_bootstrap(ctx, bootstrap="", container_name="", yaml_file=
     return True
 
 
-@minipresto.cli.pass_environment
+@pass_environment
 def check_dup_configs(ctx):
     """Checks for duplicate configs in Presto config files (jvm.config and
     config.properties). This is a safety check for modules that may improperly
@@ -398,7 +397,7 @@ def check_dup_configs(ctx):
                     duplicates = []
 
 
-@minipresto.cli.pass_environment
+@pass_environment
 def append_user_config(ctx, containers_to_restart=[]):
     """Appends Presto config from minipresto.cfg file. If the config is not
     present, it is added. If it exists, it is replaced. If anything changes in
@@ -530,7 +529,7 @@ def append_user_config(ctx, containers_to_restart=[]):
     return containers_to_restart
 
 
-@minipresto.cli.pass_environment
+@pass_environment
 def restart_containers(ctx, containers_to_restart=[]):
     """Restarts all the containers in the list."""
 
@@ -553,7 +552,7 @@ def restart_containers(ctx, containers_to_restart=[]):
             )
 
 
-@minipresto.cli.pass_environment
+@pass_environment
 def initialize_containers(ctx):
     """Initializes each container with /opt/minipresto/bootstrap_status.txt."""
 
@@ -582,7 +581,7 @@ def initialize_containers(ctx):
             )
 
 
-@minipresto.cli.pass_environment
+@pass_environment
 def rollback_provision(ctx, no_rollback):
     """Rolls back the provisioning command in the event of an error."""
 

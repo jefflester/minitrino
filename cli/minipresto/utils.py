@@ -5,13 +5,14 @@ import os
 import sys
 import traceback
 import pkg_resources
-import minipresto.errors as err
+
+from minipresto import errors as err
+from minipresto.settings import DEFAULT_INDENT
 
 from click import echo, style, prompt
 from textwrap import fill
 from shutil import get_terminal_size
 from functools import wraps
-from minipresto.settings import DEFAULT_INDENT
 
 
 class Logger:

@@ -4,13 +4,12 @@
 import sys
 import click
 
-import minipresto.cli
-import minipresto.utils as utils
-
-from docker.errors import APIError
+from minipresto.cli import pass_environment
+from minipresto import utils
 from minipresto.settings import IMAGE
 from minipresto.settings import VOLUME
 from minipresto.settings import RESOURCE_LABEL
+from docker.errors import APIError
 
 
 @click.command(
@@ -54,7 +53,7 @@ from minipresto.settings import RESOURCE_LABEL
     ),
 )
 @utils.exception_handler
-@minipresto.cli.pass_environment
+@pass_environment
 def cli(ctx, images, volumes, labels, force):
     """Remove command for Minipresto."""
 
@@ -79,7 +78,7 @@ def cli(ctx, images, volumes, labels, force):
     ctx.logger.log(f"Removal complete.")
 
 
-@minipresto.cli.pass_environment
+@pass_environment
 def remove_items(ctx, item_type, force, labels=[]):
     """Removes Docker items. If no labels are passed in, all Minipresto
     resources are removed. If label(s) are passed in, the removal is limited to

@@ -9,10 +9,9 @@ import shutil
 import tarfile
 import fileinput
 
-import minipresto.cli
-import minipresto.utils as utils
-import minipresto.errors as err
-
+from minipresto.cli import pass_environment
+from minipresto import utils
+from minipresto import errors as err
 from minipresto.settings import SNAPSHOT_ROOT_FILES
 from minipresto.settings import PROVISION_SNAPSHOT_TEMPLATE
 from minipresto.settings import LIB
@@ -84,7 +83,7 @@ from minipresto.settings import SCRUB_KEYS
     ),
 )
 @utils.exception_handler
-@minipresto.cli.pass_environment
+@pass_environment
 def cli(ctx, modules, name, directory, force, no_scrub):
     """Snapshot command for Minipresto."""
 
@@ -125,7 +124,7 @@ def cli(ctx, modules, name, directory, force, no_scrub):
     )
 
 
-@minipresto.cli.pass_environment
+@pass_environment
 def validate_name(ctx, name):
     """Validates the chosen filename for correct input."""
 
@@ -138,7 +137,7 @@ def validate_name(ctx, name):
             )
 
 
-@minipresto.cli.pass_environment
+@pass_environment
 def check_exists(ctx, name, directory, force):
     """Checks if the resulting tarball exists. If it exists, the user is
     prompted to overwrite the existing file."""
@@ -156,7 +155,7 @@ def check_exists(ctx, name, directory, force):
             sys.exit(0)
 
 
-@minipresto.cli.pass_environment
+@pass_environment
 def prepare_snapshot_dir(ctx, name, active, no_scrub, modules):
     """Checks if the snapshot temp directory exists. If it does, clears
     files/directories inside of it. If it doesn't, (1) creates it and clones the
@@ -185,7 +184,7 @@ def prepare_snapshot_dir(ctx, name, active, no_scrub, modules):
     return snapshot_name_dir
 
 
-@minipresto.cli.pass_environment
+@pass_environment
 def build_snapshot_command(ctx, snapshot_name_dir, modules=[], active=True):
     """Builds a basic shell command that can be used to provision an environment
     with the minipresto CLI. Used for snapshot purposes."""
@@ -194,7 +193,7 @@ def build_snapshot_command(ctx, snapshot_name_dir, modules=[], active=True):
     create_snapshot_command_file(command_string, snapshot_name_dir)
 
 
-@minipresto.cli.pass_environment
+@pass_environment
 def build_command_string(ctx, modules=[]):
     """Builds a command string that can be used to create an environment with
     the designated modules."""
@@ -215,7 +214,7 @@ def build_command_string(ctx, modules=[]):
     return command_string.replace("  ", " ")
 
 
-@minipresto.cli.pass_environment
+@pass_environment
 def create_snapshot_command_file(ctx, command_string="", snapshot_name_dir=""):
     """Creates an .sh file in the minipresto directory for usage by the snapshot
     command. This way, a similar command used to provision the environment is
@@ -244,7 +243,7 @@ def create_snapshot_command_file(ctx, command_string="", snapshot_name_dir=""):
         provision_snapshot_file.write(command_string)
 
 
-@minipresto.cli.pass_environment
+@pass_environment
 def clone_lib_dir(ctx, name):
     """Clones the library directory structure and necessary top-level files in
     preparation for copying over module directories.
@@ -274,7 +273,7 @@ def clone_lib_dir(ctx, name):
     return snapshot_name_dir
 
 
-@minipresto.cli.pass_environment
+@pass_environment
 def handle_copy_config_file(ctx, snapshot_name_dir, no_scrub):
     """Handles the copying of the user config file to the named snapshot
     directory. Calls `scrub_config_file()` if `no_scrub` is True."""
@@ -292,7 +291,7 @@ def handle_copy_config_file(ctx, snapshot_name_dir, no_scrub):
         copy_config_file(snapshot_name_dir)
 
 
-@minipresto.cli.pass_environment
+@pass_environment
 def copy_config_file(ctx, snapshot_name_dir, no_scrub=False):
     """Copies user config file to the named snapshot directory."""
 
@@ -309,7 +308,7 @@ def copy_config_file(ctx, snapshot_name_dir, no_scrub=False):
         scrub_config_file(snapshot_name_dir)
 
 
-@minipresto.cli.pass_environment
+@pass_environment
 def scrub_config_file(ctx, snapshot_name_dir):
     """Scrubs the user config file of sensitive data."""
 
@@ -327,7 +326,7 @@ def scrub_config_file(ctx, snapshot_name_dir):
         )
 
 
-@minipresto.cli.pass_environment
+@pass_environment
 def scrub_line(ctx, line):
     """Scrubs a line from a snapshot config file. Returns the scrubbed line."""
 
@@ -340,7 +339,7 @@ def scrub_line(ctx, line):
     return "=".join(line)
 
 
-@minipresto.cli.pass_environment
+@pass_environment
 def copy_module_dirs(ctx, snapshot_name_dir, modules=[]):
     """Copies module directories into the named snapshot directory."""
 
@@ -354,7 +353,7 @@ def copy_module_dirs(ctx, snapshot_name_dir, modules=[]):
         shutil.copytree(module_dir, dest_dir)
 
 
-@minipresto.cli.pass_environment
+@pass_environment
 def create_named_tarball(ctx, name, snapshot_name_dir, save_dir):
     """Creates a tarball of the named snapshot directory and placed in the
     library's snapshot directory."""
@@ -371,7 +370,7 @@ def snapshot_runner(name, no_scrub, active, modules=[], directory=""):
     create_named_tarball(name, snapshot_name_dir, directory)
 
 
-@minipresto.cli.pass_environment
+@pass_environment
 def check_complete(ctx, name, directory):
     """Checks if the snapshot completed. If detected as incomplete, exists with
     a non-zero status code."""

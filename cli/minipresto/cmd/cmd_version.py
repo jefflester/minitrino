@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import click
-import minipresto.cli
-import minipresto.utils as utils
+from minipresto.cli import pass_environment
+from minipresto import utils
 
 
 @click.command(
@@ -11,7 +11,7 @@ import minipresto.utils as utils
     help=("""Display the Minipresto version."""),
 )
 @utils.exception_handler
-@minipresto.cli.pass_environment
+@pass_environment
 def cli(ctx):
     """Version command for Minipresto."""
 

@@ -3,18 +3,18 @@
 
 import os
 import click
-import minipresto.settings as settings
-import minipresto.components as components
+
+from minipresto import settings
+from minipresto import components
 
 from pathlib import Path
 
 CONTEXT_SETTINGS = {"auto_envvar_prefix": "MINIPRESTO"}
-CURRENT_COMMAND = ""
 
 pass_environment = click.make_pass_decorator(components.Environment, ensure=True)
 
 
-class CLI(click.MultiCommand):
+class CommandLineInterface(click.MultiCommand):
     def list_commands(self, ctx):
         cmd_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "cmd"))
         retval = []
@@ -27,13 +27,12 @@ class CLI(click.MultiCommand):
     def get_command(self, ctx, name):
         try:
             mod = __import__(f"minipresto.cmd.cmd_{name}", None, None, ["cli"])
-            CURRENT_COMMAND = name
         except ImportError:
             return
         return mod.cli
 
 
-@click.command(cls=CLI, context_settings=CONTEXT_SETTINGS)
+@click.command(cls=CommandLineInterface, context_settings=CONTEXT_SETTINGS)
 @click.option(
     "-v",
     "--verbose",
@@ -67,8 +66,4 @@ def cli(ctx, verbose, env):
     https://github.com/jefflester/minipresto
     """
 
-    skip_lib = False
-    if CURRENT_COMMAND in settings.LIB_INDEPENDENT_CMDS:
-        skip_lib = True
-
-    ctx._user_init(verbose, env, skip_lib)
+    ctx._user_init(verbose, env, False)

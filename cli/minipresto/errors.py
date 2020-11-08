@@ -1,7 +1,7 @@
 #!usr/bin/env/python3
 # -*- coding: utf-8 -*-
 
-import minipresto.utils as utils
+from minipresto import utils
 
 
 class MiniprestoError(Exception):

@@ -4,9 +4,9 @@
 import click
 import json
 
-import minipresto.cli
-import minipresto.errors as err
-import minipresto.utils as utils
+from minipresto.cli import pass_environment
+from minipresto import errors as err
+from minipresto import utils
 
 
 @click.command(
@@ -41,7 +41,7 @@ import minipresto.utils as utils
     help=("""Print metadata for all running modules."""),
 )
 @utils.exception_handler
-@minipresto.cli.pass_environment
+@pass_environment
 def cli(ctx, modules, json_format, running):
     """Version command for Minipresto."""
 
@@ -71,7 +71,7 @@ def cli(ctx, modules, json_format, running):
                 log_info(module_key, module_dict, json_format)
 
 
-@minipresto.cli.pass_environment
+@pass_environment
 def log_info(ctx, module_name="", module_dict={}, json_format=False):
     """Logs module metadata to the user's terminal."""
 

@@ -4,10 +4,9 @@
 import sys
 import click
 
-import minipresto.cli
-import minipresto.utils as utils
-import minipresto.errors as err
-
+from minipresto.cli import pass_environment
+from minipresto import utils
+from minipresto import errors as err
 from minipresto.settings import RESOURCE_LABEL
 
 
@@ -36,7 +35,7 @@ from minipresto.settings import RESOURCE_LABEL
     help=("""Stop Minipresto containers without a grace period."""),
 )
 @utils.exception_handler
-@minipresto.cli.pass_environment
+@pass_environment
 def cli(ctx, sig_kill, keep):
     """Down command for Minipresto. Exits with a 0 status code if there are no
     running minipresto containers."""

@@ -6,9 +6,9 @@ import sys
 import click
 import shutil
 
-import minipresto.cli
-import minipresto.errors as err
-import minipresto.utils as utils
+from minipresto.cli import pass_environment
+from minipresto import errors as err
+from minipresto import utils
 
 
 @click.command(
@@ -23,7 +23,7 @@ import minipresto.utils as utils
     help=("""The version of the library to install."""),
 )
 @utils.exception_handler
-@minipresto.cli.pass_environment
+@pass_environment
 def cli(ctx, version):
     """Library installation command for Minipresto."""
 
@@ -49,7 +49,7 @@ def cli(ctx, version):
     ctx.logger.log("Library installation complete.")
 
 
-@minipresto.cli.pass_environment
+@pass_environment
 def download_and_extract(ctx, version=""):
 
     github_uri = f"https://github.com/jefflester/minipresto/archive/{version}.tar.gz"
@@ -91,7 +91,7 @@ def download_and_extract(ctx, version=""):
         raise err.MiniprestoError(str(e))
 
 
-@minipresto.cli.pass_environment
+@pass_environment
 def cleanup(ctx, tarball="", file_basename="", trigger_error=True):
 
     ctx.cmd_executor.execute_commands(

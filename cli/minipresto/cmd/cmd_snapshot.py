@@ -91,6 +91,8 @@ def cli(ctx, modules, name, directory, force, no_scrub):
     # regardless of the directory provided. The artifact (tarball) will go
     # to either the default directory or the user-provided directory.
 
+    utils.check_lib(ctx)
+
     if directory and not os.path.isdir(directory):
         raise err.UserError(
             f"Cannot save snapshot in nonexistent directory: {directory}",

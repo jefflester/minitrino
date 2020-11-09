@@ -234,6 +234,12 @@ def check_daemon(docker_client):
         )
 
 
+def check_lib(ctx):
+    """Checks if a Minipresto library exists."""
+
+    ctx.minipresto_lib_dir
+
+
 def generate_identifier(identifiers=None):
     """Returns an 'object identifier' string used for creating log messages,
     e.g. '[ID: 12345] [Name: presto]'.

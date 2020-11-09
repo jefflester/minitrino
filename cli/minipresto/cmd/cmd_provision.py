@@ -75,6 +75,7 @@ def cli(ctx, modules, no_rollback, docker_native):
     is unsuccessful, the function exits with a non-zero status code."""
 
     utils.check_daemon(ctx.docker_client)
+    utils.check_lib(ctx)
     modules = append_running_modules(modules)
     check_compatibility(modules)
 

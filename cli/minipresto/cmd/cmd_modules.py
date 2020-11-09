@@ -45,6 +45,8 @@ from minipresto import utils
 def cli(ctx, modules, json_format, running):
     """Version command for Minipresto."""
 
+    utils.check_lib(ctx)
+
     ctx.logger.log("Printing module metadata...")
 
     if modules and not running:

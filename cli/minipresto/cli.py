@@ -66,4 +66,4 @@ def cli(ctx, verbose, env):
     https://github.com/jefflester/minipresto
     """
 
-    ctx._user_init(verbose, env, False)
+    ctx._user_init(verbose, env)

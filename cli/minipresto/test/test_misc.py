@@ -129,14 +129,14 @@ def test_invalid_lib():
     helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     # Real directory, but ain't a real library
-    result = helpers.execute_command(["-v", "--env", "LIB_PATH=/tmp/", "version"])
+    result = helpers.execute_command(["-v", "--env", "LIB_PATH=/tmp/", "provision"])
 
     assert result.exit_code == 2
-    assert "Are you pointing to a valid library" in result.output
+    assert "You must provide a path to a compatible Minipresto library" in result.output
 
     # Fake directory
     result = helpers.execute_command(
-        ["-v", "--env", "LIB_PATH=/gucci-is-overrated/", "version"]
+        ["-v", "--env", "LIB_PATH=/gucci-is-overrated/", "provision"]
     )
 
     assert result.exit_code == 2

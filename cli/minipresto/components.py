@@ -91,11 +91,13 @@ class Environment:
 
         if not lib_dir and os.path.isdir(os.path.join(self.minipresto_user_dir, "lib")):
             lib_dir = os.path.join(self.minipresto_user_dir, "lib")
-        else:  # Use repo root, fail if this doesn't exist
+        elif not lib_dir:  # Use repo root, fail if this doesn't exist
             lib_dir = Path(os.path.abspath(__file__)).resolve().parents[2]
             lib_dir = os.path.join(lib_dir, "lib")
 
-        if not os.path.isdir(lib_dir):
+        if not os.path.isdir(lib_dir) or not os.path.isfile(
+            os.path.join(lib_dir, "minipresto.env")
+        ):
             raise err.UserError(
                 "You must provide a path to a compatible Minipresto library.",
                 f"You can point to a Minipresto library a few different "
@@ -293,16 +295,16 @@ class EnvironmentVariables:
             )
 
     def _parse_library_env(self):
-        """Parses the Minipresto library's root `.env` file. All config from
+        """Parses the Minipresto library's root `minipresto.env` file. All config from
         this file is added to the 'MODULES' section of the environment
         dictionary since this file explicitly defines the versions of the module
         services."""
 
-        env_file = os.path.join(self._ctx.minipresto_lib_dir, ".env")
+        env_file = os.path.join(self._ctx.minipresto_lib_dir, "minipresto.env")
         if not os.path.isfile(env_file):
             raise err.UserError(
-                f"Library '.env' file does not exist at path: {env_file}",
-                f"Are you pointing to a valid library, and is the .env file "
+                f"Library 'minipresto.env' file does not exist at path: {env_file}",
+                f"Are you pointing to a valid library, and is the minipresto.env file "
                 f"present in that library?",
             )
 

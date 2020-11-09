@@ -20,7 +20,7 @@ PRESTO_JVM_CONFIG = "jvm.config"
 LIB_INDEPENDENT_CMDS = ["lib_install"]
 
 # Snapshots
-SNAPSHOT_ROOT_FILES = ["docker-compose.yml", ".env", "Dockerfile"]
+SNAPSHOT_ROOT_FILES = ["docker-compose.yml", "minipresto.env", "Dockerfile"]
 
 # Terminal
 DEFAULT_INDENT = " " * 5

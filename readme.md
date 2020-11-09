@@ -70,10 +70,10 @@ Options:
   -e, --env TEXT  Add or override environment variables.
                   
                   Environment variables are sourced from the Minipresto
-                  library's root '.env' file as well as the user config file
-                  in '~/.minipresto/minipresto.cfg'. Variables supplied by
-                  this option will override values from either of those
-                  sources. The variables will also be passed to the
+                  library's root 'minipresto.env' file as well as the user 
+                  config file in '~/.minipresto/minipresto.cfg'. Variables 
+                  supplied by this option will override values from either 
+                  of those sources. The variables will also be passed to the
                   environment of the shell executing commands during the
                   'provision' command.
 
@@ -147,7 +147,7 @@ Docker Compose files together.
 
 #### Environment Variables
 Environment variables passed to Docker containers are sourced through two
-locations. The first is from the `.env` file in the library root. These
+locations. The first is from the `minipresto.env` file in the library root. These
 variables define the versions of the provisioned Docker services. The second is
 from from variables set in the `[MODULES]` section of the `minipresto.cfg` file.
 These variables can contain sensitive information like access credentials, so
@@ -449,9 +449,9 @@ A simplified library structure:
 
 ```
 lib
-├── .env
 ├── Dockerfile
 ├── docker-compose.yml
+├── minipresto.env
 ├── modules
 │   ├── catalog
 │   │   └── postgres

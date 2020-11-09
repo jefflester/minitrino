@@ -50,7 +50,7 @@ class CommandLineInterface(click.MultiCommand):
         """Add or override environment variables. 
 
         Environment variables are sourced from the Minipresto library's root
-        '.env' file as well as the user config file in
+        'minipresto.env' file as well as the user config file in
         '~/.minipresto/minipresto.cfg'. Variables supplied by this option will
         override values from either of those sources. The variables will also be
         passed to the environment of the shell executing commands during the

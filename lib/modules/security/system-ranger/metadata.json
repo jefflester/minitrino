@@ -1,0 +1,4 @@
+{
+    "description": "Secures Presto with Ranger role-based access control.",
+    "incompatible_modules": []
+}

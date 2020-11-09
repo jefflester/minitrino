@@ -1,0 +1,62 @@
+version: "3.7"
+services:
+  presto:
+    volumes:
+      - "./modules/catalog/hive-minio/resources/presto/hive_hms_minio.properties:/usr/lib/presto/etc/catalog/hive_hms_minio.properties"
+
+  postgres-hive-minio:
+    image: "postgres:${POSTGRES_HIVE_HMS_VER}"
+    container_name: "postgres-hive-minio"
+    labels:
+      - "com.starburst.tests=minipresto"
+      - "com.starburst.tests.module.hive-minio=catalog-hive-minio"
+    user: "postgres"
+    env_file:
+      - "./modules/catalog/hive-minio/resources/postgres/postgres.env"
+    volumes:
+      - "postgres-hive-minio-data:/var/lib/postgresql/data"
+
+  metastore-minio:
+    image: "starburstdata/hive-metastore-unsecured:0cc95b"
+    container_name: "metastore-minio"
+    labels:
+      - "com.starburst.tests=minipresto"
+      - "com.starburst.tests.module.hive-minio=catalog-hive-minio"
+    depends_on:
+      - "postgres-hive-minio"
+    env_file:
+      - "./modules/catalog/hive-minio/resources/hms/hms.env"
+    volumes:
+      - "./modules/resources/wait-for-it.sh:/etc/boot/wait-for-it.sh"
+    command:
+      [
+        "./etc/boot/wait-for-it.sh",
+        "postgres-hive-minio:5432",
+        "--strict",
+        "--timeout=60",
+        "--",
+        "./opt/bin/start-hive-metastore.sh",
+      ]
+    ports:
+      - "9083:9083"
+
+  minio:
+    image: minio/minio
+    container_name: minio
+    ports:
+      - "9000:9000"
+    volumes:
+      - "./modules/catalog/hive-minio/resources/minio/data/:/data"
+    labels:
+      - "com.starburst.tests=minipresto"
+      - "com.starburst.tests.module.hive-minio=catalog-hive-minio"
+    environment:
+      MINIO_ACCESS_KEY: access-key
+      MINIO_SECRET_KEY: secret-key
+    command: server /data
+
+volumes:
+  postgres-hive-minio-data:
+    labels:
+      - "com.starburst.tests=minipresto"
+      - "com.starburst.tests.module.hive-minio=catalog-hive-minio"

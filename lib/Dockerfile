@@ -1,12 +1,3 @@
-# This exists because of presto-cli mismatches between images. The Dockerfile
-# will ensure that invoking `presto` from the shell brings up the Presto CLI all
-# the way back to early 312-e versions. This Dockerfile also handles any
-# commands that need to be executed as tbe root user, and then sets the default
-# user back to presto.
-
-# TODO: Check if presto user exists before doing presto-specific things
-# TODO: How to handle older images that use root as default...
-
 ARG STARBURST_VER
 FROM starburstdata/presto:${STARBURST_VER}
 

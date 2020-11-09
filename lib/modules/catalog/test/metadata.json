@@ -1,0 +1,4 @@
+{
+    "description": "Test module.",
+    "incompatible_modules": ["ldap"]
+}

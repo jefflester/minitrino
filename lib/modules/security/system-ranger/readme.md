@@ -9,7 +9,7 @@ This module provisions a Ranger server and Postgres database for Ranger storage.
 To provision this module, run:
 
 ```shell
-minipresto provision --security system-ranger
+minipresto provision --module system-ranger
 ```
 
 ## Policies

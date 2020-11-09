@@ -1,2 +1,2 @@
 # Postgres Connector Module
-This module provisions a standalone Postgres service. It is named uniquely to avoid conflicts with other modules that may use Presto as a backend, such as the `hive-hms` module. 
+This module provisions a standalone Postgres service. It is named uniquely to avoid conflicts with other modules that may use Presto as a backend, such as the `hive-s3` module. 

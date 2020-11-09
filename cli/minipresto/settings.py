@@ -15,9 +15,12 @@ MODULE_CATALOG = "catalog"
 MODULE_SECURITY = "security"
 MODULE_RESOURCES = "resources"
 ETC_PRESTO = "/usr/lib/presto/etc"
+PRESTO_CONFIG = "config.properties"
+PRESTO_JVM_CONFIG = "jvm.config"
+LIB_INDEPENDENT_CMDS = ["lib_install"]
 
 # Snapshots
-SNAPSHOT_ROOT_FILES = ["docker-compose.yml", ".env", "Dockerfile"]
+SNAPSHOT_ROOT_FILES = ["docker-compose.yml", "minipresto.env", "Dockerfile"]
 
 # Terminal
 DEFAULT_INDENT = " " * 5
@@ -42,11 +45,12 @@ TEXT_EDITOR=
 DOCKER_HOST=
 
 [PRESTO]
-STARBURST_LIC_PATH=
 CONFIG=
 JVM_CONFIG=
 
 [MODULES]
+STARBURST_LIC_PATH=
+
 S3_ENDPOINT=s3.region.amazonaws.com
 S3_ACCESS_KEY=
 S3_SECRET_KEY=

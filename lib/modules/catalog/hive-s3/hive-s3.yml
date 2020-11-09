@@ -1,0 +1,52 @@
+version: "3.7"
+services:
+  presto:
+    environment:
+      S3_ENDPOINT: "${S3_ENDPOINT}"
+      S3_ACCESS_KEY: "${S3_ACCESS_KEY}"
+      S3_SECRET_KEY: "${S3_SECRET_KEY}"
+      REGION: "${REGION}"
+    volumes:
+      - "./modules/catalog/hive-s3/resources/presto/hive_hms.properties:/usr/lib/presto/etc/catalog/hive_hms.properties"
+
+  postgres-hive-s3:
+    image: "postgres:${POSTGRES_HIVE_HMS_VER}"
+    container_name: "postgres-hive-s3"
+    labels:
+      - "com.starburst.tests=minipresto"
+      - "com.starburst.tests.module.hive-s3=catalog-hive-s3"
+    user: "postgres"
+    env_file:
+      - "./modules/catalog/hive-s3/resources/postgres/postgres.env"
+    volumes:
+      - "postgres-hive-s3-data:/var/lib/postgresql/data"
+
+  metastore:
+    image: "starburstdata/hive-metastore-unsecured"
+    container_name: "metastore"
+    labels:
+      - "com.starburst.tests=minipresto"
+      - "com.starburst.tests.module.hive-s3=catalog-hive-s3"
+    depends_on:
+      - "postgres-hive-s3"
+    env_file:
+      - "./modules/catalog/hive-s3/resources/hms/hms.env"
+    volumes:
+      - "./modules/resources/wait-for-it.sh:/etc/boot/wait-for-it.sh"
+    command:
+      [
+        "./etc/boot/wait-for-it.sh",
+        "postgres-hive-s3:5432",
+        "--strict",
+        "--timeout=60",
+        "--",
+        "./opt/bin/start-hive-metastore.sh",
+      ]
+    ports:
+      - "9083:9083"
+
+volumes:
+  postgres-hive-s3-data:
+    labels:
+      - "com.starburst.tests=minipresto"
+      - "com.starburst.tests.module.hive-s3=catalog-hive-s3"

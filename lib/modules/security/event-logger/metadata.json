@@ -1,0 +1,4 @@
+{
+    "description": "Implements the query event logger, which logs all query information to a Postgres database.",
+    "incompatible_modules": []
+}

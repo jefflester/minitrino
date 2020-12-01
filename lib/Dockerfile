@@ -18,7 +18,7 @@ RUN set -euxo pipefail \
     && CLI_URL=https://repo1.maven.org/maven2/io/prestosql/presto-cli/"${DIST}"/presto-cli-"${DIST}"-executable.jar \
     && curl -fsSL "${CLI_URL}" > "${PRESTO_CLI_PATH}" \
     && chmod -v +x "${PRESTO_CLI_PATH}" \
-    && chown presto:presto "${PRESTO_CLI_PATH}" \
+    && chown --reference=/usr/lib/presto/etc/config.properties "${PRESTO_CLI_PATH}" \
     && ln -vs "${PRESTO_CLI_PATH}" \
     && echo OK
 

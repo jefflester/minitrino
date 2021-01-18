@@ -1,0 +1,13 @@
+version: "3.7"
+services:
+  presto:
+    environment:
+      TERADATA_CONNECT_URL: "${TERADATA_CONNECT_URL}"
+      TERADATA_CONNECT_USER: "${TERADATA_CONNECT_USER}"
+      TERADATA_CONNECT_PASSWORD: "${TERADATA_CONNECT_PASSWORD}"
+    labels:
+      - "com.starburst.tests.module.teradata=catalog-teradata"
+    volumes:
+      - "./modules/catalog/teradata/resources/presto/teradata.properties:/usr/lib/presto/etc/catalog/teradata.properties"
+      - "${TERADATA_TERAJDBC_PATH}:/usr/lib/presto/plugin/teradata/terajdbc4.jar"
+      #- "${TERADATA_TDGSSCONFIG_PATH}:/usr/lib/presto/plugin/teradata/tdgssconfig.jar"

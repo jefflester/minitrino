@@ -1,0 +1,4 @@
+{
+    "description": "Creates a Teradata catalog using the standard Teradata connector.",
+    "incompatible_modules": []
+}

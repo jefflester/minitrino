@@ -1,0 +1,4 @@
+{
+    "description": "Creates a SQL Server catalog using the standard SQL Server connector.",
+    "incompatible_modules": []
+}

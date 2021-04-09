@@ -1,0 +1,17 @@
+version: "3.7"
+services:
+
+  presto:
+    volumes:
+      - "./modules/catalog/sqlserver/resources/presto/sqlserver.properties:/usr/lib/presto/etc/catalog/sqlserver.properties"
+
+  sqlserver:
+    image: "mcr.microsoft.com/mssql/server:${SQLSERVER_VER}"
+    container_name: "sqlserver"
+    labels:
+      - "com.starburst.tests=minipresto"
+      - "com.starburst.tests.module.sqlserver=catalog-sqlserver"
+    env_file:
+      - "./modules/catalog/sqlserver/resources/sqlserver/sqlserver.env"
+    ports:
+      - 1433:1433

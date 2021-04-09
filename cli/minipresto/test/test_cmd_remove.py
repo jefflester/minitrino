@@ -3,9 +3,9 @@
 
 import docker
 import subprocess
-import minipresto.test.helpers as helpers
+import minitrino.test.helpers as helpers
 
-from minipresto.settings import RESOURCE_LABEL
+from minitrino.settings import RESOURCE_LABEL
 from inspect import currentframe
 from types import FrameType
 from typing import cast
@@ -29,7 +29,7 @@ def main():
 
 
 def test_images():
-    """Verifies that images with the standard Minipresto label applied to them
+    """Verifies that images with the standard Minitrino label applied to them
     are removed."""
 
     helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
@@ -54,7 +54,7 @@ def test_images():
 
 
 def test_volumes():
-    """Verifies that volumes with the standard Minipresto label applied to them
+    """Verifies that volumes with the standard Minitrino label applied to them
     are removed."""
 
     helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
@@ -106,7 +106,7 @@ def test_label():
         },
         {
             "resource_type": docker_client.images,
-            "label": "com.starburst.tests.module=presto",
+            "label": "com.starburst.tests.module=trino",
             "expected_count": 1,
         },
     )
@@ -155,7 +155,7 @@ def test_multiple_labels():
 
 
 def test_invalid_label():
-    """Verifies that images with the Minipresto label applied to them are
+    """Verifies that images with the Minitrino label applied to them are
     removed."""
 
     helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
@@ -182,7 +182,7 @@ def test_invalid_label():
 
 
 def test_all():
-    """Verifies that all Minipresto resources are removed."""
+    """Verifies that all Minitrino resources are removed."""
 
     helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 

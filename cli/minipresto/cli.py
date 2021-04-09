@@ -4,12 +4,12 @@
 import os
 import click
 
-from minipresto import settings
-from minipresto import components
+from minitrino import settings
+from minitrino import components
 
 from pathlib import Path
 
-CONTEXT_SETTINGS = {"auto_envvar_prefix": "MINIPRESTO"}
+CONTEXT_SETTINGS = {"auto_envvar_prefix": "MINITRINO"}
 
 pass_environment = click.make_pass_decorator(components.Environment, ensure=True)
 
@@ -26,7 +26,7 @@ class CommandLineInterface(click.MultiCommand):
 
     def get_command(self, ctx, name):
         try:
-            mod = __import__(f"minipresto.cmd.cmd_{name}", None, None, ["cli"])
+            mod = __import__(f"minitrino.cmd.cmd_{name}", None, None, ["cli"])
         except ImportError:
             return
         return mod.cli
@@ -49,9 +49,9 @@ class CommandLineInterface(click.MultiCommand):
     help=(
         """Add or override environment variables. 
 
-        Environment variables are sourced from the Minipresto library's root
-        'minipresto.env' file as well as the user config file in
-        '~/.minipresto/minipresto.cfg'. Variables supplied by this option will
+        Environment variables are sourced from the Minitrino library's root
+        'minitrino.env' file as well as the user config file in
+        '~/.minitrino/minitrino.cfg'. Variables supplied by this option will
         override values from either of those sources. The variables will also be
         passed to the environment of the shell executing commands during the
         'provision' command."""
@@ -59,11 +59,11 @@ class CommandLineInterface(click.MultiCommand):
 )
 @pass_environment
 def cli(ctx, verbose, env):
-    """Welcome to the Minipresto command line interface.
+    """Welcome to the Minitrino command line interface.
 
     To report issues and ask questions, please file a GitHub issue and apply a
     descriptive label at the GitHub repository:
-    https://github.com/jefflester/minipresto
+    https://github.com/jefflester/minitrino
     """
 
     ctx._user_init(verbose, env)

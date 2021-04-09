@@ -1,7 +1,7 @@
 version: "3.7"
 services:
 
-  presto:
+  trino:
     environment:
       SNOWFLAKE_JDBC_CONNECT_URL: "${SNOWFLAKE_JDBC_CONNECT_URL}"
       SNOWFLAKE_JDBC_CONNECT_USER: "${SNOWFLAKE_JDBC_CONNECT_USER}"
@@ -12,4 +12,4 @@ services:
     labels:
       - "com.starburst.tests.module.snowflake-jdbc=catalog-snowflake-jdbc"
     volumes:
-      - "./modules/catalog/snowflake-jdbc/resources/presto/snowflake_jdbc.properties:/usr/lib/presto/etc/catalog/snowflake_jdbc.properties"
+      - "./modules/catalog/snowflake-jdbc/resources/trino/snowflake_jdbc.properties:/usr/lib/trino/etc/catalog/snowflake_jdbc.properties"

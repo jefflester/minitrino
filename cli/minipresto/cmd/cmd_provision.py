@@ -4,7 +4,7 @@
 # Instead of using the Docker SDK, this script will form a Docker Compose
 # command string to execute straight through the docker-compose CLI. This is
 # required because the Docker SDK does not support communication with Compose
-# files, and Minipresto benefits hugely from Docker Compose.
+# files, and Minitrino benefits hugely from Docker Compose.
 
 import os
 import stat
@@ -12,16 +12,16 @@ import hashlib
 import time
 import click
 
-from minipresto.cli import pass_environment
-from minipresto import utils
-from minipresto import errors as err
-from minipresto.settings import RESOURCE_LABEL
-from minipresto.settings import MODULE_ROOT
-from minipresto.settings import MODULE_CATALOG
-from minipresto.settings import MODULE_SECURITY
-from minipresto.settings import ETC_PRESTO
-from minipresto.settings import PRESTO_CONFIG
-from minipresto.settings import PRESTO_JVM_CONFIG
+from minitrino.cli import pass_environment
+from minitrino import utils
+from minitrino import errors as err
+from minitrino.settings import RESOURCE_LABEL
+from minitrino.settings import MODULE_ROOT
+from minitrino.settings import MODULE_CATALOG
+from minitrino.settings import MODULE_SECURITY
+from minitrino.settings import ETC_TRINO
+from minitrino.settings import TRINO_CONFIG
+from minitrino.settings import TRINO_JVM_CONFIG
 
 from docker.errors import NotFound
 
@@ -62,16 +62,16 @@ from docker.errors import NotFound
         docker-compose shell command. Run `docker-compose up --help` to see all
         available options.
 
-        Example: minipresto provision --docker-native --build
+        Example: minitrino provision --docker-native --build
 
-        Example: minipresto provision --docker-native '--remove-orphans
+        Example: minitrino provision --docker-native '--remove-orphans
         --force-recreate'"""
     ),
 )
 @utils.exception_handler
 @pass_environment
 def cli(ctx, modules, no_rollback, docker_native):
-    """Provision command for Minipresto. If the resulting docker-compose command
+    """Provision command for Minitrino. If the resulting docker-compose command
     is unsuccessful, the function exits with a non-zero status code."""
 
     utils.check_daemon(ctx.docker_client)
@@ -82,14 +82,14 @@ def cli(ctx, modules, no_rollback, docker_native):
     if not modules:
         ctx.logger.log(
             f"No catalog or security options received. Provisioning "
-            f"standalone Presto container..."
+            f"standalone Trino container..."
         )
     else:
         for module in modules:
             if not ctx.modules.data.get(module, False):
                 raise err.UserError(
                     f"Invalid module: '{module}'. It was not found "
-                    f"in the Minipresto library at {ctx.minipresto_lib_dir}"
+                    f"in the Minitrino library at {ctx.minitrino_lib_dir}"
                 )
 
     try:
@@ -160,7 +160,7 @@ def check_compatibility(ctx, modules=[]):
                     f"with module '{module}'. Incompatible modules listed for module "
                     f"'{module}' are: {incompatible}",
                     f"You can see which modules are incompatible with this module by "
-                    f"running 'minipresto modules -m {module}'",
+                    f"running 'minitrino modules -m {module}'",
                 )
 
 
@@ -191,7 +191,7 @@ def build_command(ctx, docker_native="", compose_env={}, chunk=""):
             compose_env_string,
             "\\\n",
             "docker-compose -f ",
-            os.path.join(ctx.minipresto_lib_dir, "docker-compose.yml"),
+            os.path.join(ctx.minitrino_lib_dir, "docker-compose.yml"),
             " \\\n",
             chunk,  # Module YAML paths
             "up -d",
@@ -225,7 +225,7 @@ def execute_bootstraps(ctx, modules=[]):
             ctx.modules.data.get(module, {}).get("yaml_dict", {}).get("services", {})
         )
         if not module_services:
-            raise err.MiniprestoError(
+            raise err.MinitrinoError(
                 f"Invalid Docker Compose YAML file (no 'services' section found): {yaml_file}"
             )
         # Get all services defined in YAML file
@@ -235,7 +235,7 @@ def execute_bootstraps(ctx, modules=[]):
     containers = []
     # Get all container names for each service
     for service in services:
-        bootstrap = service[1].get("environment", {}).get("MINIPRESTO_BOOTSTRAP")
+        bootstrap = service[1].get("environment", {}).get("MINITRINO_BOOTSTRAP")
         if bootstrap is None:
             continue
         container_name = service[1].get("container_name")
@@ -251,7 +251,7 @@ def execute_bootstraps(ctx, modules=[]):
 @pass_environment
 def execute_container_bootstrap(ctx, bootstrap="", container_name="", yaml_file=""):
     """Executes a single bootstrap inside a container. If the
-    `/opt/minipresto/bootstrap_status.txt` file has the same checksum as the
+    `/opt/minitrino/bootstrap_status.txt` file has the same checksum as the
     bootstrap script that is about to be executed, the boostrap script is
     skipped.
 
@@ -281,7 +281,7 @@ def execute_container_bootstrap(ctx, bootstrap="", container_name="", yaml_file=
 
     # Check if this script has already been executed
     output = ctx.cmd_executor.execute_commands(
-        "cat /opt/minipresto/bootstrap_status.txt",
+        "cat /opt/minitrino/bootstrap_status.txt",
         suppress_output=True,
         container=container,
         trigger_error=False,
@@ -306,7 +306,7 @@ def execute_container_bootstrap(ctx, bootstrap="", container_name="", yaml_file=
     # Record executed file checksum
     ctx.cmd_executor.execute_commands(
         f"/tmp/{os.path.basename(bootstrap_file)}",
-        f'bash -c "echo {bootstrap_checksum} >> /opt/minipresto/bootstrap_status.txt"',
+        f'bash -c "echo {bootstrap_checksum} >> /opt/minitrino/bootstrap_status.txt"',
         container=container,
     )
 
@@ -320,7 +320,7 @@ def execute_container_bootstrap(ctx, bootstrap="", container_name="", yaml_file=
 
 @pass_environment
 def check_dup_configs(ctx):
-    """Checks for duplicate configs in Presto config files (jvm.config and
+    """Checks for duplicate configs in Trino config files (jvm.config and
     config.properties). This is a safety check for modules that may improperly
     modify these files.
 
@@ -328,30 +328,30 @@ def check_dup_configs(ctx):
     identical. For config.properties, duplicates will be registered if there are
     multiple overlapping property keys."""
 
-    check_files = [PRESTO_CONFIG, PRESTO_JVM_CONFIG]
+    check_files = [TRINO_CONFIG, TRINO_JVM_CONFIG]
     for check_file in check_files:
         ctx.logger.log(
-            f"Checking Presto {check_file} for duplicate configs...",
+            f"Checking Trino {check_file} for duplicate configs...",
             level=ctx.logger.verbose,
         )
-        container = ctx.docker_client.containers.get("presto")
+        container = ctx.docker_client.containers.get("trino")
         output = ctx.cmd_executor.execute_commands(
-            f"cat {ETC_PRESTO}/{check_file}",
+            f"cat {ETC_TRINO}/{check_file}",
             suppress_output=True,
             container=container,
         )
 
         configs = output[0].get("output", "")
         if not configs:
-            raise err.MiniprestoError(
-                f"Presto {check_file} file unable to be read from Presto container."
+            raise err.MinitrinoError(
+                f"Trino {check_file} file unable to be read from Trino container."
             )
 
         configs = configs.strip().split("\n")
         configs.sort()
 
         duplicates = []
-        if check_file == PRESTO_CONFIG:
+        if check_file == TRINO_CONFIG:
             for i, config in enumerate(configs):
                 if config.startswith("#"):
                     continue
@@ -372,7 +372,7 @@ def check_dup_configs(ctx):
                     duplicates = set(duplicates)
                     duplicates_string = "\n".join(duplicates)
                     ctx.logger.log(
-                        f"Duplicate Presto configuration properties detected in "
+                        f"Duplicate Trino configuration properties detected in "
                         f"{check_file} file:\n{duplicates_string}",
                         level=ctx.logger.warn,
                     )
@@ -391,7 +391,7 @@ def check_dup_configs(ctx):
                 elif duplicates:
                     duplicates_string = "\n".join(duplicates)
                     ctx.logger.log(
-                        f"Duplicate Presto configuration properties detected in "
+                        f"Duplicate Trino configuration properties detected in "
                         f"{check_file} file:\n{duplicates_string}",
                         level=ctx.logger.warn,
                     )
@@ -400,65 +400,65 @@ def check_dup_configs(ctx):
 
 @pass_environment
 def append_user_config(ctx, containers_to_restart=[]):
-    """Appends Presto config from minipresto.cfg file. If the config is not
+    """Appends Trino config from minitrino.cfg file. If the config is not
     present, it is added. If it exists, it is replaced. If anything changes in
-    the Presto config, the Presto container is added to the restart list if it's
+    the Trino config, the Trino container is added to the restart list if it's
     not already in the list."""
 
-    user_presto_config = ctx.env.get_var("CONFIG", "")
-    if user_presto_config:
-        user_presto_config = user_presto_config.strip().split("\n")
+    user_trino_config = ctx.env.get_var("CONFIG", "")
+    if user_trino_config:
+        user_trino_config = user_trino_config.strip().split("\n")
 
     user_jvm_config = ctx.env.get_var("JVM_CONFIG", "")
     if user_jvm_config:
         user_jvm_config = user_jvm_config.strip().split("\n")
 
-    if not user_presto_config and not user_jvm_config:
+    if not user_trino_config and not user_jvm_config:
         return containers_to_restart
 
     ctx.logger.log(
-        "Appending user-defined Presto config to Presto container config...",
+        "Appending user-defined Trino config to Trino container config...",
         level=ctx.logger.verbose,
     )
 
-    presto_container = ctx.docker_client.containers.get("presto")
-    if not presto_container:
-        raise err.MiniprestoError(
-            f"Attempting to append Presto configuration in Presto container, "
-            f"but no running Presto container was found."
+    trino_container = ctx.docker_client.containers.get("trino")
+    if not trino_container:
+        raise err.MinitrinoError(
+            f"Attempting to append Trino configuration in Trino container, "
+            f"but no running Trino container was found."
         )
 
     ctx.logger.log(
-        "Checking Presto server status before updating configs...",
+        "Checking Trino server status before updating configs...",
         level=ctx.logger.verbose,
     )
     retry = 0
     while retry <= 30:
-        logs = presto_container.logs().decode()
+        logs = trino_container.logs().decode()
         if "======== SERVER STARTED ========" in logs:
             break
-        elif presto_container.status != "running":
-            raise err.MiniprestoError(
-                f"Presto container stopped running. Inspect the container logs if the "
+        elif trino_container.status != "running":
+            raise err.MinitrinoError(
+                f"Trino container stopped running. Inspect the container logs if the "
                 f"container is still available. If the container was rolled back, rerun "
                 f"the command with the '--no-rollback' option, then inspect the logs."
             )
         else:
             ctx.logger.log(
-                "Presto server has not started. Waiting one second and trying again...",
+                "Trino server has not started. Waiting one second and trying again...",
                 level=ctx.logger.verbose,
             )
             time.sleep(1)
             retry += 1
 
     current_configs = ctx.cmd_executor.execute_commands(
-        f"cat {ETC_PRESTO}/{PRESTO_CONFIG}",
-        f"cat {ETC_PRESTO}/{PRESTO_JVM_CONFIG}",
-        container=presto_container,
+        f"cat {ETC_TRINO}/{TRINO_CONFIG}",
+        f"cat {ETC_TRINO}/{TRINO_JVM_CONFIG}",
+        container=trino_container,
         suppress_output=True,
     )
 
-    current_presto_config = current_configs[0].get("output", "").strip().split("\n")
+    current_trino_config = current_configs[0].get("output", "").strip().split("\n")
     current_jvm_config = current_configs[1].get("output", "").strip().split("\n")
 
     def append_configs(user_configs, current_configs, filename):
@@ -467,7 +467,7 @@ def append_user_config(ctx, containers_to_restart=[]):
         # config. If there is not overlapping config key, append it to the
         # current config list.
 
-        if filename == PRESTO_CONFIG:
+        if filename == TRINO_CONFIG:
             for user_config in user_configs:
                 user_config = utils.parse_key_value_pair(
                     user_config, err_type=err.UserError
@@ -512,20 +512,20 @@ def append_user_config(ctx, containers_to_restart=[]):
 
         # Replace existing file with new values
         ctx.cmd_executor.execute_commands(
-            f"rm {ETC_PRESTO}/{filename}", container=presto_container
+            f"rm {ETC_TRINO}/{filename}", container=trino_container
         )
 
         for current_config in current_configs:
             append_config = (
-                f'bash -c "cat <<EOT >> {ETC_PRESTO}/{filename}\n{current_config}\nEOT"'
+                f'bash -c "cat <<EOT >> {ETC_TRINO}/{filename}\n{current_config}\nEOT"'
             )
-            ctx.cmd_executor.execute_commands(append_config, container=presto_container)
+            ctx.cmd_executor.execute_commands(append_config, container=trino_container)
 
-    append_configs(user_presto_config, current_presto_config, PRESTO_CONFIG)
-    append_configs(user_jvm_config, current_jvm_config, PRESTO_JVM_CONFIG)
+    append_configs(user_trino_config, current_trino_config, TRINO_CONFIG)
+    append_configs(user_jvm_config, current_jvm_config, TRINO_JVM_CONFIG)
 
-    if not "presto" in containers_to_restart:
-        containers_to_restart.append("presto")
+    if not "trino" in containers_to_restart:
+        containers_to_restart.append("trino")
 
     return containers_to_restart
 
@@ -548,19 +548,19 @@ def restart_containers(ctx, containers_to_restart=[]):
             )
             container.restart()
         except NotFound:
-            raise err.MiniprestoError(
+            raise err.MinitrinoError(
                 f"Attempting to restart container '{container.name}', but the container was not found."
             )
 
 
 @pass_environment
 def initialize_containers(ctx):
-    """Initializes each container with /opt/minipresto/bootstrap_status.txt."""
+    """Initializes each container with /opt/minitrino/bootstrap_status.txt."""
 
     containers = ctx.docker_client.containers.list(filters={"label": RESOURCE_LABEL})
     for container in containers:
         output = ctx.cmd_executor.execute_commands(
-            "cat /opt/minipresto/bootstrap_status.txt",
+            "cat /opt/minitrino/bootstrap_status.txt",
             suppress_output=True,
             container=container,
             trigger_error=False,
@@ -568,14 +568,14 @@ def initialize_containers(ctx):
         output_string = output[0].get("output", "").strip()
         if "no such file or directory" in output_string.lower():
             ctx.cmd_executor.execute_commands(
-                "mkdir -p /opt/minipresto/",
-                "touch /opt/minipresto/bootstrap_status.txt",
+                "mkdir -p /opt/minitrino/",
+                "touch /opt/minitrino/bootstrap_status.txt",
                 container=container,
             )
         elif output[0].get("return_code", None) == 0:
             continue
         else:
-            raise err.MiniprestoError(
+            raise err.MinitrinoError(
                 f"Command failed.\n"
                 f"Output: {output_string}\n"
                 f"Exit code: {output[0].get('return_code', None)}"

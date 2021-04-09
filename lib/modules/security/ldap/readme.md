@@ -1,6 +1,6 @@
 # LDAP Module
-This module provisions an LDAP server for authenticating users in Presto. This
-also enables SSL / TLS between the LDAP server and Presto, and between Presto
+This module provisions an LDAP server for authenticating users in Trino. This
+also enables SSL / TLS between the LDAP server and Trino, and between Trino
 and clients. It is compatible with other security modules like **system-ranger**
 and **event-logger**, but is mutually-exclusive of the **password-file** module.
 
@@ -11,42 +11,42 @@ and **event-logger**, but is mutually-exclusive of the **password-file** module.
 To provision this module, run:
 
 ```shell
-minipresto provision --module ldap
+minitrino provision --module ldap
 ```
 
 ## Default Usernames and Passwords
-- alice / prestoRocks15
-- bob / prestoRocks15
+- alice / trinoRocks15
+- bob / trinoRocks15
 
 ## Client Keystore and Truststore
 The Java keystore and truststore needed for clients and drivers to securely
-connect to Presto are located in a volume mount `~/.minipresto/ssl`. These two
-files are transient and will be automatically replaced whenever Minipresto is
+connect to Trino are located in a volume mount `~/.minitrino/ssl`. These two
+files are transient and will be automatically replaced whenever Minitrino is
 provisioned with a security module that enables SSL.
 
-## Accessing Presto with the CLI
+## Accessing Trino with the CLI
 
 Via Docker:
 
 ```
-docker exec -it presto presto-cli --server https://presto:8443 \
-   --truststore-path /usr/lib/presto/etc/ssl/truststore.jks --truststore-password prestoRocks15 \
-   --keystore-path /usr/lib/presto/etc/ssl/keystore.jks --keystore-password prestoRocks15 \
+docker exec -it trino trino-cli --server https://trino:8443 \
+   --truststore-path /usr/lib/trino/etc/ssl/truststore.jks --truststore-password trinoRocks15 \
+   --keystore-path /usr/lib/trino/etc/ssl/keystore.jks --keystore-password trinoRocks15 \
    --user bob --password
 ```
 
 Via Host Machine:
 
 ```
-presto-cli-xxx-executable.jar --server https://localhost:8443 \
-   --truststore-path ~/.minipresto/ssl/truststore.jks --truststore-password prestoRocks15 \
-   --keystore-path ~/.minipresto/ssl/keystore.jks --keystore-password prestoRocks15 \
+trino-cli-xxx-executable.jar --server https://localhost:8443 \
+   --truststore-path ~/.minitrino/ssl/truststore.jks --truststore-password trinoRocks15 \
+   --keystore-path ~/.minitrino/ssl/keystore.jks --keystore-password trinoRocks15 \
    --user bob --password
 ```
 
 Note that the CLI will prompt you for the password.
 
-## Accessing the Presto Web UI
+## Accessing the Trino Web UI
 Open a web browser and go to https://localhost:8443 and log in with a valid LDAP
 username and password.
 
@@ -81,12 +81,12 @@ objectClass: top
 cn: jeff
 sn: jeff
 mail: jeff@example.com
-userPassword: prestoRocks15
+userPassword: trinoRocks15
 EOF
 ```
 
 3. Use the **ldapmodify** tool to add the new user
 
 ```
-ldapmodify -x -D "cn=admin,dc=example,dc=com" -w prestoRocks15 -H ldaps://ldap:636 -f jeff.ldif
+ldapmodify -x -D "cn=admin,dc=example,dc=com" -w trinoRocks15 -H ldaps://ldap:636 -f jeff.ldif
 ```

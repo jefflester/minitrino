@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
-import minipresto.test.helpers as helpers
+import minitrino.test.helpers as helpers
 import pkg_resources
 
 from inspect import currentframe
@@ -21,7 +21,7 @@ def test_version():
     helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     result = helpers.execute_command(["version"])
-    assert pkg_resources.require("Minipresto")[0].version in result.output
+    assert pkg_resources.require("Minitrino")[0].version in result.output
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
 

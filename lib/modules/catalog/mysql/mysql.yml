@@ -1,17 +1,17 @@
 version: "3.7"
 services:
 
-  presto:
+  trino:
     volumes:
-      - "./modules/catalog/mysql/resources/presto/mysql.properties:/usr/lib/presto/etc/catalog/mysql.properties"
+      - "./modules/catalog/mysql/resources/trino/mysql.properties:/usr/lib/trino/etc/catalog/mysql.properties"
 
   mysql:
     image: "mysql:${MYSQL_VER}"
     container_name: "mysql"
     labels:
-      - "com.starburst.tests=minipresto"
+      - "com.starburst.tests=minitrino"
       - "com.starburst.tests.module.mysql=catalog-mysql"
     env_file:
       - "./modules/catalog/mysql/resources/mysql/mysql.env"
     environment:
-      MINIPRESTO_BOOTSTRAP: "bootstrap.sh"
+      MINITRINO_BOOTSTRAP: "bootstrap.sh"

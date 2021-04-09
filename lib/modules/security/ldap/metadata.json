@@ -1,4 +1,4 @@
 {
-    "description": "Secures Presto with LDAP authentication.",
+    "description": "Secures Trino with LDAP authentication.",
     "incompatible_modules": ["password-file"]
 }

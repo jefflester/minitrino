@@ -3,7 +3,7 @@
 
 import os
 import subprocess
-import minipresto.test.helpers as helpers
+import minitrino.test.helpers as helpers
 
 from inspect import currentframe
 from types import FrameType
@@ -20,7 +20,7 @@ def main():
 
 
 def test_invalid_module():
-    """Ensures Minipresto exists with a user error if an invalid module name is
+    """Ensures Minitrino exists with a user error if an invalid module name is
     provided."""
 
     helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)

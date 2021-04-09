@@ -1,30 +1,30 @@
 version: "3.7"
 services:
 
-  presto:
+  trino:
     volumes:
-      - "./modules/security/ldap/resources/presto/password-authenticator.properties:/usr/lib/presto/etc/password-authenticator.properties"
-      - "./modules/security/ldap/resources/ldap/ldap-users:/usr/lib/presto/etc/ldap-users"
-      - "~/.minipresto/ssl:/usr/lib/presto/etc/ssl"
+      - "./modules/security/ldap/resources/trino/password-authenticator.properties:/usr/lib/trino/etc/password-authenticator.properties"
+      - "./modules/security/ldap/resources/ldap/ldap-users:/usr/lib/trino/etc/ldap-users"
+      - "~/.minitrino/ssl:/usr/lib/trino/etc/ssl"
     environment:
-      MINIPRESTO_BOOTSTRAP: "bootstrap-presto.sh"
+      MINITRINO_BOOTSTRAP: "bootstrap-trino.sh"
     links:
-      - "ldap:ldap.minipresto.starburstdata.com"
+      - "ldap:ldap.minitrino.starburstdata.com"
     ports:
       - "8443:8443"
   
   ldap:
     image: "osixia/openldap:${OPEN_LDAP_VER}"
     container_name: "ldap"
-    hostname: "ldap.minipresto.starburstdata.com"
+    hostname: "ldap.minitrino.starburstdata.com"
     environment:
       LDAP_ORGANISATION: "Example Inc."
       LDAP_DOMAIN: "example.com"
-      LDAP_ADMIN_PASSWORD: "prestoRocks15"
+      LDAP_ADMIN_PASSWORD: "trinoRocks15"
       LDAP_TLS_VERIFY_CLIENT: "try"
       LDAPTLS_REQCERT: "never" 
     labels:
-      - "com.starburst.tests=minipresto"
+      - "com.starburst.tests=minitrino"
       - "com.starburst.tests.module.ldap=security-ldap"
     ports:
       - "636:636"

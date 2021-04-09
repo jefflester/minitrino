@@ -1,14 +1,14 @@
 version: "3.7"
 services:
-  presto:
+  trino:
     volumes:
-      - "./modules/catalog/hive-minio/resources/presto/hive_hms_minio.properties:/usr/lib/presto/etc/catalog/hive_hms_minio.properties"
+      - "./modules/catalog/hive-minio/resources/trino/hive_hms_minio.properties:/usr/lib/trino/etc/catalog/hive_hms_minio.properties"
 
   postgres-hive-minio:
     image: "postgres:${POSTGRES_HIVE_HMS_VER}"
     container_name: "postgres-hive-minio"
     labels:
-      - "com.starburst.tests=minipresto"
+      - "com.starburst.tests=minitrino"
       - "com.starburst.tests.module.hive-minio=catalog-hive-minio"
     user: "postgres"
     env_file:
@@ -20,7 +20,7 @@ services:
     image: "starburstdata/hive-metastore-unsecured:0cc95b"
     container_name: "metastore-minio"
     labels:
-      - "com.starburst.tests=minipresto"
+      - "com.starburst.tests=minitrino"
       - "com.starburst.tests.module.hive-minio=catalog-hive-minio"
     depends_on:
       - "postgres-hive-minio"
@@ -48,7 +48,7 @@ services:
     volumes:
       - "./modules/catalog/hive-minio/resources/minio/data/:/data"
     labels:
-      - "com.starburst.tests=minipresto"
+      - "com.starburst.tests=minitrino"
       - "com.starburst.tests.module.hive-minio=catalog-hive-minio"
     environment:
       MINIO_ACCESS_KEY: access-key
@@ -58,5 +58,5 @@ services:
 volumes:
   postgres-hive-minio-data:
     labels:
-      - "com.starburst.tests=minipresto"
+      - "com.starburst.tests=minitrino"
       - "com.starburst.tests.module.hive-minio=catalog-hive-minio"

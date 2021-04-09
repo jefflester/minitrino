@@ -4,7 +4,7 @@
 # TODO: Test docker host
 # TODO: Test symlink paths (should work with os.environ() registered in subproc)
 
-import minipresto.test.helpers as helpers
+import minitrino.test.helpers as helpers
 
 from inspect import currentframe
 from types import FrameType
@@ -32,7 +32,7 @@ def main():
 
 
 def test_daemon_off_all(*args):
-    """Verifies that each Minipresto command properly exits properly if the
+    """Verifies that each Minitrino command properly exits properly if the
     Docker daemon is off or unresponsive."""
 
     helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
@@ -84,7 +84,7 @@ def test_multiple_env():
             "--env",
             "STARBURST_VER=338-e.1",
             "--env",
-            "PRESTO=is=awesome",
+            "TRINO=is=awesome",
             "version",
         ]
     )
@@ -94,7 +94,7 @@ def test_multiple_env():
         (
             '"COMPOSE_PROJECT_NAME": "test"' in result.output,
             '"STARBURST_VER": "338-e.1"' in result.output,
-            '"PRESTO": "is=awesome"' in result.output,
+            '"TRINO": "is=awesome"' in result.output,
         )
     )
 
@@ -123,7 +123,7 @@ def test_invalid_env():
 
 
 def test_invalid_lib():
-    """Verifies that Minipresto exists with a user error if pointing to an
+    """Verifies that Minitrino exists with a user error if pointing to an
     invalid library."""
 
     helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
@@ -132,7 +132,7 @@ def test_invalid_lib():
     result = helpers.execute_command(["-v", "--env", "LIB_PATH=/tmp/", "modules"])
 
     assert result.exit_code == 2
-    assert "You must provide a path to a compatible Minipresto library" in result.output
+    assert "You must provide a path to a compatible Minitrino library" in result.output
 
     # Fake directory
     result = helpers.execute_command(
@@ -140,7 +140,7 @@ def test_invalid_lib():
     )
 
     assert result.exit_code == 2
-    assert "You must provide a path to a compatible Minipresto library" in result.output
+    assert "You must provide a path to a compatible Minitrino library" in result.output
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
 

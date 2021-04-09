@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Docker labels
-RESOURCE_LABEL = "com.starburst.tests=minipresto"
+RESOURCE_LABEL = "com.starburst.tests=minitrino"
 MODULE_LABEL_KEY_ROOT = "com.starburst.tests.module"
 
 # Generic Constants
@@ -14,13 +14,13 @@ MODULE_ROOT = "modules"
 MODULE_CATALOG = "catalog"
 MODULE_SECURITY = "security"
 MODULE_RESOURCES = "resources"
-ETC_PRESTO = "/usr/lib/presto/etc"
-PRESTO_CONFIG = "config.properties"
-PRESTO_JVM_CONFIG = "jvm.config"
+ETC_TRINO = "/usr/lib/trino/etc"
+TRINO_CONFIG = "config.properties"
+TRINO_JVM_CONFIG = "jvm.config"
 LIB_INDEPENDENT_CMDS = ["lib_install"]
 
 # Snapshots
-SNAPSHOT_ROOT_FILES = ["docker-compose.yml", "minipresto.env", "Dockerfile"]
+SNAPSHOT_ROOT_FILES = ["docker-compose.yml", "minitrino.env", "Dockerfile"]
 
 # Terminal
 DEFAULT_INDENT = " " * 5
@@ -44,7 +44,7 @@ TEXT_EDITOR=
 [DOCKER]
 DOCKER_HOST=
 
-[PRESTO]
+[TRINO]
 CONFIG=
 JVM_CONFIG=
 
@@ -78,9 +78,9 @@ PROVISION_SNAPSHOT_TEMPLATE = """
 # Below is the exact command used to provision the snapshotted environment. Run this 
 # command in your terminal to reproduce the exact state of the environment.
 #
-# If you need config data from the snapshot's 'minipresto.cfg' file, you will either 
-# need to copy it from the snapshot directory to '~./minipresto/minipresto.cfg' or 
-# individually copy the needed configs to your existing 'minipresto.cfg' file. 
+# If you need config data from the snapshot's 'minitrino.cfg' file, you will either 
+# need to copy it from the snapshot directory to '~./minitrino/minitrino.cfg' or 
+# individually copy the needed configs to your existing 'minitrino.cfg' file. 
 # ------------------------------------------------------------------------------------
 
 

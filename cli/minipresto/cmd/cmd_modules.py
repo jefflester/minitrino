@@ -4,9 +4,9 @@
 import click
 import json
 
-from minipresto.cli import pass_environment
-from minipresto import errors as err
-from minipresto import utils
+from minitrino.cli import pass_environment
+from minitrino import errors as err
+from minitrino import utils
 
 
 @click.command(
@@ -43,7 +43,7 @@ from minipresto import utils
 @utils.exception_handler
 @pass_environment
 def cli(ctx, modules, json_format, running):
-    """Version command for Minipresto."""
+    """Version command for Minitrino."""
 
     utils.check_lib(ctx)
 
@@ -55,7 +55,7 @@ def cli(ctx, modules, json_format, running):
             if not module_dict:
                 raise err.UserError(
                     f"Invalid module: {module}",
-                    "Ensure the module you're referencing is in the Minipresto library.",
+                    "Ensure the module you're referencing is in the Minitrino library.",
                 )
             log_info(module, module_dict, json_format)
     else:

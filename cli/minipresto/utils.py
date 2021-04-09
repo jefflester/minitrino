@@ -6,8 +6,8 @@ import sys
 import traceback
 import pkg_resources
 
-from minipresto import errors as err
-from minipresto.settings import DEFAULT_INDENT
+from minitrino import errors as err
+from minitrino.settings import DEFAULT_INDENT
 
 from click import echo, style, prompt
 from textwrap import fill
@@ -16,7 +16,7 @@ from functools import wraps
 
 
 class Logger:
-    """Minipresto logging class. The logger does not log to a file; it uses
+    """Minitrino logging class. The logger does not log to a file; it uses
     `click.echo()` to print text to the user's terminal.
 
     The log level will affect the prefix color (i.e. the '[i]' in info messages
@@ -69,7 +69,7 @@ class Logger:
             try:
                 msg = str(msg)
             except:
-                raise err.MiniprestoError(
+                raise err.MinitrinoError(
                     f"A string is required for {self.log.__name__}."
                 )
             msgs = msg.replace("\r", "\n").split("\n")
@@ -101,7 +101,7 @@ class Logger:
         try:
             msg = str(msg)
         except:
-            raise err.MiniprestoError(f"A string is required for {self.log.__name__}.")
+            raise err.MinitrinoError(f"A string is required for {self.log.__name__}.")
 
         msg = self._format(msg)
         styled_prefix = style(
@@ -153,14 +153,14 @@ def handle_exception(error=Exception, additional_msg="", skip_traceback=False):
         error_msg = error.msg
         exit_code = error.exit_code
         skip_traceback = True
-    elif isinstance(error, err.MiniprestoError):
+    elif isinstance(error, err.MinitrinoError):
         error_msg = error.msg
         exit_code = error.exit_code
     elif isinstance(error, Exception):
         error_msg = str(error)
         exit_code = 1
     else:
-        raise err.MiniprestoError(
+        raise err.MinitrinoError(
             f"Invalid type given to 'e' parameter of {handle_exception.__name__}. "
             f"Expected an Exception type, but got type {type(error).__name__}"
         )
@@ -217,7 +217,7 @@ def handle_missing_param(params=[]):
     if not params:
         raise handle_missing_param(list(locals().keys()))
 
-    return err.MiniprestoError(f"Parameters {params} required to execute function.")
+    return err.MinitrinoError(f"Parameters {params} required to execute function.")
 
 
 def check_daemon(docker_client):
@@ -235,14 +235,14 @@ def check_daemon(docker_client):
 
 
 def check_lib(ctx):
-    """Checks if a Minipresto library exists."""
+    """Checks if a Minitrino library exists."""
 
-    ctx.minipresto_lib_dir
+    ctx.minitrino_lib_dir
 
 
 def generate_identifier(identifiers=None):
     """Returns an 'object identifier' string used for creating log messages,
-    e.g. '[ID: 12345] [Name: presto]'.
+    e.g. '[ID: 12345] [Name: trino]'.
 
     ### Parameters
     - `identifiers`: Dictionary of "identifier_value": "identifier_key" pairs.
@@ -251,7 +251,7 @@ def generate_identifier(identifiers=None):
     ```python
     identifier = generate_identifier(
         {"ID": container.short_id, "Name": container.name}
-    ) # Will Spit out -> "[ID: 12345] [Name: presto]"
+    ) # Will Spit out -> "[ID: 12345] [Name: trino]"
     ```"""
 
     if not identifiers:
@@ -263,16 +263,16 @@ def generate_identifier(identifiers=None):
     return " ".join(identifier)
 
 
-def parse_key_value_pair(key_value_pair, err_type=err.MiniprestoError):
+def parse_key_value_pair(key_value_pair, err_type=err.MinitrinoError):
     """Parses a key-value pair in string form and returns the resulting pair as
     both a 2-element list. If the string cannot be split by "=", a
-    MiniprestoError is raised.
+    MinitrinoError is raised.
 
     ### Parameters
     - `key_value_pair`: A string formatted as a key-value pair, i.e.
-      `"PRESTO=338-e.0"`.
+      `"TRINO=338-e.0"`.
     - `err_type`: The exception to raise if an "=" delimiter is not in the
-      key-value pair. Defaults to `MiniprestoError`.
+      key-value pair. Defaults to `MinitrinoError`.
 
     ### Return Values
     - A list `[k, v]`, but will return `None` if the stripped input is an empty
@@ -305,16 +305,16 @@ def parse_key_value_pair(key_value_pair, err_type=err.MiniprestoError):
 
 
 def get_cli_ver():
-    """Returns the version of the Minipresto CLI."""
+    """Returns the version of the Minitrino CLI."""
 
-    return pkg_resources.require("Minipresto")[0].version
+    return pkg_resources.require("Minitrino")[0].version
 
 
 def get_lib_ver(library_path=""):
-    """Returns the version of the Minipresto library.
+    """Returns the version of the Minitrino library.
 
     ### Parameters
-    - `library_path`: The Minipresto library directory."""
+    - `library_path`: The Minitrino library directory."""
 
     version_file = os.path.join(library_path, "version")
     try:

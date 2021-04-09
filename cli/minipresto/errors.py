@@ -1,11 +1,11 @@
 #!usr/bin/env/python3
 # -*- coding: utf-8 -*-
 
-from minipresto import utils
+from minitrino import utils
 
 
-class MiniprestoError(Exception):
-    """Generic Minipresto exception class."""
+class MinitrinoError(Exception):
+    """Generic Minitrino exception class."""
 
     exit_code = 1
 
@@ -19,8 +19,8 @@ class MiniprestoError(Exception):
         return self.msg
 
 
-class UserError(MiniprestoError):
-    """An exception that Minipresto can handle and show to the user.
+class UserError(MinitrinoError):
+    """An exception that Minitrino can handle and show to the user.
 
     ### Parameters
     - `msg`: The message to log, and the raised exception's message.

@@ -11,23 +11,23 @@ import click
 from datetime import datetime
 from click.testing import CliRunner
 from pathlib import Path
-from minipresto.cli import cli
+from minitrino.cli import cli
 
 # Path references
 # -----------------------------------------------------------------------------------
 USER_HOME_DIR = os.path.expanduser("~")
-MINIPRESTO_USER_DIR = os.path.abspath(os.path.join(USER_HOME_DIR, ".minipresto"))
-CONFIG_FILE = os.path.abspath(os.path.join(MINIPRESTO_USER_DIR, "minipresto.cfg"))
-MINIPRESTO_LIB_DIR = Path(os.path.abspath(__file__)).resolve().parents[3]
-SNAPSHOT_DIR = os.path.join(MINIPRESTO_LIB_DIR, "lib", "snapshots")
+MINITRINO_USER_DIR = os.path.abspath(os.path.join(USER_HOME_DIR, ".minitrino"))
+CONFIG_FILE = os.path.abspath(os.path.join(MINITRINO_USER_DIR, "minitrino.cfg"))
+MINITRINO_LIB_DIR = Path(os.path.abspath(__file__)).resolve().parents[3]
+SNAPSHOT_DIR = os.path.join(MINITRINO_LIB_DIR, "lib", "snapshots")
 SNAPSHOT_FILE = os.path.join(SNAPSHOT_DIR, "test.tar.gz")
-MINIPRESTO_USER_SNAPSHOTS_DIR = os.path.join(MINIPRESTO_USER_DIR, "snapshots")
+MINITRINO_USER_SNAPSHOTS_DIR = os.path.join(MINITRINO_USER_DIR, "snapshots")
 # -----------------------------------------------------------------------------------
 
 
-class MiniprestoResult:
+class MinitrinoResult:
     def __init__(self, click_result, output, exit_code):
-        """Result class containing information about the result of a Minipresto
+        """Result class containing information about the result of a Minitrino
         command.
 
         Attributes
@@ -50,10 +50,10 @@ def execute_command(command=[], print_output=True, command_input=""):
     else:
         result = runner.invoke(cli, command, input=command_input)
     if print_output:
-        print(f"Output of command [minipresto {' '.join(command)}]:\n{result.output}")
+        print(f"Output of command [minitrino {' '.join(command)}]:\n{result.output}")
 
     # Remove newlines for string assertion consistency
-    return MiniprestoResult(result, result.output.replace("\n", " "), result.exit_code)
+    return MinitrinoResult(result, result.output.replace("\n", " "), result.exit_code)
 
 
 def log_success(msg):

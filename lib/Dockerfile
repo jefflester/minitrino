@@ -1,26 +1,26 @@
 ARG STARBURST_VER
-FROM starburstdata/presto:${STARBURST_VER}
+FROM starburstdata/trino:${STARBURST_VER}
 
 ARG STARBURST_VER
 ENV STARBURST_VER=${STARBURST_VER}
-ENV PRESTO_CLI_PATH=/usr/local/bin/presto-cli
+ENV TRINO_CLI_PATH=/usr/local/bin/trino-cli
 
-ADD ./modules/resources/wait-for-it.sh /opt/minipresto/
+ADD ./modules/resources/wait-for-it.sh /opt/minitrino/
 
 USER root
 RUN set -euxo pipefail \
     && yum install -y wget \
         sudo \
-    && usermod -aG wheel presto \
-    && echo presto | passwd presto --stdin \
-    && echo "presto ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers \
+    && usermod -aG wheel trino \
+    && echo trino | passwd trino --stdin \
+    && echo "trino ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers \
     && DIST=${STARBURST_VER:0:3} \
-    && CLI_URL=https://repo1.maven.org/maven2/io/prestosql/presto-cli/"${DIST}"/presto-cli-"${DIST}"-executable.jar \
-    && curl -fsSL "${CLI_URL}" > "${PRESTO_CLI_PATH}" \
-    && chmod -v +x "${PRESTO_CLI_PATH}" \
-    && chown --reference=/usr/lib/presto/etc/config.properties "${PRESTO_CLI_PATH}" \
-    && ln -vs "${PRESTO_CLI_PATH}" \
+    && CLI_URL=https://repo1.maven.org/maven2/io/trinodb/trino-cli/"${DIST}"/trino-cli-"${DIST}"-executable.jar \
+    && curl -fsSL "${CLI_URL}" > "${TRINO_CLI_PATH}" \
+    && chmod -v +x "${TRINO_CLI_PATH}" \
+    && chown --reference=/usr/lib/trino/etc/config.properties "${TRINO_CLI_PATH}" \
+    && ln -vs "${TRINO_CLI_PATH}" \
     && echo OK
 
-USER presto
-WORKDIR /home/presto
+USER trino
+WORKDIR /home/trino

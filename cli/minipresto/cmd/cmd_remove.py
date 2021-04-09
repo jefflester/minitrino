@@ -4,31 +4,31 @@
 import sys
 import click
 
-from minipresto.cli import pass_environment
-from minipresto import utils
-from minipresto.settings import IMAGE
-from minipresto.settings import VOLUME
-from minipresto.settings import RESOURCE_LABEL
+from minitrino.cli import pass_environment
+from minitrino import utils
+from minitrino.settings import IMAGE
+from minitrino.settings import VOLUME
+from minitrino.settings import RESOURCE_LABEL
 from docker.errors import APIError
 
 
 @click.command(
     "remove",
-    help=("""Remove Minipresto resources."""),
+    help=("""Remove Minitrino resources."""),
 )
 @click.option(
     "-i",
     "--images",
     is_flag=True,
     default=False,
-    help=("""Remove Minipresto images."""),
+    help=("""Remove Minitrino images."""),
 )
 @click.option(
     "-v",
     "--volumes",
     is_flag=True,
     default=False,
-    help=("""Remove Minipresto container volumes."""),
+    help=("""Remove Minitrino container volumes."""),
 )
 @click.option(
     "-l",
@@ -48,20 +48,20 @@ from docker.errors import APIError
     is_flag=True,
     default=False,
     help=(
-        """Force the removal of Minipresto resources. Normal Docker removal
+        """Force the removal of Minitrino resources. Normal Docker removal
         restrictions apply."""
     ),
 )
 @utils.exception_handler
 @pass_environment
 def cli(ctx, images, volumes, labels, force):
-    """Remove command for Minipresto."""
+    """Remove command for Minitrino."""
 
     utils.check_daemon(ctx.docker_client)
 
     if all((not images, not volumes, not labels)) or all((images, volumes, not labels)):
         response = ctx.logger.prompt_msg(
-            "You are about to all remove minipresto images and volumes. Continue? [Y/N]"
+            "You are about to all remove minitrino images and volumes. Continue? [Y/N]"
         )
         if utils.validate_yes(response):
             remove_items(IMAGE, force)
@@ -80,7 +80,7 @@ def cli(ctx, images, volumes, labels, force):
 
 @pass_environment
 def remove_items(ctx, item_type, force, labels=[]):
-    """Removes Docker items. If no labels are passed in, all Minipresto
+    """Removes Docker items. If no labels are passed in, all Minitrino
     resources are removed. If label(s) are passed in, the removal is limited to
     the passed in labels."""
 

@@ -3,23 +3,23 @@
 set -euxo pipefail
 
 echo "Waiting for Ranger Admin to come up..."
-/opt/minipresto/wait-for-it.sh ranger-admin:6080 --strict --timeout=150 -- echo "Ranger Admin service is up."
+/opt/minitrino/wait-for-it.sh ranger-admin:6080 --strict --timeout=150 -- echo "Ranger Admin service is up."
 
 function create_sep_service() {
-   curl -i -v -X POST -u admin:prestoRocks15 --header 'Content-Type: application/json' --header 'Accept: application/json' -d '
+   curl -i -v -X POST -u admin:trinoRocks15 --header 'Content-Type: application/json' --header 'Accept: application/json' -d '
    {
-      "name":"minipresto",
-      "description":"Minipresto SEP service",
+      "name":"minitrino",
+      "description":"Minitrino SEP service",
       "isEnabled":true,
       "tagService":"",
       "configs":{
-         "username":"presto_admin",
-         "password":"prestoRocks15",
-         "jdbc.driverClassName":"io.prestosql.jdbc.PrestoDriver",
-         "jdbc.url":"jdbc:presto://localhost:8080",
+         "username":"trino_admin",
+         "password":"trinoRocks15",
+         "jdbc.driverClassName":"io.trinodb.jdbc.TrinoDriver",
+         "jdbc.url":"jdbc:trino://localhost:8080",
          "resource-lookup":"true"
       },
-      "type":"starburst-enterprise-presto"
+      "type":"starburst-enterprise-trino"
    }
    ' \
    'http://localhost:6080/service/plugins/services';
@@ -37,15 +37,15 @@ done
 set -e
 
 if [[ "${COUNTER}" == 36 ]]; then
-   echo "Timeout waiting for Starburst Enterprise Presto service to become available in Ranger Admin. Exiting."
+   echo "Timeout waiting for Starburst Enterprise Trino service to become available in Ranger Admin. Exiting."
    exit 1
 fi
 
 # Create users
-curl -i -v -X POST -u admin:prestoRocks15 --header 'Content-Type: application/json' --header 'Accept: application/json' -d '
+curl -i -v -X POST -u admin:trinoRocks15 --header 'Content-Type: application/json' --header 'Accept: application/json' -d '
 {
    "name":"bob",
-   "password":"prestoRocks15",
+   "password":"trinoRocks15",
    "firstName":"Bob",
    "lastName":"",
    "emailAddress":"bob@starburstdata.com",
@@ -60,10 +60,10 @@ curl -i -v -X POST -u admin:prestoRocks15 --header 'Content-Type: application/js
 ' \
 'http://localhost:6080/service/xusers/secure/users';
 
-curl -i -v -X POST -u admin:prestoRocks15 --header 'Content-Type: application/json' --header 'Accept: application/json' -d '
+curl -i -v -X POST -u admin:trinoRocks15 --header 'Content-Type: application/json' --header 'Accept: application/json' -d '
 {
    "name":"alice",
-   "password":"prestoRocks15",
+   "password":"trinoRocks15",
    "firstName":"Alice",
    "lastName":"",
    "emailAddress":"alice@starburstdata.com",
@@ -79,7 +79,7 @@ curl -i -v -X POST -u admin:prestoRocks15 --header 'Content-Type: application/js
 'http://localhost:6080/service/xusers/secure/users';
 
 # Create User Policies
-curl -i -v -X POST -u admin:prestoRocks15 --header 'Content-Type: application/json' --header 'Accept: application/json' -d '
+curl -i -v -X POST -u admin:trinoRocks15 --header 'Content-Type: application/json' --header 'Accept: application/json' -d '
 {
    "policyType":"0",
    "name":"Bob",
@@ -160,12 +160,12 @@ curl -i -v -X POST -u admin:prestoRocks15 --header 'Content-Type: application/js
    "denyExceptions":[
       
    ],
-   "service":"minipresto"
+   "service":"minitrino"
 }
 ' \
 'http://localhost:6080/service/plugins/policies';
 
-curl -i -v -X POST -u admin:prestoRocks15 --header 'Content-Type: application/json' --header 'Accept: application/json' -d '
+curl -i -v -X POST -u admin:trinoRocks15 --header 'Content-Type: application/json' --header 'Accept: application/json' -d '
 {
    "policyType":"0",
    "name":"Alice",
@@ -246,12 +246,12 @@ curl -i -v -X POST -u admin:prestoRocks15 --header 'Content-Type: application/js
    "denyExceptions":[
       
    ],
-   "service":"minipresto"
+   "service":"minitrino"
 }
 ' \
 'http://localhost:6080/service/plugins/policies';
 
-curl -i -v -X POST -u admin:prestoRocks15 --header 'Content-Type: application/json' --header 'Accept: application/json' -d '
+curl -i -v -X POST -u admin:trinoRocks15 --header 'Content-Type: application/json' --header 'Accept: application/json' -d '
 {
    "policyType":"0",
    "name":"System",
@@ -319,17 +319,17 @@ curl -i -v -X POST -u admin:prestoRocks15 --header 'Content-Type: application/js
    "denyExceptions":[
       
    ],
-   "service":"minipresto"
+   "service":"minitrino"
 }
 ' \
 'http://localhost:6080/service/plugins/policies';
 
 # Add users to query policy 
-curl -i -v -X PUT -u admin:prestoRocks15 --header 'Content-Type: application/json' --header 'Accept: application/json' -d '
+curl -i -v -X PUT -u admin:trinoRocks15 --header 'Content-Type: application/json' --header 'Accept: application/json' -d '
 {
    "id":2,
    "isEnabled":true,
-   "service":"minipresto",
+   "service":"minitrino",
    "name":"all - query",
    "policyType":0,
    "policyPriority":0,
@@ -347,7 +347,7 @@ curl -i -v -X PUT -u admin:prestoRocks15 --header 'Content-Type: application/jso
    "policyItems":[
       {
          "users":[
-            "presto_admin",
+            "trino_admin",
             "{USER}"
          ],
          "delegateAdmin":true,

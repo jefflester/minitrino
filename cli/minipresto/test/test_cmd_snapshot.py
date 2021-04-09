@@ -5,7 +5,7 @@ import os
 import docker
 import pathlib
 import subprocess
-import minipresto.test.helpers as helpers
+import minitrino.test.helpers as helpers
 
 from inspect import currentframe
 from types import FrameType
@@ -14,7 +14,7 @@ from typing import cast
 
 def snapshot_test_yaml_file(snapshot_name="test"):
     return os.path.join(
-        helpers.MINIPRESTO_USER_SNAPSHOTS_DIR,
+        helpers.MINITRINO_USER_SNAPSHOTS_DIR,
         snapshot_name,
         "lib",
         "modules",
@@ -26,7 +26,7 @@ def snapshot_test_yaml_file(snapshot_name="test"):
 
 def snapshot_config_file(snapshot_name="test"):
     return os.path.join(
-        helpers.MINIPRESTO_USER_SNAPSHOTS_DIR, snapshot_name, "minipresto.cfg"
+        helpers.MINITRINO_USER_SNAPSHOTS_DIR, snapshot_name, "minitrino.cfg"
     )
 
 
@@ -49,12 +49,12 @@ def main():
 
 def test_snapshot_no_directory():
     """Verifies that a snapshot can be created when there is no existing
-    snapshots directory in the Minipresto user home directory."""
+    snapshots directory in the Minitrino user home directory."""
 
     helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     cleanup()
-    subprocess.call(f"rm -rf {helpers.MINIPRESTO_USER_SNAPSHOTS_DIR}", shell=True)
+    subprocess.call(f"rm -rf {helpers.MINITRINO_USER_SNAPSHOTS_DIR}", shell=True)
     result = helpers.execute_command(
         ["-v", "snapshot", "--name", "test", "--module", "test"],
         command_input="y\n",
@@ -85,7 +85,7 @@ def test_snapshot_active_env():
 
 
 def test_snapshot_standalone():
-    """Verifies that a the standlone Presto module can be snapshotted."""
+    """Verifies that a the standlone Trino module can be snapshotted."""
 
     helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
@@ -96,7 +96,7 @@ def test_snapshot_standalone():
     )
 
     run_assertions(result, False)
-    assert "Snapshotting Presto resources only" in result.output
+    assert "Snapshotting Trino resources only" in result.output
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
 
@@ -218,7 +218,7 @@ def test_command_snapshot_file():
     helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     command_snapshot_file = os.path.join(
-        helpers.MINIPRESTO_USER_SNAPSHOTS_DIR, "test", "provision-snapshot.sh"
+        helpers.MINITRINO_USER_SNAPSHOTS_DIR, "test", "provision-snapshot.sh"
     )
     process = subprocess.Popen(
         command_snapshot_file,
@@ -306,11 +306,11 @@ def run_assertions(
 
     assert "Snapshot complete" in result.output
     assert result.exit_code == 0
-    if os.path.isfile(os.path.join(helpers.MINIPRESTO_USER_DIR, "minipresto.cfg")):
+    if os.path.isfile(os.path.join(helpers.MINITRINO_USER_DIR, "minitrino.cfg")):
         assert os.path.isfile(snapshot_config_file(snapshot_name))
 
     command_snapshot_file = os.path.join(
-        helpers.MINIPRESTO_USER_SNAPSHOTS_DIR, snapshot_name, "provision-snapshot.sh"
+        helpers.MINITRINO_USER_SNAPSHOTS_DIR, snapshot_name, "provision-snapshot.sh"
     )
     assert os.path.isfile(command_snapshot_file)
 
@@ -318,7 +318,7 @@ def run_assertions(
     assert os.path.isfile(os.path.join(check_path, f"{snapshot_name}.tar.gz"))
 
     with open(command_snapshot_file) as f:
-        assert "minipresto -v --env LIB_PATH=" in f.read()
+        assert "minitrino -v --env LIB_PATH=" in f.read()
 
 
 def cleanup(snapshot_name="test"):
@@ -326,7 +326,7 @@ def cleanup(snapshot_name="test"):
 
     if not snapshot_name == "test":
         subprocess.call(
-            f"rm -rf {os.path.join(helpers.MINIPRESTO_USER_SNAPSHOTS_DIR, snapshot_name)}.tar.gz",
+            f"rm -rf {os.path.join(helpers.MINITRINO_USER_SNAPSHOTS_DIR, snapshot_name)}.tar.gz",
             shell=True,
         )
     else:

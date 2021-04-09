@@ -11,13 +11,13 @@ import subprocess
 from pathlib import Path
 from configparser import ConfigParser
 
-from minipresto import utils
-from minipresto import errors as err
-from minipresto.settings import RESOURCE_LABEL
-from minipresto.settings import MODULE_LABEL_KEY_ROOT
-from minipresto.settings import MODULE_ROOT
-from minipresto.settings import MODULE_SECURITY
-from minipresto.settings import MODULE_CATALOG
+from minitrino import utils
+from minitrino import errors as err
+from minitrino.settings import RESOURCE_LABEL
+from minitrino.settings import MODULE_LABEL_KEY_ROOT
+from minitrino.settings import MODULE_ROOT
+from minitrino.settings import MODULE_SECURITY
+from minitrino.settings import MODULE_CATALOG
 
 
 class Environment:
@@ -26,10 +26,10 @@ class Environment:
     CLI's entrypoint, as it depends on user-provided inputs.
 
     ### Public Attributes (Interactive)
-    - `logger`: A `minipresto.utils.Logger` object.
+    - `logger`: A `minitrino.utils.Logger` object.
     - `env`: An `EnvironmentVariables` object containing all CLI environment
         variables, subdivided by sections when possible.
-    - `modules`: A `Modules` object containing metadata about Minipresto
+    - `modules`: A `Modules` object containing metadata about Minitrino
       modules.
     - `cmd_executor`: A `CommandExecutor` object to execute shell commands in
       the host shell and inside containers.
@@ -39,13 +39,13 @@ class Environment:
     ### Public Attributes (Static)
     - `verbose`: If `True`, logs flagged as verbose to are sent to stdout.
     - `user_home_dir`: The home directory of the current user.
-    - `minipresto_user_dir`: The location of the Minipresto directory relative
-      to the user home directory (~/.minipresto/).
-    - `config_file`: The location of the user's minipresto.cfg file.
+    - `minitrino_user_dir`: The location of the Minitrino directory relative
+      to the user home directory (~/.minitrino/).
+    - `config_file`: The location of the user's minitrino.cfg file.
     - `snapshot_dir`: The location of the user's snapshot directory (this is
         essentially a temporary directory, as 'permanent' snapshot tarballs are
         written to the library or user-specified directory).
-    - `minipresto_lib_dir`: The location of the Minipresto library."""
+    - `minitrino_lib_dir`: The location of the Minitrino library."""
 
     @utils.exception_handler
     def __init__(self):
@@ -63,21 +63,21 @@ class Environment:
 
         # Paths
         self.user_home_dir = os.path.expanduser("~")
-        self.minipresto_user_dir = self._handle_minipresto_user_dir()
+        self.minitrino_user_dir = self._handle_minitrino_user_dir()
         self.config_file = self._get_config_file()
-        self.snapshot_dir = os.path.join(self.minipresto_user_dir, "snapshots")
+        self.snapshot_dir = os.path.join(self.minitrino_user_dir, "snapshots")
 
     @property
-    def minipresto_lib_dir(self):
-        """The directory of the Minipresto library. The directory can be
+    def minitrino_lib_dir(self):
+        """The directory of the Minitrino library. The directory can be
         determined in four ways (this is the order of precedence):
         1. Passing `LIB_PATH` to the CLI's `--env` option sets the library
             directory for the current command.
-        2. The `minipresto.cfg` file's `LIB_PATH` variable sets the library
+        2. The `minitrino.cfg` file's `LIB_PATH` variable sets the library
             directory if present.
-        3. The path `~/.minipresto/lib/` is used as the default lib path if the
+        3. The path `~/.minitrino/lib/` is used as the default lib path if the
             `LIB_PATH` var is not found.
-        4. As a last resort, Minipresto will check to see if the library exists
+        4. As a last resort, Minitrino will check to see if the library exists
             in relation to the positioning of the `components.py` file and
             assumes the project is being run out of a cloned repository."""
 
@@ -89,26 +89,26 @@ class Environment:
         except:
             pass
 
-        if not lib_dir and os.path.isdir(os.path.join(self.minipresto_user_dir, "lib")):
-            lib_dir = os.path.join(self.minipresto_user_dir, "lib")
+        if not lib_dir and os.path.isdir(os.path.join(self.minitrino_user_dir, "lib")):
+            lib_dir = os.path.join(self.minitrino_user_dir, "lib")
         elif not lib_dir:  # Use repo root, fail if this doesn't exist
             lib_dir = Path(os.path.abspath(__file__)).resolve().parents[2]
             lib_dir = os.path.join(lib_dir, "lib")
 
         if not os.path.isdir(lib_dir) or not os.path.isfile(
-            os.path.join(lib_dir, "minipresto.env")
+            os.path.join(lib_dir, "minitrino.env")
         ):
             raise err.UserError(
-                "You must provide a path to a compatible Minipresto library.",
-                f"You can point to a Minipresto library a few different "
+                "You must provide a path to a compatible Minitrino library.",
+                f"You can point to a Minitrino library a few different "
                 f"ways:\n(1) You can set the 'LIB_PATH' variable in your "
-                f"Minipresto config via the command 'minipresto config'--this "
+                f"Minitrino config via the command 'minitrino config'--this "
                 f"should be placed under the '[CLI]' section.\n(2) You can "
                 f"pass in 'LIB_PATH' as an environment variable for the current "
-                f"command, e.g. 'minipresto -e LIB_PATH=<path/to/lib> ...'\n"
-                f"(3) If the above variable is not found, Minipresto will check "
-                f"if '~/.minipresto/lib/' is a valid directory.\n(4) "
-                f"If you are running Minipresto out of a cloned repo, the library "
+                f"command, e.g. 'minitrino -e LIB_PATH=<path/to/lib> ...'\n"
+                f"(3) If the above variable is not found, Minitrino will check "
+                f"if '~/.minitrino/lib/' is a valid directory.\n(4) "
+                f"If you are running Minitrino out of a cloned repo, the library "
                 f"path will be automatically detected without the need to perform "
                 f"any of the above.",
             )
@@ -128,9 +128,9 @@ class Environment:
 
         # Skip the library-related procedures if the library is not found
         try:
-            if self.minipresto_lib_dir:
+            if self.minitrino_lib_dir:
                 self.logger.log(
-                    f"Library path set to: {self.minipresto_lib_dir}",
+                    f"Library path set to: {self.minitrino_lib_dir}",
                     level=self.logger.verbose,
                 )
 
@@ -141,12 +141,12 @@ class Environment:
 
             # Warn the user if the library and CLI vers don't match
             cli_ver = utils.get_cli_ver()
-            lib_ver = utils.get_lib_ver(self.minipresto_lib_dir)
+            lib_ver = utils.get_lib_ver(self.minitrino_lib_dir)
             if cli_ver != lib_ver:
                 self.logger.log(
                     f"CLI version {cli_ver} and library version {lib_ver} "
-                    f"do not match. You can update the Minipresto library "
-                    f"version to match the CLI version by running 'minipresto "
+                    f"do not match. You can update the Minitrino library "
+                    f"version to match the CLI version by running 'minitrino "
                     f"lib_install'.",
                     level=self.logger.warn,
                 )
@@ -157,35 +157,35 @@ class Environment:
         self.cmd_executor = CommandExecutor(self)
         self._get_docker_clients()
 
-    def _handle_minipresto_user_dir(self):
-        """Checks if a Minipresto directory exists in the user home directory.
-        If it does not, it is created. The path to the Minipresto user home
+    def _handle_minitrino_user_dir(self):
+        """Checks if a Minitrino directory exists in the user home directory.
+        If it does not, it is created. The path to the Minitrino user home
         directory is returned."""
 
-        minipresto_user_dir = os.path.abspath(
-            os.path.join(self.user_home_dir, ".minipresto")
+        minitrino_user_dir = os.path.abspath(
+            os.path.join(self.user_home_dir, ".minitrino")
         )
-        if not os.path.isdir(minipresto_user_dir):
-            os.mkdir(minipresto_user_dir)
-        return minipresto_user_dir
+        if not os.path.isdir(minitrino_user_dir):
+            os.mkdir(minitrino_user_dir)
+        return minitrino_user_dir
 
     def _get_config_file(self):
-        """Returns the correct filepath for the minipresto.cfg file. Adds to
+        """Returns the correct filepath for the minitrino.cfg file. Adds to
         initialization warnings if the file does not exist, but will return the
         path regardless."""
 
-        config_file = os.path.join(self.minipresto_user_dir, "minipresto.cfg")
+        config_file = os.path.join(self.minitrino_user_dir, "minitrino.cfg")
         if not os.path.isfile(config_file):
             self.logger.log(
-                f"No minipresto.cfg file found at {config_file}. "
-                f"Run 'minipresto config' to reconfigure this file and directory.",
+                f"No minitrino.cfg file found at {config_file}. "
+                f"Run 'minitrino config' to reconfigure this file and directory.",
                 level=self.logger.warn,
             )
         return config_file
 
     def _get_docker_clients(self):
         """Gets DockerClient and APIClient objects. References the DOCKER_HOST
-        variable in `minipresto.cfg` and uses for clients if present. Returns a
+        variable in `minitrino.cfg` and uses for clients if present. Returns a
         tuple of DockerClient and APIClient objects, respectiveley.
 
         If there is an error fetching the clients, None types will be returned
@@ -203,7 +203,7 @@ class Environment:
 
 
 class EnvironmentVariables:
-    """Gathers all Minipresto variables into a single source of truth.
+    """Gathers all Minitrino variables into a single source of truth.
 
     ### Parameters
     - `ctx`: Instantiated Environment object (with user input already accounted
@@ -232,7 +232,7 @@ class EnvironmentVariables:
         self.env = {}
         self._ctx = ctx
 
-        self._parse_minipresto_config()
+        self._parse_minitrino_config()
         self._parse_user_env()
 
     def get_var(self, key="", default=None):
@@ -266,8 +266,8 @@ class EnvironmentVariables:
 
         return self.env.get(section.upper(), {})
 
-    def _parse_minipresto_config(self):
-        """Parses the Minipresto config file and adds it to the env
+    def _parse_minitrino_config(self):
+        """Parses the Minitrino config file and adds it to the env
         dictionary."""
 
         if not os.path.isfile(self._ctx.config_file):
@@ -295,20 +295,20 @@ class EnvironmentVariables:
             )
 
     def _parse_library_env(self):
-        """Parses the Minipresto library's root `minipresto.env` file. All config from
+        """Parses the Minitrino library's root `minitrino.env` file. All config from
         this file is added to the 'MODULES' section of the environment
         dictionary since this file explicitly defines the versions of the module
         services."""
 
-        env_file = os.path.join(self._ctx.minipresto_lib_dir, "minipresto.env")
+        env_file = os.path.join(self._ctx.minitrino_lib_dir, "minitrino.env")
         if not os.path.isfile(env_file):
             raise err.UserError(
-                f"Library 'minipresto.env' file does not exist at path: {env_file}",
-                f"Are you pointing to a valid library, and is the minipresto.env file "
+                f"Library 'minitrino.env' file does not exist at path: {env_file}",
+                f"Are you pointing to a valid library, and is the minitrino.env file "
                 f"present in that library?",
             )
 
-        # Check if modules section was added from Minipresto config file parsing
+        # Check if modules section was added from Minitrino config file parsing
         section = self.env.get("MODULES", None)
         if not isinstance(section, dict):
             self.env["MODULES"] = {}
@@ -349,7 +349,7 @@ class EnvironmentVariables:
         new_dict = {}
         for section_k, section_v in self.env.items():
             if not isinstance(section_v, dict):
-                raise err.MiniprestoError(
+                raise err.MinitrinoError(
                     f"Invalid environment dictionary. Expected nested dictionaries. "
                     f"Received dictionary:\n"
                     f"{json.dumps(self.env, indent=2)}"
@@ -382,7 +382,7 @@ class EnvironmentVariables:
 
 
 class Modules:
-    """Contains information about all valid Minipresto modules.
+    """Contains information about all valid Minitrino modules.
 
     ### Parameters
     - `ctx`: Instantiated Environment object (with user input already accounted
@@ -418,9 +418,9 @@ class Modules:
         if not containers:
             return {}
 
-        # Remove Presto container since it isn't a module
+        # Remove Trino container since it isn't a module
         for i, container in enumerate(containers):
-            if container.name == "presto":
+            if container.name == "trino":
                 del containers[i]
 
         names = []
@@ -435,9 +435,9 @@ class Modules:
                 else:
                     continue
                 label_set[k] = v
-            if not label_set and container.name != "presto":
+            if not label_set and container.name != "trino":
                 raise err.UserError(
-                    f"Missing Minipresto labels for container '{container.name}'.",
+                    f"Missing Minitrino labels for container '{container.name}'.",
                     f"Check this module's 'docker-compose.yml' file and ensure you are "
                     f"following the documentation on labels.",
                 )
@@ -449,7 +449,7 @@ class Modules:
                 raise err.UserError(
                     f"Module '{name}' is running, but it is not found "
                     f"in the library. Was it deleted, or are you pointing "
-                    f"Minipresto to the wrong location?"
+                    f"Minitrino to the wrong location?"
                 )
             if not running.get(name, False):
                 running[name] = self.data[name]
@@ -467,11 +467,11 @@ class Modules:
 
         self._ctx.logger.log("Loading modules...", level=self._ctx.logger.verbose)
 
-        modules_dir = os.path.join(self._ctx.minipresto_lib_dir, MODULE_ROOT)
+        modules_dir = os.path.join(self._ctx.minitrino_lib_dir, MODULE_ROOT)
         if not os.path.isdir(modules_dir):
-            raise err.MiniprestoError(
+            raise err.MinitrinoError(
                 f"Path is not a directory: {modules_dir}. "
-                f"Are you pointing to a compatible Minipresto library?"
+                f"Are you pointing to a compatible Minitrino library?"
             )
 
         # Loop through both catalog and security modules
@@ -643,7 +643,7 @@ class CommandExecutor:
 
         output, _ = process.communicate()  # Get full output (stdout + stderr)
         if process.returncode != 0 and kwargs.get("trigger_error", True):
-            raise err.MiniprestoError(
+            raise err.MinitrinoError(
                 f"Failed to execute shell command:\n{command}\n"
                 f"Exit code: {process.returncode}"
             )
@@ -660,7 +660,7 @@ class CommandExecutor:
 
         container = kwargs.get("container", None)
         if container is None:
-            raise err.MiniprestoError(
+            raise err.MinitrinoError(
                 f"Attempted to execute a command inside of a "
                 f"container, but a container object was not provided."
             )
@@ -723,7 +723,7 @@ class CommandExecutor:
         )
 
         if return_code != 0 and kwargs.get("trigger_error", True):
-            raise err.MiniprestoError(
+            raise err.MinitrinoError(
                 f"Failed to execute command in container '{container.name}':\n{command}\n"
                 f"Exit code: {return_code}"
             )
@@ -737,7 +737,7 @@ class CommandExecutor:
         host environment will be set to the container's existing environment
         variables."""
 
-        # Remove conflicting keys from host environment; Minipresto environment
+        # Remove conflicting keys from host environment; Minitrino environment
         # variables take precendance
 
         if not container:

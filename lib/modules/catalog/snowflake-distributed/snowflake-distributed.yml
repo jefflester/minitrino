@@ -1,7 +1,7 @@
 version: "3.7"
 services:
 
-  presto:
+  trino:
     environment:
       SNOWFLAKE_DIST_CONNECT_URL: "${SNOWFLAKE_DIST_CONNECT_URL}"
       SNOWFLAKE_DIST_CONNECT_USER: "${SNOWFLAKE_DIST_CONNECT_USER}"
@@ -12,4 +12,4 @@ services:
     labels:
       - "com.starburst.tests.module.snowflake-distributed=catalog-snowflake-distributed"
     volumes:
-      - "./modules/catalog/snowflake-distributed/resources/presto/snowflake_distributed.properties:/usr/lib/presto/etc/catalog/snowflake_distributed.properties"
+      - "./modules/catalog/snowflake-distributed/resources/trino/snowflake_distributed.properties:/usr/lib/trino/etc/catalog/snowflake_distributed.properties"

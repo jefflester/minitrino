@@ -1,14 +1,14 @@
 #!usr/bin/env/python3
 # -*- coding: utf-8 -*-
 
-# 1. Test with no Minipresto directory
-# 2. Test with no Minipresto config file (ensure template is created)
+# 1. Test with no Minitrino directory
+# 2. Test with no Minitrino config file (ensure template is created)
 # 3. Test reset w/ existing config dir and file (ensure template is created)
 # 4. Test editing an invalid config file
 
 import os
 import subprocess
-import minipresto.test.helpers as helpers
+import minitrino.test.helpers as helpers
 
 from inspect import currentframe
 from types import FrameType
@@ -32,11 +32,11 @@ def test_no_directory():
 
     helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    subprocess.call(f"rm -rf {helpers.MINIPRESTO_USER_DIR}", shell=True)
-    return_code = subprocess.call("minipresto config", shell=True)
+    subprocess.call(f"rm -rf {helpers.MINITRINO_USER_DIR}", shell=True)
+    return_code = subprocess.call("minitrino config", shell=True)
 
     assert return_code == 0
-    assert os.path.isdir(helpers.MINIPRESTO_USER_DIR)
+    assert os.path.isdir(helpers.MINITRINO_USER_DIR)
     assert os.path.isfile(helpers.CONFIG_FILE)
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
@@ -52,7 +52,7 @@ def test_reset_with_directory():
     helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     subprocess.call(
-        f"mkdir {helpers.MINIPRESTO_USER_DIR}", shell=True, stdout=subprocess.DEVNULL
+        f"mkdir {helpers.MINITRINO_USER_DIR}", shell=True, stdout=subprocess.DEVNULL
     )
 
     start_time = time.time()
@@ -60,7 +60,7 @@ def test_reset_with_directory():
     output = ""
     while time.time() - start_time <= end_time:
         process = subprocess.Popen(
-            "minipresto -v config --reset",
+            "minitrino -v config --reset",
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -76,7 +76,7 @@ def test_reset_with_directory():
             break
 
     process = subprocess.Popen(
-        "minipresto -v config --reset",
+        "minitrino -v config --reset",
         stdout=subprocess.PIPE,
         stdin=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -90,11 +90,11 @@ def test_reset_with_directory():
     assert all(
         (
             "Configuration directory exists" in output,
-            "Created Minipresto configuration directory" in output,
+            "Created Minitrino configuration directory" in output,
             "Opening existing config file at path" in output,
         )
     )
-    assert os.path.isdir(helpers.MINIPRESTO_USER_DIR)
+    assert os.path.isdir(helpers.MINITRINO_USER_DIR)
     assert os.path.isfile(helpers.CONFIG_FILE)
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
@@ -108,10 +108,10 @@ def test_edit_invalid_config():
 
     helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    subprocess.call(f"rm -rf {helpers.MINIPRESTO_USER_DIR}", shell=True)
-    subprocess.call(f"mkdir {helpers.MINIPRESTO_USER_DIR}", shell=True)
+    subprocess.call(f"rm -rf {helpers.MINITRINO_USER_DIR}", shell=True)
+    subprocess.call(f"mkdir {helpers.MINITRINO_USER_DIR}", shell=True)
     subprocess.call(f"touch {helpers.CONFIG_FILE}", shell=True)
-    return_code = subprocess.call(f"minipresto config", shell=True)
+    return_code = subprocess.call(f"minitrino config", shell=True)
     assert return_code == 0
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
 
@@ -121,10 +121,10 @@ def test_edit_valid_config():
 
     helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    subprocess.call(f"rm -rf {helpers.MINIPRESTO_USER_DIR}", shell=True)
-    subprocess.call(f"mkdir {helpers.MINIPRESTO_USER_DIR}", shell=True)
+    subprocess.call(f"rm -rf {helpers.MINITRINO_USER_DIR}", shell=True)
+    subprocess.call(f"mkdir {helpers.MINITRINO_USER_DIR}", shell=True)
     helpers.make_sample_config()
-    return_code = subprocess.call(f"minipresto config", shell=True)
+    return_code = subprocess.call(f"minitrino config", shell=True)
     assert return_code == 0
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
 

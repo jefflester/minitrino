@@ -9,24 +9,24 @@ import shutil
 import tarfile
 import fileinput
 
-from minipresto.cli import pass_environment
-from minipresto import utils
-from minipresto import errors as err
-from minipresto.settings import SNAPSHOT_ROOT_FILES
-from minipresto.settings import PROVISION_SNAPSHOT_TEMPLATE
-from minipresto.settings import LIB
-from minipresto.settings import MODULE_ROOT
-from minipresto.settings import MODULE_CATALOG
-from minipresto.settings import MODULE_SECURITY
-from minipresto.settings import MODULE_RESOURCES
-from minipresto.settings import SCRUB_KEYS
+from minitrino.cli import pass_environment
+from minitrino import utils
+from minitrino import errors as err
+from minitrino.settings import SNAPSHOT_ROOT_FILES
+from minitrino.settings import PROVISION_SNAPSHOT_TEMPLATE
+from minitrino.settings import LIB
+from minitrino.settings import MODULE_ROOT
+from minitrino.settings import MODULE_CATALOG
+from minitrino.settings import MODULE_SECURITY
+from minitrino.settings import MODULE_RESOURCES
+from minitrino.settings import SCRUB_KEYS
 
 
 @click.command(
     "snapshot",
     help=(
-        """Create a snapshot of a Minipresto environment. A tarball is placed in
-        the Minipresto `lib/snapshots/` directory.
+        """Create a snapshot of a Minitrino environment. A tarball is placed in
+        the Minitrino `lib/snapshots/` directory.
 
         To take a snapshot of an active environment, leave the `--module` and
         option out of the command. 
@@ -60,7 +60,7 @@ from minipresto.settings import SCRUB_KEYS
     type=click.Path(),
     help=(
         """Directory to save the resulting snapshot file in. Defaults to the
-        snapshots directory in the Minipresto library."""
+        snapshots directory in the Minitrino library."""
     ),
 )
 @click.option(
@@ -85,9 +85,9 @@ from minipresto.settings import SCRUB_KEYS
 @utils.exception_handler
 @pass_environment
 def cli(ctx, modules, name, directory, force, no_scrub):
-    """Snapshot command for Minipresto."""
+    """Snapshot command for Minitrino."""
 
-    # The snapshot temp files are saved in ~/.minipresto/snapshots/<name>
+    # The snapshot temp files are saved in ~/.minitrino/snapshots/<name>
     # regardless of the directory provided. The artifact (tarball) will go
     # to either the default directory or the user-provided directory.
 
@@ -100,7 +100,7 @@ def cli(ctx, modules, name, directory, force, no_scrub):
         )
 
     if not directory:
-        directory = os.path.join(ctx.minipresto_lib_dir, "snapshots")
+        directory = os.path.join(ctx.minitrino_lib_dir, "snapshots")
 
     validate_name(name)
     check_exists(name, directory, force)
@@ -112,8 +112,8 @@ def cli(ctx, modules, name, directory, force, no_scrub):
         modules = ctx.modules.get_running_modules()
         if not modules:
             ctx.logger.log(
-                f"No running Minipresto modules to snapshot. Snapshotting "
-                f"Presto resources only.",
+                f"No running Minitrino modules to snapshot. Snapshotting "
+                f"Trino resources only.",
                 level=ctx.logger.verbose,
             )
         else:
@@ -189,7 +189,7 @@ def prepare_snapshot_dir(ctx, name, active, no_scrub, modules):
 @pass_environment
 def build_snapshot_command(ctx, snapshot_name_dir, modules=[], active=True):
     """Builds a basic shell command that can be used to provision an environment
-    with the minipresto CLI. Used for snapshot purposes."""
+    with the minitrino CLI. Used for snapshot purposes."""
 
     command_string = build_command_string(modules)
     create_snapshot_command_file(command_string, snapshot_name_dir)
@@ -210,7 +210,7 @@ def build_command_string(ctx, modules=[]):
 
     bash_source = '"${BASH_SOURCE%/*}"'
     command_string = (
-        f"minipresto -v --env LIB_PATH={bash_source}/lib provision {option_string}\n\n"
+        f"minitrino -v --env LIB_PATH={bash_source}/lib provision {option_string}\n\n"
     )
 
     return command_string.replace("  ", " ")
@@ -218,7 +218,7 @@ def build_command_string(ctx, modules=[]):
 
 @pass_environment
 def create_snapshot_command_file(ctx, command_string="", snapshot_name_dir=""):
-    """Creates an .sh file in the minipresto directory for usage by the snapshot
+    """Creates an .sh file in the minitrino directory for usage by the snapshot
     command. This way, a similar command used to provision the environment is
     preserved."""
 
@@ -239,7 +239,7 @@ def create_snapshot_command_file(ctx, command_string="", snapshot_name_dir=""):
             st.st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH,
         )
     except Exception as e:
-        minipresto.utils.handle_exception(e, ctx.verbose)
+        minitrino.utils.handle_exception(e, ctx.verbose)
 
     with open(file_dest, "a") as provision_snapshot_file:
         provision_snapshot_file.write(command_string)
@@ -258,13 +258,13 @@ def clone_lib_dir(ctx, name):
     os.mkdir(os.path.join(snapshot_name_dir, LIB, MODULE_ROOT, MODULE_RESOURCES))
 
     # Copy root lib files to snapshot
-    for filename in os.listdir(ctx.minipresto_lib_dir):
+    for filename in os.listdir(ctx.minitrino_lib_dir):
         if filename in SNAPSHOT_ROOT_FILES:
-            file_path = os.path.join(ctx.minipresto_lib_dir, filename)
+            file_path = os.path.join(ctx.minitrino_lib_dir, filename)
             shutil.copy(file_path, os.path.join(snapshot_name_dir, LIB))
 
     # Copy everything from lib/modules/resources
-    resources_dir = os.path.join(ctx.minipresto_lib_dir, MODULE_ROOT, MODULE_RESOURCES)
+    resources_dir = os.path.join(ctx.minitrino_lib_dir, MODULE_ROOT, MODULE_RESOURCES)
     for filename in os.listdir(resources_dir):
         file_path = os.path.join(resources_dir, filename)
         shutil.copy(
@@ -314,7 +314,7 @@ def copy_config_file(ctx, snapshot_name_dir, no_scrub=False):
 def scrub_config_file(ctx, snapshot_name_dir):
     """Scrubs the user config file of sensitive data."""
 
-    snapshot_config_file = os.path.join(snapshot_name_dir, "minipresto.cfg")
+    snapshot_config_file = os.path.join(snapshot_name_dir, "minitrino.cfg")
     if os.path.isfile(snapshot_config_file):
         for line in fileinput.input(snapshot_config_file, inplace=True):
             if "=" in line:
@@ -379,6 +379,6 @@ def check_complete(ctx, name, directory):
 
     snapshot_file = os.path.join(directory, f"{name}.tar.gz")
     if not os.path.isfile(snapshot_file):
-        raise err.MiniprestoError(
+        raise err.MinitrinoError(
             f"Snapshot tarball failed to write to {snapshot_file}"
         )

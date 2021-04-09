@@ -2,4 +2,4 @@
 
 set -euxo pipefail
 
-touch /usr/lib/presto/etc/test_bootstrap.txt
+touch /usr/lib/trino/etc/test_bootstrap.txt

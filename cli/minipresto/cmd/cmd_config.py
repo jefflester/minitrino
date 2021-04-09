@@ -4,16 +4,16 @@
 import os
 import click
 
-from minipresto.cli import pass_environment
-from minipresto import utils
-from minipresto.settings import CONFIG_TEMPLATE
+from minitrino.cli import pass_environment
+from minitrino import utils
+from minitrino.settings import CONFIG_TEMPLATE
 
 from shutil import rmtree
 
 
 @click.command(
     "config",
-    help=("""Edit the Minipresto user configuration file."""),
+    help=("""Edit the Minitrino user configuration file."""),
 )
 @click.option(
     "-r",
@@ -21,7 +21,7 @@ from shutil import rmtree
     is_flag=True,
     default=False,
     help=(
-        """Reset the Minipresto user configuration file and create a new config
+        """Reset the Minitrino user configuration file and create a new config
         file from a template.
 
         WARNING: This will remove your configuration file (if it exists) and
@@ -31,11 +31,11 @@ from shutil import rmtree
 @utils.exception_handler
 @pass_environment
 def cli(ctx, reset):
-    """Config command for Minipresto."""
+    """Config command for Minitrino."""
 
-    if not os.path.isdir(ctx.minipresto_user_dir):
-        ctx.logger.log(f"No {ctx.minipresto_user_dir} directory found. Creating...")
-        os.mkdir(ctx.minipresto_user_dir)
+    if not os.path.isdir(ctx.minitrino_user_dir):
+        ctx.logger.log(f"No {ctx.minitrino_user_dir} directory found. Creating...")
+        os.mkdir(ctx.minitrino_user_dir)
 
     if os.path.isfile(ctx.config_file) and not reset:
         ctx.logger.log(
@@ -49,7 +49,7 @@ def cli(ctx, reset):
             write_template()
             edit_file()
         else:
-            ctx.logger.log(f"Opted out of recreating {ctx.minipresto_user_dir} file.")
+            ctx.logger.log(f"Opted out of recreating {ctx.minitrino_user_dir} file.")
     else:
         ctx.logger.log(
             f"No config file found at path: {ctx.config_file}. "

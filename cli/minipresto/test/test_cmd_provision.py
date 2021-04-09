@@ -2,18 +2,18 @@
 # -*- coding: utf-8 -*-
 
 # TODO: Test no rollback
-# TODO: Test invalid user config (Presto/JVM)
+# TODO: Test invalid user config (Trino/JVM)
 
 import os
 import docker
 import time
 import subprocess
-import minipresto.test.helpers as helpers
+import minitrino.test.helpers as helpers
 
 from inspect import currentframe
 from types import FrameType
 from typing import cast
-from minipresto.settings import RESOURCE_LABEL
+from minitrino.settings import RESOURCE_LABEL
 
 
 def main():
@@ -30,7 +30,7 @@ def main():
 
 
 def test_standalone():
-    """Verifies that a standalone Presto container is provisioned when no
+    """Verifies that a standalone Trino container is provisioned when no
     options are passed in."""
 
     helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
@@ -44,7 +44,7 @@ def test_standalone():
     assert len(containers) == 1
 
     for container in containers:
-        assert container.name == "presto"
+        assert container.name == "trino"
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()
@@ -100,13 +100,13 @@ def test_bootstrap_script(result):
 
     assert all(
         (
-            "Successfully executed bootstrap script in container: 'presto'",
+            "Successfully executed bootstrap script in container: 'trino'",
             "Successfully executed bootstrap script in container: 'test'",
         )
     )
 
-    presto_bootstrap_check = subprocess.Popen(
-        f"docker exec -i presto ls /usr/lib/presto/etc/",
+    trino_bootstrap_check = subprocess.Popen(
+        f"docker exec -i trino ls /usr/lib/trino/etc/",
         shell=True,
         stdout=subprocess.PIPE,
         universal_newlines=True,
@@ -118,10 +118,10 @@ def test_bootstrap_script(result):
         universal_newlines=True,
     )
 
-    presto_bootstrap_check, _ = presto_bootstrap_check.communicate()
+    trino_bootstrap_check, _ = trino_bootstrap_check.communicate()
     test_bootstrap_check, _ = test_bootstrap_check.communicate()
 
-    assert "test_bootstrap.txt" in presto_bootstrap_check
+    assert "test_bootstrap.txt" in trino_bootstrap_check
     assert "hello world" in test_bootstrap_check
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
@@ -138,7 +138,7 @@ def test_bootstrap_re_execute():
     assert result.exit_code == 0
     assert all(
         (
-            "Bootstrap already executed in container 'presto'. Skipping.",
+            "Bootstrap already executed in container 'trino'. Skipping.",
             "Bootstrap already executed in container 'test'. Skipping.",
         )
     )
@@ -147,8 +147,8 @@ def test_bootstrap_re_execute():
 
 
 def test_valid_user_config():
-    """Ensures that valid, user-defined Presto/JVM config can be successfully
-    appended to Presto config files."""
+    """Ensures that valid, user-defined Trino/JVM config can be successfully
+    appended to Trino config files."""
 
     helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
@@ -167,31 +167,31 @@ def test_valid_user_config():
 
     assert result.exit_code == 0
     assert (
-        "Appending user-defined Presto config to Presto container config"
+        "Appending user-defined Trino config to Trino container config"
         in result.output
     )
 
     jvm_config = subprocess.Popen(
-        f"docker exec -i presto cat /usr/lib/presto/etc/jvm.config",
+        f"docker exec -i trino cat /usr/lib/trino/etc/jvm.config",
         shell=True,
         stdout=subprocess.PIPE,
         universal_newlines=True,
     )
-    presto_config = subprocess.Popen(
-        f"docker exec -i presto cat /usr/lib/presto/etc/config.properties",
+    trino_config = subprocess.Popen(
+        f"docker exec -i trino cat /usr/lib/trino/etc/config.properties",
         shell=True,
         stdout=subprocess.PIPE,
         universal_newlines=True,
     )
 
     jvm_config, _ = jvm_config.communicate()
-    presto_config, _ = presto_config.communicate()
+    trino_config, _ = trino_config.communicate()
 
     assert all(("-Xmx2G" in jvm_config, "-Xms1G" in jvm_config))
     assert all(
         (
-            "query.max-stage-count=85" in presto_config,
-            "query.max-execution-time=1h" in presto_config,
+            "query.max-stage-count=85" in trino_config,
+            "query.max-execution-time=1h" in trino_config,
         )
     )
 
@@ -200,7 +200,7 @@ def test_valid_user_config():
 
 
 def test_duplicate_config_props():
-    """Ensures that duplicate configuration properties in Presto are logged as a
+    """Ensures that duplicate configuration properties in Trino are logged as a
     warning to the user."""
 
     helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
@@ -212,7 +212,7 @@ def test_duplicate_config_props():
         f"\nquery.max-execution-time=1h\nquery.max-execution-time=2h'"
     )
     subprocess.Popen(
-        f'docker exec -i presto sh -c "echo {cmd_chunk} >> /usr/lib/presto/etc/config.properties"',
+        f'docker exec -i trino sh -c "echo {cmd_chunk} >> /usr/lib/trino/etc/config.properties"',
         shell=True,
         stdout=subprocess.PIPE,
         universal_newlines=True,
@@ -220,7 +220,7 @@ def test_duplicate_config_props():
 
     cmd_chunk = "$'-Xms1G\n-Xms1G'"
     subprocess.Popen(
-        f'docker exec -i presto sh -c "echo {cmd_chunk} >> /usr/lib/presto/etc/jvm.config"',
+        f'docker exec -i trino sh -c "echo {cmd_chunk} >> /usr/lib/trino/etc/jvm.config"',
         shell=True,
         stdout=subprocess.PIPE,
         universal_newlines=True,
@@ -234,13 +234,13 @@ def test_duplicate_config_props():
 
     assert all(
         (
-            "Duplicate Presto configuration properties detected in config.properties"
+            "Duplicate Trino configuration properties detected in config.properties"
             in result.output,
             "query.max-stage-count=85" in result.output,
             "query.max-stage-count=100" in result.output,
             "query.max-execution-time=1h" in result.output,
             "query.max-execution-time=2h" in result.output,
-            "Duplicate Presto configuration properties detected in jvm.config"
+            "Duplicate Trino configuration properties detected in jvm.config"
             in result.output,
             "-Xms1G" in result.output,
             "-Xms1G" in result.output,
@@ -284,14 +284,14 @@ def test_provision_append():
 
     assert result.exit_code == 0
     assert "Identified the following running modules" in result.output
-    assert len(containers) == 3  # presto, test, and postgres
+    assert len(containers) == 3  # trino, test, and postgres
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()
 
 
 def get_containers():
-    """Returns all running minipresto containers."""
+    """Returns all running minitrino containers."""
 
     docker_client = docker.from_env()
     return docker_client.containers.list(filters={"label": RESOURCE_LABEL})

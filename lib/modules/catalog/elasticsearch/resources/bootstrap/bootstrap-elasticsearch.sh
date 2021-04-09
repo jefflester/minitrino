@@ -7,7 +7,7 @@
 set -euxo pipefail
 
 echo "Waiting for Elasticsearch to come up..."
-/opt/minipresto/wait-for-it.sh elasticsearch:9200 --strict --timeout=60 -- echo "Elasticsearch service is up."
+/opt/minitrino/wait-for-it.sh elasticsearch:9200 --strict --timeout=60 -- echo "Elasticsearch service is up."
 
 echo "Creating user index..."
 curl -XPUT http://localhost:9200/user?pretty=true;
@@ -65,7 +65,7 @@ curl -XPOST http://localhost:9200/user/profile/3?pretty=true -H 'Content-Type: a
 curl -XPOST http://localhost:9200/user/profile/4?pretty=true -H 'Content-Type: application/json' -d '
 {
     "full_name" : "Julian Spring",
-    "bio" : "Starburst Presto superuser.",
+    "bio" : "Starburst Trino superuser.",
     "age" : 7,
     "location" : "37.7749290,-122.4194160",
     "enjoys_coffee" : true,

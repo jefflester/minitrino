@@ -9,7 +9,7 @@ This module provisions a Ranger server and Postgres database for Ranger storage.
 To provision this module, run:
 
 ```shell
-minipresto provision --module system-ranger
+minitrino provision --module system-ranger
 ```
 
 ## Policies
@@ -19,4 +19,4 @@ minipresto provision --module system-ranger
 
 ## Accessing Ranger
 - Go to `localhost:6080`
-- Sign in with user: admin and pass: prestoRocks15
+- Sign in with user: admin and pass: trinoRocks15

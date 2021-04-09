@@ -2,12 +2,12 @@
 # -*- coding: utf-8 -*-
 
 import docker
-import minipresto.test.helpers as helpers
+import minitrino.test.helpers as helpers
 
 from inspect import currentframe
 from types import FrameType
 from typing import cast
-from minipresto.settings import RESOURCE_LABEL
+from minitrino.settings import RESOURCE_LABEL
 
 
 def main():
@@ -53,7 +53,7 @@ def test_running_containers():
             "Stopped container" in result.output,
             "Removed container" in result.output,
             "test" in result.output,
-            "presto" in result.output,
+            "trino" in result.output,
         )
     )
 
@@ -82,7 +82,7 @@ def test_keep():
     )
 
     for container in containers:
-        assert container.name.lower() == "presto" or container.name.lower() == "test"
+        assert container.name.lower() == "trino" or container.name.lower() == "test"
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()

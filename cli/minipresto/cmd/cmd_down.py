@@ -4,16 +4,16 @@
 import sys
 import click
 
-from minipresto.cli import pass_environment
-from minipresto import utils
-from minipresto import errors as err
-from minipresto.settings import RESOURCE_LABEL
+from minitrino.cli import pass_environment
+from minitrino import utils
+from minitrino import errors as err
+from minitrino.settings import RESOURCE_LABEL
 
 
 @click.command(
     "down",
     help=(
-        """Bring down running Minipresto containers. This command follows the
+        """Bring down running Minitrino containers. This command follows the
         behavior of `docker-compose down` where containers are both stopped and
         removed."""
     ),
@@ -32,13 +32,13 @@ from minipresto.settings import RESOURCE_LABEL
     "--sig-kill",
     is_flag=True,
     default=False,
-    help=("""Stop Minipresto containers without a grace period."""),
+    help=("""Stop Minitrino containers without a grace period."""),
 )
 @utils.exception_handler
 @pass_environment
 def cli(ctx, sig_kill, keep):
-    """Down command for Minipresto. Exits with a 0 status code if there are no
-    running minipresto containers."""
+    """Down command for Minitrino. Exits with a 0 status code if there are no
+    running minitrino containers."""
 
     utils.check_daemon(ctx.docker_client)
     utils.check_lib(ctx)
@@ -54,7 +54,7 @@ def cli(ctx, sig_kill, keep):
     if sig_kill:
         stop_timeout = 1
         ctx.logger.log(
-            "Stopping Minipresto containers with sig-kill...",
+            "Stopping Minitrino containers with sig-kill...",
             level=ctx.logger.verbose,
         )
     else:
@@ -78,4 +78,4 @@ def cli(ctx, sig_kill, keep):
             container.remove()
             ctx.logger.log(f"Removed container: {identifier}", level=ctx.logger.verbose)
 
-    ctx.logger.log("Brought down all Minipresto containers.")
+    ctx.logger.log("Brought down all Minitrino containers.")

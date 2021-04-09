@@ -270,7 +270,7 @@ def parse_key_value_pair(key_value_pair, err_type=err.MinitrinoError):
 
     ### Parameters
     - `key_value_pair`: A string formatted as a key-value pair, i.e.
-      `"TRINO=338-e.0"`.
+      `"TRINO=354-e"`.
     - `err_type`: The exception to raise if an "=" delimiter is not in the
       key-value pair. Defaults to `MinitrinoError`.
 

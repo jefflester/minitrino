@@ -1,6 +1,7 @@
 # Minipresto
 A command line tool that makes it easy to run modular Presto environments
-locally.
+locally. Compatible with Starburst releases up to 353-e. After 353-e, the
+refactored version of this project, Minitrino, will need to be used.
 
 [![PyPI version](https://badge.fury.io/py/minipresto.svg)](https://badge.fury.io/py/minipresto)
 [![Build Status](https://travis-ci.org/jefflester/minipresto.svg?branch=master)](https://travis-ci.org/jefflester/minipresto)

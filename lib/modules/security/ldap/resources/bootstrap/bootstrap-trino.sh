@@ -7,7 +7,7 @@ echo "Waiting for LDAP to come up..."
 /opt/minitrino/wait-for-it.sh ldap:636 --strict --timeout=60 -- echo "LDAP service is up."
 
 echo "Creating certs directory..."
-TRINO_CERTS=/usr/lib/trino/etc/certs
+TRINO_CERTS=/etc/starburst/certs
 if [ ! -d "${TRINO_CERTS}" ]; then
 	mkdir "${TRINO_CERTS}"
 fi
@@ -17,7 +17,7 @@ TRUSTSTORE_PATH=/etc/pki/java/cacerts
 TRUSTSTORE_DEFAULT_PASS=changeit
 TRUSTSTORE_PASS=trinoRocks15
 KEYSTORE_PASS=trinoRocks15
-SSL_DIR=/usr/lib/trino/etc/ssl
+SSL_DIR=/etc/starburst/ssl
 
 TRINO_JAVA_OPTS="-Djavax.net.ssl.trustStore=${TRUSTSTORE_PATH} \n"
 TRINO_JAVA_OPTS="${TRINO_JAVA_OPTS}-Djavax.net.ssl.trustStorePassword=${TRUSTSTORE_PASS} \n"
@@ -30,7 +30,7 @@ rm -f "${SSL_DIR}"/*
 
 echo "Getting LDAP certificate..."
 sudo yum install -y openssl
-LDAP_URI=$(cat /usr/lib/trino/etc/password-authenticator.properties | grep "ldaps" | sed -r "s/^.*ldaps:\/\/(.+:[0-9]+).*$/\1/")
+LDAP_URI=$(cat /etc/starburst/password-authenticator.properties | grep "ldaps" | sed -r "s/^.*ldaps:\/\/(.+:[0-9]+).*$/\1/")
 LDAP_HOST=$(echo "${LDAP_URI}" | cut -d ':' -f 1)
 LDAP_PORT=$(echo "${LDAP_URI}" | cut -d ':' -f 2)
 LDAP_IP=$(ping -c 1 "${LDAP_HOST}" | grep "PING ${LDAP_HOST}" | sed -r "s/^.+\(([0-9]+(\.[0-9]+)+)\).+$/\1/")
@@ -71,21 +71,21 @@ do
 done;
 
 sudo yum install -y openldap-clients
-ls /usr/lib/trino/etc/ldap-users/*.ldif | while read -r LDIF_FILE;
+ls /etc/starburst/ldap-users/*.ldif | while read -r LDIF_FILE;
 do
 	echo "LDAP Importing user from file [${LDIF_FILE}]"
 	ldapmodify -x -D "cn=admin,dc=example,dc=com" -w trinoRocks15 -H ldaps://"${LDAP_IP}":"${LDAP_PORT}" -f "${LDIF_FILE}"
 done;
 
 echo "Adding JVM configs..."
-echo -e "${TRINO_JAVA_OPTS}" >> /usr/lib/trino/etc/jvm.config
+echo -e "${TRINO_JAVA_OPTS}" >> /etc/starburst/jvm.config
 
 echo "Adding Trino configs..."
-cat <<EOT >> /usr/lib/trino/etc/config.properties
+cat <<EOT >> /etc/starburst/config.properties
 http-server.authentication.type=PASSWORD
 http-server.https.enabled=true
 http-server.https.port=8443
-http-server.https.keystore.path=/usr/lib/trino/etc/ssl/keystore.jks
+http-server.https.keystore.path=/etc/starburst/ssl/keystore.jks
 http-server.https.keystore.key=trinoRocks15
 EOT
 

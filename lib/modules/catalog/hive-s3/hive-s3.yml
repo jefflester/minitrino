@@ -7,7 +7,7 @@ services:
       S3_SECRET_KEY: "${S3_SECRET_KEY}"
       REGION: "${REGION}"
     volumes:
-      - "./modules/catalog/hive-s3/resources/trino/hive_hms.properties:/usr/lib/trino/etc/catalog/hive_hms.properties"
+      - "./modules/catalog/hive-s3/resources/trino/hive_hms.properties:/etc/starburst/catalog/hive_hms.properties"
 
   postgres-hive-s3:
     image: "postgres:${POSTGRES_HIVE_HMS_VER}"

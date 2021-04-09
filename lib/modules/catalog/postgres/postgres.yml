@@ -3,7 +3,7 @@ services:
 
   trino:
     volumes:
-      - "./modules/catalog/postgres/resources/trino/postgres.properties:/usr/lib/trino/etc/catalog/postgres.properties"
+      - "./modules/catalog/postgres/resources/trino/postgres.properties:/etc/starburst/catalog/postgres.properties"
 
   postgres:
     image: "postgres:${POSTGRES_VER}"

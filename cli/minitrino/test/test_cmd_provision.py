@@ -106,7 +106,7 @@ def test_bootstrap_script(result):
     )
 
     trino_bootstrap_check = subprocess.Popen(
-        f"docker exec -i trino ls /usr/lib/trino/etc/",
+        f"docker exec -i trino ls /etc/starburst/",
         shell=True,
         stdout=subprocess.PIPE,
         universal_newlines=True,
@@ -172,13 +172,13 @@ def test_valid_user_config():
     )
 
     jvm_config = subprocess.Popen(
-        f"docker exec -i trino cat /usr/lib/trino/etc/jvm.config",
+        f"docker exec -i trino cat /etc/starburst/jvm.config",
         shell=True,
         stdout=subprocess.PIPE,
         universal_newlines=True,
     )
     trino_config = subprocess.Popen(
-        f"docker exec -i trino cat /usr/lib/trino/etc/config.properties",
+        f"docker exec -i trino cat /etc/starburst/config.properties",
         shell=True,
         stdout=subprocess.PIPE,
         universal_newlines=True,
@@ -212,7 +212,7 @@ def test_duplicate_config_props():
         f"\nquery.max-execution-time=1h\nquery.max-execution-time=2h'"
     )
     subprocess.Popen(
-        f'docker exec -i trino sh -c "echo {cmd_chunk} >> /usr/lib/trino/etc/config.properties"',
+        f'docker exec -i trino sh -c "echo {cmd_chunk} >> /etc/starburst/config.properties"',
         shell=True,
         stdout=subprocess.PIPE,
         universal_newlines=True,
@@ -220,7 +220,7 @@ def test_duplicate_config_props():
 
     cmd_chunk = "$'-Xms1G\n-Xms1G'"
     subprocess.Popen(
-        f'docker exec -i trino sh -c "echo {cmd_chunk} >> /usr/lib/trino/etc/jvm.config"',
+        f'docker exec -i trino sh -c "echo {cmd_chunk} >> /etc/starburst/jvm.config"',
         shell=True,
         stdout=subprocess.PIPE,
         universal_newlines=True,

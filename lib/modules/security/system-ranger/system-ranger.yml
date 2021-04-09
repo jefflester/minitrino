@@ -3,7 +3,7 @@ version: "3.8"
 services:
   trino:
     volumes:
-      - "./modules/security/system-ranger/resources/trino/access-control.properties:/usr/lib/trino/etc/access-control.properties"
+      - "./modules/security/system-ranger/resources/trino/access-control.properties:/etc/starburst/access-control.properties"
 
   ranger-admin:
     image: harbor.starburstdata.net/starburstdata/starburst-ranger-admin:${SEP_RANGER_VER}

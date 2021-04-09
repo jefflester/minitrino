@@ -12,4 +12,4 @@ services:
     labels:
       - "com.starburst.tests.module.snowflake-distributed=catalog-snowflake-distributed"
     volumes:
-      - "./modules/catalog/snowflake-distributed/resources/trino/snowflake_distributed.properties:/usr/lib/trino/etc/catalog/snowflake_distributed.properties"
+      - "./modules/catalog/snowflake-distributed/resources/trino/snowflake_distributed.properties:/etc/starburst/catalog/snowflake_distributed.properties"

@@ -3,7 +3,7 @@ services:
 
   trino:
     volumes:
-      - "./modules/catalog/mysql/resources/trino/mysql.properties:/usr/lib/trino/etc/catalog/mysql.properties"
+      - "./modules/catalog/mysql/resources/trino/mysql.properties:/etc/starburst/catalog/mysql.properties"
 
   mysql:
     image: "mysql:${MYSQL_VER}"

@@ -3,9 +3,9 @@ services:
 
   trino:
     volumes:
-      - "./modules/security/ldap/resources/trino/password-authenticator.properties:/usr/lib/trino/etc/password-authenticator.properties"
-      - "./modules/security/ldap/resources/ldap/ldap-users:/usr/lib/trino/etc/ldap-users"
-      - "~/.minitrino/ssl:/usr/lib/trino/etc/ssl"
+      - "./modules/security/ldap/resources/trino/password-authenticator.properties:/etc/starburst/password-authenticator.properties"
+      - "./modules/security/ldap/resources/ldap/ldap-users:/etc/starburst/ldap-users"
+      - "~/.minitrino/ssl:/etc/starburst/ssl"
     environment:
       MINITRINO_BOOTSTRAP: "bootstrap-trino.sh"
     links:

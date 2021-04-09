@@ -11,16 +11,16 @@ USER root
 RUN set -euxo pipefail \
     && yum install -y wget \
         sudo \
-    && usermod -aG wheel trino \
-    && echo trino | passwd trino --stdin \
-    && echo "trino ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers \
+    && usermod -aG wheel starburst \
+    && echo starburst | passwd starburst --stdin \
+    && echo "starburst ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers \
     && DIST=${STARBURST_VER:0:3} \
     && CLI_URL=https://repo1.maven.org/maven2/io/trino/trino-cli/"${DIST}"/trino-cli-"${DIST}"-executable.jar \
     && curl -fsSL "${CLI_URL}" > "${TRINO_CLI_PATH}" \
     && chmod -v +x "${TRINO_CLI_PATH}" \
-    && chown --reference=/usr/lib/trino/etc/config.properties "${TRINO_CLI_PATH}" \
+    && chown --reference=/etc/starburst/config.properties "${TRINO_CLI_PATH}" \
     && ln -vs "${TRINO_CLI_PATH}" \
     && echo OK
 
-USER trino
+USER starburst
 WORKDIR /home/trino

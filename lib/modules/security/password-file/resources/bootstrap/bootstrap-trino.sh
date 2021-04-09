@@ -7,7 +7,7 @@ TRUSTSTORE_PATH=/etc/pki/java/cacerts
 TRUSTSTORE_DEFAULT_PASS=changeit
 TRUSTSTORE_PASS=trinoRocks15
 KEYSTORE_PASS=trinoRocks15
-SSL_DIR=/usr/lib/trino/etc/ssl
+SSL_DIR=/etc/starburst/ssl
 
 TRINO_JAVA_OPTS="-Djavax.net.ssl.trustStore=${TRUSTSTORE_PATH} \n"
 TRINO_JAVA_OPTS="${TRINO_JAVA_OPTS}-Djavax.net.ssl.trustStorePassword=${TRUSTSTORE_PASS} \n"
@@ -34,14 +34,14 @@ keytool -storepasswd \
         -keystore "${TRUSTSTORE_PATH}"
 
 echo "Adding JVM configs..."
-echo -e "${TRINO_JAVA_OPTS}" >> /usr/lib/trino/etc/jvm.config
+echo -e "${TRINO_JAVA_OPTS}" >> /etc/starburst/jvm.config
 
 echo "Adding Trino configs..."
-cat <<EOT >> /usr/lib/trino/etc/config.properties
+cat <<EOT >> /etc/starburst/config.properties
 http-server.authentication.type=PASSWORD
 http-server.https.enabled=true
 http-server.https.port=8443
-http-server.https.keystore.path=/usr/lib/trino/etc/ssl/keystore.jks
+http-server.https.keystore.path=/etc/starburst/ssl/keystore.jks
 http-server.https.keystore.key=trinoRocks15
 EOT
 
@@ -64,5 +64,5 @@ keytool -import -v \
 
 echo "Setting up password file..."
 sudo yum install httpd-tools -y
-htpasswd -cbB -C 10 /usr/lib/trino/etc/password.db alice trinoRocks15
-htpasswd -bB -C 10 /usr/lib/trino/etc/password.db bob trinoRocks15
+htpasswd -cbB -C 10 /etc/starburst/password.db alice trinoRocks15
+htpasswd -bB -C 10 /etc/starburst/password.db bob trinoRocks15

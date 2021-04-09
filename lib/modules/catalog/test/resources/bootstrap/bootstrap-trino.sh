@@ -2,4 +2,4 @@
 
 set -euxo pipefail
 
-touch /usr/lib/trino/etc/test_bootstrap.txt
+touch /etc/starburst/test_bootstrap.txt

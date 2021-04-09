@@ -30,8 +30,8 @@ Via Docker:
 
 ```
 docker exec -it trino trino-cli --server https://trino:8443 \
-   --truststore-path /usr/lib/trino/etc/ssl/truststore.jks --truststore-password trinoRocks15 \
-   --keystore-path /usr/lib/trino/etc/ssl/keystore.jks --keystore-password trinoRocks15 \
+   --truststore-path /etc/starburst/ssl/truststore.jks --truststore-password trinoRocks15 \
+   --keystore-path /etc/starburst/ssl/keystore.jks --keystore-password trinoRocks15 \
    --user bob --password
 ```
 

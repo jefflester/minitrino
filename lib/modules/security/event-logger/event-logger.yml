@@ -3,8 +3,8 @@ services:
 
   trino:
     volumes:
-      - "./modules/security/event-logger/resources/trino/postgres_event_logger.properties:/usr/lib/trino/etc/catalog/postgres_event_logger.properties"
-      - "./modules/security/event-logger/resources/trino/event-listener.properties:/usr/lib/trino/etc/event-listener.properties"
+      - "./modules/security/event-logger/resources/trino/postgres_event_logger.properties:/etc/starburst/catalog/postgres_event_logger.properties"
+      - "./modules/security/event-logger/resources/trino/event-listener.properties:/etc/starburst/event-listener.properties"
   
   postgres-event-logger:
     image: "postgres:${POSTGRES_EVENT_LOGGER_VER}"

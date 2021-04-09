@@ -30,8 +30,8 @@ Via Docker:
 
 ```
 docker exec -it trino trino-cli --server https://trino:8443 \
-   --truststore-path /usr/lib/trino/etc/ssl/truststore.jks --truststore-password trinoRocks15 \
-   --keystore-path /usr/lib/trino/etc/ssl/keystore.jks --keystore-password trinoRocks15 \
+   --truststore-path /etc/starburst/ssl/truststore.jks --truststore-password trinoRocks15 \
+   --keystore-path /etc/starburst/ssl/keystore.jks --keystore-password trinoRocks15 \
    --user bob --password
 ```
 
@@ -65,5 +65,5 @@ this website**.
 Example with username `jeff` and password `trinoRocks15`
 
 ```
-docker exec trino htpasswd -bB -C 10 /usr/lib/trino/etc/password.db jeff trinoRocks15
+docker exec trino htpasswd -bB -C 10 /etc/starburst/password.db jeff trinoRocks15
 ```

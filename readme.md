@@ -36,7 +36,7 @@ locally. Compatible with Staburst version 354-e and later.
 
 ## Requirements
 - Docker 19.03.0+
-- Docker Compose (Latest)
+- Docker Compose (1.29.0+)
 - Python 3.8+
 - Pip
 - Linux or Mac OS
@@ -175,7 +175,7 @@ Additionally, you need to uncomment the volume mount in the library's root
   # Uncomment this to enable the volume mount. The variable should point to a
   # valid SEP license. 
   volumes:
-    - "${STARBURST_LIC_PATH}:/usr/lib/trino/etc/starburstdata.license:ro"
+    - "${STARBURST_LIC_PATH}:/etc/starburst/starburstdata.license:ro"
 ```
 
 ### Removing Resources
@@ -494,7 +494,7 @@ services:
 
   trino:
     volumes:
-      - "./modules/catalog/postgres/resources/trino/postgres.properties:/usr/lib/trino/etc/catalog/postgres.properties"
+      - "./modules/catalog/postgres/resources/trino/postgres.properties:/etc/starburst/catalog/postgres.properties"
 
   postgres:
     image: "postgres:${POSTGRES_VER}"
@@ -654,8 +654,8 @@ services:
 
   trino:
     volumes:
-    # Always place Trino files in `/usr/lib/trino/etc/` as symbolic links can change between versions
-      - "./modules/catalog/postgres/resources/trino/postgres.properties:/usr/lib/trino/etc/catalog/postgres.properties"
+    # Always place Trino files in `/etc/starburst/` as symbolic links can change between versions
+      - "./modules/catalog/postgres/resources/trino/postgres.properties:/etc/starburst/catalog/postgres.properties"
 
   postgres:
     image: "postgres:${POSTGRES_VER}"
@@ -724,7 +724,7 @@ services:
 
   trino:
     volumes:
-      - "./modules/catalog/postgres/resources/trino/postgres.properties:/usr/lib/trino/etc/catalog/postgres.properties"
+      - "./modules/catalog/postgres/resources/trino/postgres.properties:/etc/starburst/catalog/postgres.properties"
 
   postgres:
     image: "postgres:${POSTGRES_VER}"
@@ -842,7 +842,7 @@ changes to Trino files. An example bootstrap snippet can be found below:
 set -euxo pipefail
 
 echo "Adding Trino configs..."
-cat <<EOT >> /usr/lib/trino/etc/config.properties
+cat <<EOT >> /etc/starburst/config.properties
 query.max-stage-count=105
 query.max-execution-time=1h
 EOT

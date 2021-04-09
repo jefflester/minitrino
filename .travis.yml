@@ -12,7 +12,7 @@ addons:
       - python3-pip
 
 env:
-  - DOCKER_COMPOSE_VERSION=1.25.5
+  - DOCKER_COMPOSE_VERSION=1.29.0
 
 before_install:
   - sudo rm /usr/local/bin/docker-compose

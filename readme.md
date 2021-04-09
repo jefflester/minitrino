@@ -8,7 +8,7 @@ locally. Compatible with Staburst version 354-e and later.
 
 -----
 
-**Latest Stable Release**: 1.0.1
+**Latest Stable Release**: 2.0.0
 
 -----
 
@@ -35,9 +35,9 @@ locally. Compatible with Staburst version 354-e and later.
 -----
 
 ## Requirements
-- Docker 19.03.12+
-- Docker Compose 1.26.2+
-- Python 3.6+
+- Docker 19.03.0+
+- Docker Compose (Latest)
+- Python 3.8+
 - Pip
 - Linux or Mac OS
 
@@ -489,7 +489,7 @@ lib
 And the contents of a `docker-compose.yml` file (`postgres.yml`):
 
 ```yaml
-version: "3.7"
+version: "3.8"
 services:
 
   trino:
@@ -649,7 +649,7 @@ We will now define the `postgres.yml` Docker Compose file. Set it up as follows,
 and **read the important notes after**:
 
 ```yaml
-version: "3.7"
+version: "3.8"
 services:
 
   trino:
@@ -719,7 +719,7 @@ Compose file we just created with a named volume.
 -----
 
 ```yaml
-version: "3.7"
+version: "3.8"
 services:
 
   trino:
@@ -797,7 +797,7 @@ module, create a shell script, and then reference the script name in the Compose
 YAML file:
 
 ```yaml
-version: "3.7"
+version: "3.8"
 services:
 
   trino:

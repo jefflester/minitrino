@@ -4,7 +4,7 @@ locally. Compatible with Starburst releases up to 350-e. After 350-e, the
 refactored version of this project, Minitrino, will need to be used.
 
 [![PyPI version](https://badge.fury.io/py/minipresto.svg)](https://badge.fury.io/py/minipresto)
-[![Build Status](https://travis-ci.org/jefflester/minipresto.svg?branch=master)](https://travis-ci.org/jefflester/minipresto)
+[![Build Status](https://travis-ci.org/jefflester/minitrino.svg?branch=master)](https://travis-ci.org/jefflester/minipresto)
 [![Presto Slack](https://img.shields.io/static/v1?logo=slack&logoColor=959DA5&label=Slack&labelColor=333a41&message=join%20conversation&color=3AC358)](https://prestosql.io/slack.html)
 [![Presto: The Definitive Guide book download](https://img.shields.io/badge/Presto%3A%20The%20Definitive%20Guide-download-brightgreen)](https://www.starburstdata.com/oreilly-presto-guide-download/)
 

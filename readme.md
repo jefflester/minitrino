@@ -1,6 +1,6 @@
 # Minipresto
 A command line tool that makes it easy to run modular Presto environments
-locally. Compatible with Starburst releases up to 353-e. After 353-e, the
+locally. Compatible with Starburst releases up to 350-e. After 350-e, the
 refactored version of this project, Minitrino, will need to be used.
 
 [![PyPI version](https://badge.fury.io/py/minipresto.svg)](https://badge.fury.io/py/minipresto)
@@ -37,9 +37,9 @@ refactored version of this project, Minitrino, will need to be used.
 -----
 
 ## Requirements
-- Docker 19.03.12+
-- Docker Compose 1.26.2+
-- Python 3.6+
+- Docker 19.03.0+
+- Docker Compose (1.29.0+)
+- Python 3.8+
 - Pip
 - Linux or Mac OS
 

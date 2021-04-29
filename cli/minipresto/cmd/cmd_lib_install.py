@@ -54,7 +54,7 @@ def download_and_extract(ctx, version=""):
 
     github_uri = f"https://github.com/jefflester/minipresto/archive/{version}.tar.gz"
     tarball = os.path.join(ctx.minipresto_user_dir, f"{version}.tar.gz")
-    file_basename = f"minipresto-{version}"  # filename after unpacking
+    file_basename = f"minitrino-{version}"  # filename after unpacking
     lib_dir = os.path.join(ctx.minipresto_user_dir, file_basename, "lib")
 
     try:

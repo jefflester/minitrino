@@ -10,7 +10,7 @@ refactored version of this project, Minitrino, will need to be used.
 
 -----
 
-**Latest Stable Release**: 1.0.1
+**Latest Stable Release**: 1.0.2
 
 -----
 

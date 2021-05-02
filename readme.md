@@ -205,6 +205,8 @@ Notes:
 - Images tied to stopped containers can be forcibly removed, but any image tied
   to a running container cannot be forcibly removed, neither by Minitrino nor
   by the Docker CLI.
+- You can find a module's label key by looking at the module's
+  `docker-compose.yml` file in the Minitrino library.
 
 Sample `remove` command:
 
@@ -862,9 +864,18 @@ EOT
   - `docker logs <container>`: Print the logs for a given container to the
     terminal
   - `docker ps`: Show all running Docker containers and associated statistics
+  - `docker inspect <container>` to see various details about a container
 - If you experience issues with a library module, check that that module is
   structured correctly according to the [module
-  tutorial](#adding-new-modules-tutorial)
+  tutorial](#adding-new-modules-tutorial), and ensure the library and the CLI
+  versions match
+- Sometimes, a lingering persistent volume can cause problem (i.e. a stale Hive
+  metastore database volume from a previous module), so you can run:
+  - `minitrino down`
+  - `minitrino -v remove --volumes` to remove **all** existing Minitrino
+    volumes. Alternatively, run `minitrino -v remove --volumes --label <your
+    label>` to specifiy a specific module for which to remove volumes. See the
+    [removing resources](#removing-resources) section for more information.
 
 If none of these troubleshooting tips help to resolve your issue, [please file a
 GitHub issue](#reporting-bugs-and-contributing) and provide as much information

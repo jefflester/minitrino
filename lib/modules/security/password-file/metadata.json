@@ -1,4 +1,5 @@
 {
     "description": "Secures Trino with file-based password authentication.",
-    "incompatible_modules": ["ldap"]
+    "incompatible_modules": ["ldap"],
+    "enterprise": false
 }

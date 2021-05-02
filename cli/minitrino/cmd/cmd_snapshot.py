@@ -379,6 +379,4 @@ def check_complete(ctx, name, directory):
 
     snapshot_file = os.path.join(directory, f"{name}.tar.gz")
     if not os.path.isfile(snapshot_file):
-        raise err.MinitrinoError(
-            f"Snapshot tarball failed to write to {snapshot_file}"
-        )
+        raise err.MinitrinoError(f"Snapshot tarball failed to write to {snapshot_file}")

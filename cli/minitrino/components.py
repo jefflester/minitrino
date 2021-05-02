@@ -532,13 +532,8 @@ class Modules:
                         f"Will not load metadata for module.",
                         level=self._ctx.logger.verbose,
                     )
-
-                self.data[module_name]["description"] = metadata.get(
-                    "description", "No module description provided."
-                )
-                self.data[module_name]["incompatible_modules"] = metadata.get(
-                    "incompatible_modules", []
-                )
+                for k, v in metadata.items():
+                    self.data[module_name][k] = v
 
 
 class CommandExecutor:

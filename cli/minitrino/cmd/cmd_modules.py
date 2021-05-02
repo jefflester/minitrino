@@ -81,10 +81,10 @@ def log_info(ctx, module_name="", module_dict={}, json_format=False):
         module_dict = {module_name: module_dict}
         ctx.logger.log(json.dumps(module_dict, indent=2))
     else:
-        description = module_dict.get("description", "")
-        incompatible_modules = module_dict.get("incompatible_modules", [])
-        ctx.logger.log(
-            f"Module: {module_name}\n"
-            f"Description: {description}\n"
-            f"Incompatible Modules: {incompatible_modules}",
-        )
+        log_msg = [f"Module: {module_name}\n"]
+        keys = ["description", "incompatible_modules", "enterprise"]
+        for k, v in module_dict.items():
+            if k in keys:
+                log_msg.extend(f"{k.title()}: {v}\n")
+
+        ctx.logger.log("".join(log_msg))

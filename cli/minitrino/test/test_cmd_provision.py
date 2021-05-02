@@ -167,8 +167,7 @@ def test_valid_user_config():
 
     assert result.exit_code == 0
     assert (
-        "Appending user-defined Trino config to Trino container config"
-        in result.output
+        "Appending user-defined Trino config to Trino container config" in result.output
     )
 
     jvm_config = subprocess.Popen(

@@ -1,4 +1,5 @@
 {
     "description": "Creates a Hive catalog using AWS S3 for object storage and Postgres as a backend metastore DB.",
-    "incompatible_modules": []
+    "incompatible_modules": [],
+    "enterprise": false
 }

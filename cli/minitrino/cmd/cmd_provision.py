@@ -11,6 +11,7 @@ import stat
 import hashlib
 import time
 import click
+import yaml
 
 from minitrino.cli import pass_environment
 from minitrino import utils
@@ -78,6 +79,7 @@ def cli(ctx, modules, no_rollback, docker_native):
     utils.check_lib(ctx)
     modules = append_running_modules(modules)
     check_compatibility(modules)
+    check_enterprise(modules)
 
     if not modules:
         ctx.logger.log(
@@ -161,6 +163,40 @@ def check_compatibility(ctx, modules=[]):
                     f"'{module}' are: {incompatible}",
                     f"You can see which modules are incompatible with this module by "
                     f"running 'minitrino modules -m {module}'",
+                )
+
+
+@pass_environment
+def check_enterprise(ctx, modules=[]):
+    """Checks if any of the provided modules are Starburst Enterprise features.
+    If they are, we check that a pointer to an SEP license is provided."""
+
+    ctx.logger.log(
+        "Checking for SEP license for enterprise modules...",
+        level=ctx.logger.verbose,
+    )
+
+    for module in modules:
+        enterprise = ctx.modules.data.get(module, {}).get("enterprise", False)
+        if enterprise:
+            yaml_path = os.path.join(ctx.minitrino_lib_dir, "docker-compose.yml")
+            with open(yaml_path) as f:
+                yaml_file = yaml.load(f, Loader=yaml.FullLoader)
+            if (
+                not yaml_file.get("services", False)
+                .get("trino", False)
+                .get("volumes", False)
+            ):
+                raise err.UserError(
+                    f"Module {module} requires a Starburst license. "
+                    f"The license volume in the library's docker-compose.yml "
+                    f"file must be uncommented at: {yaml_path}"
+                )
+            if not ctx.env.get_var("STARBURST_LIC_PATH", False):
+                raise err.UserError(
+                    f"Module {module} requires a Starburst license. "
+                    f"You must provide a path to a Starburst license via the "
+                    f"STARBURST_LIC_PATH environment variable"
                 )
 
 

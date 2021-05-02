@@ -1,4 +1,5 @@
 {
     "description": "Creates a MySQL catalog using the standard MySQL connector.",
-    "incompatible_modules": []
+    "incompatible_modules": [],
+    "enterprise": false
 }

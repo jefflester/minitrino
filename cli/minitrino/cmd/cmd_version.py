@@ -23,5 +23,5 @@ def cli(ctx):
     try:
         lib_version = utils.get_lib_ver(ctx.minitrino_lib_dir)
         ctx.logger.log(f"Library version: {lib_version}")
-    except: 
+    except:
         ctx.logger.log("Library version: NOT INSTALLED")

@@ -323,9 +323,9 @@ def get_lib_ver(library_path=""):
                 line = line.strip()
                 if line:
                     return line
-            return "NOT FOUND"
+            return "NOT INSTALLED"
     except:
-        return "NOT FOUND"
+        return "NOT INSTALLED"
 
 
 def validate_yes(response=""):

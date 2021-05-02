@@ -315,7 +315,9 @@ Options:
 ```
 
 ### Install the Library
-You can install the Minitrino library with the `lib_install` command. 
+You can install the Minitrino library with the `lib_install` command. Note that
+it is best practice to have the library version match the CLI version. You can
+check these versions with `minitrino version`.
 
 ```
 Usage: minitrino lib_install [OPTIONS]
@@ -344,13 +346,14 @@ Options:
   --help             Show this message and exit.
 ```
 
-### Display CLI Version
-You can display the Minitrino CLI version with the `version` command. 
+### Display Minitrino Versions
+You can display the Minitrino CLI and library versions with the `version`
+command. 
 
 ```
 Usage: minitrino version [OPTIONS]
 
-  Display the Minitrino version.
+  Display Minitrino CLI and library versions.
 
 Options:
   --help  Show this message and exit.

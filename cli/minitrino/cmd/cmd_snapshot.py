@@ -239,7 +239,7 @@ def create_snapshot_command_file(ctx, command_string="", snapshot_name_dir=""):
             st.st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH,
         )
     except Exception as e:
-        minitrino.utils.handle_exception(e, ctx.verbose)
+        utils.handle_exception(e, ctx.verbose)
 
     with open(file_dest, "a") as provision_snapshot_file:
         provision_snapshot_file.write(command_string)

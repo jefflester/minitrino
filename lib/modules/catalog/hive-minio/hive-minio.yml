@@ -2,10 +2,10 @@ version: "3.8"
 services:
   trino:
     volumes:
-      - "./modules/catalog/hive-minio/resources/trino/hive_hms_minio.properties:/etc/starburst/catalog/hive_hms_minio.properties"
+      - "./modules/catalog/hive-minio/resources/trino/hive_minio.properties:/etc/starburst/catalog/hive_minio.properties"
 
   postgres-hive-minio:
-    image: "postgres:${POSTGRES_HIVE_HMS_VER}"
+    image: "postgres:${POSTGRES_HIVE_S3_VER}"
     container_name: "postgres-hive-minio"
     labels:
       - "com.starburst.tests=minitrino"

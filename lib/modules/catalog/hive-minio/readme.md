@@ -6,10 +6,10 @@ You can access the Minio UI at `http://localhost:9000` with `access-key` and `se
 You can create a table with ORC data with Trino very quickly:
 
 ```
-trino> create schema hive_hms_minio.tiny with (location='s3a://sample-bucket/tiny/');
+trino> create schema hive_minio.tiny with (location='s3a://sample-bucket/tiny/');
 CREATE SCHEMA
 
-trino> create table hive_hms_minio.tiny.customer as select * from tpch.tiny.customer;
+trino> create table hive_minio.tiny.customer as select * from tpch.tiny.customer;
 CREATE TABLE: 1500 rows
 ```
 

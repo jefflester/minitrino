@@ -1,0 +1,11 @@
+version: "3.8"
+services:
+
+  trino:
+    volumes:
+      - "./modules/security/file-access-control/resources/trino/access-control.properties:/etc/starburst/access-control.properties"
+      - "./modules/security/file-access-control/resources/trino/group-provider.properties:/etc/starburst/group-provider.properties"
+      - "./modules/security/file-access-control/resources/trino/rules.json:/etc/starburst/rules.json"
+      - "./modules/security/file-access-control/resources/trino/group.txt:/etc/starburst/group.txt"
+    labels:
+      - "com.starburst.tests.module.file-access-control=security-file-access-control"

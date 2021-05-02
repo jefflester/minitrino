@@ -7,10 +7,10 @@ services:
       S3_SECRET_KEY: "${S3_SECRET_KEY}"
       REGION: "${REGION}"
     volumes:
-      - "./modules/catalog/hive-s3/resources/trino/hive_hms.properties:/etc/starburst/catalog/hive_hms.properties"
+      - "./modules/catalog/hive-s3/resources/trino/hive_s3.properties:/etc/starburst/catalog/hive_s3.properties"
 
   postgres-hive-s3:
-    image: "postgres:${POSTGRES_HIVE_HMS_VER}"
+    image: "postgres:${POSTGRES_HIVE_S3_VER}"
     container_name: "postgres-hive-s3"
     labels:
       - "com.starburst.tests=minitrino"

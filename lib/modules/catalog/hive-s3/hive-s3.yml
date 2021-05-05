@@ -15,7 +15,6 @@ services:
     labels:
       - "com.starburst.tests=minitrino"
       - "com.starburst.tests.module.hive-s3=catalog-hive-s3"
-    user: "postgres"
     env_file:
       - "./modules/catalog/hive-s3/resources/postgres/postgres.env"
     volumes:

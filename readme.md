@@ -602,8 +602,8 @@ This file will initialize Postgres with a database `minitrino`, a user
 `trino`, and a password `trinoRocks15`.
 
 ### Add a Metadata File
-This step is not required for personal development, but it is required to commit
-a module to the Minitrino repository.
+The `metadata.json` file allows Minitrino to obtain key information for the
+module. It is required for a module to work with the CLI.
 
 In `lib/modules/catalog/postgres/`, add the `metadata.json` file:
 

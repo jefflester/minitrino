@@ -15,7 +15,6 @@ minitrino provision --module system-ranger
 ## Policies
 - Bob: admin access to TPCH `sf100` schema
 - Alice: admin access to TPCH `sf10` schema
-- System: all users have select/ownership access to `system` catalog
 
 ## Accessing Ranger
 - Go to `localhost:6080`

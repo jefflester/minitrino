@@ -3,18 +3,18 @@ version: "3.8"
 services:
   trino:
     volumes:
+      - "./modules/security/system-ranger/resources/trino/ranger/:/tmp/ranger/"
       - "./modules/security/system-ranger/resources/trino/access-control.properties:/etc/starburst/access-control.properties"
+    environment:
+      MINITRINO_BOOTSTRAP: "bootstrap-ranger.sh"
 
   ranger-admin:
     image: harbor.starburstdata.net/starburstdata/starburst-ranger-admin:${SEP_RANGER_VER}
     container_name: ranger-admin
     environment:
       WAIT_FOR: ranger-postgres:5432
-      MINITRINO_BOOTSTRAP: "bootstrap-ranger.sh"
     env_file:
       - "./modules/security/system-ranger/resources/ranger-admin/ranger-admin.env"
-    volumes:
-      - "./modules/resources/wait-for-it.sh:/opt/minitrino/wait-for-it.sh"
     depends_on:
       - ranger-postgres
     labels:

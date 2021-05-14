@@ -124,7 +124,7 @@ class Logger:
         msg = msg.replace("\n", f"\n{DEFAULT_INDENT}")
         msg = fill(
             msg,
-            terminal_width - 2,
+            terminal_width - 4,
             subsequent_indent=DEFAULT_INDENT,
             replace_whitespace=False,
             break_on_hyphens=False,

@@ -1,4 +1,4 @@
-# Minipresto Release Notes: ${_RELEASE_VER}
+# Minitrino Release Notes: ${_RELEASE_VER}
 
 ## Release Overview
 - [CLI Changes and Additions](#cli-changes-and-additions)

@@ -1,0 +1,5 @@
+{
+    "description": "Creates a Delta Lake catalog using the enterprise Delta connector.",
+    "incompatible_modules": [],
+    "enterprise": true
+}

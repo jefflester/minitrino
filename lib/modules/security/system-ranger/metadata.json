@@ -1,4 +1,5 @@
 {
-    "description": "Secures Presto with Ranger role-based access control.",
-    "incompatible_modules": []
+    "description": "Secures Trino with Ranger system access control.",
+    "incompatible_modules": ["file-access-control"],
+    "enterprise": true
 }

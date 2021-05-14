@@ -3,13 +3,13 @@ This module uses Minio as a local implementation of S3 object storage. You can w
 
 You can access the Minio UI at `http://localhost:9000` with `access-key` and `secret-key` for credentials. 
 
-You can create a table with ORC data with Presto very quickly:
+You can create a table with ORC data with Trino very quickly:
 
 ```
-presto> create schema hive_hms_minio.tiny with (location='s3a://sample-bucket/tiny/');
+trino> create schema hive_minio.tiny with (location='s3a://sample-bucket/tiny/');
 CREATE SCHEMA
 
-presto> create table hive_hms_minio.tiny.customer as select * from tpch.tiny.customer;
+trino> create table hive_minio.tiny.customer as select * from tpch.tiny.customer;
 CREATE TABLE: 1500 rows
 ```
 

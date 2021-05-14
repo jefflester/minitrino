@@ -1,0 +1,14 @@
+{
+  "name": "alice",
+  "firstName": "Alice",
+  "lastName": "",
+  "emailAddress": "alice@starburstdata.com",
+  "password": "trinoRocks15",
+  "description": "",
+  "groupIdList": ["1"],
+  "groupNameList": [],
+  "status": 1,
+  "isVisible": 1,
+  "userSource": 0,
+  "userRoleList": ["ROLE_USER"]
+}

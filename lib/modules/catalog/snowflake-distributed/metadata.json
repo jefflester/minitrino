@@ -1,4 +1,5 @@
 {
     "description": "Creates a Snowflake catalog leveraging the Snowflake distributed connector.",
-    "incompatible_modules": []
+    "incompatible_modules": [],
+    "enterprise": true
 }

@@ -59,7 +59,7 @@ def test_all_modules():
         (
             "Module: test" in result.output,
             "Description:" in result.output,
-            "Incompatible Modules:" in result.output,
+            "Incompatiblemodules:" in result.output,
         )
     )
 

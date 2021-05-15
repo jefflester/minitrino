@@ -53,7 +53,7 @@ def execute_command(command=[], print_output=True, command_input=""):
         print(f"Output of command [minitrino {' '.join(command)}]:\n{result.output}")
 
     # Remove newlines for string assertion consistency
-    return MinitrinoResult(result, result.output.replace("\n", " "), result.exit_code)
+    return MinitrinoResult(result, result.output.replace("\n", ""), result.exit_code)
 
 
 def log_success(msg):

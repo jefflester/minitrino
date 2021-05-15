@@ -611,13 +611,13 @@ In `lib/modules/catalog/postgres/`, add the `metadata.json` file:
 bash -c 'cat << EOF > metadata.json
 {
   "description": "Creates a Postgres catalog using the standard Postgres connector.",
-  "incompatible_modules": []
+  "incompatibleModules": []
 }
 EOF'
 ```
 
 The metadata file is presentable to the user via the `modules` command, and the
-`incompatible_modules` key restricts certain modules from being provisioned
+`incompatibleModules` key restricts certain modules from being provisioned
 alongside the given module. The `*` wildcard is a supported convention if the
 module is incompatible with all other modules.
 

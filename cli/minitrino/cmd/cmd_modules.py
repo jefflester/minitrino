@@ -82,7 +82,7 @@ def log_info(ctx, module_name="", module_dict={}, json_format=False):
         ctx.logger.log(json.dumps(module_dict, indent=2))
     else:
         log_msg = [f"Module: {module_name}\n"]
-        keys = ["description", "incompatible_modules", "enterprise"]
+        keys = ["description", "incompatibleModules", "enterprise"]
         for k, v in module_dict.items():
             if k in keys:
                 log_msg.extend(f"{k.title()}: {v}\n")

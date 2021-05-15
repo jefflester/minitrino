@@ -149,7 +149,7 @@ def check_compatibility(ctx, modules=[]):
     other. If they are, a user error is raised."""
 
     for module in modules:
-        incompatible = ctx.modules.data.get(module, {}).get("incompatible_modules", [])
+        incompatible = ctx.modules.data.get(module, {}).get("incompatibleModules", [])
         if not incompatible:
             continue
         for module_inner in modules:

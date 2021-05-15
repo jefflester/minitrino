@@ -1,5 +1,5 @@
 {
     "description": "Test module.",
-    "incompatible_modules": ["ldap"],
+    "incompatibleModules": ["ldap"],
     "enterprise": false
 }

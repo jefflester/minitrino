@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import re
 import docker
 import time
 import sys
@@ -52,8 +53,10 @@ def execute_command(command=[], print_output=True, command_input=""):
     if print_output:
         print(f"Output of command [minitrino {' '.join(command)}]:\n{result.output}")
 
-    # Remove newlines for string assertion consistency
-    return MinitrinoResult(result, result.output.replace("\n", ""), result.exit_code)
+    # Remove newlines and extra spaces for string assertion consistency
+    output = result.output.replace("\n", "")
+    output = re.sub(" +", " ", output)
+    return MinitrinoResult(result, output, result.exit_code)
 
 
 def log_success(msg):
@@ -96,12 +99,12 @@ def start_docker_daemon():
     if return_code != 0:
         raise Exception("Failed to start Docker daemon.")
 
-    docker_client = docker.from_env()
     counter = 0
     while counter < 61:
         if counter == 61:
             raise Exception("Docker daemon failed to start after one minute.")
         try:
+            docker_client = docker.from_env()
             docker_client.ping()
             break
         except:

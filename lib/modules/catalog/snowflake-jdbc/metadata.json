@@ -1,4 +1,5 @@
 {
     "description": "Creates a Snowflake catalog leveraging the Snowflake JDBC connector.",
-    "incompatible_modules": []
+    "incompatibleModules": [],
+    "enterprise": true
 }

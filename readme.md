@@ -1,16 +1,14 @@
-# Minipresto
-A command line tool that makes it easy to run modular Presto environments
-locally. Compatible with Starburst releases up to 350-e. After 350-e, the
-refactored version of this project, Minitrino, will need to be used.
+# Minitrino
+A command line tool that makes it easy to run modular Trino environments
+locally. Compatible with Staburst version 354-e and later.
 
-[![PyPI version](https://badge.fury.io/py/minipresto.svg)](https://badge.fury.io/py/minipresto)
-[![Build Status](https://travis-ci.org/jefflester/minitrino.svg?branch=master)](https://travis-ci.org/jefflester/minipresto)
-[![Presto Slack](https://img.shields.io/static/v1?logo=slack&logoColor=959DA5&label=Slack&labelColor=333a41&message=join%20conversation&color=3AC358)](https://prestosql.io/slack.html)
-[![Presto: The Definitive Guide book download](https://img.shields.io/badge/Presto%3A%20The%20Definitive%20Guide-download-brightgreen)](https://www.starburstdata.com/oreilly-presto-guide-download/)
+[![PyPI version](https://badge.fury.io/py/minitrino.svg)](https://badge.fury.io/py/minitrino)
+[![Build Status](https://travis-ci.org/jefflester/minitrino.svg?branch=master)](https://travis-ci.org/jefflester/minitrino)
+[![Trino Slack](https://img.shields.io/static/v1?logo=slack&logoColor=959DA5&label=Slack&labelColor=333a41&message=join%20conversation&color=3AC358)](https://trinodb.io/slack.html)
 
 -----
 
-**Latest Stable Release**: 1.0.2
+**Latest Stable Release**: 2.0.0
 
 -----
 
@@ -27,8 +25,8 @@ refactored version of this project, Minitrino, will need to be used.
   - [Install the Library](#install-the-library)
   - [Display Module Metadata](#display-module-metadata)
   - [Display CLI Version](#display-cli-version)
-  - [Pointing the CLI to the Minipresto Library](#pointing-the-cli-to-the-minipresto-library)
-- [Minipresto Configuration File](#minipresto-configuration-file)
+  - [Pointing the CLI to the Minitrino Library](#pointing-the-cli-to-the-minitrino-library)
+- [Minitrino Configuration File](#minitrino-configuration-file)
 - [Project Structure](#project-structure)
 - [Adding New Modules (Tutorial)](#adding-new-modules-tutorial)
 - [Troubleshooting](#troubleshooting)
@@ -48,21 +46,21 @@ refactored version of this project, Minitrino, will need to be used.
 ## Installation
 
 ### End Users
-Minipresto is available on PyPI and the library is available for public download
-on GitHub. To install the Minipresto CLI, run `pip install minipresto`. To
-install the library, run `minipresto lib_install`.
+Minitrino is available on PyPI and the library is available for public download
+on GitHub. To install the Minitrino CLI, run `pip install minitrino`. To
+install the library, run `minitrino lib_install`.
 
 ### Developers
-In the project's root, run `./install.sh` to install the Minipresto CLI. If you
+In the project's root, run `./install.sh` to install the Minitrino CLI. If you
 encounter errors during installation, try running `sudo -H ./install.sh -v`.
 
 -----
 
 ## CLI
-Minipresto is built with [Click](https://click.palletsprojects.com/en/7.x/), a
+Minitrino is built with [Click](https://click.palletsprojects.com/en/7.x/), a
 popular, open-source toolkit used to build Python-based CLIs.
 
-All Minipresto commands/options are documented below. Note that many command
+All Minitrino commands/options are documented below. Note that many command
 options can be specified with a shorthand alternative, which is the first letter
 of each option, i.e. `--module` can be `-m`.
 
@@ -71,15 +69,15 @@ You can get help, enable verbose output, and change the runtime library
 directory for any command. 
 
 ```
-Usage: minipresto [OPTIONS] COMMAND [ARGS]...
+Usage: minitrino [OPTIONS] COMMAND [ARGS]...
 
 Options:
   -v, --verbose   Enable verbose output.
   -e, --env TEXT  Add or override environment variables.
                   
-                  Environment variables are sourced from the Minipresto
-                  library's root 'minipresto.env' file as well as the user 
-                  config file in '~/.minipresto/minipresto.cfg'. Variables 
+                  Environment variables are sourced from the Minitrino
+                  library's root 'minitrino.env' file as well as the user 
+                  config file in '~/.minitrino/minitrino.cfg'. Variables 
                   supplied by this option will override values from either 
                   of those sources. The variables will also be passed to the
                   environment of the shell executing commands during the
@@ -92,7 +90,7 @@ Options:
 You can provision an environment via the `provision` command.
 
 ```
-Usage: minipresto provision [OPTIONS]
+Usage: minitrino provision [OPTIONS]
 
   Provision an environment based on specified modules. All options are
   optional and can be left empty.
@@ -107,10 +105,10 @@ Options:
                             `docker-compose up --help` to see all available
                             options.
                             
-                            Example: minipresto provision --docker-native
+                            Example: minitrino provision --docker-native
                             --build
                             
-                            Example: minipresto provision --docker-native '--
+                            Example: minitrino provision --docker-native '--
                             remove-orphans --force-recreate'
 
   --help                    Show this message and exit.
@@ -118,7 +116,7 @@ Options:
 
 Notes:
 
-- If no options are passed in, the CLI will provision a standalone Presto
+- If no options are passed in, the CLI will provision a standalone Trino
   container.
 - The command cannot currently be used to append additional modules to an active
   environment. To modify an environment, first shut it down, then re-provision
@@ -127,15 +125,15 @@ Notes:
 Sample `provision` commands:
 
 ```bash
-minipresto provision \
+minitrino provision \
   --module hive-s3 \
   --module elasticsearch \
   --module ldap \
   --docker-native '--build --force-recreate'
 
-minipresto provision -m hive-s3 -m elasticsearch -m ldap
+minitrino provision -m hive-s3 -m elasticsearch -m ldap
 
-minipresto --env STARBURST_VER=332-e.6 provision
+minitrino --env STARBURST_VER=332-e.6 provision
 ```
 
 The `provision` command constructs a Docker Compose command and executes it in
@@ -150,14 +148,14 @@ docker-compose -f docker-compose.yml \
   up -d
 ```
 
-Using the structure of the Minipresto library, it is able to merge multiple
+Using the structure of the Minitrino library, it is able to merge multiple
 Docker Compose files together.
 
 #### Environment Variables
 Environment variables passed to Docker containers are sourced through two
-locations. The first is from the `minipresto.env` file in the library root. These
+locations. The first is from the `minitrino.env` file in the library root. These
 variables define the versions of the provisioned Docker services. The second is
-from from variables set in the `[MODULES]` section of the `minipresto.cfg` file.
+from from variables set in the `[MODULES]` section of the `minitrino.cfg` file.
 These variables can contain sensitive information like access credentials, so
 their values are intentionally left out of library files.
 
@@ -166,7 +164,7 @@ option, and any unset variable can be set with it.
 
 #### Using Licensed Starburst Features
 If you are using licensed features, you will need to provide a path to a valid
-Starburst license. This can be set via `minipresto config` or provided via the
+Starburst license. This can be set via `minitrino config` or provided via the
 `--env` option at command runtime. The variable for this is
 `STARBURST_LIC_PATH`. 
 
@@ -177,24 +175,24 @@ Additionally, you need to uncomment the volume mount in the library's root
   # Uncomment this to enable the volume mount. The variable should point to a
   # valid SEP license. 
   volumes:
-    - "${STARBURST_LIC_PATH}:/usr/lib/presto/etc/starburstdata.license:ro"
+    - "${STARBURST_LIC_PATH}:/etc/starburst/starburstdata.license:ro"
 ```
 
 ### Removing Resources
 You can remove resources with the `remove` command.
 
 ```
-Usage: minipresto remove [OPTIONS]
+Usage: minitrino remove [OPTIONS]
 
-  Remove Minipresto resources.
+  Remove Minitrino resources.
 
 Options:
-  -i, --images      Remove Minipresto images.
-  -v, --volumes     Remove Minipresto container volumes.
+  -i, --images      Remove Minitrino images.
+  -v, --volumes     Remove Minitrino container volumes.
   -l, --label TEXT  Target specific labels for removal (format: key-value
                     pair(s)).
 
-  -f, --force       Force the removal of Minipresto resources. Normal Docker
+  -f, --force       Force the removal of Minitrino resources. Normal Docker
                     removal restrictions apply.
 
   --help            Show this message and exit.
@@ -203,15 +201,17 @@ Options:
 Notes:
 
 - Named volumes tied to any *existing* container cannot be forcibly removed,
-  neither by Minipresto nor by the Docker CLI/SDK.
+  neither by Minitrino nor by the Docker CLI/SDK.
 - Images tied to stopped containers can be forcibly removed, but any image tied
-  to a running container cannot be forcibly removed, neither by Minipresto nor
+  to a running container cannot be forcibly removed, neither by Minitrino nor
   by the Docker CLI.
+- You can find a module's label key by looking at the module's
+  `docker-compose.yml` file in the Minitrino library.
 
 Sample `remove` command:
 
 ```bash
-minipresto -v remove \
+minitrino -v remove \
   --volumes \
   --label com.starburst.tests.module.postgres=catalog-postgres \
   --force
@@ -223,9 +223,9 @@ This will only remove volumes associated to the Postgres catalog module.
 You can shut down an active environment with the `down` command.
 
 ```
-Usage: minipresto down [OPTIONS]
+Usage: minitrino down [OPTIONS]
 
-  Bring down running Minipresto containers. This command follows the
+  Bring down running Minitrino containers. This command follows the
   behavior of `docker-compose down` where containers are both stopped and
   removed.
 
@@ -233,14 +233,14 @@ Options:
   -k, --keep  Does not remove containers; instead, containers will only be
               stopped.
 
-  --sig-kill  Stop Minipresto containers without a grace period.
+  --sig-kill  Stop Minitrino containers without a grace period.
   --help      Show this message and exit.
 ```
 
 Sample `down` command:
 
 ```bash
-minipresto -v down
+minitrino -v down
 ```
 
 ### Taking Environment Snapshots
@@ -248,10 +248,10 @@ You can capture snapshots for both active and inactive environments with the
 `snapshot` command. 
 
 ```
-Usage: minipresto snapshot [OPTIONS]
+Usage: minitrino snapshot [OPTIONS]
 
-  Create a snapshot of a Minipresto environment. A tarball is placed in the
-  Minipresto `lib/snapshots/` directory.
+  Create a snapshot of a Minitrino environment. A tarball is placed in the
+  Minitrino `lib/snapshots/` directory.
 
   To take a snapshot of an active environment, leave the `--module` and
   option out of the command.
@@ -266,7 +266,7 @@ Options:
                         underscores.  [required]
 
   -d, --directory PATH  Directory to save the resulting snapshot file in.
-                        Defaults to the snapshots directory in the Minipresto
+                        Defaults to the snapshots directory in the Minitrino
                         library.
 
   -f, --force           Overwrite the file if it already exists.
@@ -282,7 +282,7 @@ Options:
 
 Notes: 
 
-- Minipresto records the original `provision` command and places it in the
+- Minitrino records the original `provision` command and places it in the
   snapshot file as `provision-snapshot.sh`; this can be directly executed. This
   makes it easier for others to reuse the environment and provision it
   identically.
@@ -292,22 +292,22 @@ Sample `snapshot` commands:
 ```bash
 # Take a snapshot of an active environment (this will create a tarball 
 # called `snapshot-t2533.tar.gz` in the library's `snapshots/` directory):
-minipresto snapshot --name t-2533
+minitrino snapshot --name t-2533
 
 # Take a snapshot of specific modules:
-minipresto snapshot -n super-cool-env -m hive-s3 -m elasticsearch -m ldap
+minitrino snapshot -n super-cool-env -m hive-s3 -m elasticsearch -m ldap
 ```
 
 ### Manage User Configuration
-You can manage Minipresto configuration with the `config` command. 
+You can manage Minitrino configuration with the `config` command. 
 
 ```
-Usage: minipresto config [OPTIONS]
+Usage: minitrino config [OPTIONS]
 
-  Edit the Minipresto user configuration file.
+  Edit the Minitrino user configuration file.
 
 Options:
-  -r, --reset  Reset the Minipresto user configuration file and create a new
+  -r, --reset  Reset the Minitrino user configuration file and create a new
                config file from a template.
                
                WARNING: This will remove your configuration file (if it
@@ -317,12 +317,14 @@ Options:
 ```
 
 ### Install the Library
-You can install the Minipresto library with the `lib_install` command. 
+You can install the Minitrino library with the `lib_install` command. Note that
+it is best practice to have the library version match the CLI version. You can
+check these versions with `minitrino version`.
 
 ```
-Usage: minipresto lib_install [OPTIONS]
+Usage: minitrino lib_install [OPTIONS]
 
-  Install the Minipresto library.
+  Install the Minitrino library.
 
 Options:
   -v, --version TEXT  The version of the library to install.
@@ -330,10 +332,10 @@ Options:
 ```
 
 ### Display Module Metadata
-You can see Minipresto module metadata with the `modules` command. 
+You can see Minitrino module metadata with the `modules` command. 
 
 ```
-Usage: minipresto modules [OPTIONS]
+Usage: minitrino modules [OPTIONS]
 
   Display module metadata.
 
@@ -346,68 +348,69 @@ Options:
   --help             Show this message and exit.
 ```
 
-### Display CLI Version
-You can display the Minipresto CLI version with the `version` command. 
+### Display Minitrino Versions
+You can display the Minitrino CLI and library versions with the `version`
+command. 
 
 ```
-Usage: minipresto version [OPTIONS]
+Usage: minitrino version [OPTIONS]
 
-  Display the Minipresto version.
+  Display Minitrino CLI and library versions.
 
 Options:
   --help  Show this message and exit.
 ```
 
-### Pointing the CLI to the Minipresto Library
-The Minipresto CLI should always point to a compatible library with the expected
+### Pointing the CLI to the Minitrino Library
+The Minitrino CLI should always point to a compatible library with the expected
 structure. The library directory can be set one of four ways, listed below in
 the order of precedence:
 
 1. Passing the `LIB_PATH` variable to the CLI's `--env` option sets the library
    directory for the current command.
-2. The `minipresto.cfg` file's `LIB_PATH` variable sets the library directory if
+2. The `minitrino.cfg` file's `LIB_PATH` variable sets the library directory if
    present.
-3. The path `~/.minipresto/lib/` is used as the default lib path if the
+3. The path `~/.minitrino/lib/` is used as the default lib path if the
    `LIB_PATH` var is not found.
-4. As a last resort, Minipresto will check to see if the library exists in
+4. As a last resort, Minitrino will check to see if the library exists in
    relation to the positioning of the `components.py` file and assumes the
    project is being run out of a cloned repository.
 
 If you not running out of a cloned repository, it is advisable to provide a
-pointer to the library in Minipresto's configuration via the `LIB_PATH` config.
+pointer to the library in Minitrino's configuration via the `LIB_PATH` config.
 
 -----
 
-## Minipresto Configuration File
-Sticky configuration is set in `~/.minipresto/minipresto.cfg`. The sections in
+## Minitrino Configuration File
+Sticky configuration is set in `~/.minitrino/minitrino.cfg`. The sections in
 this file each serve a separate purpose.
 
 ### [CLI] Section
-These configs allow the user to customize the behavior of Minipresto. 
+These configs allow the user to customize the behavior of Minitrino. 
 
-- LIB_PATH: The filesystem path of the Minipresto library (specifically to the
+- LIB_PATH: The filesystem path of the Minitrino library (specifically to the
   `lib/` directory).
 - TEXT_EDITOR: The text editor to use with the `config` command, e.g. "vi",
   "nano", etc. Defaults to the shell's default editor.
 
 ### [DOCKER] Section
-These configs allow the user to customize how Minipresto uses Docker.
+These configs allow the user to customize how Minitrino uses Docker.
 
 - DOCKER_HOST: A URL pointing to an accessible Docker host. This is
   automatically detected by Docker otherwise.
 
-### [PRESTO] Section
-These configs allow the user to propagate config to the Presto container. Since
-many modules can append to Presto's core files, the supported way to make
-propagate changes to these Presto files is with these configs.
+### [TRINO] Section
+These configs allow the user to propagate config to the Trino container. Since
+many modules can append to Trino's core files, the supported way to make
+propagate changes to these Trino files is with these configs.
 
-- CONFIG: Configuration for Presto's `config.properties` file. 
-- JVM_CONFIG: Configuration for Presto's `jvm.config` file.
+- CONFIG: Configuration for Trino's `config.properties` file. 
+- JVM_CONFIG: Configuration for Trino's `jvm.config` file.
 
 A multiline example of this section (note the indentation):
 
 ```
-[PRESTO]
+[TRINO]
 CONFIG=
     query.max-memory-per-node=500MB
     query.max-total-memory-per-node=500MB
@@ -417,12 +420,12 @@ JVM_CONFIG=
 
 ### [MODULES] Section
 This section sets environment variables passed to containers provisioned by
-Minipresto. Environment variables are only passed to a container if the variable
+Minitrino. Environment variables are only passed to a container if the variable
 is specified in the module's `docker-compose.yml` file.
 
-Variables propagated to the Presto container are supported by Presto secrets.
+Variables propagated to the Trino container are supported by Trino secrets.
 
-- STARBURST_LIC_PATH: Required if using licensed Starburst Enterprise Presto
+- STARBURST_LIC_PATH: Required if using licensed Starburst Enterprise Trino
   features. It can point to any valid license on your filesystem.
 - S3_ENDPOINT
 - S3_ACCESS_KEY
@@ -447,9 +450,9 @@ Variables propagated to the Presto container are supported by Presto secrets.
 The library is built around Docker Compose files and utilizes Docker's ability
 to [extend Compose files](https://docs.docker.com/compose/extends/#multiple-compose-files).
 
-The Starburst Presto service is defined in a Compose file at the library root,
+The Starburst Trino service is defined in a Compose file at the library root,
 and all other services look up in the directory tree to reference the parent
-Presto service. In Compose files, the fully-qualified path––relative to the
+Trino service. In Compose files, the fully-qualified path––relative to the
 library's root `docker-compose.yml` file––must be provided for Docker to locate
 resources.
 
@@ -459,7 +462,7 @@ A simplified library structure:
 lib
 ├── Dockerfile
 ├── docker-compose.yml
-├── minipresto.env
+├── minitrino.env
 ├── modules
 │   ├── catalog
 │   │   └── postgres
@@ -469,7 +472,7 @@ lib
 │   │       └── resources
 │   │           ├── postgres
 │   │           │   └── postgres.env
-│   │           └── presto
+│   │           └── trino
 │   │               └── postgres.properties
 │   ├── resources
 │   │   └── wait-for-it.sh
@@ -481,7 +484,7 @@ lib
 │           └── resources
 │               ├── event-logger
 │               │   └── postgres.env
-│               └── presto
+│               └── trino
 │                   ├── event-listener.properties
 │                   └── postgres_event_logger.properties
 ├── snapshots
@@ -491,18 +494,18 @@ lib
 And the contents of a `docker-compose.yml` file (`postgres.yml`):
 
 ```yaml
-version: "3.7"
+version: "3.8"
 services:
 
-  presto:
+  trino:
     volumes:
-      - "./modules/catalog/postgres/resources/presto/postgres.properties:/usr/lib/presto/etc/catalog/postgres.properties"
+      - "./modules/catalog/postgres/resources/trino/postgres.properties:/etc/starburst/catalog/postgres.properties"
 
   postgres:
     image: "postgres:${POSTGRES_VER}"
     container_name: "postgres"
     labels:
-      - "com.starburst.tests=minipresto"
+      - "com.starburst.tests=minitrino"
       - "com.starburst.tests.module.postgres=catalog-postgres"
     env_file:
       - "./modules/catalog/postgres/resources/postgres/postgres.env"
@@ -512,20 +515,20 @@ Notice that the volume mount is not relative to the
 `lib/modules/catalog/postgres/` directory––it is relative to the parent
 directory which houses the top-level `docker-compose.yml` file. Also, notice the
 labels––these labels will be used to identify Docker resources tied to
-Minipresto modules so that the CLI commands actually work.
+Minitrino modules so that the CLI commands actually work.
 
-### Presto Dockerfile
-Minipresto modifies the Starburst Presto Docker image by adding the Presto CLI
-to the image as well as by providing `sudo` to the `presto` user. This is
+### Trino Dockerfile
+Minitrino modifies the Starburst Trino Docker image by adding the Trino CLI
+to the image as well as by providing `sudo` to the `trino` user. This is
 required for certain bootstrap scripts (i.e. using `yum` to install packages in
-a Presto container for a module). This image is compatible with Starburst Presto
-images back to Starburst Presto version `332-e.0`.
+a Trino container for a module). This image is compatible with Starburst Trino
+images back to Starburst Trino version `332-e.0`.
 
 -----
 
 ## Adding New Modules (Tutorial)
 Adding new modules is relatively simple, but there are a few important
-guidelines to follow to ensure compatibility with the Minipresto CLI. The design
+guidelines to follow to ensure compatibility with the Minitrino CLI. The design
 rules are the same for both catalogs and security modules. The example below
 demonstrates the process of creating a new catalog module for a Postgres
 service.
@@ -538,30 +541,30 @@ mkdir lib/modules/catalog/postgres/
 cd lib/modules/catalog/postgres/
 ```
 
-### Add Presto Resources 
+### Add Trino Resources 
 All resources for a module go inside of a `resources/` directory within the
-module. Inside this directory, place Presto-specific resources into a `presto/`
-directory, then mount the resources to the Presto service defined in the root
+module. Inside this directory, place Trino-specific resources into a `trino/`
+directory, then mount the resources to the Trino service defined in the root
 `docker-compose.yml` file. 
 
 ```sh
-mkdir -p resources/presto/
+mkdir -p resources/trino/
 ```
 
-In the newly-created `resources/presto/` directory, add a properties file.
+In the newly-created `resources/trino/` directory, add a properties file.
 
 ```sh
 bash -c "cat << EOF > postgres.properties
 connector.name=postgresql
-connection-url=jdbc:postgresql://postgres:5432/minipresto
+connection-url=jdbc:postgresql://postgres:5432/minitrino
 connection-user=admin
-connection-password=prestoRocks15
+connection-password=trinoRocks15
 EOF"
 ```
 
 -----
 
-**Note**: Passwords should always be `prestoRocks15` for consistency throughout
+**Note**: Passwords should always be `trinoRocks15` for consistency throughout
 modules. 
 
 -----
@@ -575,9 +578,9 @@ touch postgres.yml
 
 Notice the naming convention: `postgres.yml`. Giving the same root name of
 "postgres" to both the parent directory `postgres/` and to the Docker Compose
-file `postgres.yml` will allow Minipresto to find our new catalog module.
+file `postgres.yml` will allow Minitrino to find our new catalog module.
 
-Next, add an environment file for the Postgres service. Non-Presto resources
+Next, add an environment file for the Postgres service. Non-Trino resources
 should go into their own directory, so create one for postgres:
 
 ```sh
@@ -590,17 +593,17 @@ variables in the Postgres container when it is provisioned:
 ```sh
 bash -c "cat << EOF > postgres.env
 POSTGRES_USER=admin
-POSTGRES_PASSWORD=prestoRocks15
-POSTGRES_DB=minipresto
+POSTGRES_PASSWORD=trinoRocks15
+POSTGRES_DB=minitrino
 EOF"
 ```
 
-This file will initialize Postgres with a database `minipresto`, a user
-`presto`, and a password `prestoRocks15`.
+This file will initialize Postgres with a database `minitrino`, a user
+`trino`, and a password `trinoRocks15`.
 
 ### Add a Metadata File
-This step is not required for personal development, but it is required to commit
-a module to the Minipresto repository.
+The `metadata.json` file allows Minitrino to obtain key information for the
+module. It is required for a module to work with the CLI.
 
 In `lib/modules/catalog/postgres/`, add the `metadata.json` file:
 
@@ -608,19 +611,19 @@ In `lib/modules/catalog/postgres/`, add the `metadata.json` file:
 bash -c 'cat << EOF > metadata.json
 {
   "description": "Creates a Postgres catalog using the standard Postgres connector.",
-  "incompatible_modules": []
+  "incompatibleModules": []
 }
 EOF'
 ```
 
 The metadata file is presentable to the user via the `modules` command, and the
-`incompatible_modules` key restricts certain modules from being provisioned
+`incompatibleModules` key restricts certain modules from being provisioned
 alongside the given module. The `*` wildcard is a supported convention if the
 module is incompatible with all other modules.
 
 ### Add a Readme File
 This step is not required for personal development, but it is required to commit
-a module to the Minipresto repository.
+a module to the Minitrino repository.
 
 In `lib/modules/catalog/postgres/`, add the `readme.md` file:
 
@@ -642,7 +645,7 @@ postgres
 └── resources
     ├── postgres
     │   └── postgres.env
-    └── presto
+    └── trino
         └── postgres.properties
 ```
 
@@ -651,19 +654,19 @@ We will now define the `postgres.yml` Docker Compose file. Set it up as follows,
 and **read the important notes after**:
 
 ```yaml
-version: "3.7"
+version: "3.8"
 services:
 
-  presto:
+  trino:
     volumes:
-    # Always place Presto files in `/usr/lib/presto/etc/` as symbolic links can change between versions
-      - "./modules/catalog/postgres/resources/presto/postgres.properties:/usr/lib/presto/etc/catalog/postgres.properties"
+    # Always place Trino files in `/etc/starburst/` as symbolic links can change between versions
+      - "./modules/catalog/postgres/resources/trino/postgres.properties:/etc/starburst/catalog/postgres.properties"
 
   postgres:
     image: "postgres:${POSTGRES_VER}"
     container_name: "postgres"
     labels:
-      - "com.starburst.tests=minipresto"
+      - "com.starburst.tests=minitrino"
       - "com.starburst.tests.module.postgres=catalog-postgres"
     env_file:
       - "./modules/catalog/postgres/resources/postgres/postgres.env"
@@ -682,18 +685,18 @@ Compose files need to be relative to the positioning of the parent Compose file.
 The base Compose file is determined when you execute a Docker Compose
 command––the first Compose file referenced in the command becomes the base file,
 and that happens to be the `docker-compose.yml` file in the library root. This
-is how Minipresto constructs these commands. 
+is how Minitrino constructs these commands. 
 
 If this is confusing, you can read more about extending Compose files on the
 [Docker docs](https://docs.docker.com/compose/extends/#multiple-compose-files). 
 
-#### Minipresto Docker Labels
+#### Minitrino Docker Labels
 Secondly, notice how we applied sets of labels to the Postgres service. These
 labels tell the CLI which resources to target when executing commands.
 
-In general, there is no need to apply labels to the Presto service since they
+In general, there is no need to apply labels to the Trino service since they
 are already applied in the parent Compose file **unless** the module is an
-extension of the Presto service itself (i.e. the Snowflake modules). Labels
+extension of the Trino service itself (i.e. the Snowflake modules). Labels
 should always be applied to:
 
 - Docker services (AKA the resulting container)
@@ -702,7 +705,7 @@ should always be applied to:
 
 Labels should be defined in pairs of two. The convention is:
 
-- The standard Minipresto resource label: `com.starburst.tests=minipresto`
+- The standard Minitrino resource label: `com.starburst.tests=minitrino`
 - A module-specific resource label:
   `com.starburst.tests.module.<module-name>=<module-type>-<module-name>`
   - For this label, the `module-type` should be either `catalog` or `security`
@@ -721,18 +724,18 @@ Compose file we just created with a named volume.
 -----
 
 ```yaml
-version: "3.7"
+version: "3.8"
 services:
 
-  presto:
+  trino:
     volumes:
-      - "./modules/catalog/postgres/resources/presto/postgres.properties:/usr/lib/presto/etc/catalog/postgres.properties"
+      - "./modules/catalog/postgres/resources/trino/postgres.properties:/etc/starburst/catalog/postgres.properties"
 
   postgres:
     image: "postgres:${POSTGRES_VER}"
     container_name: "postgres"
     labels: # These labels are applied to the service/container
-      - "com.starburst.tests=minipresto"
+      - "com.starburst.tests=minitrino"
       - "com.starburst.tests.module.postgres=catalog-postgres"
     env_file:
       - "./modules/catalog/postgres/resources/postgres/postgres.env"
@@ -740,33 +743,33 @@ services:
 volumes:
   postgres-data:
     labels: # These labels are applied to the named volume
-      - "com.starburst.tests=minipresto"
+      - "com.starburst.tests=minitrino"
       - "com.starburst.tests.module.postgres=catalog-postgres"
 ```
 
 -----
 
-**Note**: Certain modules will only extend the parent Presto service and do not
+**Note**: Certain modules will only extend the parent Trino service and do not
 actually define any new services/containers. See the Snowflake catalog modules
 for an example of this. For these modules, the only label requirement is to add
-the module-specific label to the Presto service in the relevant
+the module-specific label to the Trino service in the relevant
 `docker-compose.yml` file 
 
 -----
 
 ### Test the New Catalog
-We are all finished up. We can test our new catalog through the Minipresto CLI:
+We are all finished up. We can test our new catalog through the Minitrino CLI:
 
 ```sh
-minipresto provision -m postgres
+minitrino provision -m postgres
 ```
 
-We can now shell into the `presto` container and run some tests:
+We can now shell into the `trino` container and run some tests:
 
 ```
-docker exec -it presto bash 
-presto-cli
-presto> show catalogs;
+docker exec -it trino bash 
+trino-cli
+trino> show catalogs;
 ```
 
 ### Customizing Images
@@ -777,56 +780,56 @@ and the image build context will follow the same convention as volume mount
 paths described earlier.
 
 ### Bootstrap Scripts
-Minipresto supports container bootstrap scripts. These scripts **do not
+Minitrino supports container bootstrap scripts. These scripts **do not
 replace** the entrypoint (or default command) for a given container. The script
-is copied from the Minipresto library to the container, executed, and then
+is copied from the Minitrino library to the container, executed, and then
 removed from the container. Containers are restarted after each bootstrap script
 execution, **so the bootstrap scripts themselves should not restart the
 container's service**.
 
 If a bootstrap script has already executed in a container *and* the volume
-associated with the container still exists, Minipresto will not re-execute the
+associated with the container still exists, Minitrino will not re-execute the
 bootstrap script *unless the contents of the script have changed*. The is useful
-after running `minipresto down --keep` (which does not remove unnamed container
+after running `minitrino down --keep` (which does not remove unnamed container
 volumes), so that the subsequent `provision` command will not re-execute the
 same bootstrap script(s).
 
 If a bootstrap script is updated, it is recommended to destroy the associated
-container(s) via `minipresto down` and then to re-provision.
+container(s) via `minitrino down` and then to re-provision.
 
 To add a bootstrap script, add a `resources/bootstrap/` directory in any given
 module, create a shell script, and then reference the script name in the Compose
 YAML file:
 
 ```yaml
-version: "3.7"
+version: "3.8"
 services:
 
-  presto:
+  trino:
     environment:
-      MINIPRESTO_BOOTSTRAP: "bootstrap.sh"
+      MINITRINO_BOOTSTRAP: "bootstrap.sh"
 ```
 
 The `elasticsearch` module is a good example of this.
 
-### Managing Presto's `config.properties` File
-Many modules can change the Presto `config.properties` and `jvm.config` files.
+### Managing Trino's `config.properties` File
+Many modules can change the Trino `config.properties` and `jvm.config` files.
 Because of this, there are two supported ways to modify these files with
-Minipresto.
+Minitrino.
 
-The first way is by setting the `CONFIG` variable in your `minipresto.cfg` file.
-This will propagate the config to the Presto container when it is provisioned.
+The first way is by setting the `CONFIG` variable in your `minitrino.cfg` file.
+This will propagate the config to the Trino container when it is provisioned.
 
 Generally speaking, this can be used for any type of configuration (i.e. memory
 configuration) that is unlikely to be modified by any module. This also applies
 to the `jvm.config` file, which has identical support via the `JVM_CONFIG`
-variable. If there are duplicate configs in either file, Minipresto will warn
+variable. If there are duplicate configs in either file, Minitrino will warn
 the user.
 
 To set these configs, your configuration file should look like:
 
 ```
-[PRESTO]
+[TRINO]
 CONFIG=
     query.max-memory-per-node=500MB
     query.max-total-memory-per-node=500MB
@@ -834,17 +837,17 @@ JVM_CONFIG=
     -Dsun.security.krb5.debug=true
 ```
 
-The second way to modify core Presto configuration is via module bootstrap
+The second way to modify core Trino configuration is via module bootstrap
 scripts. This method is utilized by modules that need to make module-specific
-changes to Presto files. An example bootstrap snippet can be found below:
+changes to Trino files. An example bootstrap snippet can be found below:
 
 ```bash
 #!/usr/bin/env bash
 
 set -euxo pipefail
 
-echo "Adding Presto configs..."
-cat <<EOT >> /usr/lib/presto/etc/config.properties
+echo "Adding Trino configs..."
+cat <<EOT >> /etc/starburst/config.properties
 query.max-stage-count=105
 query.max-execution-time=1h
 EOT
@@ -854,16 +857,25 @@ EOT
 
 ## Troubleshooting
 
-- If you experience issues executing a Minipresto command, re-run it with the
+- If you experience issues executing a Minitrino command, re-run it with the
   `-v` option for verbose output. This will often reveal the issue
 - If you experience an issue with a particular Docker container, consider
   running these commands:
   - `docker logs <container>`: Print the logs for a given container to the
     terminal
   - `docker ps`: Show all running Docker containers and associated statistics
+  - `docker inspect <container>` to see various details about a container
 - If you experience issues with a library module, check that that module is
   structured correctly according to the [module
-  tutorial](#adding-new-modules-tutorial)
+  tutorial](#adding-new-modules-tutorial), and ensure the library and the CLI
+  versions match
+- Sometimes, a lingering persistent volume can cause problem (i.e. a stale Hive
+  metastore database volume from a previous module), so you can run:
+  - `minitrino down`
+  - `minitrino -v remove --volumes` to remove **all** existing Minitrino
+    volumes. Alternatively, run `minitrino -v remove --volumes --label <your
+    label>` to specifiy a specific module for which to remove volumes. See the
+    [removing resources](#removing-resources) section for more information.
 
 If none of these troubleshooting tips help to resolve your issue, [please file a
 GitHub issue](#reporting-bugs-and-contributing) and provide as much information
@@ -872,8 +884,8 @@ as possible.
 -----
 
 ## Reporting Bugs and Contributing
-To report bugs, please file a GitHub issue on the [Minipresto
-repository](https://github.com/jefflester/minipresto). Bug reports should:
+To report bugs, please file a GitHub issue on the [Minitrino
+repository](https://github.com/jefflester/minitrino). Bug reports should:
 
 - Contain any relevant log messages (if the bug is tied to a command, running
   with the `-v` flag will make debugging easier)

@@ -1,23 +1,23 @@
-version: "3.7"
+version: "3.8"
 services:
   
-  presto:
+  trino:
     build:
       context: .
       args:
         STARBURST_VER: "${STARBURST_VER}"
       labels:
-        - "com.starburst.tests=minipresto"
-        - "com.starburst.tests.module=presto"
-    image: "minipresto/presto:${STARBURST_VER}"
-    container_name: "presto"
-    hostname: "presto.minipresto.starburstdata.com"
+        - "com.starburst.tests=minitrino"
+        - "com.starburst.tests.module=trino"
+    image: "minitrino/trino:${STARBURST_VER}"
+    container_name: "trino"
+    hostname: "trino.minitrino.starburstdata.com"
     labels:
-      - "com.starburst.tests=minipresto"
-      - "com.starburst.tests.module=presto"
+      - "com.starburst.tests=minitrino"
+      - "com.starburst.tests.module=trino"
     # Uncomment this to enable the volume mount. The variable should point to a
     # valid SEP license. 
     # volumes:
-    #   - "${STARBURST_LIC_PATH}:/usr/lib/presto/etc/starburstdata.license:ro"
+    #   - "${STARBURST_LIC_PATH}:/etc/starburst/starburstdata.license:ro"
     ports:
       - "8080:8080"

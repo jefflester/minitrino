@@ -1,4 +1,5 @@
 {
     "description": "Creates an Elasticsearch catalog using the standard Elasticsearch connector.",
-    "incompatible_modules": []
+    "incompatibleModules": [],
+    "enterprise": false
 }

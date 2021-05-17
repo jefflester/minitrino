@@ -1,15 +1,15 @@
-version: "3.7"
+version: "3.8"
 services:
 
-  presto:
+  trino:
     volumes:
-      - "./modules/catalog/sqlserver/resources/presto/sqlserver.properties:/usr/lib/presto/etc/catalog/sqlserver.properties"
+      - "./modules/catalog/sqlserver/resources/trino/sqlserver.properties:/etc/starburst/catalog/sqlserver.properties"
 
   sqlserver:
     image: "mcr.microsoft.com/mssql/server:${SQLSERVER_VER}"
     container_name: "sqlserver"
     labels:
-      - "com.starburst.tests=minipresto"
+      - "com.starburst.tests=minitrino"
       - "com.starburst.tests.module.sqlserver=catalog-sqlserver"
     env_file:
       - "./modules/catalog/sqlserver/resources/sqlserver/sqlserver.env"

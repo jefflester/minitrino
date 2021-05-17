@@ -9,14 +9,13 @@ This module provisions a Ranger server and Postgres database for Ranger storage.
 To provision this module, run:
 
 ```shell
-minipresto provision --module system-ranger
+minitrino provision --module system-ranger
 ```
 
 ## Policies
 - Bob: admin access to TPCH `sf100` schema
 - Alice: admin access to TPCH `sf10` schema
-- System: all users have select/ownership access to `system` catalog
 
 ## Accessing Ranger
 - Go to `localhost:6080`
-- Sign in with user: admin and pass: prestoRocks15
+- Sign in with user: admin and pass: trinoRocks15

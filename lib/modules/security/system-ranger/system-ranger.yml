@@ -1,24 +1,24 @@
-version: "3.7"
+version: "3.8"
 
 services:
-  presto:
+  trino:
     volumes:
-      - "./modules/security/system-ranger/resources/presto/access-control.properties:/usr/lib/presto/etc/access-control.properties"
+      - "./modules/security/system-ranger/resources/trino/ranger/:/tmp/ranger/"
+      - "./modules/security/system-ranger/resources/trino/access-control.properties:/etc/starburst/access-control.properties"
+    environment:
+      MINITRINO_BOOTSTRAP: "bootstrap-ranger.sh"
 
   ranger-admin:
     image: harbor.starburstdata.net/starburstdata/starburst-ranger-admin:${SEP_RANGER_VER}
     container_name: ranger-admin
     environment:
       WAIT_FOR: ranger-postgres:5432
-      MINIPRESTO_BOOTSTRAP: "bootstrap-ranger.sh"
     env_file:
       - "./modules/security/system-ranger/resources/ranger-admin/ranger-admin.env"
-    volumes:
-      - "./modules/resources/wait-for-it.sh:/opt/minipresto/wait-for-it.sh"
     depends_on:
       - ranger-postgres
     labels:
-      - "com.starburst.tests=minipresto"
+      - "com.starburst.tests=minitrino"
       - "com.starburst.tests.module.system-ranger=security-system-ranger"
     ports:
       - 6080:6080
@@ -31,11 +31,11 @@ services:
     volumes:
       - ranger-system-postgres-data:/var/lib/postgresql/data
     labels:
-      - "com.starburst.tests=minipresto"
+      - "com.starburst.tests=minitrino"
       - "com.starburst.tests.module.system-ranger=security-system-ranger"
 
 volumes:
   ranger-system-postgres-data:
     labels:
-      - "com.starburst.tests=minipresto"
+      - "com.starburst.tests=minitrino"
       - "com.starburst.tests.module.system-ranger=security-system-ranger"

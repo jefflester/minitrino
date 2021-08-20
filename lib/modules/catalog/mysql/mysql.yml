@@ -15,3 +15,5 @@ services:
       - "./modules/catalog/mysql/resources/mysql/mysql.env"
     environment:
       MINITRINO_BOOTSTRAP: "bootstrap.sh"
+    ports:
+      - "3306:3306"

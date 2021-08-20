@@ -62,7 +62,7 @@ def test_bad_sep_version():
     )
 
     assert result.exit_code == 2
-    assert "Invalid Starburst version" in result.output
+    assert "Provided Starburst version" in result.output
 
     containers = get_containers()
     assert len(containers) == 0

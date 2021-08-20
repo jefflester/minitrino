@@ -240,6 +240,26 @@ def check_lib(ctx):
     ctx.minitrino_lib_dir
 
 
+def check_starburst_ver(ctx):
+    """Checks if a proper Starburst version is provided."""
+
+    starburst_ver = ctx.env.get_var("STARBURST_VER", "")
+
+    try:
+        starburst_ver = starburst_ver[0:3]
+        starburst_ver = int(starburst_ver)
+        if starburst_ver < 354:
+            raise err.UserError(
+                f"Provided Starburst version {starburst_ver} is invalid. "
+                f"The provided version must be 354-e or higher."
+            )
+    except:
+        raise err.UserError(
+            f"Invalid Starburst version: {starburst_ver}. "
+            f"Must provide a valid version (354-e or higher)."
+        )
+
+
 def generate_identifier(identifiers=None):
     """Returns an 'object identifier' string used for creating log messages,
     e.g. '[ID: 12345] [Name: trino]'.

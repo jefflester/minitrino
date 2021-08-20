@@ -11,7 +11,7 @@ mutually-exclusive of the **ldap** module.
 To provision this module, run:
 
 ```shell
-minitrino provision --module ldap
+minitrino provision --module password-file
 ```
 
 ## Default Usernames and Passwords

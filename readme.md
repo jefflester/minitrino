@@ -2,9 +2,12 @@
 A command line tool that makes it easy to run modular Trino environments
 locally. Compatible with Staburst version 354-e and later.
 
-[![PyPI version](https://badge.fury.io/py/minitrino.svg)](https://badge.fury.io/py/minitrino)
-[![Build Status](https://travis-ci.org/jefflester/minitrino.svg?branch=master)](https://travis-ci.org/jefflester/minitrino)
-[![Trino Slack](https://img.shields.io/static/v1?logo=slack&logoColor=959DA5&label=Slack&labelColor=333a41&message=join%20conversation&color=3AC358)](https://trinodb.io/slack.html)
+[![PyPI
+version](https://badge.fury.io/py/minitrino.svg)](https://badge.fury.io/py/minitrino)
+[![Build
+Status](https://travis-ci.org/jefflester/minitrino.svg?branch=master)](https://app.travis-ci.com/jefflester/minitrino.svg?branch=master)
+[![Trino
+Slack](https://img.shields.io/static/v1?logo=slack&logoColor=959DA5&label=Slack&labelColor=333a41&message=join%20conversation&color=3AC358)](https://trinodb.io/slack.html)
 
 -----
 

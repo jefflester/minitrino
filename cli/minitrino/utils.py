@@ -298,6 +298,8 @@ def parse_key_value_pair(key_value_pair, err_type=err.MinitrinoError):
             key_value_pair[i] = key_value_pair[i].strip()
         if not key_value_pair[0]:
             raise err_type(err_msg)
+        else:
+            key_value_pair[0] = key_value_pair[0].upper()
     if not len(key_value_pair) == 2:
         raise err_type(err_msg)
 

@@ -1,0 +1,5 @@
+{
+    "description": "Creates a Db2 catalog using the Db2 connector.",
+    "incompatibleModules": [],
+    "enterprise": true
+}

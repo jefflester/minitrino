@@ -280,7 +280,9 @@ def generate_identifier(identifiers=None):
     return " ".join(identifier)
 
 
-def parse_key_value_pair(key_value_pair, err_type=err.MinitrinoError):
+def parse_key_value_pair(
+    key_value_pair, err_type=err.MinitrinoError, key_to_upper=True
+):
     """Parses a key-value pair in string form and returns the resulting pair as
     both a 2-element list. If the string cannot be split by "=", a
     MinitrinoError is raised.
@@ -290,6 +292,7 @@ def parse_key_value_pair(key_value_pair, err_type=err.MinitrinoError):
       `"TRINO=354-e"`.
     - `err_type`: The exception to raise if an "=" delimiter is not in the
       key-value pair. Defaults to `MinitrinoError`.
+    - `key_to_upper`: If `True`, the key will be forced to uppercase.
 
     ### Return Values
     - A list `[k, v]`, but will return `None` if the stripped input is an empty
@@ -315,7 +318,7 @@ def parse_key_value_pair(key_value_pair, err_type=err.MinitrinoError):
             key_value_pair[i] = key_value_pair[i].strip()
         if not key_value_pair[0]:
             raise err_type(err_msg)
-        else:
+        elif key_to_upper:
             key_value_pair[0] = key_value_pair[0].upper()
     if not len(key_value_pair) == 2:
         raise err_type(err_msg)

@@ -1,0 +1,17 @@
+version: "3.8"
+services:
+
+  trino:
+    volumes:
+      - "./modules/catalog/oracle/resources/trino/oracle.properties:/etc/starburst/catalog/oracle.properties"
+
+  oracle:
+    image: "store/oracle/database-enterprise:${ORACLE_VER}"
+    container_name: "oracle"
+    labels:
+      - "com.starburst.tests=minitrino"
+      - "com.starburst.tests.module.oracle=catalog-oracle"
+    env_file:
+      - "./modules/catalog/oracle/resources/oracle/oracle.env"
+    ports:
+      - "1521:1521"

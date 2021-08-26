@@ -11,7 +11,9 @@ services:
     labels:
       - "com.starburst.tests=minitrino"
       - "com.starburst.tests.module.oracle=catalog-oracle"
+    environment:
+      MINITRINO_BOOTSTRAP: "bootstrap-oracle.sh"
     env_file:
-      - "./modules/catalog/oracle/resources/oracle/oracle.env"
+      - "./modules/catalog/oracle/resources/oracle/ora.conf"
     ports:
       - "1521:1521"

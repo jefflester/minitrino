@@ -1,40 +1,100 @@
 # Minitrino
+
 A command line tool that makes it easy to run modular Trino environments
 locally. Compatible with Staburst version 354-e and later.
 
-[![PyPI version](https://badge.fury.io/py/minitrino.svg)](https://badge.fury.io/py/minitrino)
-[![Build Status](https://travis-ci.org/jefflester/minitrino.svg?branch=master)](https://travis-ci.org/jefflester/minitrino)
-[![Trino Slack](https://img.shields.io/static/v1?logo=slack&logoColor=959DA5&label=Slack&labelColor=333a41&message=join%20conversation&color=3AC358)](https://trinodb.io/slack.html)
+[![PyPI
+version](https://badge.fury.io/py/minitrino.svg)](https://badge.fury.io/py/minitrino)
+[![Build
+Status](https://travis-ci.org/jefflester/minitrino.svg?branch=master)](https://app.travis-ci.com/jefflester/minitrino.svg?branch=master)
+[![Trino
+Slack](https://img.shields.io/static/v1?logo=slack&logoColor=959DA5&label=Slack&labelColor=333a41&message=join%20conversation&color=3AC358)](https://trinodb.io/slack.html)
 
 -----
 
-**Latest Stable Release**: 2.0.0
+**Latest Stable Release**: 2.0.1
 
 -----
 
 ## Overview
-- [Requirements](#requirements)
-- [Installation](#installation)
-- [CLI](#cli)
-  - [Top-Level CLI Options](#top-level-cli-options)
-  - [Provisioning Environments](#provisioning-environments)
-  - [Removing Resources](#removing-resources)
-  - [Shutting Down Environments](#shutting-down-environments)
-  - [Taking Environment Snapshots](#taking-environment-snapshots)
-  - [Manage User Configuration](#manage-user-configuration)
-  - [Install the Library](#install-the-library)
-  - [Display Module Metadata](#display-module-metadata)
-  - [Display CLI Version](#display-cli-version)
-  - [Pointing the CLI to the Minitrino Library](#pointing-the-cli-to-the-minitrino-library)
-- [Minitrino Configuration File](#minitrino-configuration-file)
-- [Project Structure](#project-structure)
-- [Adding New Modules (Tutorial)](#adding-new-modules-tutorial)
-- [Troubleshooting](#troubleshooting)
-- [Reporting Bugs and Contributing](#reporting-bugs-and-contributing)
+
+- [Minitrino](#minitrino)
+  - [Overview](#overview)
+  - [Requirements](#requirements)
+  - [Installation](#installation)
+    - [End Users](#end-users)
+    - [Developers](#developers)
+  - [CLI](#cli)
+    - [Top-Level CLI Options](#top-level-cli-options)
+    - [Provisioning Environments](#provisioning-environments)
+      - [Environment Variables](#environment-variables)
+      - [Using Licensed Starburst Features](#using-licensed-starburst-features)
+    - [Removing Resources](#removing-resources)
+    - [Shutting Down Environments](#shutting-down-environments)
+    - [Taking Environment Snapshots](#taking-environment-snapshots)
+    - [Manage User Configuration](#manage-user-configuration)
+    - [Install the Library](#install-the-library)
+    - [Display Module Metadata](#display-module-metadata)
+    - [Display Minitrino Versions](#display-minitrino-versions)
+    - [Pointing the CLI to the Minitrino Library](#pointing-the-cli-to-the-minitrino-library)
+  - [Minitrino Configuration File](#minitrino-configuration-file)
+    - [[CLI] Section](#cli-section)
+    - [[DOCKER] Section](#docker-section)
+    - [[TRINO] Section](#trino-section)
+    - [[MODULES] Section](#modules-section)
+  - [Project Structure](#project-structure)
+    - [Trino Dockerfile](#trino-dockerfile)
+  - [Adding New Modules (Tutorial)](#adding-new-modules-tutorial)
+    - [Create the Module Directory](#create-the-module-directory)
+    - [Add Trino Resources](#add-trino-resources)
+    - [Add the Docker Compose YAML](#add-the-docker-compose-yaml)
+    - [Add a Metadata File](#add-a-metadata-file)
+    - [Add a Readme File](#add-a-readme-file)
+    - [Review Progress](#review-progress)
+    - [Configure the Docker Compose YAML File](#configure-the-docker-compose-yaml-file)
+    - [Important Implementation Details: Paths and Labels](#important-implementation-details-paths-and-labels)
+      - [Path References for Volumes and Build Contexts](#path-references-for-volumes-and-build-contexts)
+      - [Minitrino Docker Labels](#minitrino-docker-labels)
+    - [Test the New Catalog](#test-the-new-catalog)
+    - [Customizing Images](#customizing-images)
+    - [Bootstrap Scripts](#bootstrap-scripts)
+    - [Managing Trino's `config.properties` File](#managing-trinos-configproperties-file)
+  - [Troubleshooting](#troubleshooting)
+  - [Reporting Bugs and Contributing](#reporting-bugs-and-contributing)
+      Library](#pointing-the-cli-to-the-minitrino-library)
+  - [Minitrino Configuration File](#minitrino-configuration-file)
+    - [[CLI] Section](#cli-section)
+    - [[DOCKER] Section](#docker-section)
+    - [[TRINO] Section](#trino-section)
+    - [[MODULES] Section](#modules-section)
+  - [Project Structure](#project-structure)
+    - [Trino Dockerfile](#trino-dockerfile)
+  - [Adding New Modules (Tutorial)](#adding-new-modules-tutorial)
+    - [Create the Module Directory](#create-the-module-directory)
+    - [Add Trino Resources](#add-trino-resources)
+    - [Add the Docker Compose YAML](#add-the-docker-compose-yaml)
+    - [Add a Metadata File](#add-a-metadata-file)
+    - [Add a Readme File](#add-a-readme-file)
+    - [Review Progress](#review-progress)
+    - [Configure the Docker Compose YAML
+      File](#configure-the-docker-compose-yaml-file)
+    - [Important Implementation Details: Paths and
+      Labels](#important-implementation-details-paths-and-labels)
+      - [Path References for Volumes and Build
+        Contexts](#path-references-for-volumes-and-build-contexts)
+      - [Minitrino Docker Labels](#minitrino-docker-labels)
+    - [Test the New Catalog](#test-the-new-catalog)
+    - [Customizing Images](#customizing-images)
+    - [Bootstrap Scripts](#bootstrap-scripts)
+    - [Managing Trino's `config.properties`
+      File](#managing-trinos-configproperties-file)
+  - [Troubleshooting](#troubleshooting)
+  - [Reporting Bugs and Contributing](#reporting-bugs-and-contributing)
 
 -----
 
 ## Requirements
+
 - Docker 19.03.0+
 - Docker Compose (1.29.0+)
 - Python 3.8+
@@ -46,17 +106,20 @@ locally. Compatible with Staburst version 354-e and later.
 ## Installation
 
 ### End Users
+
 Minitrino is available on PyPI and the library is available for public download
-on GitHub. To install the Minitrino CLI, run `pip install minitrino`. To
-install the library, run `minitrino lib_install`.
+on GitHub. To install the Minitrino CLI, run `pip install minitrino`. To install
+the library, run `minitrino lib_install`.
 
 ### Developers
+
 In the project's root, run `./install.sh` to install the Minitrino CLI. If you
 encounter errors during installation, try running `sudo -H ./install.sh -v`.
 
 -----
 
 ## CLI
+
 Minitrino is built with [Click](https://click.palletsprojects.com/en/7.x/), a
 popular, open-source toolkit used to build Python-based CLIs.
 
@@ -65,8 +128,9 @@ options can be specified with a shorthand alternative, which is the first letter
 of each option, i.e. `--module` can be `-m`.
 
 ### Top-Level CLI Options
+
 You can get help, enable verbose output, and change the runtime library
-directory for any command. 
+directory for any command.
 
 ```
 Usage: minitrino [OPTIONS] COMMAND [ARGS]...
@@ -87,6 +151,7 @@ Options:
 ```
 
 ### Provisioning Environments
+
 You can provision an environment via the `provision` command.
 
 ```
@@ -152,6 +217,7 @@ Using the structure of the Minitrino library, it is able to merge multiple
 Docker Compose files together.
 
 #### Environment Variables
+
 Environment variables passed to Docker containers are sourced through two
 locations. The first is from the `minitrino.env` file in the library root. These
 variables define the versions of the provisioned Docker services. The second is
@@ -163,10 +229,11 @@ Any existing environment variable can be overridden with the top-level `--env`
 option, and any unset variable can be set with it.
 
 #### Using Licensed Starburst Features
+
 If you are using licensed features, you will need to provide a path to a valid
 Starburst license. This can be set via `minitrino config` or provided via the
 `--env` option at command runtime. The variable for this is
-`STARBURST_LIC_PATH`. 
+`STARBURST_LIC_PATH`.
 
 Additionally, you need to uncomment the volume mount in the library's root
 `docker-compose.yml` file:
@@ -179,6 +246,7 @@ Additionally, you need to uncomment the volume mount in the library's root
 ```
 
 ### Removing Resources
+
 You can remove resources with the `remove` command.
 
 ```
@@ -203,8 +271,8 @@ Notes:
 - Named volumes tied to any *existing* container cannot be forcibly removed,
   neither by Minitrino nor by the Docker CLI/SDK.
 - Images tied to stopped containers can be forcibly removed, but any image tied
-  to a running container cannot be forcibly removed, neither by Minitrino nor
-  by the Docker CLI.
+  to a running container cannot be forcibly removed, neither by Minitrino nor by
+  the Docker CLI.
 - You can find a module's label key by looking at the module's
   `docker-compose.yml` file in the Minitrino library.
 
@@ -220,6 +288,7 @@ minitrino -v remove \
 This will only remove volumes associated to the Postgres catalog module.
 
 ### Shutting Down Environments
+
 You can shut down an active environment with the `down` command.
 
 ```
@@ -244,8 +313,9 @@ minitrino -v down
 ```
 
 ### Taking Environment Snapshots
+
 You can capture snapshots for both active and inactive environments with the
-`snapshot` command. 
+`snapshot` command.
 
 ```
 Usage: minitrino snapshot [OPTIONS]
@@ -280,7 +350,7 @@ Options:
   --help                Show this message and exit.
 ```
 
-Notes: 
+Notes:
 
 - Minitrino records the original `provision` command and places it in the
   snapshot file as `provision-snapshot.sh`; this can be directly executed. This
@@ -299,7 +369,8 @@ minitrino snapshot -n super-cool-env -m hive-s3 -m elasticsearch -m ldap
 ```
 
 ### Manage User Configuration
-You can manage Minitrino configuration with the `config` command. 
+
+You can manage Minitrino configuration with the `config` command.
 
 ```
 Usage: minitrino config [OPTIONS]
@@ -317,6 +388,7 @@ Options:
 ```
 
 ### Install the Library
+
 You can install the Minitrino library with the `lib_install` command. Note that
 it is best practice to have the library version match the CLI version. You can
 check these versions with `minitrino version`.
@@ -332,7 +404,8 @@ Options:
 ```
 
 ### Display Module Metadata
-You can see Minitrino module metadata with the `modules` command. 
+
+You can see Minitrino module metadata with the `modules` command.
 
 ```
 Usage: minitrino modules [OPTIONS]
@@ -349,8 +422,9 @@ Options:
 ```
 
 ### Display Minitrino Versions
+
 You can display the Minitrino CLI and library versions with the `version`
-command. 
+command.
 
 ```
 Usage: minitrino version [OPTIONS]
@@ -362,6 +436,7 @@ Options:
 ```
 
 ### Pointing the CLI to the Minitrino Library
+
 The Minitrino CLI should always point to a compatible library with the expected
 structure. The library directory can be set one of four ways, listed below in
 the order of precedence:
@@ -382,11 +457,13 @@ pointer to the library in Minitrino's configuration via the `LIB_PATH` config.
 -----
 
 ## Minitrino Configuration File
+
 Sticky configuration is set in `~/.minitrino/minitrino.cfg`. The sections in
 this file each serve a separate purpose.
 
 ### [CLI] Section
-These configs allow the user to customize the behavior of Minitrino. 
+
+These configs allow the user to customize the behavior of Minitrino.
 
 - LIB_PATH: The filesystem path of the Minitrino library (specifically to the
   `lib/` directory).
@@ -394,17 +471,19 @@ These configs allow the user to customize the behavior of Minitrino.
   "nano", etc. Defaults to the shell's default editor.
 
 ### [DOCKER] Section
+
 These configs allow the user to customize how Minitrino uses Docker.
 
 - DOCKER_HOST: A URL pointing to an accessible Docker host. This is
   automatically detected by Docker otherwise.
 
 ### [TRINO] Section
+
 These configs allow the user to propagate config to the Trino container. Since
 many modules can append to Trino's core files, the supported way to make
 propagate changes to these Trino files is with these configs.
 
-- CONFIG: Configuration for Trino's `config.properties` file. 
+- CONFIG: Configuration for Trino's `config.properties` file.
 - JVM_CONFIG: Configuration for Trino's `jvm.config` file.
 
 A multiline example of this section (note the indentation):
@@ -419,6 +498,7 @@ JVM_CONFIG=
 ```
 
 ### [MODULES] Section
+
 This section sets environment variables passed to containers provisioned by
 Minitrino. Environment variables are only passed to a container if the variable
 is specified in the module's `docker-compose.yml` file.
@@ -446,9 +526,11 @@ Variables propagated to the Trino container are supported by Trino secrets.
 
 -----
 
-## Project Structure 
+## Project Structure
+
 The library is built around Docker Compose files and utilizes Docker's ability
-to [extend Compose files](https://docs.docker.com/compose/extends/#multiple-compose-files).
+to [extend Compose
+files](https://docs.docker.com/compose/extends/#multiple-compose-files).
 
 The Starburst Trino service is defined in a Compose file at the library root,
 and all other services look up in the directory tree to reference the parent
@@ -514,19 +596,21 @@ services:
 Notice that the volume mount is not relative to the
 `lib/modules/catalog/postgres/` directory––it is relative to the parent
 directory which houses the top-level `docker-compose.yml` file. Also, notice the
-labels––these labels will be used to identify Docker resources tied to
-Minitrino modules so that the CLI commands actually work.
+labels––these labels will be used to identify Docker resources tied to Minitrino
+modules so that the CLI commands actually work.
 
 ### Trino Dockerfile
-Minitrino modifies the Starburst Trino Docker image by adding the Trino CLI
-to the image as well as by providing `sudo` to the `trino` user. This is
-required for certain bootstrap scripts (i.e. using `yum` to install packages in
-a Trino container for a module). This image is compatible with Starburst Trino
-images back to Starburst Trino version `332-e.0`.
+
+Minitrino modifies the Starburst Trino Docker image by adding the Trino CLI to
+the image as well as by providing `sudo` to the `trino` user. This is required
+for certain bootstrap scripts (i.e. using `yum` to install packages in a Trino
+container for a module). This image is compatible with Starburst Trino images
+back to Starburst Trino version `332-e.0`.
 
 -----
 
 ## Adding New Modules (Tutorial)
+
 Adding new modules is relatively simple, but there are a few important
 guidelines to follow to ensure compatibility with the Minitrino CLI. The design
 rules are the same for both catalogs and security modules. The example below
@@ -534,6 +618,7 @@ demonstrates the process of creating a new catalog module for a Postgres
 service.
 
 ### Create the Module Directory
+
 Create the module's directory in the `lib/modules/catalog/` directory:
 
 ```sh
@@ -541,11 +626,12 @@ mkdir lib/modules/catalog/postgres/
 cd lib/modules/catalog/postgres/
 ```
 
-### Add Trino Resources 
+### Add Trino Resources
+
 All resources for a module go inside of a `resources/` directory within the
 module. Inside this directory, place Trino-specific resources into a `trino/`
 directory, then mount the resources to the Trino service defined in the root
-`docker-compose.yml` file. 
+`docker-compose.yml` file.
 
 ```sh
 mkdir -p resources/trino/
@@ -565,11 +651,12 @@ EOF"
 -----
 
 **Note**: Passwords should always be `trinoRocks15` for consistency throughout
-modules. 
+modules.
 
 -----
 
 ### Add the Docker Compose YAML
+
 In `lib/modules/catalog/postgres/`, add a Docker Compose file:
 
 ```sh
@@ -598,10 +685,11 @@ POSTGRES_DB=minitrino
 EOF"
 ```
 
-This file will initialize Postgres with a database `minitrino`, a user
-`trino`, and a password `trinoRocks15`.
+This file will initialize Postgres with a database `minitrino`, a user `trino`,
+and a password `trinoRocks15`.
 
 ### Add a Metadata File
+
 The `metadata.json` file allows Minitrino to obtain key information for the
 module. It is required for a module to work with the CLI.
 
@@ -622,6 +710,7 @@ alongside the given module. The `*` wildcard is a supported convention if the
 module is incompatible with all other modules.
 
 ### Add a Readme File
+
 This step is not required for personal development, but it is required to commit
 a module to the Minitrino repository.
 
@@ -633,7 +722,8 @@ touch readme.md
 
 This file should contain an overview of the module.
 
-### Review Progress 
+### Review Progress
+
 The resulting directory tree should look like this (from the `/modules/catalog/`
 directory):
 
@@ -650,6 +740,7 @@ postgres
 ```
 
 ### Configure the Docker Compose YAML File
+
 We will now define the `postgres.yml` Docker Compose file. Set it up as follows,
 and **read the important notes after**:
 
@@ -674,9 +765,11 @@ services:
 ```
 
 ### Important Implementation Details: Paths and Labels
+
 We can observe a few things about the Compose file we just defined.
 
 #### Path References for Volumes and Build Contexts
+
 First, the volumes we mount *are not relative to the Compose file itself*, they
 are relative to the base `docker-compose.yml` file in the library root. This is
 because the CLI extends Compose files, meaning that all path references in child
@@ -685,19 +778,20 @@ Compose files need to be relative to the positioning of the parent Compose file.
 The base Compose file is determined when you execute a Docker Compose
 command––the first Compose file referenced in the command becomes the base file,
 and that happens to be the `docker-compose.yml` file in the library root. This
-is how Minitrino constructs these commands. 
+is how Minitrino constructs these commands.
 
 If this is confusing, you can read more about extending Compose files on the
-[Docker docs](https://docs.docker.com/compose/extends/#multiple-compose-files). 
+[Docker docs](https://docs.docker.com/compose/extends/#multiple-compose-files).
 
 #### Minitrino Docker Labels
+
 Secondly, notice how we applied sets of labels to the Postgres service. These
 labels tell the CLI which resources to target when executing commands.
 
-In general, there is no need to apply labels to the Trino service since they
-are already applied in the parent Compose file **unless** the module is an
-extension of the Trino service itself (i.e. the Snowflake modules). Labels
-should always be applied to:
+In general, there is no need to apply labels to the Trino service since they are
+already applied in the parent Compose file **unless** the module is an extension
+of the Trino service itself (i.e. the Snowflake modules). Labels should always
+be applied to:
 
 - Docker services (AKA the resulting container)
 - Named volumes
@@ -753,11 +847,12 @@ volumes:
 actually define any new services/containers. See the Snowflake catalog modules
 for an example of this. For these modules, the only label requirement is to add
 the module-specific label to the Trino service in the relevant
-`docker-compose.yml` file 
+`docker-compose.yml` file
 
 -----
 
 ### Test the New Catalog
+
 We are all finished up. We can test our new catalog through the Minitrino CLI:
 
 ```sh
@@ -773,6 +868,7 @@ trino> show catalogs;
 ```
 
 ### Customizing Images
+
 If you need to build an image from a local Dockerfile, you can do so and
 structure the Compose file accordingly. See the library's root
 `docker-compose.yml` file for an example of this. Path references for volumes
@@ -780,12 +876,12 @@ and the image build context will follow the same convention as volume mount
 paths described earlier.
 
 ### Bootstrap Scripts
-Minitrino supports container bootstrap scripts. These scripts **do not
-replace** the entrypoint (or default command) for a given container. The script
-is copied from the Minitrino library to the container, executed, and then
-removed from the container. Containers are restarted after each bootstrap script
-execution, **so the bootstrap scripts themselves should not restart the
-container's service**.
+
+Minitrino supports container bootstrap scripts. These scripts **do not replace**
+the entrypoint (or default command) for a given container. The script is copied
+from the Minitrino library to the container, executed, and then removed from the
+container. Containers are restarted after each bootstrap script execution, **so
+the bootstrap scripts themselves should not restart the container's service**.
 
 If a bootstrap script has already executed in a container *and* the volume
 associated with the container still exists, Minitrino will not re-execute the
@@ -813,6 +909,7 @@ services:
 The `elasticsearch` module is a good example of this.
 
 ### Managing Trino's `config.properties` File
+
 Many modules can change the Trino `config.properties` and `jvm.config` files.
 Because of this, there are two supported ways to modify these files with
 Minitrino.
@@ -823,8 +920,8 @@ This will propagate the config to the Trino container when it is provisioned.
 Generally speaking, this can be used for any type of configuration (i.e. memory
 configuration) that is unlikely to be modified by any module. This also applies
 to the `jvm.config` file, which has identical support via the `JVM_CONFIG`
-variable. If there are duplicate configs in either file, Minitrino will warn
-the user.
+variable. If there are duplicate configs in either file, Minitrino will warn the
+user.
 
 To set these configs, your configuration file should look like:
 
@@ -884,12 +981,13 @@ as possible.
 -----
 
 ## Reporting Bugs and Contributing
+
 To report bugs, please file a GitHub issue on the [Minitrino
 repository](https://github.com/jefflester/minitrino). Bug reports should:
 
 - Contain any relevant log messages (if the bug is tied to a command, running
   with the `-v` flag will make debugging easier)
-- Describe what the expected outcome is 
+- Describe what the expected outcome is
 - Describe the proposed code fix (optional)
 
 Contributors have two options:
@@ -897,7 +995,7 @@ Contributors have two options:
 1. Fork the repository, then make a PR to merge your changes
 2. If you have been added as a contributor, you can go with the method above or
    you can create a feature branch, then submit a PR for that feature branch
-   when it is ready to be merged. 
+   when it is ready to be merged.
 
 In either case, please provide a comprehensive description of your changes with
 the PR.

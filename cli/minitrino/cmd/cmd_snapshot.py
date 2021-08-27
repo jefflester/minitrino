@@ -205,8 +205,8 @@ def build_command_string(ctx, modules=[]):
     if modules:
         options = ""
         for module in modules:
-            options += f" {module}"
-        option_string = f"--module {options}"
+            options += f"--module {module} "
+        option_string = f"{options}"
 
     bash_source = '"${BASH_SOURCE%/*}"'
     command_string = (

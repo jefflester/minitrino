@@ -21,6 +21,7 @@ def main():
     helpers.start_docker_daemon()
     cleanup()
     test_standalone()
+    test_bad_sep_version()
     test_invalid_module()
     test_docker_native()
     test_valid_user_config()
@@ -45,6 +46,26 @@ def test_standalone():
 
     for container in containers:
         assert container.name == "trino"
+
+    helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
+    cleanup()
+
+
+def test_bad_sep_version():
+    """Verifies that a non-zero status code is returned when attempting to
+    provide an invalid SEP version."""
+
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
+
+    result = helpers.execute_command(
+        ["-v", "--env", "STARBURST_VER=332-e", "provision"]
+    )
+
+    assert result.exit_code == 2
+    assert "Provided Starburst version" in result.output
+
+    containers = get_containers()
+    assert len(containers) == 0
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()

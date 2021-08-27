@@ -42,7 +42,7 @@ services:
         "./opt/bin/start-hive-metastore.sh",
       ]
     ports:
-      - "9083:9085"
+      - "${METASTORE_HIVE_S3_PORT}:9083"
 
 volumes:
   postgres-hive-s3-data:

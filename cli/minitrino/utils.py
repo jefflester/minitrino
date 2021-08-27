@@ -240,6 +240,23 @@ def check_lib(ctx):
     ctx.minitrino_lib_dir
 
 
+def check_starburst_ver(ctx):
+    """Checks if a proper Starburst version is provided."""
+
+    starburst_ver = ctx.env.get_var("STARBURST_VER", "")
+    error_msg = (
+        f"Provided Starburst version '{starburst_ver}' is invalid. "
+        f"The provided version must be 354-e or higher."
+    )
+
+    try:
+        starburst_ver_int = int(starburst_ver[0:3])
+        if starburst_ver_int < 354 or "-e" not in starburst_ver:
+            raise err.UserError(error_msg)
+    except:
+        raise err.UserError(error_msg)
+
+
 def generate_identifier(identifiers=None):
     """Returns an 'object identifier' string used for creating log messages,
     e.g. '[ID: 12345] [Name: trino]'.
@@ -263,7 +280,9 @@ def generate_identifier(identifiers=None):
     return " ".join(identifier)
 
 
-def parse_key_value_pair(key_value_pair, err_type=err.MinitrinoError):
+def parse_key_value_pair(
+    key_value_pair, err_type=err.MinitrinoError, key_to_upper=True
+):
     """Parses a key-value pair in string form and returns the resulting pair as
     both a 2-element list. If the string cannot be split by "=", a
     MinitrinoError is raised.
@@ -273,6 +292,7 @@ def parse_key_value_pair(key_value_pair, err_type=err.MinitrinoError):
       `"TRINO=354-e"`.
     - `err_type`: The exception to raise if an "=" delimiter is not in the
       key-value pair. Defaults to `MinitrinoError`.
+    - `key_to_upper`: If `True`, the key will be forced to uppercase.
 
     ### Return Values
     - A list `[k, v]`, but will return `None` if the stripped input is an empty
@@ -298,6 +318,8 @@ def parse_key_value_pair(key_value_pair, err_type=err.MinitrinoError):
             key_value_pair[i] = key_value_pair[i].strip()
         if not key_value_pair[0]:
             raise err_type(err_msg)
+        elif key_to_upper:
+            key_value_pair[0] = key_value_pair[0].upper()
     if not len(key_value_pair) == 2:
         raise err_type(err_msg)
 

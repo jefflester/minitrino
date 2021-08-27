@@ -1,0 +1,5 @@
+{
+    "description": "Creates an Oracle catalog using the standard Oracle connector.",
+    "incompatibleModules": [],
+    "enterprise": false
+}

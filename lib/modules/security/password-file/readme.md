@@ -1,24 +1,29 @@
 # Password File Authentication Module
-This module configures Trino to authenticate users with a password file. It
-also enables SSL / TLS between Trino and clients. It is compatible with other
+
+This module configures Trino to authenticate users with a password file. It also
+enables SSL / TLS between Trino and clients. It is compatible with other
 security modules like **system-ranger** and **event-logger**, but is
 mutually-exclusive of the **ldap** module.
 
-## Requirements
-- N/A
+## Usage
 
-## Sample Usage
-To provision this module, run:
+    minitrino --env STARBURST_VER=<ver> provision --module password-file
+    docker exec -it trino bash 
 
-```shell
-minitrino provision --module ldap
-```
+    trino-cli --server https://trino:8443 \
+       --truststore-path /etc/starburst/ssl/truststore.jks --truststore-password trinoRocks15 \
+       --keystore-path /etc/starburst/ssl/keystore.jks --keystore-password trinoRocks15 \
+       --user bob --password
+       
+    trino> show schemas from tpch;
 
 ## Default Usernames and Passwords
+
 - alice / trinoRocks15
 - bob / trinoRocks15
 
 ## Client Keystore and Truststore
+
 The Java keystore and truststore needed for clients and drivers to securely
 connect to Trino are located in a volume mount `~/.minitrino/ssl`. These two
 files are transient and will be automatically replaced whenever Minitrino is
@@ -28,26 +33,23 @@ provisioned with a security module that enables SSL.
 
 Via Docker:
 
-```
-docker exec -it trino trino-cli --server https://trino:8443 \
-   --truststore-path /etc/starburst/ssl/truststore.jks --truststore-password trinoRocks15 \
-   --keystore-path /etc/starburst/ssl/keystore.jks --keystore-password trinoRocks15 \
-   --user bob --password
-```
+    docker exec -it trino trino-cli --server https://trino:8443 \
+       --truststore-path /etc/starburst/ssl/truststore.jks --truststore-password trinoRocks15 \
+       --keystore-path /etc/starburst/ssl/keystore.jks --keystore-password trinoRocks15 \
+       --user bob --password
 
 Via Host Machine:
 
-```
-trino-cli-xxx-executable.jar --server https://localhost:8443 \
-   --truststore-path ~/.minitrino/ssl/truststore.jks --truststore-password trinoRocks15 \
-   --keystore-path ~/.minitrino/ssl/keystore.jks --keystore-password trinoRocks15 \
-   --user bob --password
-```
+    trino-cli-xxx-executable.jar --server https://localhost:8443 \
+       --truststore-path ~/.minitrino/ssl/truststore.jks --truststore-password trinoRocks15 \
+       --keystore-path ~/.minitrino/ssl/keystore.jks --keystore-password trinoRocks15 \
+       --user bob --password
 
 Note that the CLI will prompt you for the password.
 
 ## Accessing the Trino Web UI
-Open a web browser and go to https://localhost:8443 and log in with a valid
+
+Open a web browser and go to <https://localhost:8443> and log in with a valid
 username and password.
 
 To have the browser accept the self-signed certificate, do the following:
@@ -64,6 +66,4 @@ this website**.
 
 Example with username `jeff` and password `trinoRocks15`
 
-```
-docker exec trino htpasswd -bB -C 10 /etc/starburst/password.db jeff trinoRocks15
-```
+    docker exec trino htpasswd -bB -C 10 /etc/starburst/password.db jeff trinoRocks15

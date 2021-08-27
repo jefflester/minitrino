@@ -77,6 +77,7 @@ def cli(ctx, modules, no_rollback, docker_native):
 
     utils.check_daemon(ctx.docker_client)
     utils.check_lib(ctx)
+    utils.check_starburst_ver(ctx)
     modules = append_running_modules(modules)
     check_compatibility(modules)
     check_enterprise(modules)
@@ -391,12 +392,14 @@ def check_dup_configs(ctx):
             for i, config in enumerate(configs):
                 if config.startswith("#"):
                     continue
-                config = utils.parse_key_value_pair(config, err_type=err.UserError)
+                config = utils.parse_key_value_pair(
+                    config, err_type=err.UserError, key_to_upper=False
+                )
                 if config is None:
                     continue
                 if i + 1 != len(configs):
                     next_config = utils.parse_key_value_pair(
-                        configs[i + 1], err_type=err.UserError
+                        configs[i + 1], err_type=err.UserError, key_to_upper=False
                     )
                     if config[0] == next_config[0]:
                         duplicates.extend(["=".join(config), "=".join(next_config)])
@@ -506,7 +509,7 @@ def append_user_config(ctx, containers_to_restart=[]):
         if filename == TRINO_CONFIG:
             for user_config in user_configs:
                 user_config = utils.parse_key_value_pair(
-                    user_config, err_type=err.UserError
+                    user_config, err_type=err.UserError, key_to_upper=False
                 )
                 if user_config is None:
                     continue
@@ -514,7 +517,7 @@ def append_user_config(ctx, containers_to_restart=[]):
                     if current_config.startswith("#"):
                         continue
                     current_config = utils.parse_key_value_pair(
-                        current_config, err_type=err.UserError
+                        current_config, err_type=err.UserError, key_to_upper=False
                     )
                     if current_config is None:
                         continue

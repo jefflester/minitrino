@@ -1,0 +1,23 @@
+version: "3.8"
+services:
+
+  trino:
+    volumes:
+      - "./modules/catalog/postgres/resources/trino/postgres.properties:/etc/starburst/catalog/postgres.properties"
+
+  postgres-cache-service:
+    image: "postgres:${POSTGRES_VER}"
+    container_name: "postgres-cache-service"
+    labels:
+      - "com.starburst.tests=minitrino"
+      - "com.starburst.tests.administration.postgres=administration-cache-service"
+    env_file:
+      - "./modules/administration/cache-service/resources/postgres/postgres.env"
+    volumes:
+      - "postgres-cache-service-data:/var/lib/postgresql/data"
+
+volumes:
+  postgres-cache-service-data:
+    labels:
+      - "com.starburst.tests=minitrino"
+      - "com.starburst.tests.administration.postgres=administration-cache-service"

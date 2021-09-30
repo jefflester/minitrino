@@ -5,6 +5,9 @@ services:
     volumes:
       - "./modules/administration/cache-service/resources/trino/cache.properties:/etc/starburst/cache.properties"
       - "./modules/administration/cache-service/resources/trino/cache-rules.json:/etc/starburst/cache-rules.json"
+    depends_on:
+      - "mysql-cache-service"
+    restart: "on-failure"
 
   mysql-cache-service:
     image: "mysql:${MYSQL_VER}"

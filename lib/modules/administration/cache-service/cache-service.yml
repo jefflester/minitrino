@@ -4,7 +4,8 @@ services:
   trino:
     volumes:
       - "./modules/administration/cache-service/resources/trino/cache.properties:/etc/starburst/cache.properties"
-      - "./modules/administration/cache-service/resources/trino/cache-rules.json:/etc/starburst/cache-rules.json"
+    environment:
+      MINITRINO_BOOTSTRAP: "bootstrap-trino.sh"
     depends_on:
       - "mysql-cache-service"
     restart: "on-failure"

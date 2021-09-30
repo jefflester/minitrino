@@ -16,6 +16,7 @@ from minitrino import errors as err
 from minitrino.settings import RESOURCE_LABEL
 from minitrino.settings import MODULE_LABEL_KEY_ROOT
 from minitrino.settings import MODULE_ROOT
+from minitrino.settings import MODULE_ADMINISTRATION
 from minitrino.settings import MODULE_SECURITY
 from minitrino.settings import MODULE_CATALOG
 
@@ -423,7 +424,9 @@ class Modules:
         for i, container in enumerate(containers):
             label_set = {}
             for k, v in container.labels.items():
-                if "com.starburst.tests" in k and "catalog-" in v:
+                if "com.starburst.tests" in k and "administration-" in v:
+                    names.append(v.lower().strip().replace("administration-", ""))
+                elif "com.starburst.tests" in k and "catalog-" in v:
                     names.append(v.lower().strip().replace("catalog-", ""))
                 elif "com.starburst.tests" in k and "security-" in v:
                     names.append(v.lower().strip().replace("security-", ""))
@@ -472,8 +475,9 @@ class Modules:
                 f"Are you pointing to a compatible Minitrino library?"
             )
 
-        # Loop through both catalog and security modules
+        # Loop through all module types
         sections = [
+            os.path.join(modules_dir, MODULE_ADMINISTRATION),
             os.path.join(modules_dir, MODULE_CATALOG),
             os.path.join(modules_dir, MODULE_SECURITY),
         ]

@@ -17,9 +17,6 @@ from minitrino.cli import pass_environment
 from minitrino import utils
 from minitrino import errors as err
 from minitrino.settings import RESOURCE_LABEL
-from minitrino.settings import MODULE_ROOT
-from minitrino.settings import MODULE_CATALOG
-from minitrino.settings import MODULE_SECURITY
 from minitrino.settings import ETC_TRINO
 from minitrino.settings import SEP_VOLUME_MOUNT
 from minitrino.settings import TRINO_CONFIG
@@ -86,8 +83,7 @@ def cli(ctx, modules, no_rollback, docker_native):
 
     if not modules:
         ctx.logger.log(
-            f"No catalog or security options received. Provisioning "
-            f"standalone Trino container..."
+            f"No modules specified. Provisioning standalone Trino container..."
         )
     else:
         for module in modules:
@@ -211,7 +207,7 @@ def check_enterprise(ctx, modules=[]):
                     f"Module {module} requires a Starburst license. "
                     f"The license volume in the library's docker-compose.yml "
                     f"file must be uncommented at: {yaml_path}."
-                    f"For reference, the proper volume mount is: {SEP_VOLUME_MOUNT}"
+                    f"For reference, the proper volume mount is: '{SEP_VOLUME_MOUNT}'"
                 )
             if not ctx.env.get_var("STARBURST_LIC_PATH", False):
                 raise err.UserError(

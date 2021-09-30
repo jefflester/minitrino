@@ -3,21 +3,16 @@ services:
 
   trino:
     volumes:
-      - "./modules/catalog/postgres/resources/trino/postgres.properties:/etc/starburst/catalog/postgres.properties"
+      - "./modules/administration/cache-service/resources/trino/cache.properties:/etc/starburst/cache.properties"
+      - "./modules/administration/cache-service/resources/trino/cache-rules.json:/etc/starburst/cache-rules.json"
 
-  postgres-cache-service:
-    image: "postgres:${POSTGRES_VER}"
-    container_name: "postgres-cache-service"
+  mysql-cache-service:
+    image: "mysql:${MYSQL_VER}"
+    container_name: "mysql-cache-service"
     labels:
       - "com.starburst.tests=minitrino"
-      - "com.starburst.tests.administration.postgres=administration-cache-service"
+      - "com.starburst.tests.module.cache-service=administration-cache-service"
     env_file:
-      - "./modules/administration/cache-service/resources/postgres/postgres.env"
-    volumes:
-      - "postgres-cache-service-data:/var/lib/postgresql/data"
-
-volumes:
-  postgres-cache-service-data:
-    labels:
-      - "com.starburst.tests=minitrino"
-      - "com.starburst.tests.administration.postgres=administration-cache-service"
+      - "./modules/administration/cache-service/resources/mysql/mysql.env"
+    environment:
+      MINITRINO_BOOTSTRAP: "bootstrap-mysql.sh"

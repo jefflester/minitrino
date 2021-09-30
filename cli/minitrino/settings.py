@@ -15,6 +15,7 @@ MODULE_CATALOG = "catalog"
 MODULE_SECURITY = "security"
 MODULE_RESOURCES = "resources"
 ETC_TRINO = "/etc/starburst"
+SEP_VOLUME_MOUNT = "${STARBURST_LIC_PATH}:/etc/starburst/starburstdata.license:ro"
 TRINO_CONFIG = "config.properties"
 TRINO_JVM_CONFIG = "jvm.config"
 LIB_INDEPENDENT_CMDS = ["lib_install"]

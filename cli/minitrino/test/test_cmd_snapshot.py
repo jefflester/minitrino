@@ -81,6 +81,16 @@ def test_snapshot_active_env():
     run_assertions(result, False)
     assert "Creating snapshot of active environment" in result.output
 
+    # This also verifies we pick up on dependent modules that are provisioned
+    # alongside another module
+    command_snapshot_file = os.path.join(
+        helpers.MINITRINO_USER_SNAPSHOTS_DIR, "test", "provision-snapshot.sh"
+    )
+    with open(command_snapshot_file, "r") as f:
+        assert (
+            "--module file-access-control" and "--module test" in f.read()
+        ), "Expected modules not found in snapshot provisioning file"
+
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
 
 
@@ -216,6 +226,14 @@ def test_command_snapshot_file():
     easily reproduce the environment)."""
 
     helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
+
+    cleanup()
+    helpers.execute_command(["-v", "provision", "--module", "test"])
+    helpers.execute_command(
+        ["-v", "snapshot", "--name", "test"],
+        command_input="y\n",
+    )
+    helpers.execute_command(["down", "--sig-kill"])
 
     command_snapshot_file = os.path.join(
         helpers.MINITRINO_USER_SNAPSHOTS_DIR, "test", "provision-snapshot.sh"

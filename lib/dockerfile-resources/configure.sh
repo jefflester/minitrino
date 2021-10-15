@@ -32,7 +32,7 @@ function configure_base() {
 
 DIST="${STARBURST_VER:0:3}"
 
-if [ "${DIST}" -le 355 ]; then
+if [ "${DIST}" -le 362 ]; then
     configure_centos
 else
     configure_redhat_ubi

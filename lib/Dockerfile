@@ -5,7 +5,7 @@ ARG STARBURST_VER
 ENV STARBURST_VER=${STARBURST_VER}
 ENV TRINO_CLI_PATH=/usr/local/bin/trino-cli
 
-ADD ./modules/resources/wait-for-it.sh /opt/minitrino/
+ADD ./dockerfile-resources/wait-for-it.sh /opt/minitrino/
 ADD ./dockerfile-resources/configure.sh /opt/minitrino/
 
 USER root

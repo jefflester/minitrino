@@ -261,7 +261,12 @@ def clone_lib_dir(ctx, name):
     for filename in os.listdir(ctx.minitrino_lib_dir):
         if filename in SNAPSHOT_ROOT_FILES:
             file_path = os.path.join(ctx.minitrino_lib_dir, filename)
-            shutil.copy(file_path, os.path.join(snapshot_name_dir, LIB))
+            if os.path.isfile(file_path):
+                shutil.copy(file_path, os.path.join(snapshot_name_dir, LIB))
+            elif os.path.isdir(file_path):
+                shutil.copytree(
+                    file_path, os.path.join(snapshot_name_dir, LIB, filename)
+                )
 
     # Copy everything from lib/modules/resources
     resources_dir = os.path.join(ctx.minitrino_lib_dir, MODULE_ROOT, MODULE_RESOURCES)

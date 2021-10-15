@@ -4,7 +4,10 @@ set -euxo pipefail
 
 function configure_centos() {
     yum install -y wget \
-        sudo 
+        sudo \
+        openssl \
+        openldap-clients \
+        httpd-tools
     configure_base
 }
 
@@ -12,7 +15,10 @@ function configure_redhat_ubi() {
     microdnf install wget \
         sudo \
         findutils \
-        passwd
+        passwd \
+        openssl \
+        openldap-clients \
+        httpd-tools
     configure_base
 }
 

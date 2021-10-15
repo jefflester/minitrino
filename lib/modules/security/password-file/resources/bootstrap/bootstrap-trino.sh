@@ -63,6 +63,5 @@ keytool -import -v \
 	-noprompt
 
 echo "Setting up password file..."
-sudo yum install httpd-tools -y
 htpasswd -cbB -C 10 /etc/starburst/password.db alice trinoRocks15
 htpasswd -bB -C 10 /etc/starburst/password.db bob trinoRocks15

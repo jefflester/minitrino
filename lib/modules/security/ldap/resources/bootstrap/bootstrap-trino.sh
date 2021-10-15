@@ -29,7 +29,6 @@ echo "Removing pre-existing SSL resources..."
 rm -f "${SSL_DIR}"/* 
 
 echo "Getting LDAP certificate..."
-sudo yum install -y openssl
 LDAP_URI=$(cat /etc/starburst/password-authenticator.properties | grep "ldaps" | sed -r "s/^.*ldaps:\/\/(.+:[0-9]+).*$/\1/")
 LDAP_HOST=$(echo "${LDAP_URI}" | cut -d ':' -f 1)
 LDAP_PORT=$(echo "${LDAP_URI}" | cut -d ':' -f 2)
@@ -70,7 +69,6 @@ do
 		-file "${CERT_FILE}";
 done;
 
-sudo yum install -y openldap-clients
 ls /etc/starburst/ldap-users/*.ldif | while read -r LDIF_FILE;
 do
 	echo "LDAP Importing user from file [${LDIF_FILE}]"

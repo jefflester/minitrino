@@ -12,7 +12,7 @@ Slack](https://img.shields.io/static/v1?logo=slack&logoColor=959DA5&label=Slack&
 
 -----
 
-**Latest Stable Release**: 2.0.1
+**Latest Stable Release**: 2.0.2
 
 -----
 
@@ -58,36 +58,8 @@ Slack](https://img.shields.io/static/v1?logo=slack&logoColor=959DA5&label=Slack&
     - [Test the New Catalog](#test-the-new-catalog)
     - [Customizing Images](#customizing-images)
     - [Bootstrap Scripts](#bootstrap-scripts)
+      - [Installing Shell Packages for Bootstrap Scripts](#installing-shell-packages-for-bootstrap-scripts)
     - [Managing Trino's `config.properties` File](#managing-trinos-configproperties-file)
-  - [Troubleshooting](#troubleshooting)
-  - [Reporting Bugs and Contributing](#reporting-bugs-and-contributing)
-      Library](#pointing-the-cli-to-the-minitrino-library)
-  - [Minitrino Configuration File](#minitrino-configuration-file)
-    - [[CLI] Section](#cli-section)
-    - [[DOCKER] Section](#docker-section)
-    - [[TRINO] Section](#trino-section)
-    - [[MODULES] Section](#modules-section)
-  - [Project Structure](#project-structure)
-    - [Trino Dockerfile](#trino-dockerfile)
-  - [Adding New Modules (Tutorial)](#adding-new-modules-tutorial)
-    - [Create the Module Directory](#create-the-module-directory)
-    - [Add Trino Resources](#add-trino-resources)
-    - [Add the Docker Compose YAML](#add-the-docker-compose-yaml)
-    - [Add a Metadata File](#add-a-metadata-file)
-    - [Add a Readme File](#add-a-readme-file)
-    - [Review Progress](#review-progress)
-    - [Configure the Docker Compose YAML
-      File](#configure-the-docker-compose-yaml-file)
-    - [Important Implementation Details: Paths and
-      Labels](#important-implementation-details-paths-and-labels)
-      - [Path References for Volumes and Build
-        Contexts](#path-references-for-volumes-and-build-contexts)
-      - [Minitrino Docker Labels](#minitrino-docker-labels)
-    - [Test the New Catalog](#test-the-new-catalog)
-    - [Customizing Images](#customizing-images)
-    - [Bootstrap Scripts](#bootstrap-scripts)
-    - [Managing Trino's `config.properties`
-      File](#managing-trinos-configproperties-file)
   - [Troubleshooting](#troubleshooting)
   - [Reporting Bugs and Contributing](#reporting-bugs-and-contributing)
 
@@ -907,6 +879,16 @@ services:
 ```
 
 The `elasticsearch` module is a good example of this.
+
+#### Installing Shell Packages for Bootstrap Scripts
+
+If you need to install a shell package for a bootstrap script, it is recommended
+that the package be added at the Dockerfile level instead of within the
+bootstrap script. This is to ensure compatibility between SEP Trino-based
+releases.
+
+To add the necessary package, simply update shell dependencies in
+`lib/dockerfile-resources/configure.sh`.
 
 ### Managing Trino's `config.properties` File
 

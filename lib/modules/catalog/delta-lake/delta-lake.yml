@@ -43,7 +43,8 @@ services:
     image: "minio/minio"
     container_name: "minio-delta-lake"
     ports:
-      - "${MINIO_DELTA_LAKE_PORT}:9000"
+      - "9000:9000"
+      - "9001:9001"
     volumes:
       - "./modules/catalog/delta-lake/resources/minio/data/:/data"
     labels:
@@ -52,7 +53,7 @@ services:
     environment:
       MINIO_ACCESS_KEY: access-key
       MINIO_SECRET_KEY: secret-key
-    command: server /data
+    command: server --address ":9000" --console-address ":9001" /data
 
 volumes:
   postgres-delta-lake-data:

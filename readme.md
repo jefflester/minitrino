@@ -1,7 +1,7 @@
 # Minitrino
 
 A command line tool that makes it easy to run modular Trino environments
-locally. Compatible with Staburst version 354-e and later.
+locally. Compatible with Starburst versions 370-e and later.
 
 [![PyPI
 version](https://badge.fury.io/py/minitrino.svg)](https://badge.fury.io/py/minitrino)
@@ -38,10 +38,10 @@ Slack](https://img.shields.io/static/v1?logo=slack&logoColor=959DA5&label=Slack&
     - [Display Minitrino Versions](#display-minitrino-versions)
     - [Pointing the CLI to the Minitrino Library](#pointing-the-cli-to-the-minitrino-library)
   - [Minitrino Configuration File](#minitrino-configuration-file)
-    - [[CLI] Section](#cli-section)
-    - [[DOCKER] Section](#docker-section)
-    - [[TRINO] Section](#trino-section)
-    - [[MODULES] Section](#modules-section)
+    - [\[CLI\] Section](#cli-section)
+    - [\[DOCKER\] Section](#docker-section)
+    - [\[TRINO\] Section](#trino-section)
+    - [\[MODULES\] Section](#modules-section)
   - [Project Structure](#project-structure)
     - [Trino Dockerfile](#trino-dockerfile)
   - [Adding New Modules (Tutorial)](#adding-new-modules-tutorial)

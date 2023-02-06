@@ -16,6 +16,7 @@ from minitrino import errors as err
 from minitrino.settings import RESOURCE_LABEL
 from minitrino.settings import MODULE_LABEL_KEY_ROOT
 from minitrino.settings import MODULE_ROOT
+from minitrino.settings import MODULE_ADMINISTRATION
 from minitrino.settings import MODULE_SECURITY
 from minitrino.settings import MODULE_CATALOG
 
@@ -418,23 +419,23 @@ class Modules:
         if not containers:
             return {}
 
-        # Remove Trino container since it isn't a module
-        for i, container in enumerate(containers):
-            if container.name == "trino":
-                del containers[i]
-
         names = []
         label_sets = []
         for i, container in enumerate(containers):
             label_set = {}
             for k, v in container.labels.items():
-                if "catalog-" in v:
+                if "com.starburst.tests" in k and "administration-" in v:
+                    names.append(v.lower().strip().replace("administration-", ""))
+                elif "com.starburst.tests" in k and "catalog-" in v:
                     names.append(v.lower().strip().replace("catalog-", ""))
-                elif "security-" in v:
+                elif "com.starburst.tests" in k and "security-" in v:
                     names.append(v.lower().strip().replace("security-", ""))
                 else:
                     continue
                 label_set[k] = v
+            # All containers except the trino container must have
+            # module-specific labels. The trino container only has module labels
+            # if a module applies labels to it
             if not label_set and container.name != "trino":
                 raise err.UserError(
                     f"Missing Minitrino labels for container '{container.name}'.",
@@ -474,8 +475,9 @@ class Modules:
                 f"Are you pointing to a compatible Minitrino library?"
             )
 
-        # Loop through both catalog and security modules
+        # Loop through all module types
         sections = [
+            os.path.join(modules_dir, MODULE_ADMINISTRATION),
             os.path.join(modules_dir, MODULE_CATALOG),
             os.path.join(modules_dir, MODULE_SECURITY),
         ]

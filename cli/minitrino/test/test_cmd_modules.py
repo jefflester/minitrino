@@ -59,7 +59,8 @@ def test_all_modules():
         (
             "Module: test" in result.output,
             "Description:" in result.output,
-            "Incompatiblemodules:" in result.output,
+            "IncompatibleModules:" in result.output,
+            "DependentModules:" in result.output,
         )
     )
 
@@ -92,7 +93,8 @@ def test_running():
     assert all(
         (
             '"type": "catalog"' in result.output,
-            '"type": "catalog"' in result.output,
+            '"type": "security"' in result.output,
+            "file-access-control" in result.output,
             '"containers":' in result.output,
         )
     )

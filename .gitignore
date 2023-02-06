@@ -53,3 +53,4 @@ yarn-error.log*
 *DS_Store
 *todo.txt*
 *minio.sys*
+*.tar.gz

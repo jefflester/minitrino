@@ -22,7 +22,13 @@ TRINO_JVM_CONFIG = "jvm.config"
 LIB_INDEPENDENT_CMDS = ["lib_install"]
 
 # Snapshots
-SNAPSHOT_ROOT_FILES = ["docker-compose.yml", "minitrino.env", "Dockerfile", "version"]
+SNAPSHOT_ROOT_FILES = [
+    "docker-compose.yml",
+    "minitrino.env",
+    "Dockerfile",
+    "version",
+    "dockerfile-resources",
+]
 
 # Terminal
 DEFAULT_INDENT = " " * 5

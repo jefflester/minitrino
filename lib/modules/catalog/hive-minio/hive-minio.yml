@@ -44,6 +44,7 @@ services:
     container_name: minio
     ports:
       - "9000:9000"
+      - "9001:9001"
     volumes:
       - "./modules/catalog/hive-minio/resources/minio/data/:/data"
     labels:
@@ -52,7 +53,7 @@ services:
     environment:
       MINIO_ACCESS_KEY: access-key
       MINIO_SECRET_KEY: secret-key
-    command: server /data
+    command: server --address ":9000" --console-address ":9001" /data
 
 volumes:
   postgres-hive-minio-data:

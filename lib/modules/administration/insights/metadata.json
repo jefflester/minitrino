@@ -1,6 +1,0 @@
-{
-    "description": "Implements the Starburst Insights.",
-    "incompatibleModules": [],
-    "dependentModules": ["event-logger"],
-    "enterprise": true
-}

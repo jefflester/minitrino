@@ -1,9 +1,0 @@
-version: "3.8"
-services:
-
-  trino:
-    environment:
-      MINITRINO_BOOTSTRAP: "bootstrap-trino.sh"
-    labels:
-      - "com.starburst.tests=minitrino"
-      - "com.starburst.tests.module.insights=administration-insights"

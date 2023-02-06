@@ -671,15 +671,18 @@ In `lib/modules/catalog/postgres/`, add the `metadata.json` file:
 bash -c 'cat << EOF > metadata.json
 {
   "description": "Creates a Postgres catalog using the standard Postgres connector.",
-  "incompatibleModules": []
+  "incompatibleModules": [],
+  "dependentModules": []
 }
 EOF'
 ```
 
-The metadata file is presentable to the user via the `modules` command, and the
+The metadata file is presentable to the user via the `modules` command. The
 `incompatibleModules` key restricts certain modules from being provisioned
 alongside the given module. The `*` wildcard is a supported convention if the
-module is incompatible with all other modules.
+module is incompatible with all other modules. Lastly, the `dependentModules`
+key can be used to require other pre-defined modules to provision alongside the
+module containing the `metadata.json` file.
 
 ### Add a Readme File
 
@@ -953,7 +956,7 @@ EOT
   - `minitrino down`
   - `minitrino -v remove --volumes` to remove **all** existing Minitrino
     volumes. Alternatively, run `minitrino -v remove --volumes --label <your
-    label>` to specifiy a specific module for which to remove volumes. See the
+    label>` to specify a specific module for which to remove volumes. See the
     [removing resources](#removing-resources) section for more information.
 
 If none of these troubleshooting tips help to resolve your issue, [please file a

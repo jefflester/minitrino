@@ -251,8 +251,7 @@ def is_apple_m1(ctx):
         level=ctx.logger.verbose,
     )
 
-    uname = os.uname()
-    if "arm64" == uname.machine.lower() and platform.processor() == "arm":
+    if "arm64" == os.uname().machine.lower() and platform.processor().lower() == "arm":
         ctx.logger.log(
             "Host machine running on Apple M1 architecture.",
             level=ctx.logger.verbose,

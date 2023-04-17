@@ -39,7 +39,6 @@ class Logger:
     - `prompt_msg()`: Logs a prompt message and returns the user's input."""
 
     def __init__(self, log_verbose=False):
-
         self.info = {"prefix": "[i]  ", "prefix_color": "cyan"}
         self.warn = {"prefix": "[w]  ", "prefix_color": "yellow"}
         self.error = {"prefix": "[e]  ", "prefix_color": "red"}

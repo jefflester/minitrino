@@ -51,7 +51,6 @@ def cli(ctx, version):
 
 @pass_environment
 def download_and_extract(ctx, version=""):
-
     github_uri = f"https://github.com/jefflester/minitrino/archive/{version}.tar.gz"
     tarball = os.path.join(ctx.minitrino_user_dir, f"{version}.tar.gz")
     file_basename = f"minitrino-{version}"  # filename after unpacking
@@ -93,7 +92,6 @@ def download_and_extract(ctx, version=""):
 
 @pass_environment
 def cleanup(ctx, tarball="", file_basename="", trigger_error=True):
-
     ctx.cmd_executor.execute_commands(
         f"rm -rf {tarball} {os.path.join(ctx.minitrino_user_dir, file_basename)}",
         trigger_error=trigger_error,

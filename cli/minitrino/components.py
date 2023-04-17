@@ -50,7 +50,6 @@ class Environment:
 
     @utils.exception_handler
     def __init__(self):
-
         # Attributes that depend on user input prior to being set
         self.verbose = False
         self._user_env = []
@@ -226,7 +225,6 @@ class EnvironmentVariables:
 
     @utils.exception_handler
     def __init__(self, ctx=None):
-
         if not ctx:
             raise utils.handle_missing_param(list(locals().keys()))
 
@@ -399,7 +397,6 @@ class Modules:
 
     @utils.exception_handler
     def __init__(self, ctx=None):
-
         if not ctx:
             raise utils.handle_missing_param(list(locals().keys()))
 
@@ -552,7 +549,6 @@ class CommandExecutor:
 
     @utils.exception_handler
     def __init__(self, ctx=None):
-
         if not ctx:
             raise utils.handle_missing_param(list(locals().keys()))
 

@@ -80,6 +80,7 @@ def cli(ctx, modules, no_rollback, docker_native):
     modules = check_dependent_modules(modules)
     check_compatibility(modules)
     check_enterprise(modules)
+    check_volumes(modules)
 
     if not modules:
         ctx.logger.log(
@@ -215,6 +216,27 @@ def check_enterprise(ctx, modules=[]):
                     f"You must provide a path to a Starburst license via the "
                     f"STARBURST_LIC_PATH environment variable"
                 )
+
+
+@pass_environment
+def check_volumes(ctx, modules=[]):
+    """Checks if any of the modules have persistent volumes and issues a warning
+    to the user if so."""
+
+    ctx.logger.log(
+        "Checking modules for persisent volumes...",
+        level=ctx.logger.verbose,
+    )
+
+    for module in modules:
+        v = ctx.modules.data.get(module).get("yaml_dict", {}).get("volumes", {})
+        if ctx.modules.data.get(module).get("yaml_dict", {}).get("volumes", {}):
+            ctx.logger.log(
+                f"Module [module] has persistent volumes associated with it. "
+                f"To delete these volumes, remember to run "
+                f"`minitrino remove --volumes`.",
+                level=ctx.logger.warn,
+            )
 
 
 @pass_environment
@@ -517,7 +539,6 @@ def append_user_config(ctx, containers_to_restart=[]):
     current_jvm_config = current_configs[1].get("output", "").strip().split("\n")
 
     def append_configs(user_configs, current_configs, filename):
-
         # If there is an overlapping config key, replace it with the user
         # config. If there is not overlapping config key, append it to the
         # current config list.

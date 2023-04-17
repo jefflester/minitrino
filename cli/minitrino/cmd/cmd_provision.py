@@ -10,6 +10,7 @@ import os
 import stat
 import hashlib
 import time
+import platform
 import click
 import yaml
 
@@ -103,6 +104,8 @@ def cli(ctx, modules, no_rollback, docker_native):
 
         compose_env = ctx.env.get_section("MODULES")
         compose_env.update(ctx.env.get_section("EXTRA"))
+        if is_apple_m1():
+            compose_env.update({"DOCKER_DEFAULT_PLATFORM": "linux/amd64"})
         compose_cmd = build_command(docker_native, compose_env, cmd_chunk)
 
         ctx.cmd_executor.execute_commands(compose_cmd, environment=compose_env)
@@ -236,6 +239,26 @@ def check_volumes(ctx, modules=[]):
                 f"`minitrino remove --volumes`.",
                 level=ctx.logger.warn,
             )
+
+
+@pass_environment
+def is_apple_m1(ctx):
+    """Checks the host platform to determine if DOCKER_DEFAULT_PLATFORM needs to
+    be set."""
+
+    ctx.logger.log(
+        "Checking host platform...",
+        level=ctx.logger.verbose,
+    )
+
+    uname = os.uname()
+    if "arm64" == uname.machine.lower() and platform.processor() == "arm":
+        ctx.logger.log(
+            "Host machine running on Apple M1 architecture.",
+            level=ctx.logger.verbose,
+        )
+        return True
+    return False
 
 
 @pass_environment

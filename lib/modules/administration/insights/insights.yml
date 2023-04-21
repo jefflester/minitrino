@@ -1,0 +1,19 @@
+version: "3.8"
+services:
+
+  trino:
+    environment:
+      MINITRINO_BOOTSTRAP: "bootstrap-insights.sh"
+    volumes:
+      - "./modules/administration/insights/resources/trino/postgres_query_logger.properties:/etc/starburst/catalog/postgres_query_logger.properties"
+    
+  
+  postgres-query-logger:
+    image: "postgres:${POSTGRES_QUERY_LOGGER_VER}"
+    container_name: "postgres-query-logger"
+    labels:
+      - "com.starburst.tests=minitrino"
+      - "com.starburst.tests.module.insights=administration-insights"
+    env_file:
+      - "./modules/administration/insights/resources/postgres/postgres.env"
+      

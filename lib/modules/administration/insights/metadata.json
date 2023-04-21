@@ -1,0 +1,5 @@
+{
+  "description": "Implements query logger and insights configuration, logging all query information to backend Postgres database and supplying additional configuration for Insights web UI features.",
+  "incompatibleModules": [],
+  "dependentModules": []
+}

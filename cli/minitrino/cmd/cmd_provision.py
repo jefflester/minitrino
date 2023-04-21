@@ -105,7 +105,7 @@ def cli(ctx, modules, no_rollback, docker_native):
         compose_env = ctx.env.get_section("MODULES")
         compose_env.update(ctx.env.get_section("EXTRA"))
         if is_apple_m1():
-            compose_env.update({"DOCKER_DEFAULT_PLATFORM": "linux/amd64"})
+            compose_env.update({"MODULE_PLATFORM": "linux/amd64"})
         compose_cmd = build_command(docker_native, compose_env, cmd_chunk)
 
         ctx.cmd_executor.execute_commands(compose_cmd, environment=compose_env)

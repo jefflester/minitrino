@@ -176,10 +176,6 @@ def test_valid_user_config():
     result = helpers.execute_command(
         [
             "-v",
-            "--env",
-            "CONFIG=query.max-stage-count=85\nquery.max-execution-time=1h",
-            "--env",
-            "JVM_CONFIG=-Xmx2G\n-Xms1G",
             "provision",
             "--module",
             "test",

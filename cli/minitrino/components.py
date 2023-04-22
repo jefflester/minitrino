@@ -184,9 +184,8 @@ class Environment:
         return config_file
 
     def _get_docker_clients(self):
-        """Gets DockerClient and APIClient objects. References the DOCKER_HOST
-        variable in `minitrino.cfg` and uses for clients if present. Returns a
-        tuple of DockerClient and APIClient objects, respectiveley.
+        """Gets DockerClient and APIClient objects. Returns a tuple of DockerClient
+        and APIClient objects, respectively.
 
         If there is an error fetching the clients, None types will be returned
         for each client. The lack of clients should be caught by check_daemon()
@@ -194,9 +193,8 @@ class Environment:
         service."""
 
         try:
-            docker_host = self.env.get_var("DOCKER_HOST", "")
-            docker_client = docker.DockerClient(base_url=docker_host)
-            api_client = docker.APIClient(base_url=docker_host)
+            docker_client = docker.DockerClient(base_url="")
+            api_client = docker.APIClient(base_url="")
             self.docker_client, self.api_client = docker_client, api_client
         except:
             return None, None
@@ -658,10 +656,11 @@ class CommandExecutor:
                 f"container, but a container object was not provided."
             )
 
-        self._ctx.logger.log(
-            f"Executing command in container '{container.name}':\n{command}",
-            level=self._ctx.logger.verbose,
-        )
+        if not kwargs.get("suppress_output"):
+            self._ctx.logger.log(
+                f"Executing command in container '{container.name}':\n{command}",
+                level=self._ctx.logger.verbose,
+            )
 
         # Create exec handler and execute the command
         exec_handler = self._ctx.api_client.exec_create(

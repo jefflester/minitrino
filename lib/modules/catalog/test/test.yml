@@ -4,7 +4,13 @@ services:
   trino:
     environment:
       MINITRINO_BOOTSTRAP: "bootstrap-trino.sh"
-    
+      CONFIG_PROPERTIES: |- 
+        query.max-stage-count=85
+        query.max-execution-time=1h
+      JVM_CONFIG: |-
+        -Xmx2G
+        -Xms1G
+
   test:
     build: 
       context: ./modules/catalog/test/
@@ -14,7 +20,7 @@ services:
     environment:
       MINITRINO_BOOTSTRAP: "bootstrap-test.sh"
     command: "tail -F anything" # Keep alive 
-    image: "minitrino:test"
+    image: "minitrino/test:latest"
     container_name: "test"
     labels: 
       - "com.starburst.tests=minitrino"

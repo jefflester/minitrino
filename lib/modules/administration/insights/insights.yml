@@ -3,7 +3,12 @@ services:
 
   trino:
     environment:
-      MINITRINO_BOOTSTRAP: "bootstrap-insights.sh"
+      CONFIG_PROPERTIES: |-
+        insights.jdbc.url=jdbc:postgresql://postgres-query-logger:5432/querylogger
+        insights.jdbc.user=admin
+        insights.jdbc.password=trinoRocks15
+        insights.persistence-enabled=true
+        insights.metrics-persistence-enabled=true
     volumes:
       - "./modules/administration/insights/resources/trino/postgres_query_logger.properties:/etc/starburst/catalog/postgres_query_logger.properties"
     

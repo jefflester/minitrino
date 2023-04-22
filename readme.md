@@ -39,8 +39,6 @@ Slack](https://img.shields.io/static/v1?logo=slack&logoColor=959DA5&label=Slack&
     - [Pointing the CLI to the Minitrino Library](#pointing-the-cli-to-the-minitrino-library)
   - [Minitrino Configuration File](#minitrino-configuration-file)
     - [\[CLI\] Section](#cli-section)
-    - [\[DOCKER\] Section](#docker-section)
-    - [\[TRINO\] Section](#trino-section)
     - [\[MODULES\] Section](#modules-section)
   - [Project Structure](#project-structure)
     - [Trino Dockerfile](#trino-dockerfile)
@@ -59,7 +57,7 @@ Slack](https://img.shields.io/static/v1?logo=slack&logoColor=959DA5&label=Slack&
     - [Customizing Images](#customizing-images)
     - [Bootstrap Scripts](#bootstrap-scripts)
       - [Installing Shell Packages for Bootstrap Scripts](#installing-shell-packages-for-bootstrap-scripts)
-    - [Managing Trino's `config.properties` File](#managing-trinos-configproperties-file)
+    - [Managing Trino's `config.properties` and `jvm.config` Files](#managing-trinos-configproperties-and-jvmconfig-files)
   - [Troubleshooting](#troubleshooting)
   - [Reporting Bugs and Contributing](#reporting-bugs-and-contributing)
 
@@ -441,33 +439,6 @@ These configs allow the user to customize the behavior of Minitrino.
   `lib/` directory).
 - TEXT_EDITOR: The text editor to use with the `config` command, e.g. "vi",
   "nano", etc. Defaults to the shell's default editor.
-
-### [DOCKER] Section
-
-These configs allow the user to customize how Minitrino uses Docker.
-
-- DOCKER_HOST: A URL pointing to an accessible Docker host. This is
-  automatically detected by Docker otherwise.
-
-### [TRINO] Section
-
-These configs allow the user to propagate config to the Trino container. Since
-many modules can append to Trino's core files, the supported way to make
-propagate changes to these Trino files is with these configs.
-
-- CONFIG: Configuration for Trino's `config.properties` file.
-- JVM_CONFIG: Configuration for Trino's `jvm.config` file.
-
-A multiline example of this section (note the indentation):
-
-```
-[TRINO]
-CONFIG=
-    query.max-memory-per-node=500MB
-    query.max-total-memory-per-node=500MB
-JVM_CONFIG=
-    -Dsun.security.krb5.debug=true
-```
 
 ### [MODULES] Section
 
@@ -893,47 +864,30 @@ releases.
 To add the necessary package, simply update shell dependencies in
 `lib/dockerfile-resources/configure.sh`.
 
-### Managing Trino's `config.properties` File
+### Managing Trino's `config.properties` and `jvm.config` Files
 
 Many modules can change the Trino `config.properties` and `jvm.config` files.
 Because of this, there are two supported ways to modify these files with
 Minitrino.
 
-The first way is by setting the `CONFIG` variable in your `minitrino.cfg` file.
-This will propagate the config to the Trino container when it is provisioned.
+The first way is by setting the relevant environment variables in your
+`module.yml` Docker Compose file. This will propagate the configs to the Trino
+container when it is provisioned. For example:
 
-Generally speaking, this can be used for any type of configuration (i.e. memory
-configuration) that is unlikely to be modified by any module. This also applies
-to the `jvm.config` file, which has identical support via the `JVM_CONFIG`
-variable. If there are duplicate configs in either file, Minitrino will warn the
-user.
-
-To set these configs, your configuration file should look like:
-
-```
-[TRINO]
-CONFIG=
-    query.max-memory-per-node=500MB
-    query.max-total-memory-per-node=500MB
-JVM_CONFIG=
-    -Dsun.security.krb5.debug=true
+```yaml
+trino:
+  environment:
+    CONFIG_PROPERTIES: |-
+      insights.jdbc.url=jdbc:postgresql://postgresdb:5432/insights
+      insights.jdbc.user=admin
+      insights.jdbc.password=password
+      insights.persistence-enabled=true
+    JVM_CONFIG: |-
+      -Xlog:gc:/var/log/sep-gc-%t.log:time:filecount=10
 ```
 
-The second way to modify core Trino configuration is via module bootstrap
-scripts. This method is utilized by modules that need to make module-specific
-changes to Trino files. An example bootstrap snippet can be found below:
-
-```bash
-#!/usr/bin/env bash
-
-set -euxo pipefail
-
-echo "Adding Trino configs..."
-cat <<EOT >> /etc/starburst/config.properties
-query.max-stage-count=105
-query.max-execution-time=1h
-EOT
-```
+The second way to modify these configuration files is via module [bootstrap
+scripts](#bootstrap-scripts).
 
 -----
 

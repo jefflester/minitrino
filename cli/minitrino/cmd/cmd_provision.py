@@ -112,7 +112,7 @@ def cli(ctx, modules, no_rollback, docker_native):
         initialize_containers()
 
         containers_to_restart = execute_bootstraps(modules)
-        containers_to_restart = append_user_config(containers_to_restart)
+        containers_to_restart = write_trino_configs(containers_to_restart, modules)
         check_dup_configs()
         restart_containers(containers_to_restart)
         ctx.logger.log(f"Environment provisioning complete.")
@@ -234,16 +234,15 @@ def check_volumes(ctx, modules=[]):
     for module in modules:
         if ctx.modules.data.get(module).get("yaml_dict", {}).get("volumes", {}):
             ctx.logger.log(
-                f"Module {module} has persistent volumes associated with it. "
-                f"To delete these volumes, remember to run "
-                f"`minitrino remove --volumes`.",
+                f"Module '{module}' has persistent volumes associated with it. "
+                f"To delete these volumes, remember to run `minitrino remove --volumes`.",
                 level=ctx.logger.warn,
             )
 
 
 @pass_environment
 def is_apple_m1(ctx):
-    """Checks the host platform to determine if DOCKER_DEFAULT_PLATFORM needs to
+    """Checks the host platform to determine if MODULE_PLATFORM needs to
     be set."""
 
     ctx.logger.log(
@@ -253,7 +252,8 @@ def is_apple_m1(ctx):
 
     if "arm64" == os.uname().machine.lower() and platform.processor().lower() == "arm":
         ctx.logger.log(
-            "Host machine running on Apple M1 architecture.",
+            f"Host machine running on Apple M1 architecture. "
+            f"Images will pull in a best-effort fashion.",
             level=ctx.logger.verbose,
         )
         return True
@@ -497,21 +497,35 @@ def check_dup_configs(ctx):
 
 
 @pass_environment
-def append_user_config(ctx, containers_to_restart=[]):
-    """Appends Trino config from minitrino.cfg file. If the config is not
-    present, it is added. If it exists, it is replaced. If anything changes in
-    the Trino config, the Trino container is added to the restart list if it's
-    not already in the list."""
+def write_trino_configs(ctx, containers_to_restart=[], modules=[]):
+    """Appends Trino config from various modules if specified in the module YAML
+    file. The Trino container is added to the restart list if any configs are
+    written to files in the container."""
 
-    user_trino_config = ctx.env.get_var("CONFIG", "")
-    if user_trino_config:
-        user_trino_config = user_trino_config.strip().split("\n")
+    config_properties = []
+    jvm_config = []
 
-    user_jvm_config = ctx.env.get_var("JVM_CONFIG", "")
-    if user_jvm_config:
-        user_jvm_config = user_jvm_config.strip().split("\n")
+    for module in modules:
+        yaml = ctx.modules.data.get(module).get("yaml_dict")
+        conf = (
+            yaml.get("services", {})
+            .get("trino", {})
+            .get("environment", {})
+            .get("CONFIG_PROPERTIES", {})
+        )
+        jvm = (
+            yaml.get("services", {})
+            .get("trino", {})
+            .get("environment", {})
+            .get("JVM_CONFIG", {})
+        )
 
-    if not user_trino_config and not user_jvm_config:
+        if conf:
+            config_properties.extend(conf.strip().split("\n"))
+        if jvm:
+            jvm_config.extend(jvm.strip().split("\n"))
+
+    if not config_properties and not jvm_config:
         return containers_to_restart
 
     ctx.logger.log(
@@ -564,6 +578,10 @@ def append_user_config(ctx, containers_to_restart=[]):
         # config. If there is not overlapping config key, append it to the
         # current config list.
 
+        # No additional configs, leave the file in the container alone
+        if not user_configs:
+            return
+
         if filename == TRINO_CONFIG:
             for user_config in user_configs:
                 user_config = utils.parse_key_value_pair(
@@ -607,19 +625,28 @@ def append_user_config(ctx, containers_to_restart=[]):
                     ):
                         current_configs.append(user_config)
 
-        # Replace existing file with new values
+        ctx.logger.log(
+            f"Removing existing {filename} file...",
+            level=ctx.logger.verbose,
+        )
         ctx.cmd_executor.execute_commands(
             f"rm {ETC_TRINO}/{filename}", container=trino_container
         )
 
+        ctx.logger.log(
+            f"Writing new config to {filename}...",
+            level=ctx.logger.verbose,
+        )
         for current_config in current_configs:
             append_config = (
                 f'bash -c "cat <<EOT >> {ETC_TRINO}/{filename}\n{current_config}\nEOT"'
             )
-            ctx.cmd_executor.execute_commands(append_config, container=trino_container)
+            ctx.cmd_executor.execute_commands(
+                append_config, container=trino_container, suppress_output=True
+            )
 
-    append_configs(user_trino_config, current_trino_config, TRINO_CONFIG)
-    append_configs(user_jvm_config, current_jvm_config, TRINO_JVM_CONFIG)
+    append_configs(config_properties, current_trino_config, TRINO_CONFIG)
+    append_configs(jvm_config, current_jvm_config, TRINO_JVM_CONFIG)
 
     if not "trino" in containers_to_restart:
         containers_to_restart.append("trino")

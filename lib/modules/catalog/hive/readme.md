@@ -1,4 +1,4 @@
-# Hive-Minio Module
+# Hive Module
 
 This module uses Minio as a local implementation of S3 server. You can write
 data to this service and the files will be written to your machine. You can read
@@ -12,10 +12,10 @@ You can access the Minio UI at `http://localhost:9000` with `access-key` and
 
 You can create a table with ORC data with Trino very quickly:
 
-    trino> create schema hive_minio.tiny with (location='s3a://sample-bucket/tiny/');
+    trino> create schema hive.tiny with (location='s3a://sample-bucket/tiny/');
     CREATE SCHEMA
 
-    trino> create table hive_minio.tiny.customer as select * from tpch.tiny.customer;
+    trino> create table hive.tiny.customer as select * from tpch.tiny.customer;
     CREATE TABLE: 1500 rows
 
 You will see the ORC data stored in your local Minio bucket.
@@ -26,7 +26,7 @@ for the property `S3_PATH_STYLE_ACCESS` in `hms.env`.
 
 ## Usage
 
-    minitrino --env STARBURST_VER=<ver> provision --module hive-minio
+    minitrino --env STARBURST_VER=<ver> provision --module hive
     docker exec -it trino bash 
     trino-cli
-    trino> show schemas from hive_minio;
+    trino> show schemas from hive;

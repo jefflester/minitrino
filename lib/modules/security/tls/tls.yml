@@ -14,5 +14,7 @@ services:
       MINITRINO_BOOTSTRAP: "bootstrap-trino.sh"
     volumes:
       - "~/.minitrino/ssl:/etc/starburst/ssl"
+    labels:
+      - "com.starburst.tests.module.tls=security-tls"
     ports:
       - "8443:8443"

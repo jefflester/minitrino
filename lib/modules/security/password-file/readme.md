@@ -8,7 +8,7 @@ This module configures Trino to authenticate users with a password file.
     docker exec -it trino bash 
 
     trino-cli --server https://trino:8443 \
-       --truststore-path /etc/starburst/ssl/truststore.jks --truststore-password trinoRocks15 \
+       --truststore-path /etc/starburst/ssl/truststore.jks --truststore-password changeit \
        --user bob --password
        
     trino> show schemas from tpch;

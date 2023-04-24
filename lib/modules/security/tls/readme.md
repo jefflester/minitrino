@@ -17,14 +17,14 @@ Via Docker:
     docker exec -it trino trino-cli \
         --server https://trino:8443 \
         --truststore-path /etc/starburst/ssl/truststore.jks \
-        --truststore-password trinoRocks15
+        --truststore-password changeit
 
 Via Host Machine:
 
     trino-cli-xxx-executable.jar \
         --server https://localhost:8443 \
         --truststore-path ~/.minitrino/ssl/truststore.jks 
-        --truststore-password trinoRocks15
+        --truststore-password changeit
 
 ## Accessing the Trino Web UI
 

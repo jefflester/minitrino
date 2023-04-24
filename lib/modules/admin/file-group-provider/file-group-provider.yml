@@ -3,7 +3,7 @@ services:
 
   trino:
     volumes:
-      - "./modules/security/file-group-provider/resources/trino/group-provider.properties:/etc/starburst/group-provider.properties"
-      - "./modules/security/file-group-provider/resources/trino/groups.txt:/etc/starburst/groups.txt"
+      - "./modules/admin/file-group-provider/resources/trino/group-provider.properties:/etc/starburst/group-provider.properties"
+      - "./modules/admin/file-group-provider/resources/trino/groups.txt:/etc/starburst/groups.txt"
     labels:
       - "com.starburst.tests.module.file-group-provider=admin-file-group-provider"

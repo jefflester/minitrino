@@ -2,6 +2,6 @@
     "description": "File group provider module",
     "incompatibleModules": [],
     "dependentModules": [],
-    "enterprise": true
+    "enterprise": false
   }
   

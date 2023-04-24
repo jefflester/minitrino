@@ -10,7 +10,7 @@ services:
         insights.persistence-enabled=true
         insights.metrics-persistence-enabled=true
     volumes:
-      - "./modules/administration/insights/resources/trino/postgres_query_logger.properties:/etc/starburst/catalog/postgres_query_logger.properties"
+      - "./modules/admin/insights/resources/trino/query_logger.properties:/etc/starburst/catalog/query_logger.properties"
     
   
   postgres-query-logger:
@@ -18,7 +18,7 @@ services:
     container_name: "postgres-query-logger"
     labels:
       - "com.starburst.tests=minitrino"
-      - "com.starburst.tests.module.insights=administration-insights"
+      - "com.starburst.tests.module.insights=admin-insights"
     env_file:
-      - "./modules/administration/insights/resources/postgres/postgres.env"
+      - "./modules/admin/insights/resources/postgres/postgres.env"
       

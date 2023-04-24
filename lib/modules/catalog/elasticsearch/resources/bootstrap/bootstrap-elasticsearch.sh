@@ -65,7 +65,7 @@ curl -XPOST http://localhost:9200/user/profile/3?pretty=true -H 'Content-Type: a
 curl -XPOST http://localhost:9200/user/profile/4?pretty=true -H 'Content-Type: application/json' -d '
 {
     "full_name" : "Julian Spring",
-    "bio" : "Starburst Trino superuser.",
+    "bio" : "Starburst superuser.",
     "age" : 7,
     "location" : "37.7749290,-122.4194160",
     "enjoys_coffee" : true,

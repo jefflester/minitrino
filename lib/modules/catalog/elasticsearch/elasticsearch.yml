@@ -23,14 +23,3 @@ services:
     ports:
       - 9200:9200
       - 9300:9300
-      
-  # kibana:
-  #   image: docker.elastic.co/kibana/kibana:${KIBANA_VER}
-  #   container_name: kibana
-  #   environment:
-  #     - ELASTICSEARCH_URL=http://elasticsearch:9200
-  #     - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-  #   labels:
-  #     - "com.starburst.tests=minitrino"
-  #   ports:
-  #     - 5601:5601

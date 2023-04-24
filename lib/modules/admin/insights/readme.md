@@ -9,7 +9,7 @@ This module is a prerequisite for Built-in access control (BIAC).
     minitrino --env STARBURST_VER=<ver> provision --module insights
     docker exec -it trino bash 
     trino-cli
-    trino> show schemas from postgres_query_logger;
+    trino> show schemas from query_logger;
 
 ## Accessing Insights Web UI
 Open a web browser and go to [https://localhost:8080](https://localhost:8080) and log in with a user that is authorized to access insights.  

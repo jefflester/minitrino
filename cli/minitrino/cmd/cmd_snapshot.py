@@ -16,7 +16,7 @@ from minitrino.settings import SNAPSHOT_ROOT_FILES
 from minitrino.settings import PROVISION_SNAPSHOT_TEMPLATE
 from minitrino.settings import LIB
 from minitrino.settings import MODULE_ROOT
-from minitrino.settings import MODULE_ADMINISTRATION
+from minitrino.settings import MODULE_ADMIN
 from minitrino.settings import MODULE_CATALOG
 from minitrino.settings import MODULE_SECURITY
 from minitrino.settings import MODULE_RESOURCES
@@ -254,9 +254,7 @@ def clone_lib_dir(ctx, name):
     Returns the absolute path of the named snapshot directory."""
 
     snapshot_name_dir = os.path.join(ctx.snapshot_dir, name)
-    os.makedirs(
-        os.path.join(snapshot_name_dir, LIB, MODULE_ROOT, MODULE_ADMINISTRATION)
-    )
+    os.makedirs(os.path.join(snapshot_name_dir, LIB, MODULE_ROOT, MODULE_ADMIN))
     os.mkdir(os.path.join(snapshot_name_dir, LIB, MODULE_ROOT, MODULE_CATALOG))
     os.mkdir(os.path.join(snapshot_name_dir, LIB, MODULE_ROOT, MODULE_SECURITY))
     os.mkdir(os.path.join(snapshot_name_dir, LIB, MODULE_ROOT, MODULE_RESOURCES))

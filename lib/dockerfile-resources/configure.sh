@@ -18,7 +18,8 @@ function configure_redhat_ubi() {
         passwd \
         openssl \
         openldap-clients \
-        httpd-tools
+        httpd-tools \
+        iputils
     configure_base
 }
 

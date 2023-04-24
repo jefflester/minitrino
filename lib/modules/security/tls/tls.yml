@@ -1,0 +1,18 @@
+version: "3.8"
+services:
+
+  trino:
+    environment:
+      CONFIG_PROPERTIES: |-
+        http-server.https.enabled=true
+        http-server.https.port=8443
+        http-server.https.keystore.path=/etc/starburst/ssl/keystore.jks
+        http-server.https.keystore.key=trinoRocks15
+      JVM_CONFIG: |-
+        -Djavax.net.ssl.trustStore=/etc/pki/java/cacerts
+        -Djavax.net.ssl.trustStorePassword=trinoRocks15
+      MINITRINO_BOOTSTRAP: "bootstrap-trino.sh"
+    volumes:
+      - "~/.minitrino/ssl:/etc/starburst/ssl"
+    ports:
+      - "8443:8443"

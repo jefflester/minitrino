@@ -254,9 +254,7 @@ def clone_lib_dir(ctx, name):
     Returns the absolute path of the named snapshot directory."""
 
     snapshot_name_dir = os.path.join(ctx.snapshot_dir, name)
-    os.makedirs(
-        os.path.join(snapshot_name_dir, LIB, MODULE_ROOT, MODULE_ADMIN)
-    )
+    os.makedirs(os.path.join(snapshot_name_dir, LIB, MODULE_ROOT, MODULE_ADMIN))
     os.mkdir(os.path.join(snapshot_name_dir, LIB, MODULE_ROOT, MODULE_CATALOG))
     os.mkdir(os.path.join(snapshot_name_dir, LIB, MODULE_ROOT, MODULE_SECURITY))
     os.mkdir(os.path.join(snapshot_name_dir, LIB, MODULE_ROOT, MODULE_RESOURCES))

@@ -18,6 +18,6 @@ services:
     # Uncomment this to enable the volume mount. The variable should point to a
     # valid SEP license. 
     # volumes:
-    #   - "${STARBURST_LIC_PATH}:/etc/starburst/starburstdata.license:ro"
+    #  - "${STARBURST_LIC_PATH}:/etc/starburst/starburstdata.license:ro"
     ports:
       - "8080:8080"

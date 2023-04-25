@@ -14,4 +14,4 @@ You will need to supply a username to the Trino CLI in order to map to a group
 (see `lib/modules/security/file-access-control/resources/trino/group.txt` for
 which users belong to which groups). Example:
 
-    trino-cli --user admin # maps to group platform-admins
+    trino-cli --user admin # maps to group sepadmins

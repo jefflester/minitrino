@@ -15,6 +15,7 @@ This module provisions an LDAP server for authenticating users in Trino.
 
 ## Default Usernames and Passwords
 
+- admin / trinoRocks15
 - alice / trinoRocks15
 - bob / trinoRocks15
 

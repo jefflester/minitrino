@@ -11,8 +11,7 @@ The access policy is located in the `rules.json` file which defines groups of
 users that map to a certain access control permission. The users for the groups
 are defined in the `groups.txt` file.
 
-- Users in the `platform-admins` group have full access to all objects within
-  Trino
+- Users in the `sepadmins` group have full access to all objects within Trino
 - Users in the `metadata-users` group only have access to the tables within the
   `system.metadata` schema
 - Users in the `platform-users` group only have access to the tables within the

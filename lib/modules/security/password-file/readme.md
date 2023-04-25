@@ -15,6 +15,7 @@ This module configures Trino to authenticate users with a password file.
 
 ## Default Usernames and Passwords
 
+- admin / trinoRocks15
 - alice / trinoRocks15
 - bob / trinoRocks15
 

@@ -232,7 +232,7 @@ def check_volumes(ctx, modules=[]):
     )
 
     for module in modules:
-        if ctx.modules.data.get(module).get("yaml_dict", {}).get("volumes", {}):
+        if ctx.modules.data.get(module, {}).get("yaml_dict", {}).get("volumes", {}):
             ctx.logger.log(
                 f"Module '{module}' has persistent volumes associated with it. "
                 f"To delete these volumes, remember to run `minitrino remove --volumes`.",

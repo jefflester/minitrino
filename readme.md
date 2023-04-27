@@ -161,14 +161,14 @@ Sample `provision` commands:
 
 ```bash
 minitrino provision \
-  --module hive-s3 \
+  --module hive \
   --module elasticsearch \
   --module ldap \
   --docker-native '--build --force-recreate'
 
-minitrino provision -m hive-s3 -m elasticsearch -m ldap
+minitrino provision -m hive -m elasticsearch -m ldap
 
-minitrino --env STARBURST_VER=332-e.6 provision
+minitrino --env STARBURST_VER=411-e provision
 ```
 
 The `provision` command constructs a Docker Compose command and executes it in
@@ -335,7 +335,7 @@ Sample `snapshot` commands:
 minitrino snapshot --name t-2533
 
 # Take a snapshot of specific modules:
-minitrino snapshot -n super-cool-env -m hive-s3 -m elasticsearch -m ldap
+minitrino snapshot -n super-cool-env -m hive -m elasticsearch -m ldap
 ```
 
 ### Manage User Configuration
@@ -435,37 +435,39 @@ this file each serve a separate purpose.
 
 These configs allow the user to customize the behavior of Minitrino.
 
-- LIB_PATH: The filesystem path of the Minitrino library (specifically to the
+- `LIB_PATH`: The filesystem path of the Minitrino library (specifically to the
   `lib/` directory).
-- TEXT_EDITOR: The text editor to use with the `config` command, e.g. "vi",
+- `TEXT_EDITOR`: The text editor to use with the `config` command, e.g. "vi",
   "nano", etc. Defaults to the shell's default editor.
 
 ### [MODULES] Section
 
-This section sets environment variables passed to containers provisioned by
-Minitrino. Environment variables are only passed to a container if the variable
-is specified in the module's `docker-compose.yml` file.
+This section has only one default config: `STARBURST_LIC_PATH`. This is required
+if using licensed Starburst Enterprise features. It can point to any valid
+license on your filesystem.
 
-Variables propagated to the Trino container are supported by Trino secrets.
+This section can also be used to set environment variables passed to containers
+provisioned by Minitrino. Environment variables are only passed to a container
+if the variable is specified in the module's `docker-compose.yml` file.
 
-- STARBURST_LIC_PATH: Required if using licensed Starburst Enterprise Trino
-  features. It can point to any valid license on your filesystem.
-- S3_ENDPOINT
-- S3_ACCESS_KEY
-- S3_SECRET_KEY
-- AWS_REGION
-- SNOWFLAKE_DIST_CONNECT_URL
-- SNOWFLAKE_DIST_CONNECT_USER
-- SNOWFLAKE_DIST_CONNECT_PASSWORD
-- SNOWFLAKE_DIST_WAREHOUSE
-- SNOWFLAKE_DIST_DB
-- SNOWFLAKE_DIST_STAGE_SCHEMA
-- SNOWFLAKE_JDBC_CONNECT_URL
-- SNOWFLAKE_JDBC_CONNECT_USER
-- SNOWFLAKE_JDBC_CONNECT_PASSWORD
-- SNOWFLAKE_JDBC_WAREHOUSE
-- SNOWFLAKE_JDBC_DB
-- SNOWFLAKE_JDBC_STAGE_SCHEMA
+For example, if your `minitrino.cfg` config file contains this variable:
+
+```bash
+DB_PASSWORD=password123
+```
+
+And your `docker-compose.yml` file contains this:
+
+```yaml
+services:
+  trino:
+    environment:
+      DB_PASSWORD: "${DB_PASSWORD}"
+```
+
+Then `DB_PASSWORD` is accessible inside of the resulting Trino container in the
+form of a shell environment variable. This functionality can be applied to any
+container as long as the above is followed.
 
 -----
 
@@ -489,6 +491,8 @@ lib
 ├── docker-compose.yml
 ├── minitrino.env
 ├── modules
+│   ├── admin
+│   │   └── ...
 │   ├── catalog
 │   │   └── postgres
 │   │       ├── metadata.json
@@ -500,18 +504,8 @@ lib
 │   │           └── trino
 │   │               └── postgres.properties
 │   ├── resources
-│   │   └── wait-for-it.sh
 │   └── security
-│       └── event-logger
-│           ├── event-logger.yml
-│           ├── metadata.json
-│           ├── readme.md
-│           └── resources
-│               ├── event-logger
-│               │   └── postgres.env
-│               └── trino
-│                   ├── event-listener.properties
-│                   └── postgres_event_logger.properties
+│       └── ...
 ├── snapshots
 └── version
 ```

@@ -78,7 +78,7 @@ def test_invalid_module():
     helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     result = helpers.execute_command(
-        ["-v", "provision", "--module", "hive-s3", "--module", "not-a-real-module"]
+        ["-v", "provision", "--module", "hive", "--module", "not-a-real-module"]
     )
 
     assert result.exit_code == 2

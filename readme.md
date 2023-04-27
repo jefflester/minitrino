@@ -178,7 +178,7 @@ the host shell. The commands look similar to:
 ENV_VAR_1=SOMETHING ENV_VAR_2=SOMETHING ENV_VAR_3=${ENV_VAR_3} ... \
 docker-compose -f docker-compose.yml \
   -f modules/catalog/elasticsearch/elasticsearch.yml \
-  -f modules/catalog/hive-s3/hive-s3.yml \
+  -f modules/catalog/hive/hive.yml \
   -f modules/security/ldap/ldap.yml \
   up -d
 ```
@@ -747,7 +747,7 @@ Labels should be defined in pairs of two. The convention is:
     component when necessary.
 
 In Compose files where multiple services are defined, all services should be
-labeled with the same label sets (see `hive-s3.yml` for an example).
+labeled with the same label sets (see `hive.yml` for an example).
 
 -----
 

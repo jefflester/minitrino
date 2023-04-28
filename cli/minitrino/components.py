@@ -414,20 +414,15 @@ class Modules:
         if not containers:
             return {}
 
-        names = []
-        label_sets = []
-        for i, container in enumerate(containers):
+        modules = []
+        for container in containers:
             label_set = {}
+            ids = ["admin-", "catalog-", "security-"]
             for k, v in container.labels.items():
-                if "com.starburst.tests" in k and "admin-" in v:
-                    names.append(v.lower().strip().replace("admin-", ""))
-                elif "com.starburst.tests" in k and "catalog-" in v:
-                    names.append(v.lower().strip().replace("catalog-", ""))
-                elif "com.starburst.tests" in k and "security-" in v:
-                    names.append(v.lower().strip().replace("security-", ""))
-                else:
-                    continue
-                label_set[k] = v
+                for _id in ids:
+                    if "com.starburst.tests" in k and _id in v:
+                        modules.append(v.lower().strip().replace(_id, ""))
+                        label_set[k] = v
             # All containers except the trino container must have
             # module-specific labels. The trino container only has module labels
             # if a module applies labels to it
@@ -437,26 +432,15 @@ class Modules:
                     f"Check this module's 'docker-compose.yml' file and ensure you are "
                     f"following the documentation on labels.",
                 )
-            label_sets.append(label_set)
 
-        running = {}
-        for name, label_set, container in zip(names, label_sets, containers):
-            if not isinstance(self.data.get(name), dict):
+        for module in modules:
+            if not isinstance(self.data.get(module), dict):
                 raise err.UserError(
-                    f"Module '{name}' is running, but it is not found "
+                    f"Module '{module}' is running, but it is not found "
                     f"in the library. Was it deleted, or are you pointing "
                     f"Minitrino to the wrong location?"
                 )
-            if not running.get(name, False):
-                running[name] = self.data[name]
-            if not running.get("labels", False):
-                running[name]["labels"] = label_set
-            if not running.get(name, {}).get("containers", False):
-                running[name]["containers"] = [container]
-            else:
-                running[name]["containers"].append(container)
-
-        return running
+        return modules
 
     def _load_modules(self):
         """Loads module data during instantiation."""

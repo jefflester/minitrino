@@ -119,7 +119,7 @@ def cli(ctx, modules, name, directory, force, no_scrub):
             )
         else:
             ctx.logger.log(f"Creating snapshot of active environment...")
-        snapshot_runner(name, no_scrub, True, list(modules.keys()), directory)
+        snapshot_runner(name, no_scrub, True, modules, directory)
 
     check_complete(name, directory)
     ctx.logger.log(

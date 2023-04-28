@@ -451,7 +451,7 @@ class Modules:
                 running[name] = self.data[name]
             if not running.get("labels", False):
                 running[name]["labels"] = label_set
-            if not running.get(name).get("containers", False):
+            if not running.get(name, {}).get("containers", False):
                 running[name]["containers"] = [container]
             else:
                 running[name]["containers"].append(container)

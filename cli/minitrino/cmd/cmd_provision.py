@@ -203,9 +203,7 @@ def check_enterprise(ctx, modules=[]):
             yaml_path = os.path.join(ctx.minitrino_lib_dir, "docker-compose.yml")
             with open(yaml_path) as f:
                 yaml_file = yaml.load(f, Loader=yaml.FullLoader)
-            volumes = (
-                yaml_file.get("services", False).get("trino", False).get("volumes", [])
-            )
+            volumes = yaml_file.get("services", {}).get("trino", {}).get("volumes", [])
             if SEP_VOLUME_MOUNT not in volumes:
                 raise err.UserError(
                     f"Module {module} requires a Starburst license. "
@@ -266,8 +264,8 @@ def chunk(ctx, modules=[]):
     command chunk string."""
 
     chunk = []
-    for mod in modules:
-        yaml_file = ctx.modules.data.get(mod, "").get("yaml_file", "")
+    for module in modules:
+        yaml_file = ctx.modules.data.get(module, {}).get("yaml_file", "")
         chunk.extend(f"-f {yaml_file} \\\n")
     return "".join(chunk)
 
@@ -506,7 +504,7 @@ def write_trino_configs(ctx, containers_to_restart=[], modules=[]):
     jvm_config = []
 
     for module in modules:
-        yaml = ctx.modules.data.get(module).get("yaml_dict")
+        yaml = ctx.modules.data.get(module, {}).get("yaml_dict")
         conf = (
             yaml.get("services", {})
             .get("trino", {})

@@ -353,8 +353,8 @@ def copy_module_dirs(ctx, snapshot_name_dir, modules=[]):
     """Copies module directories into the named snapshot directory."""
 
     for module in modules:
-        module_dir = ctx.modules.data.get(module, "").get("module_dir", "")
-        module_type = ctx.modules.data.get(module, "").get("type", "")
+        module_dir = ctx.modules.data.get(module, {}).get("module_dir", "")
+        module_type = ctx.modules.data.get(module, {}).get("type", "")
         dest_dir = os.path.join(
             os.path.join(snapshot_name_dir, LIB, MODULE_ROOT, module_type),
             os.path.basename(module_dir),

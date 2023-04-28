@@ -43,7 +43,7 @@ from minitrino import utils
 @utils.exception_handler
 @pass_environment
 def cli(ctx, modules, json_format, running):
-    """Version command for Minitrino."""
+    """Module metadata command for Minitrino."""
 
     utils.check_lib(ctx)
 

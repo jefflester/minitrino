@@ -128,22 +128,16 @@ def append_running_modules(ctx, modules=[]):
     to the provided modules list and the updated list is returned."""
 
     ctx.logger.log("Checking for running modules...", level=ctx.logger.verbose)
-    running_modules_dict = ctx.modules.get_running_modules()
-    running_modules_list = []
+    running_modules = ctx.modules.get_running_modules()
 
-    for module in running_modules_dict:
-        running_modules_list.append(module)
-
-    if running_modules_list:
+    if running_modules:
         ctx.logger.log(
-            f"Identified the following running modules: {running_modules_list}. "
-            f"Appending the running module list to the list of modules to provsion.",
+            f"Identified the following running modules: {running_modules}. "
+            f"Appending the running module list to the list of modules to provision.",
             level=ctx.logger.verbose,
         )
 
-    modules = list(modules)
-    modules.extend(running_modules_list)
-    return list(set(modules))
+    return modules.extend(running_modules)
 
 
 @pass_environment

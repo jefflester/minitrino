@@ -389,9 +389,7 @@ class Modules:
     - `data`: A dictionary of module information.
 
     ### Public Methods
-    - `get_running_modules()`: Returns a dictionary with the same information as
-      the `modules` attribute, but includes Docker labels and container objects
-      tied to the module."""
+    - `get_running_modules()`: Returns a list of running modules."""
 
     @utils.exception_handler
     def __init__(self, ctx=None):

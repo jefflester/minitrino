@@ -49,28 +49,17 @@ def cli(ctx, modules, json_format, running):
 
     ctx.logger.log("Printing module metadata...")
 
-    if modules and not running:
-        for module in modules:
-            module_dict = ctx.modules.data.get(module, {})
-            if not module_dict:
-                raise err.UserError(
-                    f"Invalid module: {module}",
-                    "Ensure the module you're referencing is in the Minitrino library.",
-                )
-            log_info(module, module_dict, json_format)
-    else:
-        if running:
-            for module_key, module_dict in ctx.modules.get_running_modules().items():
-                for i, container in enumerate(module_dict.get("containers", {})):
-                    module_dict["containers"][i] = {
-                        "id": container.short_id,
-                        "name": container.name,
-                        "labels": container.labels,
-                    }
-                log_info(module_key, module_dict, json_format)
-        else:
-            for module_key, module_dict in ctx.modules.data.items():
-                log_info(module_key, module_dict, json_format)
+    if running:
+        modules = ctx.modules.get_running_modules()
+
+    for module in modules:
+        module_dict = ctx.modules.data.get(module, {})
+        if not module_dict:
+            raise err.UserError(
+                f"Invalid module: '{module}'",
+                "Ensure the module you're referencing is in the Minitrino library.",
+            )
+        log_info(module, module_dict, json_format)
 
 
 @pass_environment

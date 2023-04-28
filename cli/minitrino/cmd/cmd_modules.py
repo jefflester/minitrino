@@ -49,6 +49,11 @@ def cli(ctx, modules, json_format, running):
 
     ctx.logger.log("Printing module metadata...")
 
+    if not modules and not running:
+        for module, module_dict in ctx.modules.data.items():
+            log_info(module, module_dict, json_format)
+        return
+
     if running:
         modules = ctx.modules.get_running_modules()
 

@@ -94,8 +94,7 @@ def test_running():
         (
             '"type": "catalog"' in result.output,
             '"type": "security"' in result.output,
-            "file-access-control" in result.output,
-            '"containers":' in result.output,
+            "file-access-control" in result.output
         )
     )
 

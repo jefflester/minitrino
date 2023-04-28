@@ -1,5 +1,0 @@
-{
-    "description": "Secures Trino with Ranger system access control.",
-    "incompatibleModules": ["file-access-control"],
-    "enterprise": true
-}

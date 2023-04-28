@@ -1,0 +1,11 @@
+version: "3.8"
+services:
+
+  trino:
+    environment:
+      CONFIG_PROPERTIES: |-
+        starburst.data-product.enabled=true
+        data-product.starburst-jdbc-url=jdbc:trino://trino:8080
+        data-product.starburst-user=admin
+    labels:
+      - "com.starburst.tests.module.data-products=admin-data-products"

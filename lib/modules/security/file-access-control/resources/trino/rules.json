@@ -1,7 +1,7 @@
 {
    "catalogs":[
       {
-         "group":"platform-admins",
+         "group":"sepadmins",
          "catalog":".*",
          "allow":"all"
       },
@@ -21,7 +21,7 @@
    ],
    "schemas":[
       {
-         "group":"platform-admins",
+         "group":"sepadmins",
          "schema":".*",
          "owner":true
       },
@@ -43,7 +43,7 @@
    ],
    "tables":[
       {
-         "group":"platform-admins",
+         "group":"sepadmins",
          "catalog":".*",
          "schema":".*",
          "privileges":[

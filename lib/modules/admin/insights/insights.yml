@@ -1,0 +1,24 @@
+version: "3.8"
+services:
+
+  trino:
+    environment:
+      CONFIG_PROPERTIES: |-
+        insights.jdbc.url=jdbc:postgresql://postgres-query-logger:5432/querylogger
+        insights.jdbc.user=admin
+        insights.jdbc.password=trinoRocks15
+        insights.persistence-enabled=true
+        insights.metrics-persistence-enabled=true
+    volumes:
+      - "./modules/admin/insights/resources/trino/query_logger.properties:/etc/starburst/catalog/query_logger.properties"
+    
+  
+  postgres-query-logger:
+    image: "postgres:${POSTGRES_QUERY_LOGGER_VER}"
+    container_name: "postgres-query-logger"
+    labels:
+      - "com.starburst.tests=minitrino"
+      - "com.starburst.tests.module.insights=admin-insights"
+    env_file:
+      - "./modules/admin/insights/resources/postgres/postgres.env"
+      

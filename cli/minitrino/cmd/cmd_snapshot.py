@@ -16,6 +16,7 @@ from minitrino.settings import SNAPSHOT_ROOT_FILES
 from minitrino.settings import PROVISION_SNAPSHOT_TEMPLATE
 from minitrino.settings import LIB
 from minitrino.settings import MODULE_ROOT
+from minitrino.settings import MODULE_ADMIN
 from minitrino.settings import MODULE_CATALOG
 from minitrino.settings import MODULE_SECURITY
 from minitrino.settings import MODULE_RESOURCES
@@ -118,7 +119,7 @@ def cli(ctx, modules, name, directory, force, no_scrub):
             )
         else:
             ctx.logger.log(f"Creating snapshot of active environment...")
-        snapshot_runner(name, no_scrub, True, list(modules.keys()), directory)
+        snapshot_runner(name, no_scrub, True, modules, directory)
 
     check_complete(name, directory)
     ctx.logger.log(
@@ -253,7 +254,8 @@ def clone_lib_dir(ctx, name):
     Returns the absolute path of the named snapshot directory."""
 
     snapshot_name_dir = os.path.join(ctx.snapshot_dir, name)
-    os.makedirs(os.path.join(snapshot_name_dir, LIB, MODULE_ROOT, MODULE_CATALOG))
+    os.makedirs(os.path.join(snapshot_name_dir, LIB, MODULE_ROOT, MODULE_ADMIN))
+    os.mkdir(os.path.join(snapshot_name_dir, LIB, MODULE_ROOT, MODULE_CATALOG))
     os.mkdir(os.path.join(snapshot_name_dir, LIB, MODULE_ROOT, MODULE_SECURITY))
     os.mkdir(os.path.join(snapshot_name_dir, LIB, MODULE_ROOT, MODULE_RESOURCES))
 
@@ -351,8 +353,8 @@ def copy_module_dirs(ctx, snapshot_name_dir, modules=[]):
     """Copies module directories into the named snapshot directory."""
 
     for module in modules:
-        module_dir = ctx.modules.data.get(module, "").get("module_dir", "")
-        module_type = ctx.modules.data.get(module, "").get("type", "")
+        module_dir = ctx.modules.data.get(module, {}).get("module_dir", "")
+        module_type = ctx.modules.data.get(module, {}).get("type", "")
         dest_dir = os.path.join(
             os.path.join(snapshot_name_dir, LIB, MODULE_ROOT, module_type),
             os.path.basename(module_dir),

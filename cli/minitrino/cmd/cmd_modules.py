@@ -43,34 +43,28 @@ from minitrino import utils
 @utils.exception_handler
 @pass_environment
 def cli(ctx, modules, json_format, running):
-    """Version command for Minitrino."""
+    """Module metadata command for Minitrino."""
 
     utils.check_lib(ctx)
 
     ctx.logger.log("Printing module metadata...")
 
-    if modules and not running:
-        for module in modules:
-            module_dict = ctx.modules.data.get(module, {})
-            if not module_dict:
-                raise err.UserError(
-                    f"Invalid module: {module}",
-                    "Ensure the module you're referencing is in the Minitrino library.",
-                )
+    if not modules and not running:
+        for module, module_dict in ctx.modules.data.items():
             log_info(module, module_dict, json_format)
-    else:
-        if running:
-            for module_key, module_dict in ctx.modules.get_running_modules().items():
-                for i, container in enumerate(module_dict.get("containers", {})):
-                    module_dict["containers"][i] = {
-                        "id": container.short_id,
-                        "name": container.name,
-                        "labels": container.labels,
-                    }
-                log_info(module_key, module_dict, json_format)
-        else:
-            for module_key, module_dict in ctx.modules.data.items():
-                log_info(module_key, module_dict, json_format)
+        return
+
+    if running:
+        modules = ctx.modules.get_running_modules()
+
+    for module in modules:
+        module_dict = ctx.modules.data.get(module, {})
+        if not module_dict:
+            raise err.UserError(
+                f"Invalid module: '{module}'",
+                "Ensure the module you're referencing is in the Minitrino library.",
+            )
+        log_info(module, module_dict, json_format)
 
 
 @pass_environment
@@ -82,9 +76,13 @@ def log_info(ctx, module_name="", module_dict={}, json_format=False):
         ctx.logger.log(json.dumps(module_dict, indent=2))
     else:
         log_msg = [f"Module: {module_name}\n"]
-        keys = ["description", "incompatibleModules", "enterprise"]
-        for k, v in module_dict.items():
-            if k in keys:
-                log_msg.extend(f"{k.title()}: {v}\n")
+        keys = ["description", "incompatibleModules", "dependentModules", "enterprise"]
+        for key in keys:
+            val = module_dict.get(key, None)
+            if val is not None:
+                key = list(key)
+                key[0] = key[0].title()
+                key = "".join(key)
+                log_msg.extend(f"{key}: {val}\n")
 
         ctx.logger.log("".join(log_msg))

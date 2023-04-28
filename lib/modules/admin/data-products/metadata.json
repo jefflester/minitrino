@@ -1,0 +1,6 @@
+{
+  "description": "Configures data products feature",
+  "incompatibleModules": [],
+  "dependentModules": ["insights", "hive"],
+  "enterprise": true
+}

@@ -5,13 +5,12 @@ services:
     volumes:
       - "./modules/security/ldap/resources/trino/password-authenticator.properties:/etc/starburst/password-authenticator.properties"
       - "./modules/security/ldap/resources/ldap/ldap-users:/etc/starburst/ldap-users"
-      - "~/.minitrino/ssl:/etc/starburst/ssl"
     environment:
+      CONFIG_PROPERTIES: |-
+        http-server.authentication.type=PASSWORD
       MINITRINO_BOOTSTRAP: "bootstrap-trino.sh"
     links:
       - "ldap:ldap.minitrino.starburstdata.com"
-    ports:
-      - "8443:8443"
   
   ldap:
     image: "osixia/openldap:${OPEN_LDAP_VER}"

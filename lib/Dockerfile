@@ -10,6 +10,7 @@ ADD ./dockerfile-resources/configure.sh /opt/minitrino/
 
 USER root
 RUN set -euxo pipefail \
+    && echo "internal-communication.shared-secret=minitrinoRocks15" >> /etc/starburst/config.properties \
     && chmod +x /opt/minitrino/configure.sh \
     && /opt/minitrino/configure.sh
 

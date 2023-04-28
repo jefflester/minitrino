@@ -16,6 +16,7 @@ from minitrino import errors as err
 from minitrino.settings import RESOURCE_LABEL
 from minitrino.settings import MODULE_LABEL_KEY_ROOT
 from minitrino.settings import MODULE_ROOT
+from minitrino.settings import MODULE_ADMIN
 from minitrino.settings import MODULE_SECURITY
 from minitrino.settings import MODULE_CATALOG
 
@@ -49,7 +50,6 @@ class Environment:
 
     @utils.exception_handler
     def __init__(self):
-
         # Attributes that depend on user input prior to being set
         self.verbose = False
         self._user_env = []
@@ -184,9 +184,8 @@ class Environment:
         return config_file
 
     def _get_docker_clients(self):
-        """Gets DockerClient and APIClient objects. References the DOCKER_HOST
-        variable in `minitrino.cfg` and uses for clients if present. Returns a
-        tuple of DockerClient and APIClient objects, respectiveley.
+        """Gets DockerClient and APIClient objects. Returns a tuple of DockerClient
+        and APIClient objects, respectively.
 
         If there is an error fetching the clients, None types will be returned
         for each client. The lack of clients should be caught by check_daemon()
@@ -194,9 +193,8 @@ class Environment:
         service."""
 
         try:
-            docker_host = self.env.get_var("DOCKER_HOST", "")
-            docker_client = docker.DockerClient(base_url=docker_host)
-            api_client = docker.APIClient(base_url=docker_host)
+            docker_client = docker.DockerClient(base_url="")
+            api_client = docker.APIClient(base_url="")
             self.docker_client, self.api_client = docker_client, api_client
         except:
             return None, None
@@ -219,13 +217,12 @@ class EnvironmentVariables:
     ### Usage
     ```python
     # ctx object has an instantiated EnvironmentVariables object
-    env_variable = ctx.env.get_var("STARBURST_VER", "354-e")
+    env_variable = ctx.env.get_var("STARBURST_VER", "370-e")
     env_section = ctx.env.get_section("MODULES")
     ```"""
 
     @utils.exception_handler
     def __init__(self, ctx=None):
-
         if not ctx:
             raise utils.handle_missing_param(list(locals().keys()))
 
@@ -392,13 +389,10 @@ class Modules:
     - `data`: A dictionary of module information.
 
     ### Public Methods
-    - `get_running_modules()`: Returns a dictionary with the same information as
-      the `modules` attribute, but includes Docker labels and container objects
-      tied to the module."""
+    - `get_running_modules()`: Returns a list of running modules."""
 
     @utils.exception_handler
     def __init__(self, ctx=None):
-
         if not ctx:
             raise utils.handle_missing_param(list(locals().keys()))
 
@@ -416,51 +410,35 @@ class Modules:
         )
 
         if not containers:
-            return {}
+            return []
 
-        # Remove Trino container since it isn't a module
-        for i, container in enumerate(containers):
-            if container.name == "trino":
-                del containers[i]
-
-        names = []
-        label_sets = []
-        for i, container in enumerate(containers):
+        modules = []
+        for container in containers:
             label_set = {}
+            ids = ["admin-", "catalog-", "security-"]
             for k, v in container.labels.items():
-                if "catalog-" in v:
-                    names.append(v.lower().strip().replace("catalog-", ""))
-                elif "security-" in v:
-                    names.append(v.lower().strip().replace("security-", ""))
-                else:
-                    continue
-                label_set[k] = v
+                for _id in ids:
+                    if "com.starburst.tests" in k and _id in v:
+                        modules.append(v.lower().strip().replace(_id, ""))
+                        label_set[k] = v
+            # All containers except the trino container must have
+            # module-specific labels. The trino container only has module labels
+            # if a module applies labels to it
             if not label_set and container.name != "trino":
                 raise err.UserError(
                     f"Missing Minitrino labels for container '{container.name}'.",
                     f"Check this module's 'docker-compose.yml' file and ensure you are "
                     f"following the documentation on labels.",
                 )
-            label_sets.append(label_set)
 
-        running = {}
-        for name, label_set, container in zip(names, label_sets, containers):
-            if not isinstance(self.data.get(name), dict):
+        for module in modules:
+            if not isinstance(self.data.get(module), dict):
                 raise err.UserError(
-                    f"Module '{name}' is running, but it is not found "
+                    f"Module '{module}' is running, but it is not found "
                     f"in the library. Was it deleted, or are you pointing "
                     f"Minitrino to the wrong location?"
                 )
-            if not running.get(name, False):
-                running[name] = self.data[name]
-            if not running.get("labels", False):
-                running[name]["labels"] = label_set
-            if not running.get(name).get("containers", False):
-                running[name]["containers"] = [container]
-            else:
-                running[name]["containers"].append(container)
-
-        return running
+        return modules
 
     def _load_modules(self):
         """Loads module data during instantiation."""
@@ -474,8 +452,9 @@ class Modules:
                 f"Are you pointing to a compatible Minitrino library?"
             )
 
-        # Loop through both catalog and security modules
+        # Loop through all module types
         sections = [
+            os.path.join(modules_dir, MODULE_ADMIN),
             os.path.join(modules_dir, MODULE_CATALOG),
             os.path.join(modules_dir, MODULE_SECURITY),
         ]
@@ -550,7 +529,6 @@ class CommandExecutor:
 
     @utils.exception_handler
     def __init__(self, ctx=None):
-
         if not ctx:
             raise utils.handle_missing_param(list(locals().keys()))
 
@@ -660,10 +638,11 @@ class CommandExecutor:
                 f"container, but a container object was not provided."
             )
 
-        self._ctx.logger.log(
-            f"Executing command in container '{container.name}':\n{command}",
-            level=self._ctx.logger.verbose,
-        )
+        if not kwargs.get("suppress_output"):
+            self._ctx.logger.log(
+                f"Executing command in container '{container.name}':\n{command}",
+                level=self._ctx.logger.verbose,
+            )
 
         # Create exec handler and execute the command
         exec_handler = self._ctx.api_client.exec_create(

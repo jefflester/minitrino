@@ -10,7 +10,7 @@ README = (HERE / "readme.md").read_text()
 
 setup(
     name="minitrino",
-    version="2.0.2",
+    version="2.0.3",
     description="A command line tool that makes it easy to run modular Trino environments locally.",
     long_description=README,
     long_description_content_type="text/markdown",
@@ -28,7 +28,7 @@ setup(
     packages=["minitrino", "minitrino.cmd"],
     include_package_data=True,
     install_requires=[
-        "click==7.1.2",
+        "click==8.1.3",
         "colorama",
         "docker==5.0.0",
         "PyYAML",

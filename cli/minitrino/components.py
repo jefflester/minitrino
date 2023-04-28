@@ -410,7 +410,7 @@ class Modules:
         )
 
         if not containers:
-            return {}
+            return []
 
         modules = []
         for container in containers:

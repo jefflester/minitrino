@@ -137,7 +137,9 @@ def append_running_modules(ctx, modules=[]):
             level=ctx.logger.verbose,
         )
 
-    return modules.extend(running_modules)
+    modules = list(modules)
+    modules.extend(running_modules)
+    return modules
 
 
 @pass_environment

@@ -14,10 +14,8 @@ services:
     hostname: "trino.minitrino.starburstdata.com"
     labels:
       - "com.starburst.tests=minitrino"
-      - "com.starburst.tests.module=trino"
-    # Uncomment this to enable the volume mount. The variable should point to a
-    # valid SEP license. 
-    # volumes:
-    #   - "${STARBURST_LIC_PATH}:/etc/starburst/starburstdata.license:ro"
+      - "com.starburst.tests.module=trino" 
+    volumes:
+      - "${SEP_LIC_PATH}:${SEP_LIC_MOUNT_PATH}"
     ports:
       - "8080:8080"

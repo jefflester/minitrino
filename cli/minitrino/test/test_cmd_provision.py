@@ -4,7 +4,6 @@
 # TODO: Test no rollback
 # TODO: Test invalid user config (Trino/JVM)
 
-import os
 import docker
 import time
 import subprocess
@@ -24,6 +23,7 @@ def main():
     test_bad_sep_version()
     test_invalid_module()
     test_docker_native()
+    test_enterprise()
     test_valid_user_config()
     test_duplicate_config_props()
     test_incompatible_modules()
@@ -111,6 +111,48 @@ def test_docker_native():
 
     test_bootstrap_script(result)
     test_bootstrap_re_execute()
+    cleanup()
+
+
+def test_enterprise():
+    """Ensures that the enterprise license checker works properly."""
+
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
+
+    result = helpers.execute_command(["-v", "provision", "--module", "test-enterprise"])
+
+    assert result.exit_code == 2
+    assert "You must provide a path to a Starburst license" in result.output
+    cleanup()
+
+    # Create dummy license
+    process = subprocess.Popen(
+        "touch /tmp/dummy.license",
+        shell=True,
+    )
+    process.communicate()
+
+    result = helpers.execute_command(
+        [
+            "-v",
+            "--env",
+            "SEP_LIC_PATH=/tmp/dummy.license",
+            "provision",
+            "--module",
+            "test",
+        ]
+    )
+
+    assert "SEP_LIC_PATH" and "/tmp/dummy.license" in result.output
+    cleanup()
+
+    result = helpers.execute_command(["-v", "provision", "--module", "test"])
+
+    assert result.exit_code == 0
+    assert "SEP_LIC_PATH" and "./modules/resources/dummy.license" in result.output
+    assert "SEP_LIC_MOUNT_PATH" and "/etc/starburst/dummy.license:ro" in result.output
+
+    helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()
 
 

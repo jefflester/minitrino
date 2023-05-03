@@ -202,18 +202,7 @@ option, and any unset variable can be set with it.
 
 If you are using licensed features, you will need to provide a path to a valid
 Starburst license. This can be set via `minitrino config` or provided via the
-`--env` option at command runtime. The variable for this is
-`STARBURST_LIC_PATH`.
-
-Additionally, you need to uncomment the volume mount in the library's root
-`docker-compose.yml` file:
-
-```yaml
-  # Uncomment this to enable the volume mount. The variable should point to a
-  # valid SEP license. 
-  volumes:
-    - "${STARBURST_LIC_PATH}:/etc/starburst/starburstdata.license:ro"
-```
+`--env` option at command runtime. The variable for this is `SEP_LIC_PATH`.
 
 ### Removing Resources
 
@@ -442,9 +431,9 @@ These configs allow the user to customize the behavior of Minitrino.
 
 ### [MODULES] Section
 
-This section has only one default config: `STARBURST_LIC_PATH`. This is required
-if using licensed Starburst Enterprise features. It can point to any valid
-license on your filesystem.
+This section has only one default config: `SEP_LIC_PATH`. This is required if
+using licensed Starburst Enterprise features. It can point to any valid license
+on your filesystem.
 
 This section can also be used to set environment variables passed to containers
 provisioned by Minitrino. Environment variables are only passed to a container

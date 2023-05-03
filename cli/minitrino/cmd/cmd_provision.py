@@ -20,6 +20,8 @@ from minitrino import errors as err
 from minitrino.settings import RESOURCE_LABEL
 from minitrino.settings import ETC_TRINO
 from minitrino.settings import SEP_VOLUME_MOUNT
+from minitrino.settings import SEP_LIC_MOUNT_PATH
+from minitrino.settings import DUMMY_LIC_MOUNT_PATH
 from minitrino.settings import TRINO_CONFIG
 from minitrino.settings import TRINO_JVM_CONFIG
 
@@ -80,7 +82,7 @@ def cli(ctx, modules, no_rollback, docker_native):
     modules = append_running_modules(modules)
     modules = check_dependent_modules(modules)
     check_compatibility(modules)
-    check_enterprise(modules)
+    compose_env = check_enterprise(modules)
     check_volumes(modules)
 
     if not modules:
@@ -102,7 +104,6 @@ def cli(ctx, modules, no_rollback, docker_native):
         # section of environment variables and any extra variables provided by the
         # user that didn't fit into any other section
 
-        compose_env = ctx.env.get_section("MODULES")
         compose_env.update(ctx.env.get_section("EXTRA"))
         if is_apple_m1():
             compose_env.update({"MODULE_PLATFORM": "linux/amd64"})
@@ -186,33 +187,46 @@ def check_compatibility(ctx, modules=[]):
 @pass_environment
 def check_enterprise(ctx, modules=[]):
     """Checks if any of the provided modules are Starburst Enterprise features.
-    If they are, we check that a pointer to an SEP license is provided."""
+    If they are, we check that a pointer to a SEP license is provided."""
 
     ctx.logger.log(
         "Checking for SEP license for enterprise modules...",
         level=ctx.logger.verbose,
     )
 
+    yaml_path = os.path.join(ctx.minitrino_lib_dir, "docker-compose.yml")
+    with open(yaml_path) as f:
+        yaml_file = yaml.load(f, Loader=yaml.FullLoader)
+    volumes = yaml_file.get("services", {}).get("trino", {}).get("volumes", [])
+
+    if SEP_VOLUME_MOUNT not in volumes:
+        raise err.UserError(
+            f"The required license volume in the library's root docker-compose.yml "
+            f"is either commented out or deleted: {yaml_path}. For reference, "
+            f"the proper volume mount is: '{SEP_VOLUME_MOUNT}'"
+        )
+
+    enterprise_modules = []
     for module in modules:
-        enterprise = ctx.modules.data.get(module, {}).get("enterprise", False)
-        if enterprise:
-            yaml_path = os.path.join(ctx.minitrino_lib_dir, "docker-compose.yml")
-            with open(yaml_path) as f:
-                yaml_file = yaml.load(f, Loader=yaml.FullLoader)
-            volumes = yaml_file.get("services", {}).get("trino", {}).get("volumes", [])
-            if SEP_VOLUME_MOUNT not in volumes:
-                raise err.UserError(
-                    f"Module {module} requires a Starburst license. "
-                    f"The license volume in the library's docker-compose.yml "
-                    f"file must be uncommented at: {yaml_path}."
-                    f"For reference, the proper volume mount is: '{SEP_VOLUME_MOUNT}'"
-                )
-            if not ctx.env.get_var("STARBURST_LIC_PATH", False):
-                raise err.UserError(
-                    f"Module {module} requires a Starburst license. "
-                    f"You must provide a path to a Starburst license via the "
-                    f"STARBURST_LIC_PATH environment variable"
-                )
+        if ctx.modules.data.get(module, {}).get("enterprise", False):
+            enterprise_modules.append(module)
+
+    compose_env = ctx.env.get_section("MODULES")
+
+    if enterprise_modules:
+        if not ctx.env.get_var("SEP_LIC_PATH", False):
+            raise err.UserError(
+                f"Module(s) {enterprise_modules} requires a Starburst license. "
+                f"You must provide a path to a Starburst license via the "
+                f"SEP_LIC_PATH environment variable"
+            )
+        compose_env.update({"SEP_LIC_MOUNT_PATH": SEP_LIC_MOUNT_PATH})
+    elif ctx.env.get_var("SEP_LIC_PATH", False):
+        compose_env.update({"SEP_LIC_MOUNT_PATH": SEP_LIC_MOUNT_PATH})
+    else:
+        compose_env.update({"SEP_LIC_PATH": "./modules/resources/dummy.license"})
+        compose_env.update({"SEP_LIC_MOUNT_PATH": DUMMY_LIC_MOUNT_PATH})
+    return compose_env
 
 
 @pass_environment

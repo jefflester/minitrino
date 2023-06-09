@@ -1,7 +1,7 @@
 # Minitrino
 
 A command line tool that makes it easy to run modular Trino environments
-locally. Compatible with Starburst versions 370-e and later.
+locally. Compatible with Starburst versions 380-e and later.
 
 [![PyPI
 version](https://badge.fury.io/py/minitrino.svg)](https://badge.fury.io/py/minitrino)

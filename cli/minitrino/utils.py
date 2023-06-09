@@ -245,12 +245,12 @@ def check_starburst_ver(ctx):
     starburst_ver = ctx.env.get_var("STARBURST_VER", "")
     error_msg = (
         f"Provided Starburst version '{starburst_ver}' is invalid. "
-        f"The provided version must be 370-e or higher."
+        f"The provided version must be 380-e or higher."
     )
 
     try:
         starburst_ver_int = int(starburst_ver[0:3])
-        if starburst_ver_int < 370 or "-e" not in starburst_ver:
+        if starburst_ver_int < 380 or "-e" not in starburst_ver:
             raise err.UserError(error_msg)
     except:
         raise err.UserError(error_msg)
@@ -288,7 +288,7 @@ def parse_key_value_pair(
 
     ### Parameters
     - `key_value_pair`: A string formatted as a key-value pair, i.e.
-      `"STARBURST_VER=370-e"`.
+      `"STARBURST_VER=380-e"`.
     - `err_type`: The exception to raise if an "=" delimiter is not in the
       key-value pair. Defaults to `MinitrinoError`.
     - `key_to_upper`: If `True`, the key will be forced to uppercase.

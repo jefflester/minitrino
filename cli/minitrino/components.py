@@ -217,7 +217,7 @@ class EnvironmentVariables:
     ### Usage
     ```python
     # ctx object has an instantiated EnvironmentVariables object
-    env_variable = ctx.env.get_var("STARBURST_VER", "370-e")
+    env_variable = ctx.env.get_var("STARBURST_VER", "380-e")
     env_section = ctx.env.get_section("MODULES")
     ```"""
 

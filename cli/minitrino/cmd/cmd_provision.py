@@ -79,7 +79,7 @@ def cli(ctx, modules, no_rollback, docker_native):
     utils.check_daemon(ctx.docker_client)
     utils.check_lib(ctx)
     utils.check_starburst_ver(ctx)
-    modules = append_running_modules(modules)
+    modules = list(set(append_running_modules(modules)))
     modules = check_dependent_modules(modules)
     check_compatibility(modules)
     compose_env = check_enterprise(modules)

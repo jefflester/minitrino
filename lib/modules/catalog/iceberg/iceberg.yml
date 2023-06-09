@@ -1,0 +1,43 @@
+version: "3.8"
+services:
+  trino:
+    volumes:
+      - ./modules/catalog/iceberg/resources/trino/iceberg.properties:/etc/starburst/catalog/iceberg.properties
+
+  iceberg-rest:
+    image: tabulario/iceberg-rest:0.5.0
+    container_name: iceberg-rest
+    ports:
+      - 8181:8181
+    environment:
+      AWS_ACCESS_KEY_ID: access-key
+      AWS_SECRET_ACCESS_KEY: secret-key
+      AWS_REGION: us-east-1
+      CATALOG_WAREHOUSE: s3://sample-bucket/wh/
+      CATALOG_IO__IMPL: org.apache.iceberg.aws.s3.S3FileIO
+      CATALOG_S3_ENDPOINT: http://s3.us-east-1.minio.com:9000
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.iceberg=catalog-iceberg
+
+  minio-iceberg:
+    image: minio/minio
+    container_name: minio-iceberg
+    ports:
+      - :9000
+      - 9002:9002
+    volumes:
+      - ./modules/catalog/iceberg/resources/minio/data/:/data
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.iceberg=catalog-iceberg
+    environment:
+      MINIO_ACCESS_KEY: access-key
+      MINIO_SECRET_KEY: secret-key
+      MINIO_DOMAIN: s3.us-east-1.minio.com
+    # https://stackoverflow.com/a/73393416
+    networks:
+      default:
+        aliases:
+          - sample-bucket.s3.us-east-1.minio.com
+    command: server --address ":9000" --console-address ":9002" /data

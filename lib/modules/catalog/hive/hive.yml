@@ -37,13 +37,13 @@ services:
         "./opt/bin/start-hive-metastore.sh",
       ]
     ports:
-      - "9083:9083"
+      - ":9083"
 
   minio:
     image: minio/minio
     container_name: minio
     ports:
-      - "9000:9000"
+      - ":9000"
       - "9001:9001"
     volumes:
       - "./modules/catalog/hive/resources/minio/data/:/data"

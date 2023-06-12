@@ -20,12 +20,23 @@ services:
       - com.starburst.tests=minitrino
       - com.starburst.tests.module.iceberg=catalog-iceberg
 
+  # ---------------------------------------------------------------------------
+  # I couldn't get path-style access to work with
+  # `org.apache.iceberg.aws.s3.S3FileIO`, even after setting the property that
+  # supposedly enables that feature. As a fallback, I have configured MinIO to
+  # use virtual-style paths for S3, which is the default path style used by the
+  # Iceberg S3 filesystem.
+
+  # Virtual-style path solution for MinIO:
+  # https://stackoverflow.com/a/73393416 
+  # ---------------------------------------------------------------------------
+
   minio-iceberg:
     image: minio/minio
     container_name: minio-iceberg
     ports:
       - :9000
-      - 9002:9002
+      - 9003:9003
     volumes:
       - ./modules/catalog/iceberg/resources/minio/data/:/data
     labels:
@@ -35,9 +46,8 @@ services:
       MINIO_ACCESS_KEY: access-key
       MINIO_SECRET_KEY: secret-key
       MINIO_DOMAIN: s3.us-east-1.minio.com
-    # https://stackoverflow.com/a/73393416
     networks:
       default:
         aliases:
           - sample-bucket.s3.us-east-1.minio.com
-    command: server --address ":9000" --console-address ":9002" /data
+    command: server --address ":9000" --console-address ":9003" /data

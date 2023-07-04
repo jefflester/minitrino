@@ -21,7 +21,7 @@ services:
       - postgres-hive-data:/var/lib/postgresql/data
 
   metastore-minio:
-    image: jefflester/hive-metastore:latest
+    image: naushadh/hive-metastore:latest
     container_name: metastore-minio
     depends_on:
       postgres-hive:

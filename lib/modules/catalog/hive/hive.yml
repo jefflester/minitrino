@@ -1,4 +1,4 @@
-version: "3.8"
+version: '3.8'
 services:
   trino:
     volumes:
@@ -8,7 +8,7 @@ services:
     image: postgres:${POSTGRES_HIVE_VER}
     container_name: postgres-hive
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      test: [ 'CMD-SHELL', 'pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}']
       interval: 10s
       timeout: 5s
       retries: 5

@@ -8,12 +8,12 @@ the HMS's backend storage. The HMS image is based off of naushadh's repository
 [here](https://github.com/naushadh/hive-metastore) (refer to his repository for
 additional documentation on the HMS image and configuration options).
 
-You can access the Minio UI at `http://localhost:9000` with `access-key` and
+You can access the Minio UI at `http://localhost:9001` with `access-key` and
 `secret-key` for credentials.
 
 You can create a table with ORC data with Trino very quickly:
 
-    trino> create schema hive.tiny with (location='s3a://sample-bucket/tiny/');
+    trino> create schema hive.tiny with (location='s3a://sample-bucket/wh/tiny/');
     CREATE SCHEMA
 
     trino> create table hive.tiny.customer as select * from tpch.tiny.customer;

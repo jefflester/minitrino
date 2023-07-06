@@ -502,7 +502,7 @@ lib
 And the contents of a `docker-compose.yml` file (`postgres.yml`):
 
 ```yaml
-version: "3.8"
+version: '3.8'
 services:
 
   trino:
@@ -674,7 +674,7 @@ We will now define the `postgres.yml` Docker Compose file. Set it up as follows,
 and **read the important notes after**:
 
 ```yaml
-version: "3.8"
+version: '3.8'
 services:
 
   trino:
@@ -747,7 +747,7 @@ Compose file we just created with a named volume.
 -----
 
 ```yaml
-version: "3.8"
+version: '3.8'
 services:
 
   trino:
@@ -827,7 +827,7 @@ module, create a shell script, and then reference the script name in the Compose
 YAML file:
 
 ```yaml
-version: "3.8"
+version: '3.8'
 services:
 
   trino:

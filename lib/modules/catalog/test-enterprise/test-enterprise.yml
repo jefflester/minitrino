@@ -1,8 +1,8 @@
-version: "3.8"
+version: '3.8'
 services:
 
   trino:
     environment:
-      TESTING: "True"
+      TESTING: True
     labels:
-      - "com.starburst.tests.module.test-enterprise=catalog-test-enterprise"
+      - com.starburst.tests.module.test-enterprise=catalog-test-enterprise

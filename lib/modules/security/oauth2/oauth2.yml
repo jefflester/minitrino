@@ -2,11 +2,6 @@ version: '3.8'
 services:
 
   trino:
-    depends_on:
-      oauth2-healthcheck:
-        condition: service_healthy
-    extra_hosts:
-      host.docker.internal: host-gateway
     environment:
       MINITRINO_BOOTSTRAP: bootstrap-trino.sh
       CONFIG_PROPERTIES: |-
@@ -15,19 +10,24 @@ services:
         http-server.authentication.oauth2.issuer=https://host.docker.internal:8100/example
         http-server.authentication.oauth2.client-id=id
         http-server.authentication.oauth2.client-secret=secret
-
+    depends_on:
+      oauth2-healthcheck:
+        condition: service_healthy
+    extra_hosts:
+      host.docker.internal: host-gateway
+  
   oauth2-server:
     image: ghcr.io/navikt/mock-oauth2-server:0.5.9
     container_name: oauth2-server
+    environment:
+      LOG_LEVEL: debug
+      SERVER_PORT: 8100
+      JSON_CONFIG_PATH: /app/config.json
     ports:
       - 8100:8100
     volumes:
       - ./modules/security/oauth2/resources/oauth2/config.json:/app/config.json
       - ./modules/security/oauth2/resources/oauth2/keystore.jks:/app/keystore.jks
-    environment:
-      LOG_LEVEL: debug
-      SERVER_PORT: 8100
-      JSON_CONFIG_PATH: /app/config.json
     labels:
       - com.starburst.tests=minitrino
       - com.starburst.tests.module.oauth2=security-oauth2

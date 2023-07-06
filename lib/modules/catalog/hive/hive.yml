@@ -1,5 +1,6 @@
 version: '3.8'
 services:
+
   trino:
     volumes:
       - ./modules/catalog/hive/resources/trino/hive.properties:/etc/starburst/catalog/hive.properties
@@ -12,13 +13,13 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.hive=catalog-hive
     env_file:
       - ./modules/catalog/hive/resources/postgres/postgres.env
     volumes:
       - postgres-hive-data:/var/lib/postgresql/data
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.hive=catalog-hive
 
   metastore-minio:
     image: naushadh/hive-metastore:latest
@@ -26,17 +27,21 @@ services:
     depends_on:
       postgres-hive:
         condition: service_healthy
-    labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.hive=catalog-hive
     env_file:
       - ./modules/catalog/hive/resources/hms/hms.env
     ports:
       - :9083
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.hive=catalog-hive
 
   minio:
     image: minio/minio
     container_name: minio
+    environment:
+      MINIO_ACCESS_KEY: access-key
+      MINIO_SECRET_KEY: secret-key
+    command: server --address :9000 --console-address :9001 /data
     ports:
       - :9000
       - 9001:9001
@@ -45,10 +50,6 @@ services:
     labels:
       - com.starburst.tests=minitrino
       - com.starburst.tests.module.hive=catalog-hive
-    environment:
-      MINIO_ACCESS_KEY: access-key
-      MINIO_SECRET_KEY: secret-key
-    command: server --address :9000 --console-address :9001 /data
 
 volumes:
   postgres-hive-data:

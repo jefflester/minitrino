@@ -6,7 +6,7 @@ services:
       MINITRINO_BOOTSTRAP: bootstrap-trino.sh
       CONFIG_PROPERTIES: |-
         web-ui.authentication.type=oauth2
-        http-server.authentication.type=oauth2
+        http-server.authentication.type=OAUTH2
         http-server.authentication.oauth2.issuer=https://host.docker.internal:8100/example
         http-server.authentication.oauth2.client-id=id
         http-server.authentication.oauth2.client-secret=secret
@@ -35,8 +35,10 @@ services:
   oauth2-healthcheck:
     image: curlimages/curl:latest
     container_name: oauth2-healthcheck
+    environment:
+      OPENID_CONF: https://oauth2-server:8100/default/.well-known/openid-configuration
     healthcheck:
-      test: curl --fail --insecure https://oauth2-server:8100/default/.well-known/openid-configuration || exit 1
+      test: curl --fail --insecure $${OPENID_CONF} || exit 1
       interval: 10s
       retries: 3
       start_period: 10s

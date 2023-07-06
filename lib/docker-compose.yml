@@ -5,17 +5,18 @@ services:
     build:
       context: .
       args:
-        STARBURST_VER: "${STARBURST_VER}"
+        STARBURST_VER: ${STARBURST_VER}
       labels:
-        - "com.starburst.tests=minitrino"
-        - "com.starburst.tests.module=trino"
-    image: "minitrino/trino:${STARBURST_VER}"
-    container_name: "trino"
-    hostname: "trino.minitrino.starburstdata.com"
-    labels:
-      - "com.starburst.tests=minitrino"
-      - "com.starburst.tests.module=trino" 
-    volumes:
-      - "${SEP_LIC_PATH}:${SEP_LIC_MOUNT_PATH}"
+        - com.starburst.tests=minitrino
+        - com.starburst.tests.module=trino
+    image: minitrino/trino:${STARBURST_VER}
+    container_name: trino
+    restart: no
+    hostname: trino.minitrino.starburstdata.com
     ports:
-      - "8080:8080"
+      - 8080:8080
+    volumes:
+      - ${SEP_LIC_PATH}:${SEP_LIC_MOUNT_PATH}
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module=trino 

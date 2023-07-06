@@ -386,7 +386,6 @@ def execute_container_bootstrap(ctx, bootstrap="", container_name="", yaml_file=
     # Check if this script has already been executed
     output = ctx.cmd_executor.execute_commands(
         "cat /opt/minitrino/bootstrap_status.txt",
-        suppress_output=True,
         container=container,
         trigger_error=False,
     )
@@ -693,7 +692,6 @@ def initialize_containers(ctx):
     for container in containers:
         output = ctx.cmd_executor.execute_commands(
             "cat /opt/minitrino/bootstrap_status.txt",
-            suppress_output=True,
             container=container,
             trigger_error=False,
         )
@@ -704,7 +702,7 @@ def initialize_containers(ctx):
                 "touch /opt/minitrino/bootstrap_status.txt",
                 container=container,
             )
-        elif output[0].get("return_code", None) == 0:
+        elif output[0].get("return_code", None) in [0, 126]:
             continue
         else:
             raise err.MinitrinoError(

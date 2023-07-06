@@ -695,6 +695,14 @@ class CommandExecutor:
         return_code = self._ctx.api_client.exec_inspect(exec_handler["Id"]).get(
             "ExitCode"
         )
+        # https://www.gnu.org/software/bash/manual/html_node/Exit-Status.html
+        if return_code == 126:
+            self._ctx.logger.log(
+                f"The command exited with a 126 code which typically means an "
+                f"executable is not accessible or installed. Does this image have "
+                f"all required dependencies installed?\nCommand: {command}",
+                level=self._ctx.logger.warn,
+            )
 
         if return_code != 0 and kwargs.get("trigger_error", True):
             raise err.MinitrinoError(

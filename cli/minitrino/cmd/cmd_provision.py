@@ -355,7 +355,7 @@ def execute_bootstraps(ctx, modules=[]):
 @pass_environment
 def execute_container_bootstrap(ctx, bootstrap="", container_name="", yaml_file=""):
     """Executes a single bootstrap inside a container. If the
-    `/opt/minitrino/bootstrap_status.txt` file has the same checksum as the
+    `/opt/minitrino/bootstrap-status.txt` file has the same checksum as the
     bootstrap script that is about to be executed, the boostrap script is
     skipped.
 
@@ -385,7 +385,7 @@ def execute_container_bootstrap(ctx, bootstrap="", container_name="", yaml_file=
 
     # Check if this script has already been executed
     output = ctx.cmd_executor.execute_commands(
-        "cat /opt/minitrino/bootstrap_status.txt",
+        "cat /opt/minitrino/bootstrap-status.txt",
         container=container,
         trigger_error=False,
     )
@@ -409,7 +409,7 @@ def execute_container_bootstrap(ctx, bootstrap="", container_name="", yaml_file=
     # Record executed file checksum
     ctx.cmd_executor.execute_commands(
         f"/tmp/{os.path.basename(bootstrap_file)}",
-        f'bash -c "echo {bootstrap_checksum} >> /opt/minitrino/bootstrap_status.txt"',
+        f'bash -c "echo {bootstrap_checksum} >> /opt/minitrino/bootstrap-status.txt"',
         container=container,
     )
 
@@ -518,13 +518,13 @@ def write_trino_configs(ctx, containers_to_restart=[], modules=[]):
             yaml.get("services", {})
             .get("trino", {})
             .get("environment", {})
-            .get("CONFIG_PROPERTIES", {})
+            .get("CONFIG_PROPERTIES", "")
         )
         jvm = (
             yaml.get("services", {})
             .get("trino", {})
             .get("environment", {})
-            .get("JVM_CONFIG", {})
+            .get("JVM_CONFIG", "")
         )
 
         if conf:
@@ -534,6 +534,24 @@ def write_trino_configs(ctx, containers_to_restart=[], modules=[]):
 
     if not config_properties and not jvm_config:
         return containers_to_restart
+
+    checksum_file = "/tmp/minitrino-user-config.txt"
+    config_checksum = hashlib.md5(
+        bytes(str([config_properties, jvm_config]), "utf-8")
+    ).hexdigest()
+
+    if os.path.isfile(checksum_file):
+        output = ctx.cmd_executor.execute_commands(
+            f"cat {checksum_file}",
+        )
+        old_config_checksum = output[0].get("output", "").strip().lower()
+
+        if old_config_checksum == config_checksum:
+            ctx.logger.log(
+                "User-defined config already added to config files. Skipping...",
+                level=ctx.logger.verbose,
+            )
+            return containers_to_restart
 
     ctx.logger.log(
         "Appending user-defined Trino config to Trino container config...",
@@ -658,6 +676,11 @@ def write_trino_configs(ctx, containers_to_restart=[], modules=[]):
     if not "trino" in containers_to_restart:
         containers_to_restart.append("trino")
 
+    ctx.logger.log("Recording config checksum...", level=ctx.logger.verbose)
+    output = ctx.cmd_executor.execute_commands(
+        f"echo {config_checksum} > {checksum_file}"
+    )
+
     return containers_to_restart
 
 
@@ -686,12 +709,12 @@ def restart_containers(ctx, containers_to_restart=[]):
 
 @pass_environment
 def initialize_containers(ctx):
-    """Initializes each container with /opt/minitrino/bootstrap_status.txt."""
+    """Initializes each container with /opt/minitrino/bootstrap-status.txt."""
 
     containers = ctx.docker_client.containers.list(filters={"label": RESOURCE_LABEL})
     for container in containers:
         output = ctx.cmd_executor.execute_commands(
-            "cat /opt/minitrino/bootstrap_status.txt",
+            "cat /opt/minitrino/bootstrap-status.txt",
             container=container,
             trigger_error=False,
         )
@@ -699,7 +722,7 @@ def initialize_containers(ctx):
         if "no such file or directory" in output_string.lower():
             ctx.cmd_executor.execute_commands(
                 "mkdir -p /opt/minitrino/",
-                "touch /opt/minitrino/bootstrap_status.txt",
+                "touch /opt/minitrino/bootstrap-status.txt",
                 container=container,
             )
         elif output[0].get("return_code", None) in [0, 126]:

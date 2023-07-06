@@ -25,6 +25,7 @@ def main():
     test_docker_native()
     test_enterprise()
     test_valid_user_config()
+    test_existing_user_config()
     test_duplicate_config_props()
     test_incompatible_modules()
     test_provision_append()
@@ -252,6 +253,37 @@ def test_valid_user_config():
             "query.max-execution-time=1h" in trino_config,
         )
     )
+
+    helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
+    cleanup()
+
+
+def test_existing_user_config():
+    """Ensures that already-propagated configs are not propagated again, thus
+    avoiding unnecessary container restarts."""
+
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
+
+    helpers.execute_command(
+        [
+            "-v",
+            "provision",
+            "--module",
+            "test",
+        ]
+    )
+
+    result = helpers.execute_command(
+        [
+            "-v",
+            "provision",
+            "--module",
+            "test",
+        ]
+    )
+
+    assert result.exit_code == 0
+    assert "User-defined config already added to config files" in result.output
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()

@@ -600,6 +600,7 @@ class CommandExecutor:
             # do is to run the string through the `_strip_ansi()` function.
 
             started_stream = False
+            output = ""
             while True:
                 output_line = process.stdout.readline()
                 if output_line == "" and process.poll() is not None:
@@ -613,8 +614,8 @@ class CommandExecutor:
                 self._ctx.logger.log(
                     output_line, level=self._ctx.logger.verbose, stream=True
                 )
+                output += output_line
 
-        output, _ = process.communicate()  # Get full output (stdout + stderr)
         if process.returncode != 0 and kwargs.get("trigger_error", True):
             raise err.MinitrinoError(
                 f"Failed to execute shell command:\n{command}\n"

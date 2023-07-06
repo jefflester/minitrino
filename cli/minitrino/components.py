@@ -191,10 +191,12 @@ class Environment:
         for each client. The lack of clients should be caught by check_daemon()
         calls that execute in each command that requires an accessible Docker
         service."""
+        
+        docker_url = os.environ.get("DOCKER_HOST", "")
 
         try:
-            docker_client = docker.DockerClient(base_url="")
-            api_client = docker.APIClient(base_url="")
+            docker_client = docker.DockerClient(base_url=docker_url)
+            api_client = docker.APIClient(base_url=docker_url)
             self.docker_client, self.api_client = docker_client, api_client
         except:
             return None, None

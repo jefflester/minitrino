@@ -1,0 +1,30 @@
+{
+  "interactiveLogin": true,
+  "httpServer": {
+    "type": "NettyWrapper",
+    "ssl": {
+      "keyPassword": "changeit",
+      "keystorePassword": "changeit",
+      "keystoreFile": "/app/keystore.jks",
+      "keystoreType": "JKS"
+    }
+  },
+  "tokenCallbacks": [
+    {
+      "issuerId": "example",
+      "tokenExpiry": 120,
+      "requestMappings": [
+        {
+          "requestParam": "scope",
+          "match": "all",
+          "claims": {
+            "sub": "subByScope",
+            "aud": [
+              "audByScope"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

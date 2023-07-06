@@ -1,0 +1,6 @@
+{
+    "description": "Secures Trino with OAuth2 authentication.",
+    "incompatibleModules": ["password-file", "ldap"],
+    "dependentModules": ["tls"],
+    "enterprise": false
+}

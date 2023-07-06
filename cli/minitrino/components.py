@@ -431,6 +431,7 @@ class Modules:
                     f"following the documentation on labels.",
                 )
 
+        modules = set(modules)
         for module in modules:
             if not isinstance(self.data.get(module), dict):
                 raise err.UserError(

@@ -422,6 +422,221 @@ def execute_container_bootstrap(ctx, bootstrap="", container_name="", yaml_file=
 
 
 @pass_environment
+def write_trino_configs(ctx, containers_to_restart=[], modules=[]):
+    """Appends Trino config from various modules if specified in the module YAML
+    file. The Trino container is added to the restart list if any configs are
+    written to files in the container."""
+
+    config_properties = []
+    jvm_config = []
+
+    for module in modules:
+        yaml = ctx.modules.data.get(module, {}).get("yaml_dict")
+        conf = (
+            yaml.get("services", {})
+            .get("trino", {})
+            .get("environment", {})
+            .get("CONFIG_PROPERTIES", "")
+        )
+        jvm = (
+            yaml.get("services", {})
+            .get("trino", {})
+            .get("environment", {})
+            .get("JVM_CONFIG", "")
+        )
+
+        if conf:
+            config_properties.extend(conf.strip().split("\n"))
+        if jvm:
+            jvm_config.extend(jvm.strip().split("\n"))
+
+    if not config_properties and not jvm_config:
+        return containers_to_restart
+
+    if config_properties:
+        config_properties = handle_password_authenticators(config_properties)
+
+    checksum_file = "/tmp/minitrino-user-config.txt"
+    config_checksum = hashlib.md5(
+        bytes(str([config_properties, jvm_config]), "utf-8")
+    ).hexdigest()
+
+    if os.path.isfile(checksum_file):
+        output = ctx.cmd_executor.execute_commands(
+            f"cat {checksum_file}",
+        )
+        old_config_checksum = output[0].get("output", "").strip().lower()
+
+        if old_config_checksum == config_checksum:
+            ctx.logger.log(
+                "User-defined config already added to config files. Skipping...",
+                level=ctx.logger.verbose,
+            )
+            return containers_to_restart
+
+    ctx.logger.log(
+        "Appending user-defined Trino config to Trino container config...",
+        level=ctx.logger.verbose,
+    )
+
+    trino_container = ctx.docker_client.containers.get("trino")
+    if not trino_container:
+        raise err.MinitrinoError(
+            f"Attempting to append Trino configuration in Trino container, "
+            f"but no running Trino container was found."
+        )
+
+    ctx.logger.log(
+        "Checking Trino server status before updating configs...",
+        level=ctx.logger.verbose,
+    )
+    retry = 0
+    while retry <= 30:
+        logs = trino_container.logs().decode()
+        if "======== SERVER STARTED ========" in logs:
+            break
+        elif trino_container.status != "running":
+            raise err.MinitrinoError(
+                f"Trino container stopped running. Inspect the container logs if the "
+                f"container is still available. If the container was rolled back, rerun "
+                f"the command with the '--no-rollback' option, then inspect the logs."
+            )
+        else:
+            ctx.logger.log(
+                "Trino server has not started. Waiting one second and trying again...",
+                level=ctx.logger.verbose,
+            )
+            time.sleep(1)
+            retry += 1
+
+    current_configs = ctx.cmd_executor.execute_commands(
+        f"cat {ETC_TRINO}/{TRINO_CONFIG}",
+        f"cat {ETC_TRINO}/{TRINO_JVM_CONFIG}",
+        container=trino_container,
+        suppress_output=True,
+    )
+
+    current_trino_config = current_configs[0].get("output", "").strip().split("\n")
+    current_jvm_config = current_configs[1].get("output", "").strip().split("\n")
+
+    append_configs(
+        trino_container, config_properties, current_trino_config, TRINO_CONFIG
+    )
+    append_configs(trino_container, jvm_config, current_jvm_config, TRINO_JVM_CONFIG)
+
+    if not "trino" in containers_to_restart:
+        containers_to_restart.append("trino")
+
+    ctx.logger.log("Recording config checksum...", level=ctx.logger.verbose)
+    output = ctx.cmd_executor.execute_commands(
+        f"echo {config_checksum} > {checksum_file}"
+    )
+
+    return containers_to_restart
+
+
+@pass_environment
+def handle_password_authenticators(ctx, config_properties):
+    """Merges multiple instances of `http-server.authentication.type` if
+    found."""
+
+    auth_configs = []
+    auth_property = "http-server.authentication.type"
+
+    def config_builder(config):
+        if auth_property in config:
+            auth_configs.append(config.split("="))
+            return False
+        return True
+
+    config_properties = [x for x in config_properties if config_builder(x)]
+
+    auth_property += "="
+    for i, val in enumerate(auth_configs):
+        if i + 1 == len(auth_configs):
+            # Is the end, leave the comma out
+            auth_property += val[1]
+        else:
+            # Not the end, add a comma
+            auth_property += f"{val[1]},"
+
+    config_properties.append(auth_property)
+    return config_properties
+
+
+@pass_environment
+def append_configs(ctx, trino_container, user_configs, current_configs, filename):
+    """If there is an overlapping config key, replace it with the user
+    config. If there is not overlapping config key, append it to the current
+    config list.
+
+    No additional configs, leave the file in the container alone."""
+
+    if not user_configs:
+        return
+
+    if filename == TRINO_CONFIG:
+        for user_config in user_configs:
+            user_config = utils.parse_key_value_pair(
+                user_config, err_type=err.UserError, key_to_upper=False
+            )
+            if user_config is None:
+                continue
+            for i, current_config in enumerate(current_configs):
+                if current_config.startswith("#"):
+                    continue
+                current_config = utils.parse_key_value_pair(
+                    current_config, err_type=err.UserError, key_to_upper=False
+                )
+                if current_config is None:
+                    continue
+                if user_config[0] == current_config[0]:
+                    current_configs[i] = "=".join(user_config)
+                    break
+                if (
+                    i + 1 == len(current_configs)
+                    and not "=".join(user_config) in current_configs
+                ):
+                    current_configs.append("=".join(user_config))
+    else:
+        for user_config in user_configs:
+            user_config = user_config.strip()
+            if not user_config:
+                continue
+            for i, current_config in enumerate(current_configs):
+                if current_config.startswith("#"):
+                    continue
+                current_config = current_config.strip()
+                if not current_config:
+                    continue
+                if user_config == current_config:
+                    current_configs[i] = user_config
+                    break
+                if i + 1 == len(current_configs) and not user_config in current_configs:
+                    current_configs.append(user_config)
+
+    ctx.logger.log(
+        f"Removing existing {filename} file...",
+        level=ctx.logger.verbose,
+    )
+    ctx.cmd_executor.execute_commands(
+        f"rm {ETC_TRINO}/{filename}", container=trino_container
+    )
+
+    ctx.logger.log(
+        f"Writing new config to {filename}...",
+        level=ctx.logger.verbose,
+    )
+    for current_config in current_configs:
+        append_config = (
+            f'bash -c "cat <<EOT >> {ETC_TRINO}/{filename}\n{current_config}\nEOT"'
+        )
+        ctx.cmd_executor.execute_commands(
+            append_config, container=trino_container, suppress_output=True
+        )
+
+
+@pass_environment
 def check_dup_configs(ctx):
     """Checks for duplicate configs in Trino config files (jvm.config and
     config.properties). This is a safety check for modules that may improperly
@@ -501,187 +716,6 @@ def check_dup_configs(ctx):
                         level=ctx.logger.warn,
                     )
                     duplicates = []
-
-
-@pass_environment
-def write_trino_configs(ctx, containers_to_restart=[], modules=[]):
-    """Appends Trino config from various modules if specified in the module YAML
-    file. The Trino container is added to the restart list if any configs are
-    written to files in the container."""
-
-    config_properties = []
-    jvm_config = []
-
-    for module in modules:
-        yaml = ctx.modules.data.get(module, {}).get("yaml_dict")
-        conf = (
-            yaml.get("services", {})
-            .get("trino", {})
-            .get("environment", {})
-            .get("CONFIG_PROPERTIES", "")
-        )
-        jvm = (
-            yaml.get("services", {})
-            .get("trino", {})
-            .get("environment", {})
-            .get("JVM_CONFIG", "")
-        )
-
-        if conf:
-            config_properties.extend(conf.strip().split("\n"))
-        if jvm:
-            jvm_config.extend(jvm.strip().split("\n"))
-
-    if not config_properties and not jvm_config:
-        return containers_to_restart
-
-    checksum_file = "/tmp/minitrino-user-config.txt"
-    config_checksum = hashlib.md5(
-        bytes(str([config_properties, jvm_config]), "utf-8")
-    ).hexdigest()
-
-    if os.path.isfile(checksum_file):
-        output = ctx.cmd_executor.execute_commands(
-            f"cat {checksum_file}",
-        )
-        old_config_checksum = output[0].get("output", "").strip().lower()
-
-        if old_config_checksum == config_checksum:
-            ctx.logger.log(
-                "User-defined config already added to config files. Skipping...",
-                level=ctx.logger.verbose,
-            )
-            return containers_to_restart
-
-    ctx.logger.log(
-        "Appending user-defined Trino config to Trino container config...",
-        level=ctx.logger.verbose,
-    )
-
-    trino_container = ctx.docker_client.containers.get("trino")
-    if not trino_container:
-        raise err.MinitrinoError(
-            f"Attempting to append Trino configuration in Trino container, "
-            f"but no running Trino container was found."
-        )
-
-    ctx.logger.log(
-        "Checking Trino server status before updating configs...",
-        level=ctx.logger.verbose,
-    )
-    retry = 0
-    while retry <= 30:
-        logs = trino_container.logs().decode()
-        if "======== SERVER STARTED ========" in logs:
-            break
-        elif trino_container.status != "running":
-            raise err.MinitrinoError(
-                f"Trino container stopped running. Inspect the container logs if the "
-                f"container is still available. If the container was rolled back, rerun "
-                f"the command with the '--no-rollback' option, then inspect the logs."
-            )
-        else:
-            ctx.logger.log(
-                "Trino server has not started. Waiting one second and trying again...",
-                level=ctx.logger.verbose,
-            )
-            time.sleep(1)
-            retry += 1
-
-    current_configs = ctx.cmd_executor.execute_commands(
-        f"cat {ETC_TRINO}/{TRINO_CONFIG}",
-        f"cat {ETC_TRINO}/{TRINO_JVM_CONFIG}",
-        container=trino_container,
-        suppress_output=True,
-    )
-
-    current_trino_config = current_configs[0].get("output", "").strip().split("\n")
-    current_jvm_config = current_configs[1].get("output", "").strip().split("\n")
-
-    def append_configs(user_configs, current_configs, filename):
-        # If there is an overlapping config key, replace it with the user
-        # config. If there is not overlapping config key, append it to the
-        # current config list.
-
-        # No additional configs, leave the file in the container alone
-        if not user_configs:
-            return
-
-        if filename == TRINO_CONFIG:
-            for user_config in user_configs:
-                user_config = utils.parse_key_value_pair(
-                    user_config, err_type=err.UserError, key_to_upper=False
-                )
-                if user_config is None:
-                    continue
-                for i, current_config in enumerate(current_configs):
-                    if current_config.startswith("#"):
-                        continue
-                    current_config = utils.parse_key_value_pair(
-                        current_config, err_type=err.UserError, key_to_upper=False
-                    )
-                    if current_config is None:
-                        continue
-                    if user_config[0] == current_config[0]:
-                        current_configs[i] = "=".join(user_config)
-                        break
-                    if (
-                        i + 1 == len(current_configs)
-                        and not "=".join(user_config) in current_configs
-                    ):
-                        current_configs.append("=".join(user_config))
-        else:
-            for user_config in user_configs:
-                user_config = user_config.strip()
-                if not user_config:
-                    continue
-                for i, current_config in enumerate(current_configs):
-                    if current_config.startswith("#"):
-                        continue
-                    current_config = current_config.strip()
-                    if not current_config:
-                        continue
-                    if user_config == current_config:
-                        current_configs[i] = user_config
-                        break
-                    if (
-                        i + 1 == len(current_configs)
-                        and not user_config in current_configs
-                    ):
-                        current_configs.append(user_config)
-
-        ctx.logger.log(
-            f"Removing existing {filename} file...",
-            level=ctx.logger.verbose,
-        )
-        ctx.cmd_executor.execute_commands(
-            f"rm {ETC_TRINO}/{filename}", container=trino_container
-        )
-
-        ctx.logger.log(
-            f"Writing new config to {filename}...",
-            level=ctx.logger.verbose,
-        )
-        for current_config in current_configs:
-            append_config = (
-                f'bash -c "cat <<EOT >> {ETC_TRINO}/{filename}\n{current_config}\nEOT"'
-            )
-            ctx.cmd_executor.execute_commands(
-                append_config, container=trino_container, suppress_output=True
-            )
-
-    append_configs(config_properties, current_trino_config, TRINO_CONFIG)
-    append_configs(jvm_config, current_jvm_config, TRINO_JVM_CONFIG)
-
-    if not "trino" in containers_to_restart:
-        containers_to_restart.append("trino")
-
-    ctx.logger.log("Recording config checksum...", level=ctx.logger.verbose)
-    output = ctx.cmd_executor.execute_commands(
-        f"echo {config_checksum} > {checksum_file}"
-    )
-
-    return containers_to_restart
 
 
 @pass_environment

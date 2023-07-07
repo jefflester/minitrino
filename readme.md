@@ -117,10 +117,10 @@ run:
 minitrino -v lib_install
 ```
 
-**Note**: Installing the new library will overwrite all modules and snapshots
-with the upgraded default library. If you have customized modules or snapshot
-files in `lib/snapshots/`, make sure to take a backup of the `~/.minitrino/lib`
-directory prior to running this command in order to persist your local changes.
+**Note**: Installing the new library will overwrite all modules and snapshots in
+the current library. If you have customized modules or snapshot files in
+`lib/snapshots/`, make sure to take a backup of the `~/.minitrino/lib` directory
+prior to running this command in order to persist your local changes.
 
 -----
 

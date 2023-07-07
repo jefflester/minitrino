@@ -3,7 +3,7 @@ dist: xenial
 os: linux
 services:
   - docker
-python: "3.8"
+python: "3.10"
 
 addons:
   apt:
@@ -11,20 +11,11 @@ addons:
     packages:
       - python3-pip
 
-env:
-  - DOCKER_COMPOSE_VERSION=1.29.0
-
-before_install:
-  - sudo rm /usr/local/bin/docker-compose
-  - curl -L https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-`uname -s`-`uname -m` > docker-compose
-  - chmod +x docker-compose
-  - sudo mv docker-compose /usr/local/bin
-
 script:
   - |
     pip3 install --editable ./cli/ && 
     minitrino --help || exit 1 && echo -e '\n' &&
-    source ~/virtualenv/python3.8/bin/activate &&
+    source ~/virtualenv/python3.10/bin/activate &&
     python ./cli/minitrino/test/runner.py 
 
 after_failure:

@@ -49,7 +49,10 @@ def test_daemon_off_all(*args):
     helpers.stop_docker_daemon()
 
     for arg in args:
-        result = helpers.execute_command(arg)
+        if "snapshot" in arg:
+            result = helpers.execute_command(arg, command_input="y\n")
+        else:
+            result = helpers.execute_command(arg)
         run_daemon_assertions(result)
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)

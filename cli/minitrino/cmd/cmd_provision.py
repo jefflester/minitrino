@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Instead of using the Docker SDK, this script will form a Docker Compose
-# command string to execute straight through the docker-compose CLI. This is
+# command string to execute straight through the docker compose CLI. This is
 # required because the Docker SDK does not support communication with Compose
 # files, and Minitrino benefits hugely from Docker Compose.
 
@@ -60,8 +60,8 @@ from docker.errors import NotFound
     default="",
     type=str,
     help=(
-        """Appends native docker-compose commands to the generated
-        docker-compose shell command. Run `docker-compose up --help` to see all
+        """Appends native docker compose commands to the generated
+        docker compose shell command. Run `docker compose up --help` to see all
         available options.
 
         Example: minitrino provision --docker-native --build
@@ -73,7 +73,7 @@ from docker.errors import NotFound
 @utils.exception_handler
 @pass_environment
 def cli(ctx, modules, no_rollback, docker_native):
-    """Provision command for Minitrino. If the resulting docker-compose command
+    """Provision command for Minitrino. If the resulting docker compose command
     is unsuccessful, the function exits with a non-zero status code."""
 
     utils.check_daemon(ctx.docker_client)
@@ -270,7 +270,7 @@ def is_apple_m1(ctx):
 
 @pass_environment
 def chunk(ctx, modules=[]):
-    """Builds docker-compose command chunk for the chosen modules. Returns a
+    """Builds docker compose command chunk for the chosen modules. Returns a
     command chunk string."""
 
     chunk = []
@@ -282,8 +282,8 @@ def chunk(ctx, modules=[]):
 
 @pass_environment
 def build_command(ctx, docker_native="", compose_env={}, chunk=""):
-    """Builds a formatted docker-compose command for shell execution. Returns a
-    docker-compose command string."""
+    """Builds a formatted docker compose command for shell execution. Returns a
+    docker compose command string."""
 
     cmd = []
     compose_env_string = ""
@@ -294,7 +294,7 @@ def build_command(ctx, docker_native="", compose_env={}, chunk=""):
         [
             compose_env_string,
             "\\\n",
-            "docker-compose -f ",
+            "docker compose -f ",
             os.path.join(ctx.minitrino_lib_dir, "docker-compose.yml"),
             " \\\n",
             chunk,  # Module YAML paths
@@ -430,6 +430,13 @@ def write_trino_configs(ctx, containers_to_restart=[], modules=[]):
     config_properties = []
     jvm_config = []
 
+    trino_container = ctx.docker_client.containers.get("trino")
+    if not trino_container:
+        raise err.MinitrinoError(
+            f"Attempting to append Trino configuration in Trino container, "
+            f"but no running Trino container was found."
+        )
+
     for module in modules:
         yaml = ctx.modules.data.get(module, {}).get("yaml_dict")
         conf = (
@@ -461,12 +468,14 @@ def write_trino_configs(ctx, containers_to_restart=[], modules=[]):
         bytes(str([config_properties, jvm_config]), "utf-8")
     ).hexdigest()
 
-    if os.path.isfile(checksum_file):
-        output = ctx.cmd_executor.execute_commands(
-            f"cat {checksum_file}",
-        )
-        old_config_checksum = output[0].get("output", "").strip().lower()
+    output = ctx.cmd_executor.execute_commands(
+        f"cat {checksum_file}",
+        container=trino_container,
+        trigger_error=False,
+    )
+    old_config_checksum = output[0].get("output", "").strip().lower()
 
+    if not "no such file or directory" in old_config_checksum:
         if old_config_checksum == config_checksum:
             ctx.logger.log(
                 "User-defined config already added to config files. Skipping...",
@@ -478,13 +487,6 @@ def write_trino_configs(ctx, containers_to_restart=[], modules=[]):
         "Appending user-defined Trino config to Trino container config...",
         level=ctx.logger.verbose,
     )
-
-    trino_container = ctx.docker_client.containers.get("trino")
-    if not trino_container:
-        raise err.MinitrinoError(
-            f"Attempting to append Trino configuration in Trino container, "
-            f"but no running Trino container was found."
-        )
 
     ctx.logger.log(
         "Checking Trino server status before updating configs...",
@@ -529,7 +531,7 @@ def write_trino_configs(ctx, containers_to_restart=[], modules=[]):
 
     ctx.logger.log("Recording config checksum...", level=ctx.logger.verbose)
     output = ctx.cmd_executor.execute_commands(
-        f"echo {config_checksum} > {checksum_file}"
+        f'bash -c "echo {config_checksum} > {checksum_file}"', container=trino_container
     )
 
     return containers_to_restart
@@ -542,14 +544,19 @@ def handle_password_authenticators(ctx, config_properties):
 
     auth_configs = []
     auth_property = "http-server.authentication.type"
+    auth_found = False
 
     def config_builder(config):
         if auth_property in config:
             auth_configs.append(config.split("="))
+            auth_found = True
             return False
         return True
 
     config_properties = [x for x in config_properties if config_builder(x)]
+
+    if not auth_found:
+        return config_properties
 
     auth_property += "="
     for i, val in enumerate(auth_configs):

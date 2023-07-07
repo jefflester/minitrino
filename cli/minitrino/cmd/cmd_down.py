@@ -14,7 +14,7 @@ from minitrino.settings import RESOURCE_LABEL
     "down",
     help=(
         """Bring down running Minitrino containers. This command follows the
-        behavior of `docker-compose down` where containers are both stopped and
+        behavior of `docker compose down` where containers are both stopped and
         removed."""
     ),
 )

@@ -5,6 +5,7 @@ services:
     environment:
       CONFIG_PROPERTIES: http-server.authentication.type=PASSWORD
       MINITRINO_BOOTSTRAP: bootstrap-trino.sh
+    hostname: trino.minitrino.starburstdata.com
     volumes:
       - ./modules/security/ldap/resources/trino/password-authenticator.properties:/etc/starburst/password-authenticator.properties
       - ./modules/security/ldap/resources/ldap/ldap-users:/etc/starburst/ldap-users

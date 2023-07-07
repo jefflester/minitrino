@@ -12,7 +12,6 @@ services:
     image: minitrino/trino:${STARBURST_VER}
     container_name: trino
     restart: no
-    hostname: trino.minitrino.starburstdata.com
     ports:
       - 8080:8080
     volumes:

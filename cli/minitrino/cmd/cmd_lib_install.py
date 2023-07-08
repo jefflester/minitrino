@@ -37,16 +37,14 @@ def cli(ctx, version):
             f"Continue? [Y/N]"
         )
         if utils.validate_yes(response):
-            ctx.logger.log(
-                "Removing existing library directory...", level=ctx.logger.verbose
-            )
+            ctx.logger.verbose("Removing existing library directory...")
             shutil.rmtree(lib_dir)
         else:
-            ctx.logger.log("Opted to skip library installation.")
+            ctx.logger.info("Opted to skip library installation.")
             sys.exit(0)
 
     download_and_extract(version)
-    ctx.logger.log("Library installation complete.")
+    ctx.logger.info("Library installation complete.")
 
 
 @pass_environment
@@ -66,9 +64,8 @@ def download_and_extract(ctx, version=""):
             )
 
         # Unpack tarball and copy lib
-        ctx.logger.log(
+        ctx.logger.verbose(
             f"Unpacking tarball at {tarball} and copying library...",
-            level=ctx.logger.verbose,
         )
         ctx.cmd_executor.execute_commands(
             f"tar -xzvf {tarball} -C {ctx.minitrino_user_dir}",

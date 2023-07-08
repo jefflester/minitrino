@@ -87,7 +87,7 @@ def cli(ctx, modules, no_rollback, docker_native):
     check_volumes(modules)
 
     if not modules:
-        ctx.logger.log(
+        ctx.logger.info(
             f"No modules specified. Provisioning standalone Trino container..."
         )
     else:
@@ -117,7 +117,7 @@ def cli(ctx, modules, no_rollback, docker_native):
         c_restart = write_trino_cfg(c_restart, modules)
         check_dup_cfgs()
         restart_containers(c_restart)
-        ctx.logger.log(f"Environment provisioning complete.")
+        ctx.logger.info(f"Environment provisioning complete.")
 
     except Exception as e:
         rollback_provision(no_rollback)
@@ -129,14 +129,13 @@ def append_running_modules(ctx, modules=[]):
     """Checks if any modules are already running. If they are, they are appended
     to the provided modules list and the updated list is returned."""
 
-    ctx.logger.log("Checking for running modules...", level=ctx.logger.verbose)
+    ctx.logger.verbose("Checking for running modules...")
     running_modules = ctx.modules.get_running_modules()
 
     if running_modules:
-        ctx.logger.log(
+        ctx.logger.verbose(
             f"Identified the following running modules: {running_modules}. "
             f"Appending the running module list to the list of modules to provision.",
-            level=ctx.logger.verbose,
         )
 
     modules = list(modules)
@@ -155,9 +154,8 @@ def check_dependent_modules(ctx, modules=[]):
         for dependent_module in dependent_modules:
             if not dependent_module in modules:
                 modules.append(dependent_module)
-                ctx.logger.log(
+                ctx.logger.verbose(
                     f"Module dependency for module '{module}' will be included: '{dependent_module}'",
-                    level=ctx.logger.verbose,
                 )
     return modules
 
@@ -190,9 +188,8 @@ def check_enterprise(ctx, modules=[]):
     """Checks if any of the provided modules are Starburst Enterprise features.
     If they are, we check that a pointer to a SEP license is provided."""
 
-    ctx.logger.log(
+    ctx.logger.verbose(
         "Checking for SEP license for enterprise modules...",
-        level=ctx.logger.verbose,
     )
 
     yaml_path = os.path.join(ctx.minitrino_lib_dir, "docker-compose.yml")
@@ -235,17 +232,15 @@ def check_volumes(ctx, modules=[]):
     """Checks if any of the modules have persistent volumes and issues a warning
     to the user if so."""
 
-    ctx.logger.log(
+    ctx.logger.verbose(
         "Checking modules for persisent volumes...",
-        level=ctx.logger.verbose,
     )
 
     for module in modules:
         if ctx.modules.data.get(module, {}).get("yaml_dict", {}).get("volumes", {}):
-            ctx.logger.log(
+            ctx.logger.warn(
                 f"Module '{module}' has persistent volumes associated with it. "
                 f"To delete these volumes, remember to run `minitrino remove --volumes`.",
-                level=ctx.logger.warn,
             )
 
 
@@ -254,16 +249,14 @@ def is_apple_m1(ctx):
     """Checks the host platform to determine if MODULE_PLATFORM needs to
     be set."""
 
-    ctx.logger.log(
+    ctx.logger.verbose(
         "Checking host platform...",
-        level=ctx.logger.verbose,
     )
 
     if "arm64" == os.uname().machine.lower() and platform.processor().lower() == "arm":
-        ctx.logger.log(
+        ctx.logger.verbose(
             f"Host machine running on Apple M1 architecture. "
             f"Images will pull in a best-effort fashion.",
-            level=ctx.logger.verbose,
         )
         return True
     return False
@@ -304,9 +297,8 @@ def build_command(ctx, docker_native="", compose_env={}, chunk=""):
     )
 
     if docker_native:
-        ctx.logger.log(
+        ctx.logger.verbose(
             f"Received native Docker Compose options: '{docker_native}'",
-            level=ctx.logger.verbose,
         )
         cmd.extend([" ", docker_native])
     return "".join(cmd)
@@ -392,15 +384,13 @@ def execute_container_bootstrap(ctx, bootstrap="", container_name="", yaml_file=
     )
 
     if f"{bootstrap_checksum}" in output[0].get("output", ""):
-        ctx.logger.log(
+        ctx.logger.verbose(
             f"Bootstrap already executed in container '{container_name}'. Skipping.",
-            level=ctx.logger.verbose,
         )
         return False
 
-    ctx.logger.log(
+    ctx.logger.verbose(
         f"Executing bootstrap script in container '{container_name}'...",
-        level=ctx.logger.verbose,
     )
 
     ctx.cmd_executor.execute_commands(
@@ -414,9 +404,8 @@ def execute_container_bootstrap(ctx, bootstrap="", container_name="", yaml_file=
         container=container,
     )
 
-    ctx.logger.log(
+    ctx.logger.verbose(
         f"Successfully executed bootstrap script in container '{container_name}'.",
-        level=ctx.logger.verbose,
     )
 
     return True
@@ -526,24 +515,21 @@ def write_trino_cfg(ctx, c_restart=[], modules=[]):
     old_checksum = output[0].get("output", "").strip().lower()
     if not "no such file or directory" in old_checksum:
         if old_checksum == checksum:
-            ctx.logger.log(
+            ctx.logger.verbose(
                 "User-defined config already added to config files. Skipping...",
-                level=ctx.logger.verbose,
             )
             return c_restart
 
-    ctx.logger.log(
+    ctx.logger.verbose(
         "Checking Trino server status before updating configs...",
-        level=ctx.logger.verbose,
     )
 
     retry = 0
     while retry <= 30:
         logs = trino_container.logs().decode()
         if "======== SERVER STARTED ========" in logs:
-            ctx.logger.log(
+            ctx.logger.verbose(
                 "Trino server started.",
-                level=ctx.logger.verbose,
             )
             break
         elif trino_container.status != "running":
@@ -553,9 +539,8 @@ def write_trino_cfg(ctx, c_restart=[], modules=[]):
                 f"the command with the '--no-rollback' option, then inspect the logs."
             )
         else:
-            ctx.logger.log(
+            ctx.logger.verbose(
                 "Waiting for Trino server to start...",
-                level=ctx.logger.verbose,
             )
             time.sleep(1)
             retry += 1
@@ -576,17 +561,15 @@ def write_trino_cfg(ctx, c_restart=[], modules=[]):
         current_cfgs.extend(usr_cfgs)
         current_cfgs = ["=".join(x) for x in current_cfgs]
 
-        ctx.logger.log(
+        ctx.logger.verbose(
             f"Removing existing {filename} file...",
-            level=ctx.logger.verbose,
         )
         ctx.cmd_executor.execute_commands(
             f"rm {ETC_TRINO}/{filename}", container=trino_container
         )
 
-        ctx.logger.log(
+        ctx.logger.verbose(
             f"Writing new config to {filename}...",
-            level=ctx.logger.verbose,
         )
         for current_cfg in current_cfgs:
             append_cfg = (
@@ -596,9 +579,8 @@ def write_trino_cfg(ctx, c_restart=[], modules=[]):
                 append_cfg, container=trino_container, suppress_output=True
             )
 
-    ctx.logger.log(
+    ctx.logger.verbose(
         "Appending user-defined Trino config to Trino container config...",
-        level=ctx.logger.verbose,
     )
 
     current_trino_cfgs, current_jvm_cfg = get_current_trino_cfgs()
@@ -608,7 +590,7 @@ def write_trino_cfg(ctx, c_restart=[], modules=[]):
     if not "trino" in c_restart:
         c_restart.append("trino")
 
-    ctx.logger.log("Recording config checksum...", level=ctx.logger.verbose)
+    ctx.logger.verbose("Recording config checksum...")
     output = ctx.cmd_executor.execute_commands(
         f'bash -c "echo {checksum} > {checksum_file}"', container=trino_container
     )
@@ -623,9 +605,8 @@ def check_dup_cfgs(ctx):
     modify these files."""
 
     def log_duplicates(cfgs, filename):
-        ctx.logger.log(
+        ctx.logger.verbose(
             f"Checking Trino '{filename}' file for duplicate configs...",
-            level=ctx.logger.verbose,
         )
 
         unique = {}
@@ -639,10 +620,9 @@ def check_dup_cfgs(ctx):
         duplicates = ["=".join(x) for y in unique.values() for x in y if len(y) > 1]
 
         if duplicates:
-            ctx.logger.log(
+            ctx.logger.warn(
                 f"Duplicate Trino configuration properties detected in "
                 f"'{filename}' file:\n{str(duplicates)}",
-                level=ctx.logger.warn,
             )
 
     current_trino_cfgs, current_jvm_cfg = get_current_trino_cfgs()
@@ -663,9 +643,7 @@ def restart_containers(ctx, c_restart=[]):
     for container in c_restart:
         try:
             container = ctx.docker_client.containers.get(container)
-            ctx.logger.log(
-                f"Restarting container '{container.name}'...", level=ctx.logger.verbose
-            )
+            ctx.logger.verbose(f"Restarting container '{container.name}'...")
             container.restart()
         except NotFound:
             raise err.MinitrinoError(
@@ -706,16 +684,15 @@ def rollback_provision(ctx, no_rollback):
     """Rolls back the provisioning command in the event of an error."""
 
     if no_rollback:
-        ctx.logger.log(
+        ctx.logger.warn(
             f"Errors occurred during environment provisioning and rollback has been disabled. "
             f"Provisioned resources will remain in an unaltered state.",
-            level=ctx.logger.warn,
         )
         return
-    ctx.logger.log(
+
+    ctx.logger.warn(
         f"Rolling back provisioned resources due to "
         f"errors encountered while provisioning the environment.",
-        level=ctx.logger.warn,
     )
 
     containers = ctx.docker_client.containers.list(

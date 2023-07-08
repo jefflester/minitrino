@@ -18,10 +18,10 @@ def cli(ctx):
     """Version command for Minitrino."""
 
     cli_version = utils.get_cli_ver()
-    ctx.logger.log(f"Minitrino version: {cli_version}")
+    ctx.logger.info(f"Minitrino version: {cli_version}")
 
     try:
         lib_version = utils.get_lib_ver(ctx.minitrino_lib_dir)
-        ctx.logger.log(f"Library version: {lib_version}")
+        ctx.logger.info(f"Library version: {lib_version}")
     except:
-        ctx.logger.log("Library version: NOT INSTALLED")
+        ctx.logger.info("Library version: NOT INSTALLED")

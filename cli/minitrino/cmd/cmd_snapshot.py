@@ -107,22 +107,21 @@ def cli(ctx, modules, name, directory, force, no_scrub):
     check_exists(name, directory, force)
 
     if modules:
-        ctx.logger.log(f"Creating snapshot of specified modules...")
+        ctx.logger.info(f"Creating snapshot of specified modules...")
         snapshot_runner(name, no_scrub, False, modules, directory)
     else:
         modules = ctx.modules.get_running_modules()
         if not modules:
-            ctx.logger.log(
+            ctx.logger.verbose(
                 f"No running Minitrino modules to snapshot. Snapshotting "
                 f"Trino resources only.",
-                level=ctx.logger.verbose,
             )
         else:
-            ctx.logger.log(f"Creating snapshot of active environment...")
+            ctx.logger.info(f"Creating snapshot of active environment...")
         snapshot_runner(name, no_scrub, True, modules, directory)
 
     check_complete(name, directory)
-    ctx.logger.log(
+    ctx.logger.info(
         f"Snapshot complete and saved at path: {os.path.join(directory, name)}.tar.gz"
     )
 
@@ -154,7 +153,7 @@ def check_exists(ctx, name, directory, force):
             f"Snapshot file {name}.tar.gz already exists. Overwrite? [Y/N]"
         )
         if not utils.validate_yes(response):
-            ctx.logger.log(f"Opted to skip snapshot.")
+            ctx.logger.info(f"Opted to skip snapshot.")
             sys.exit(0)
 
 
@@ -168,14 +167,13 @@ def prepare_snapshot_dir(ctx, name, active, no_scrub, modules):
     Returns the absolute path of the named snapshot directory."""
 
     if os.path.isdir(ctx.snapshot_dir):
-        ctx.logger.log(
+        ctx.logger.verbose(
             "Snapshot temp directory exists. Removing and recreating...",
-            level=ctx.logger.verbose,
         )
         shutil.rmtree(ctx.snapshot_dir)
         os.mkdir(ctx.snapshot_dir)
     else:
-        ctx.logger.log(
+        ctx.logger.info(
             "Snapshot directory does not exist. Creating...", level=ctx.logger.verbose
         )
         os.mkdir(ctx.snapshot_dir)
@@ -224,9 +222,8 @@ def create_snapshot_command_file(ctx, command_string="", snapshot_name_dir=""):
     preserved."""
 
     file_dest = os.path.join(snapshot_name_dir, "provision-snapshot.sh")
-    ctx.logger.log(
+    ctx.logger.verbose(
         f"Creating snapshot command to file at path: {file_dest}",
-        level=ctx.logger.verbose,
     )
 
     # Create provisioning command snapshot file from template and make it
@@ -294,7 +291,7 @@ def handle_copy_config_file(ctx, snapshot_name_dir, no_scrub):
         if utils.validate_yes(response):
             copy_config_file(snapshot_name_dir, no_scrub)
         else:
-            ctx.logger.log(f"Opted to scrub sensitive user config data.")
+            ctx.logger.info(f"Opted to scrub sensitive user config data.")
             copy_config_file(snapshot_name_dir)
     else:
         copy_config_file(snapshot_name_dir)
@@ -307,9 +304,8 @@ def copy_config_file(ctx, snapshot_name_dir, no_scrub=False):
     if os.path.isfile(ctx.config_file):
         shutil.copy(ctx.config_file, snapshot_name_dir)
     else:
-        ctx.logger.log(
+        ctx.logger.warn(
             f"No user config file at path: {ctx.config_file}. Will not be added to snapshot.",
-            level=ctx.logger.warn,
         )
         return
 
@@ -329,9 +325,8 @@ def scrub_config_file(ctx, snapshot_name_dir):
             else:
                 print(line.replace(line, line.rstrip()))
     else:
-        ctx.logger.log(
+        ctx.logger.warn(
             f"No user config file at path: {ctx.config_file}. Nothing to scrub.",
-            level=ctx.logger.warn,
         )
 
 

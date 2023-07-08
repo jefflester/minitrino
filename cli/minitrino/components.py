@@ -129,9 +129,8 @@ class Environment:
         # Skip the library-related procedures if the library is not found
         try:
             if self.minitrino_lib_dir:
-                self.logger.log(
+                self.logger.verbose(
                     f"Library path set to: {self.minitrino_lib_dir}",
-                    level=self.logger.verbose,
                 )
 
             # Now that we know where the library is, we can try to parse the env
@@ -143,12 +142,11 @@ class Environment:
             cli_ver = utils.get_cli_ver()
             lib_ver = utils.get_lib_ver(self.minitrino_lib_dir)
             if cli_ver != lib_ver:
-                self.logger.log(
+                self.logger.warn(
                     f"CLI version {cli_ver} and library version {lib_ver} "
                     f"do not match. You can update the Minitrino library "
                     f"version to match the CLI version by running 'minitrino "
                     f"lib_install'.",
-                    level=self.logger.warn,
                 )
         except:
             pass
@@ -176,10 +174,9 @@ class Environment:
 
         config_file = os.path.join(self.minitrino_user_dir, "minitrino.cfg")
         if not os.path.isfile(config_file):
-            self.logger.log(
+            self.logger.warn(
                 f"No minitrino.cfg file found at {config_file}. "
                 f"Run 'minitrino config' to reconfigure this file and directory.",
-                level=self.logger.warn,
             )
         return config_file
 
@@ -374,9 +371,8 @@ class EnvironmentVariables:
         """Logs environment variables."""
 
         if self.env:
-            self._ctx.logger.log(
+            self._ctx.logger.verbose(
                 f"Registered environment variables:\n{json.dumps(self.env, indent=2)}",
-                level=self._ctx.logger.verbose,
             )
 
 
@@ -446,7 +442,7 @@ class Modules:
     def _load_modules(self):
         """Loads module data during instantiation."""
 
-        self._ctx.logger.log("Loading modules...", level=self._ctx.logger.verbose)
+        self._ctx.logger.verbose("Loading modules...")
 
         modules_dir = os.path.join(self._ctx.minitrino_lib_dir, MODULE_ROOT)
         if not os.path.isdir(modules_dir):
@@ -467,10 +463,9 @@ class Modules:
                 module_dir = os.path.join(section_dir, _dir)
 
                 if not os.path.isdir(module_dir):
-                    self._ctx.logger.log(
+                    self._ctx.logger.verbose(
                         f"Skipping file (expected a directory, not a file) "
                         f"at path: {module_dir}",
-                        level=self._ctx.logger.verbose,
                     )
                     continue
 
@@ -509,10 +504,9 @@ class Modules:
                     with open(json_file) as f:
                         metadata = json.load(f)
                 else:
-                    self._ctx.logger.log(
+                    self._ctx.logger.verbose(
                         f"No JSON metadata file for module '{module_name}'. "
                         f"Will not load metadata for module.",
-                        level=self._ctx.logger.verbose,
                     )
                 for k, v in metadata.items():
                     self.data[module_name][k] = v
@@ -582,9 +576,8 @@ class CommandExecutor:
     def _execute_in_shell(self, command="", **kwargs):
         """Executes a command in the host shell."""
 
-        self._ctx.logger.log(
+        self._ctx.logger.verbose(
             f"Executing command in shell:\n{command}",
-            level=self._ctx.logger.verbose,
         )
 
         process = subprocess.Popen(
@@ -610,13 +603,9 @@ class CommandExecutor:
                     break
                 output_line = self._strip_ansi(output_line)
                 if not started_stream:
-                    self._ctx.logger.log(
-                        "Command Output:", level=self._ctx.logger.verbose
-                    )
+                    self._ctx.logger.verbose("Command Output:")
                     started_stream = True
-                self._ctx.logger.log(
-                    output_line, level=self._ctx.logger.verbose, stream=True
-                )
+                self._ctx.logger.verbose(output_line, stream=True)
                 output += output_line
 
         if process.returncode != 0 and kwargs.get("trigger_error", True):
@@ -643,9 +632,8 @@ class CommandExecutor:
             )
 
         if not kwargs.get("suppress_output"):
-            self._ctx.logger.log(
+            self._ctx.logger.verbose(
                 f"Executing command in container '{container.name}':\n{command}",
-                level=self._ctx.logger.verbose,
             )
 
         # Create exec handler and execute the command
@@ -678,13 +666,9 @@ class CommandExecutor:
                 full_line += chunk[0]
                 if not kwargs.get("suppress_output", False):
                     if not started_stream:
-                        self._ctx.logger.log(
-                            "Command Output:", level=self._ctx.logger.verbose
-                        )
+                        self._ctx.logger.verbose("Command Output:")
                         started_stream = True
-                    self._ctx.logger.log(
-                        full_line, level=self._ctx.logger.verbose, stream=True
-                    )
+                    self._ctx.logger.verbose(full_line, stream=True)
                     full_line = ""
                 if chunk[1]:
                     full_line = chunk[1]
@@ -693,7 +677,7 @@ class CommandExecutor:
 
         # Catch lingering full line post-loop
         if not kwargs.get("suppress_output", False) and full_line:
-            self._ctx.logger.log(full_line, level=self._ctx.logger.verbose, stream=True)
+            self._ctx.logger.verbose(full_line, stream=True)
 
         # Get the exit code
         return_code = self._ctx.api_client.exec_inspect(exec_handler["Id"]).get(
@@ -701,11 +685,10 @@ class CommandExecutor:
         )
         # https://www.gnu.org/software/bash/manual/html_node/Exit-Status.html
         if return_code == 126:
-            self._ctx.logger.log(
+            self._ctx.logger.warn(
                 f"The command exited with a 126 code which typically means an "
                 f"executable is not accessible or installed. Does this image have "
                 f"all required dependencies installed?\nCommand: {command}",
-                level=self._ctx.logger.warn,
             )
 
         if return_code != 0 and kwargs.get("trigger_error", True):

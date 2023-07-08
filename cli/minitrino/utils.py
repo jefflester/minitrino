@@ -35,14 +35,19 @@ class Logger:
     - `verbose`: Verbose log level.
 
     ### Public Methods
-    - `log()`: Logs a message to the user's terminal.
+    - `log()`: Logs a message to the user's terminal. Level must be specified,
+      defaults to INFO.
+    - `info()`: Logs an info message
+    - `warn()`: Logs a warning message
+    - `error()`: Logs an error message
+    - `verbose()`: Logs a verbose message
     - `prompt_msg()`: Logs a prompt message and returns the user's input."""
 
     def __init__(self, log_verbose=False):
-        self.info = {"prefix": "[i]  ", "prefix_color": "cyan"}
-        self.warn = {"prefix": "[w]  ", "prefix_color": "yellow"}
-        self.error = {"prefix": "[e]  ", "prefix_color": "red"}
-        self.verbose = {"prefix": "[i]  ", "prefix_color": "cyan", "verbose": True}
+        self.INFO = {"prefix": "[i]  ", "prefix_color": "cyan"}
+        self.WARN = {"prefix": "[w]  ", "prefix_color": "yellow"}
+        self.ERROR = {"prefix": "[e]  ", "prefix_color": "red"}
+        self.VERBOSE = {"prefix": "[i]  ", "prefix_color": "cyan", "verbose": True}
 
         self._log_verbose = log_verbose
 
@@ -57,10 +62,10 @@ class Logger:
           streamed to the console."""
 
         if not level:
-            level = self.info
+            level = self.INFO
 
         # Skip verbose messages unless verbose mode is enabled
-        if not self._log_verbose and level == self.verbose:
+        if not self._log_verbose and level == self.VERBOSE:
             return
 
         for msg in args:
@@ -87,6 +92,18 @@ class Logger:
                     )
                 echo(f"{msg_prefix}{msg}")
 
+    def info(self, *args, stream=False):
+        self.log(*args, level=self.INFO, stream=stream)
+
+    def warn(self, *args, stream=False):
+        self.log(*args, level=self.WARN, stream=stream)
+
+    def error(self, *args, stream=False):
+        self.log(*args, level=self.ERROR, stream=stream)
+
+    def verbose(self, *args, stream=False):
+        self.log(*args, level=self.VERBOSE, stream=stream)
+
     def prompt_msg(self, msg="", input_type=str):
         """Logs a prompt message and returns the user's input.
 
@@ -104,7 +121,7 @@ class Logger:
 
         msg = self._format(msg)
         styled_prefix = style(
-            self.info.get("prefix", ""), fg=self.info.get("prefix_color", ""), bold=True
+            self.INFO.get("prefix", ""), fg=self.INFO.get("prefix_color", ""), bold=True
         )
 
         return prompt(
@@ -165,7 +182,7 @@ def handle_exception(error=Exception, additional_msg="", skip_traceback=False):
         )
 
     logger = Logger()
-    logger.log(additional_msg, error_msg, level=logger.error)
+    logger.error(additional_msg, error_msg)
     if not skip_traceback:
         echo()  # Force a newline
         echo(f"{traceback.format_exc()}", err=True)

@@ -7,6 +7,7 @@
 # files, and Minitrino benefits hugely from Docker Compose.
 
 import os
+import re
 import stat
 import hashlib
 import time
@@ -112,10 +113,10 @@ def cli(ctx, modules, no_rollback, docker_native):
         ctx.cmd_executor.execute_commands(compose_cmd, environment=compose_env)
         initialize_containers()
 
-        containers_to_restart = execute_bootstraps(modules)
-        containers_to_restart = write_trino_configs(containers_to_restart, modules)
-        check_dup_configs()
-        restart_containers(containers_to_restart)
+        c_restart = execute_bootstraps(modules)
+        c_restart = write_trino_cfg(c_restart, modules)
+        check_dup_cfgs()
+        restart_containers(c_restart)
         ctx.logger.log(f"Environment provisioning complete.")
 
     except Exception as e:
@@ -421,81 +422,129 @@ def execute_container_bootstrap(ctx, bootstrap="", container_name="", yaml_file=
     return True
 
 
+def split_cfg(cfgs=""):
+    cfgs = cfgs.strip().split("\n")
+    for i, cfg in enumerate(cfgs):
+        cfg = re.sub(r"\s*=\s*", "=", cfg)
+        cfgs[i] = cfg.split("=", 1)
+    return cfgs
+
+
 @pass_environment
-def write_trino_configs(ctx, containers_to_restart=[], modules=[]):
+def get_current_trino_cfgs(ctx):
+    """Get Trino config.properties and jvm.config files. Return the two sets of
+    configs as lists, e.g.:
+
+    [['a', 'b'], ['c', 'd'], ['e', 'f']]
+    """
+
+    current_cfgs = ctx.cmd_executor.execute_commands(
+        f"cat {ETC_TRINO}/{TRINO_CONFIG}",
+        f"cat {ETC_TRINO}/{TRINO_JVM_CONFIG}",
+        container=ctx.docker_client.containers.get("trino"),
+        suppress_output=True,
+    )
+
+    current_trino_cfgs = split_cfg(current_cfgs[0].get("output", ""))
+    current_jvm_cfg = split_cfg(current_cfgs[1].get("output", ""))
+
+    return current_trino_cfgs, current_jvm_cfg
+
+
+@pass_environment
+def write_trino_cfg(ctx, c_restart=[], modules=[]):
     """Appends Trino config from various modules if specified in the module YAML
     file. The Trino container is added to the restart list if any configs are
     written to files in the container."""
 
-    config_properties = []
-    jvm_config = []
+    def handle_password_authenticators(cfgs):
+        merge = []
+        for i, cfg in enumerate(cfgs):
+            if cfg[0] == "http-server.authentication.type":
+                merge.append(i)
+
+        if not merge:
+            return cfgs
+
+        auth_property = "http-server.authentication.type="
+        for i, cfg in enumerate(merge):
+            if i + 1 == len(merge):
+                auth_property += cfgs[cfg][1].upper()
+            else:
+                auth_property += f"{cfgs[cfg][1].upper()},"
+
+        cfgs = [x for i, x in enumerate(cfgs) if i not in merge]
+        cfgs.append(auth_property.split("="))
+        return cfgs
 
     trino_container = ctx.docker_client.containers.get("trino")
+
     if not trino_container:
         raise err.MinitrinoError(
             f"Attempting to append Trino configuration in Trino container, "
             f"but no running Trino container was found."
         )
 
+    cfgs = []
+    jvm_cfg = []
+
     for module in modules:
         yaml = ctx.modules.data.get(module, {}).get("yaml_dict")
-        conf = (
+        usr_cfgs = (
             yaml.get("services", {})
             .get("trino", {})
             .get("environment", {})
-            .get("CONFIG_PROPERTIES", "")
+            .get("CONFIG_PROPERTIES", [])
         )
-        jvm = (
+        user_jvm_cfg = (
             yaml.get("services", {})
             .get("trino", {})
             .get("environment", {})
-            .get("JVM_CONFIG", "")
+            .get("JVM_CONFIG", [])
         )
 
-        if conf:
-            config_properties.extend(conf.strip().split("\n"))
-        if jvm:
-            jvm_config.extend(jvm.strip().split("\n"))
+        if usr_cfgs:
+            cfgs.extend(split_cfg(usr_cfgs))
+        if user_jvm_cfg:
+            jvm_cfg.extend(split_cfg(user_jvm_cfg))
 
-    if not config_properties and not jvm_config:
-        return containers_to_restart
+    if not cfgs and not jvm_cfg:
+        return c_restart
 
-    if config_properties:
-        config_properties = handle_password_authenticators(config_properties)
+    cfgs = handle_password_authenticators(cfgs)
 
     checksum_file = "/tmp/minitrino-user-config.txt"
-    config_checksum = hashlib.md5(
-        bytes(str([config_properties, jvm_config]), "utf-8")
-    ).hexdigest()
+    checksum_data = bytes(str([cfgs, jvm_cfg]), "utf-8")
+    checksum = hashlib.md5(checksum_data).hexdigest()
 
     output = ctx.cmd_executor.execute_commands(
         f"cat {checksum_file}",
         container=trino_container,
         trigger_error=False,
     )
-    old_config_checksum = output[0].get("output", "").strip().lower()
 
-    if not "no such file or directory" in old_config_checksum:
-        if old_config_checksum == config_checksum:
+    old_checksum = output[0].get("output", "").strip().lower()
+    if not "no such file or directory" in old_checksum:
+        if old_checksum == checksum:
             ctx.logger.log(
                 "User-defined config already added to config files. Skipping...",
                 level=ctx.logger.verbose,
             )
-            return containers_to_restart
-
-    ctx.logger.log(
-        "Appending user-defined Trino config to Trino container config...",
-        level=ctx.logger.verbose,
-    )
+            return c_restart
 
     ctx.logger.log(
         "Checking Trino server status before updating configs...",
         level=ctx.logger.verbose,
     )
+
     retry = 0
     while retry <= 30:
         logs = trino_container.logs().decode()
         if "======== SERVER STARTED ========" in logs:
+            ctx.logger.log(
+                "Trino server started.",
+                level=ctx.logger.verbose,
+            )
             break
         elif trino_container.status != "running":
             raise err.MinitrinoError(
@@ -505,237 +554,113 @@ def write_trino_configs(ctx, containers_to_restart=[], modules=[]):
             )
         else:
             ctx.logger.log(
-                "Trino server has not started. Waiting one second and trying again...",
+                "Waiting for Trino server to start...",
                 level=ctx.logger.verbose,
             )
             time.sleep(1)
             retry += 1
 
-    current_configs = ctx.cmd_executor.execute_commands(
-        f"cat {ETC_TRINO}/{TRINO_CONFIG}",
-        f"cat {ETC_TRINO}/{TRINO_JVM_CONFIG}",
-        container=trino_container,
-        suppress_output=True,
+    def append_cfgs(trino_container, usr_cfgs, current_cfgs, filename):
+        """If there is an overlapping config key, replace it with the user
+        config."""
+
+        if not usr_cfgs:
+            return
+
+        current_cfgs = [
+            cfg
+            for cfg in current_cfgs
+            if not any(cfg[0] == usr_cfg[0] for usr_cfg in usr_cfgs)
+        ]
+
+        current_cfgs.extend(usr_cfgs)
+        current_cfgs = ["=".join(x) for x in current_cfgs]
+
+        ctx.logger.log(
+            f"Removing existing {filename} file...",
+            level=ctx.logger.verbose,
+        )
+        ctx.cmd_executor.execute_commands(
+            f"rm {ETC_TRINO}/{filename}", container=trino_container
+        )
+
+        ctx.logger.log(
+            f"Writing new config to {filename}...",
+            level=ctx.logger.verbose,
+        )
+        for current_cfg in current_cfgs:
+            append_cfg = (
+                f'bash -c "cat <<EOT >> {ETC_TRINO}/{filename}\n{current_cfg}\nEOT"'
+            )
+            ctx.cmd_executor.execute_commands(
+                append_cfg, container=trino_container, suppress_output=True
+            )
+
+    ctx.logger.log(
+        "Appending user-defined Trino config to Trino container config...",
+        level=ctx.logger.verbose,
     )
 
-    current_trino_config = current_configs[0].get("output", "").strip().split("\n")
-    current_jvm_config = current_configs[1].get("output", "").strip().split("\n")
+    current_trino_cfgs, current_jvm_cfg = get_current_trino_cfgs()
+    append_cfgs(trino_container, cfgs, current_trino_cfgs, TRINO_CONFIG)
+    append_cfgs(trino_container, jvm_cfg, current_jvm_cfg, TRINO_JVM_CONFIG)
 
-    append_configs(
-        trino_container, config_properties, current_trino_config, TRINO_CONFIG
-    )
-    append_configs(trino_container, jvm_config, current_jvm_config, TRINO_JVM_CONFIG)
-
-    if not "trino" in containers_to_restart:
-        containers_to_restart.append("trino")
+    if not "trino" in c_restart:
+        c_restart.append("trino")
 
     ctx.logger.log("Recording config checksum...", level=ctx.logger.verbose)
     output = ctx.cmd_executor.execute_commands(
-        f'bash -c "echo {config_checksum} > {checksum_file}"', container=trino_container
+        f'bash -c "echo {checksum} > {checksum_file}"', container=trino_container
     )
 
-    return containers_to_restart
+    return c_restart
 
 
 @pass_environment
-def handle_password_authenticators(ctx, config_properties):
-    """Merges multiple instances of `http-server.authentication.type` if
-    found."""
-
-    auth_configs = []
-    auth_property = "http-server.authentication.type"
-    auth_found = False
-
-    def config_builder(config):
-        if auth_property in config:
-            auth_configs.append(config.split("="))
-            auth_found = True
-            return False
-        return True
-
-    config_properties = [x for x in config_properties if config_builder(x)]
-
-    if not auth_found:
-        return config_properties
-
-    auth_property += "="
-    for i, val in enumerate(auth_configs):
-        if i + 1 == len(auth_configs):
-            # Is the end, leave the comma out
-            auth_property += val[1]
-        else:
-            # Not the end, add a comma
-            auth_property += f"{val[1]},"
-
-    config_properties.append(auth_property)
-    return config_properties
-
-
-@pass_environment
-def append_configs(ctx, trino_container, user_configs, current_configs, filename):
-    """If there is an overlapping config key, replace it with the user
-    config. If there is not overlapping config key, append it to the current
-    config list.
-
-    No additional configs, leave the file in the container alone."""
-
-    if not user_configs:
-        return
-
-    if filename == TRINO_CONFIG:
-        for user_config in user_configs:
-            user_config = utils.parse_key_value_pair(
-                user_config, err_type=err.UserError, key_to_upper=False
-            )
-            if user_config is None:
-                continue
-            for i, current_config in enumerate(current_configs):
-                if current_config.startswith("#"):
-                    continue
-                current_config = utils.parse_key_value_pair(
-                    current_config, err_type=err.UserError, key_to_upper=False
-                )
-                if current_config is None:
-                    continue
-                if user_config[0] == current_config[0]:
-                    current_configs[i] = "=".join(user_config)
-                    break
-                if (
-                    i + 1 == len(current_configs)
-                    and not "=".join(user_config) in current_configs
-                ):
-                    current_configs.append("=".join(user_config))
-    else:
-        for user_config in user_configs:
-            user_config = user_config.strip()
-            if not user_config:
-                continue
-            for i, current_config in enumerate(current_configs):
-                if current_config.startswith("#"):
-                    continue
-                current_config = current_config.strip()
-                if not current_config:
-                    continue
-                if user_config == current_config:
-                    current_configs[i] = user_config
-                    break
-                if i + 1 == len(current_configs) and not user_config in current_configs:
-                    current_configs.append(user_config)
-
-    ctx.logger.log(
-        f"Removing existing {filename} file...",
-        level=ctx.logger.verbose,
-    )
-    ctx.cmd_executor.execute_commands(
-        f"rm {ETC_TRINO}/{filename}", container=trino_container
-    )
-
-    ctx.logger.log(
-        f"Writing new config to {filename}...",
-        level=ctx.logger.verbose,
-    )
-    for current_config in current_configs:
-        append_config = (
-            f'bash -c "cat <<EOT >> {ETC_TRINO}/{filename}\n{current_config}\nEOT"'
-        )
-        ctx.cmd_executor.execute_commands(
-            append_config, container=trino_container, suppress_output=True
-        )
-
-
-@pass_environment
-def check_dup_configs(ctx):
+def check_dup_cfgs(ctx):
     """Checks for duplicate configs in Trino config files (jvm.config and
     config.properties). This is a safety check for modules that may improperly
-    modify these files.
+    modify these files."""
 
-    Duplicates will only be registered for JVM config if the configs are
-    identical. For config.properties, duplicates will be registered if there are
-    multiple overlapping property keys."""
-
-    check_files = [TRINO_CONFIG, TRINO_JVM_CONFIG]
-    for check_file in check_files:
+    def log_duplicates(cfgs, filename):
         ctx.logger.log(
-            f"Checking Trino {check_file} for duplicate configs...",
+            f"Checking Trino '{filename}' file for duplicate configs...",
             level=ctx.logger.verbose,
         )
-        container = ctx.docker_client.containers.get("trino")
-        output = ctx.cmd_executor.execute_commands(
-            f"cat {ETC_TRINO}/{check_file}",
-            suppress_output=True,
-            container=container,
-        )
 
-        configs = output[0].get("output", "")
-        if not configs:
-            raise err.MinitrinoError(
-                f"Trino {check_file} file unable to be read from Trino container."
+        unique = {}
+        for cfg in cfgs:
+            key = cfg[0]
+            if key in unique:
+                unique[key].append(cfg)
+            else:
+                unique[key] = [cfg]
+
+        duplicates = ["=".join(x) for y in unique.values() for x in y if len(y) > 1]
+
+        if duplicates:
+            ctx.logger.log(
+                f"Duplicate Trino configuration properties detected in "
+                f"'{filename}' file:\n{str(duplicates)}",
+                level=ctx.logger.warn,
             )
 
-        configs = configs.strip().split("\n")
-        configs.sort()
+    current_trino_cfgs, current_jvm_cfg = get_current_trino_cfgs()
 
-        duplicates = []
-        if check_file == TRINO_CONFIG:
-            for i, config in enumerate(configs):
-                if config.startswith("#"):
-                    continue
-                config = utils.parse_key_value_pair(
-                    config, err_type=err.UserError, key_to_upper=False
-                )
-                if config is None:
-                    continue
-                if i + 1 != len(configs):
-                    next_config = utils.parse_key_value_pair(
-                        configs[i + 1], err_type=err.UserError, key_to_upper=False
-                    )
-                    if config[0] == next_config[0]:
-                        duplicates.extend(["=".join(config), "=".join(next_config)])
-                else:
-                    next_config = [""]
-                if config[0] == next_config[0]:
-                    duplicates.extend(["=".join(config), "=".join(next_config)])
-                elif duplicates:
-                    duplicates = set(duplicates)
-                    duplicates_string = "\n".join(duplicates)
-                    ctx.logger.log(
-                        f"Duplicate Trino configuration properties detected in "
-                        f"{check_file} file:\n{duplicates_string}",
-                        level=ctx.logger.warn,
-                    )
-                    duplicates = []
-        else:  # JVM config
-            for i, config in enumerate(configs):
-                config = config.strip()
-                if config.startswith("#") or not config:
-                    continue
-                if i + 1 != len(configs):
-                    next_config = configs[i + 1].strip()
-                else:
-                    next_config = ""
-                if config == next_config:
-                    duplicates.extend([config, next_config])
-                elif duplicates:
-                    duplicates_string = "\n".join(duplicates)
-                    ctx.logger.log(
-                        f"Duplicate Trino configuration properties detected in "
-                        f"{check_file} file:\n{duplicates_string}",
-                        level=ctx.logger.warn,
-                    )
-                    duplicates = []
+    log_duplicates(current_trino_cfgs, TRINO_CONFIG)
+    log_duplicates(current_jvm_cfg, TRINO_JVM_CONFIG)
 
 
 @pass_environment
-def restart_containers(ctx, containers_to_restart=[]):
+def restart_containers(ctx, c_restart=[]):
     """Restarts all the containers in the list."""
 
-    if containers_to_restart == []:
+    if c_restart == []:
         return
 
-    # Remove any duplicates
-    containers_to_restart = list(set(containers_to_restart))
+    c_restart = list(set(c_restart))
 
-    for container in containers_to_restart:
+    for container in c_restart:
         try:
             container = ctx.docker_client.containers.get(container)
             ctx.logger.log(

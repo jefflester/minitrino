@@ -173,9 +173,7 @@ def prepare_snapshot_dir(ctx, name, active, no_scrub, modules):
         shutil.rmtree(ctx.snapshot_dir)
         os.mkdir(ctx.snapshot_dir)
     else:
-        ctx.logger.info(
-            "Snapshot directory does not exist. Creating...", level=ctx.logger.verbose
-        )
+        ctx.logger.verbose("Snapshot directory does not exist. Creating...")
         os.mkdir(ctx.snapshot_dir)
 
     snapshot_name_dir = clone_lib_dir(name)

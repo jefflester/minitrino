@@ -324,13 +324,13 @@ def test_duplicate_config_props():
 
     assert all(
         (
-            "Duplicate Trino configuration properties detected in config.properties"
+            "Duplicate Trino configuration properties detected in 'config.properties' file"
             in result.output,
             "query.max-stage-count=85" in result.output,
             "query.max-stage-count=100" in result.output,
             "query.max-execution-time=1h" in result.output,
             "query.max-execution-time=2h" in result.output,
-            "Duplicate Trino configuration properties detected in jvm.config"
+            "Duplicate Trino configuration properties detected in 'jvm.config' file"
             in result.output,
             "-Xms1G" in result.output,
             "-Xms1G" in result.output,

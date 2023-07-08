@@ -3,7 +3,7 @@ name: Pre-Release Tests
 on:
   pull_request:
     branches:
-      - "[0-9]\.[0-9]\.[0-9]-update"
+      - "[0-9].[0-9].[0-9]-update"
 
 jobs:
   test:

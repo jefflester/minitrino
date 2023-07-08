@@ -120,7 +120,7 @@ def cli(ctx, modules, no_rollback, docker_native):
         ctx.logger.info(f"Environment provisioning complete.")
 
     except Exception as e:
-        rollback_provision(no_rollback)
+        rollback(no_rollback)
         utils.handle_exception(e)
 
 
@@ -233,7 +233,7 @@ def check_volumes(ctx, modules=[]):
     to the user if so."""
 
     ctx.logger.verbose(
-        "Checking modules for persisent volumes...",
+        "Checking modules for persistent volumes...",
     )
 
     for module in modules:
@@ -373,7 +373,7 @@ def execute_container_bootstrap(ctx, bootstrap="", container_name="", yaml_file=
         st.st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH,
     )
 
-    bootstrap_checksum = hashlib.md5(open(bootstrap_file, "rb").read()).hexdigest()
+    checksum = hashlib.md5(open(bootstrap_file, "rb").read()).hexdigest()
     container = ctx.docker_client.containers.get(container_name)
 
     # Check if this script has already been executed
@@ -383,7 +383,7 @@ def execute_container_bootstrap(ctx, bootstrap="", container_name="", yaml_file=
         trigger_error=False,
     )
 
-    if f"{bootstrap_checksum}" in output[0].get("output", ""):
+    if f"{checksum}" in output[0].get("output", ""):
         ctx.logger.verbose(
             f"Bootstrap already executed in container '{container_name}'. Skipping.",
         )
@@ -400,7 +400,7 @@ def execute_container_bootstrap(ctx, bootstrap="", container_name="", yaml_file=
     # Record executed file checksum
     ctx.cmd_executor.execute_commands(
         f"/tmp/{os.path.basename(bootstrap_file)}",
-        f'bash -c "echo {bootstrap_checksum} >> /opt/minitrino/bootstrap-status.txt"',
+        f'bash -c "echo {checksum} >> /opt/minitrino/bootstrap-status.txt"',
         container=container,
     )
 
@@ -502,7 +502,7 @@ def write_trino_cfg(ctx, c_restart=[], modules=[]):
 
     cfgs = handle_password_authenticators(cfgs)
 
-    checksum_file = "/tmp/minitrino-user-config.txt"
+    checksum_file = "/opt/minitrino/user-config.txt"
     checksum_data = bytes(str([cfgs, jvm_cfg]), "utf-8")
     checksum = hashlib.md5(checksum_data).hexdigest()
 
@@ -653,34 +653,27 @@ def restart_containers(ctx, c_restart=[]):
 
 @pass_environment
 def initialize_containers(ctx):
-    """Initializes each container with /opt/minitrino/bootstrap-status.txt."""
+    """Initializes each container with /opt/minitrino/ directory."""
 
     containers = ctx.docker_client.containers.list(filters={"label": RESOURCE_LABEL})
     for container in containers:
         output = ctx.cmd_executor.execute_commands(
-            "cat /opt/minitrino/bootstrap-status.txt",
+            "mkdir -p /opt/minitrino/",
             container=container,
             trigger_error=False,
         )
-        output_string = output[0].get("output", "").strip()
-        if "no such file or directory" in output_string.lower():
-            ctx.cmd_executor.execute_commands(
-                "mkdir -p /opt/minitrino/",
-                "touch /opt/minitrino/bootstrap-status.txt",
-                container=container,
-            )
-        elif output[0].get("return_code", None) in [0, 126]:
+        if output[0].get("return_code", None) in [0, 126]:
             continue
         else:
             raise err.MinitrinoError(
                 f"Command failed.\n"
-                f"Output: {output_string}\n"
+                f"Output: {output[0].get('output', '').strip()}\n"
                 f"Exit code: {output[0].get('return_code', None)}"
             )
 
 
 @pass_environment
-def rollback_provision(ctx, no_rollback):
+def rollback(ctx, no_rollback):
     """Rolls back the provisioning command in the event of an error."""
 
     if no_rollback:

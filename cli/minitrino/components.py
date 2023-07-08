@@ -14,7 +14,6 @@ from configparser import ConfigParser
 from minitrino import utils
 from minitrino import errors as err
 from minitrino.settings import RESOURCE_LABEL
-from minitrino.settings import MODULE_LABEL_KEY_ROOT
 from minitrino.settings import MODULE_ROOT
 from minitrino.settings import MODULE_ADMIN
 from minitrino.settings import MODULE_SECURITY

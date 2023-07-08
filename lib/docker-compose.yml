@@ -1,23 +1,21 @@
-version: "3.8"
+version: '3.8'
 services:
   
   trino:
     build:
       context: .
       args:
-        STARBURST_VER: "${STARBURST_VER}"
+        STARBURST_VER: ${STARBURST_VER}
       labels:
-        - "com.starburst.tests=minitrino"
-        - "com.starburst.tests.module=trino"
-    image: "minitrino/trino:${STARBURST_VER}"
-    container_name: "trino"
-    hostname: "trino.minitrino.starburstdata.com"
-    labels:
-      - "com.starburst.tests=minitrino"
-      - "com.starburst.tests.module=trino"
-    # Uncomment this to enable the volume mount. The variable should point to a
-    # valid SEP license. 
-    # volumes:
-    #   - "${STARBURST_LIC_PATH}:/etc/starburst/starburstdata.license:ro"
+        - com.starburst.tests=minitrino
+        - com.starburst.tests.module=trino
+    image: minitrino/trino:${STARBURST_VER}
+    container_name: trino
+    restart: no
     ports:
-      - "8080:8080"
+      - 8080:8080
+    volumes:
+      - ${SEP_LIC_PATH}:${SEP_LIC_MOUNT_PATH}
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module=trino 

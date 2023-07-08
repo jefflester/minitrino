@@ -4,7 +4,6 @@
 # TODO: Test no rollback
 # TODO: Test invalid user config (Trino/JVM)
 
-import os
 import docker
 import time
 import subprocess
@@ -24,7 +23,9 @@ def main():
     test_bad_sep_version()
     test_invalid_module()
     test_docker_native()
+    test_enterprise()
     test_valid_user_config()
+    test_existing_user_config()
     test_duplicate_config_props()
     test_incompatible_modules()
     test_provision_append()
@@ -111,6 +112,48 @@ def test_docker_native():
 
     test_bootstrap_script(result)
     test_bootstrap_re_execute()
+    cleanup()
+
+
+def test_enterprise():
+    """Ensures that the enterprise license checker works properly."""
+
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
+
+    result = helpers.execute_command(["-v", "provision", "--module", "test-enterprise"])
+
+    assert result.exit_code == 2
+    assert "You must provide a path to a Starburst license" in result.output
+    cleanup()
+
+    # Create dummy license
+    process = subprocess.Popen(
+        "touch /tmp/dummy.license",
+        shell=True,
+    )
+    process.communicate()
+
+    result = helpers.execute_command(
+        [
+            "-v",
+            "--env",
+            "SEP_LIC_PATH=/tmp/dummy.license",
+            "provision",
+            "--module",
+            "test",
+        ]
+    )
+
+    assert "SEP_LIC_PATH" and "/tmp/dummy.license" in result.output
+    cleanup()
+
+    result = helpers.execute_command(["-v", "provision", "--module", "test"])
+
+    assert result.exit_code == 0
+    assert "SEP_LIC_PATH" and "./modules/resources/dummy.license" in result.output
+    assert "SEP_LIC_MOUNT_PATH" and "/etc/starburst/dummy.license:ro" in result.output
+
+    helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()
 
 
@@ -215,6 +258,37 @@ def test_valid_user_config():
     cleanup()
 
 
+def test_existing_user_config():
+    """Ensures that already-propagated configs are not propagated again, thus
+    avoiding unnecessary container restarts."""
+
+    helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
+
+    helpers.execute_command(
+        [
+            "-v",
+            "provision",
+            "--module",
+            "test",
+        ]
+    )
+
+    result = helpers.execute_command(
+        [
+            "-v",
+            "provision",
+            "--module",
+            "test",
+        ]
+    )
+
+    assert result.exit_code == 0
+    assert "User-defined config already added to config files" in result.output
+
+    helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
+    cleanup()
+
+
 def test_duplicate_config_props():
     """Ensures that duplicate configuration properties in Trino are logged as a
     warning to the user."""
@@ -250,13 +324,13 @@ def test_duplicate_config_props():
 
     assert all(
         (
-            "Duplicate Trino configuration properties detected in config.properties"
+            "Duplicate Trino configuration properties detected in 'config.properties' file"
             in result.output,
             "query.max-stage-count=85" in result.output,
             "query.max-stage-count=100" in result.output,
             "query.max-execution-time=1h" in result.output,
             "query.max-execution-time=2h" in result.output,
-            "Duplicate Trino configuration properties detected in jvm.config"
+            "Duplicate Trino configuration properties detected in 'jvm.config' file"
             in result.output,
             "-Xms1G" in result.output,
             "-Xms1G" in result.output,

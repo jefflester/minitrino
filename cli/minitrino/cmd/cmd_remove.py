@@ -67,7 +67,7 @@ def cli(ctx, images, volumes, labels, force):
             remove_items(IMAGE, force)
             remove_items(VOLUME, force)
         else:
-            ctx.logger.log(f"Opted to skip resource removal.")
+            ctx.logger.info(f"Opted to skip resource removal.")
             sys.exit(0)
 
     if images:
@@ -75,7 +75,7 @@ def cli(ctx, images, volumes, labels, force):
     if volumes:
         remove_items(VOLUME, force, labels)
 
-    ctx.logger.log(f"Removal complete.")
+    ctx.logger.info(f"Removal complete.")
 
 
 @pass_environment
@@ -107,15 +107,13 @@ def remove_items(ctx, item_type, force, labels=[]):
                 )
             else:
                 ctx.docker_client.images.remove(image.short_id)
-            ctx.logger.log(
+            ctx.logger.verbose(
                 f"{item_type.title()} removed: {identifier}",
-                level=ctx.logger.verbose,
             )
         except APIError as e:
-            ctx.logger.log(
+            ctx.logger.verbose(
                 f"Cannot remove image: {identifier}\n"
                 f"Error from Docker: {e.explanation}",
-                level=ctx.logger.verbose,
             )
 
     volumes = list(set(volumes))
@@ -126,15 +124,13 @@ def remove_items(ctx, item_type, force, labels=[]):
                 volume.remove(force=True)
             else:
                 volume.remove()
-            ctx.logger.log(
+            ctx.logger.verbose(
                 f"{item_type.title()} removed: {identifier}",
-                level=ctx.logger.verbose,
             )
         except APIError as e:
-            ctx.logger.log(
+            ctx.logger.verbose(
                 f"Cannot remove volume: {identifier}\n"
                 f"Error from Docker: {e.explanation}",
-                level=ctx.logger.verbose,
             )
 
 

@@ -1,0 +1,6 @@
+{
+    "description": "Secures Trino with OAuth2 authentication.",
+    "incompatibleModules": [],
+    "dependentModules": ["tls"],
+    "enterprise": false
+}

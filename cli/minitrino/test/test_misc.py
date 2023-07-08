@@ -49,7 +49,10 @@ def test_daemon_off_all(*args):
     helpers.stop_docker_daemon()
 
     for arg in args:
-        result = helpers.execute_command(arg)
+        if "snapshot" in arg:
+            result = helpers.execute_command(arg, command_input="y\n")
+        else:
+            result = helpers.execute_command(arg)
         run_daemon_assertions(result)
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
@@ -82,7 +85,7 @@ def test_multiple_env():
             "--env",
             "COMPOSE_PROJECT_NAME=test",
             "--env",
-            "STARBURST_VER=370-e",
+            "STARBURST_VER=388-e",
             "--env",
             "TRINO=is=awesome",
             "version",
@@ -93,7 +96,7 @@ def test_multiple_env():
     assert all(
         (
             '"COMPOSE_PROJECT_NAME": "test"' in result.output,
-            '"STARBURST_VER": "370-e"' in result.output,
+            '"STARBURST_VER": "388-e"' in result.output,
             '"TRINO": "is=awesome"' in result.output,
         )
     )

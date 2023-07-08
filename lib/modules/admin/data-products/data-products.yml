@@ -1,4 +1,4 @@
-version: "3.8"
+version: '3.8'
 services:
 
   trino:
@@ -8,4 +8,4 @@ services:
         data-product.starburst-jdbc-url=jdbc:trino://trino:8080
         data-product.starburst-user=admin
     labels:
-      - "com.starburst.tests.module.data-products=admin-data-products"
+      - com.starburst.tests.module.data-products=admin-data-products

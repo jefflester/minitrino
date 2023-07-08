@@ -47,7 +47,7 @@ def cli(ctx, modules, json_format, running):
 
     utils.check_lib(ctx)
 
-    ctx.logger.log("Printing module metadata...")
+    ctx.logger.info("Printing module metadata...")
 
     if not modules and not running:
         for module, module_dict in ctx.modules.data.items():
@@ -73,7 +73,7 @@ def log_info(ctx, module_name="", module_dict={}, json_format=False):
 
     if json_format:
         module_dict = {module_name: module_dict}
-        ctx.logger.log(json.dumps(module_dict, indent=2))
+        ctx.logger.info(json.dumps(module_dict, indent=2))
     else:
         log_msg = [f"Module: {module_name}\n"]
         keys = ["description", "incompatibleModules", "dependentModules", "enterprise"]
@@ -85,4 +85,4 @@ def log_info(ctx, module_name="", module_dict={}, json_format=False):
                 key = "".join(key)
                 log_msg.extend(f"{key}: {val}\n")
 
-        ctx.logger.log("".join(log_msg))
+        ctx.logger.info("".join(log_msg))

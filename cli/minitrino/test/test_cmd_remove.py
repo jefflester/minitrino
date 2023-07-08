@@ -10,25 +10,24 @@ from inspect import currentframe
 from types import FrameType
 from typing import cast
 
-docker_client = docker.from_env()
-
 
 def main():
     helpers.log_status(__file__)
     helpers.start_docker_daemon()
+    docker_client = docker.from_env()
     cleanup()
-    test_images()
-    test_volumes()
-    test_label()
-    test_multiple_labels()
-    test_invalid_label()
-    test_all()
-    test_remove_dependent_resources_running()
-    test_remove_dependent_resources_stopped()
-    test_remove_dependent_resources_force()
+    test_images(docker_client)
+    test_volumes(docker_client)
+    test_label(docker_client)
+    test_multiple_labels(docker_client)
+    test_invalid_label(docker_client)
+    test_all(docker_client)
+    test_remove_dependent_resources_running(docker_client)
+    test_remove_dependent_resources_stopped(docker_client)
+    test_remove_dependent_resources_force(docker_client)
 
 
-def test_images():
+def test_images(docker_client):
     """Verifies that images with the standard Minitrino label applied to them
     are removed."""
 
@@ -53,7 +52,7 @@ def test_images():
     cleanup()
 
 
-def test_volumes():
+def test_volumes(docker_client):
     """Verifies that volumes with the standard Minitrino label applied to them
     are removed."""
 
@@ -78,7 +77,7 @@ def test_volumes():
     cleanup()
 
 
-def test_label():
+def test_label(docker_client):
     """Verifies that only images with the given label are removed."""
 
     helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
@@ -115,7 +114,7 @@ def test_label():
     cleanup()
 
 
-def test_multiple_labels():
+def test_multiple_labels(docker_client):
     """Verifies that images with any of the given labels are removed."""
 
     helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
@@ -154,7 +153,7 @@ def test_multiple_labels():
     cleanup()
 
 
-def test_invalid_label():
+def test_invalid_label(docker_client):
     """Verifies that images with the Minitrino label applied to them are
     removed."""
 
@@ -181,7 +180,7 @@ def test_invalid_label():
     cleanup()
 
 
-def test_all():
+def test_all(docker_client):
     """Verifies that all Minitrino resources are removed."""
 
     helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
@@ -212,7 +211,7 @@ def test_all():
     cleanup()
 
 
-def test_remove_dependent_resources_running():
+def test_remove_dependent_resources_running(docker_client):
     """Verifies that a dependent resources (tied to active containers) cannot be
     removed."""
 
@@ -248,7 +247,7 @@ def test_remove_dependent_resources_running():
     cleanup()
 
 
-def test_remove_dependent_resources_stopped():
+def test_remove_dependent_resources_stopped(docker_client):
     """Verifies that a dependent resources (tied to stopped containers) cannot
     be removed."""
 
@@ -292,7 +291,7 @@ def test_remove_dependent_resources_stopped():
     cleanup()
 
 
-def test_remove_dependent_resources_force():
+def test_remove_dependent_resources_force(docker_client):
     """Verifies that a dependent resources can be forcibly removed. Note that
     even forcing a resource removal will not work if it is tied to a running
     container.

@@ -1,4 +1,4 @@
-version: "3.8"
+version: '3.8'
 services:
 
   trino:
@@ -9,7 +9,7 @@ services:
         starburst.access-control.authorized-users=starburst_service,admin
         starburst.access-control.authorized-groups=admins,sepadmins
         access-control.config-files=/etc/starburst/biac.properties
-    labels:
-      - "com.starburst.tests.module.biac=security-biac"
     volumes:
-      - "./modules/security/biac/resources/trino/biac.properties:/etc/starburst/biac.properties"
+      - ./modules/security/biac/resources/trino/biac.properties:/etc/starburst/biac.properties
+    labels:
+      - com.starburst.tests.module.biac=security-biac

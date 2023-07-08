@@ -1,25 +1,25 @@
-version: "3.8"
+version: '3.8'
 services:
   
   trino:
     volumes:
-      - "./modules/catalog/elasticsearch/resources/trino/elasticsearch.properties:/etc/starburst/catalog/elasticsearch.properties"
+      - ./modules/catalog/elasticsearch/resources/trino/elasticsearch.properties:/etc/starburst/catalog/elasticsearch.properties
 
   elasticsearch:
-    image: "elasticsearch:${ELASTICSEARCH_VER}"
+    image: elasticsearch:${ELASTICSEARCH_VER}
     container_name: elasticsearch
-    volumes:
-      - "./modules/resources/wait-for-it.sh:/opt/minitrino/wait-for-it.sh"
     environment:
-      MINITRINO_BOOTSTRAP: "bootstrap-elasticsearch.sh"
-      discovery.type: "single-node"
-      bootstrap.memory_lock: "true"
-      network.host: "0.0.0.0"
-      network.bind_host: "0.0.0.0"
-      ES_JAVA_OPTS: "-Xms256m -Xmx256m"
-    labels:
-      - "com.starburst.tests=minitrino"
-      - "com.starburst.tests.module.elasticsearch=catalog-elasticsearch"
+      MINITRINO_BOOTSTRAP: bootstrap-elasticsearch.sh
+      discovery.type: single-node
+      bootstrap.memory_lock: true
+      network.host: 0.0.0.0
+      network.bind_host: 0.0.0.0
+      ES_JAVA_OPTS: -Xms256m -Xmx256m
     ports:
       - 9200:9200
       - 9300:9300
+    volumes:
+      - ./modules/resources/wait-for-it.sh:/opt/minitrino/wait-for-it.sh
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.elasticsearch=catalog-elasticsearch

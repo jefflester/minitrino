@@ -14,7 +14,7 @@ from minitrino.settings import RESOURCE_LABEL
     "down",
     help=(
         """Bring down running Minitrino containers. This command follows the
-        behavior of `docker-compose down` where containers are both stopped and
+        behavior of `docker compose down` where containers are both stopped and
         removed."""
     ),
 )
@@ -48,14 +48,13 @@ def cli(ctx, sig_kill, keep):
     )
 
     if len(containers) == 0:
-        ctx.logger.log("No containers to bring down.")
+        ctx.logger.info("No containers to bring down.")
         sys.exit(0)
 
     if sig_kill:
         stop_timeout = 1
-        ctx.logger.log(
+        ctx.logger.verbose(
             "Stopping Minitrino containers with sig-kill...",
-            level=ctx.logger.verbose,
         )
     else:
         stop_timeout = 10
@@ -67,7 +66,7 @@ def cli(ctx, sig_kill, keep):
         )
         if container.status == "running":
             container.stop(timeout=stop_timeout)
-            ctx.logger.log(f"Stopped container: {identifier}", level=ctx.logger.verbose)
+            ctx.logger.verbose(f"Stopped container: {identifier}")
 
     # Remove
     if not keep:
@@ -76,6 +75,6 @@ def cli(ctx, sig_kill, keep):
                 {"ID": container.short_id, "Name": container.name}
             )
             container.remove()
-            ctx.logger.log(f"Removed container: {identifier}", level=ctx.logger.verbose)
+            ctx.logger.verbose(f"Removed container: {identifier}")
 
-    ctx.logger.log("Brought down all Minitrino containers.")
+    ctx.logger.info("Brought down all Minitrino containers.")

@@ -1,11 +1,22 @@
 # Delta-Lake Module
 
+This module uses Minio as a local S3 service. You can write data to this service
+and the files will be written to your machine. You can read more about Minio
+[here](https://docs.min.io/docs/minio-docker-quickstart-guide.html). This module
+also uses a Hive metastore (HMS) container along with a Postgres container for
+the HMS's backend storage. The HMS image is based off of naushadh's repository
+[here](https://github.com/naushadh/hive-metastore) (refer to his repository for
+additional documentation on the HMS image and configuration options).
+
+You can access the Minio UI at `http://localhost:9002` with `access-key` and
+`secret-key` for credentials.
+
 This module uses the Delta Lake connector. There is no Spark backend, so tables
 need to be created via `CREATE TABLE AS ...` queries from Trino. Example:
 
     CREATE TABLE delta.default.customer 
     WITH (
-        location = 's3a://sample-bucket/default/'
+        location = 's3a://sample-bucket/wh/default/'
     )
     AS SELECT * FROM tpch.tiny.customer;
 

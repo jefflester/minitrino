@@ -1,17 +1,17 @@
-version: "3.8"
+version: '3.8'
 services:
 
   trino:
     volumes:
-      - "./modules/catalog/postgres/resources/trino/postgres.properties:/etc/starburst/catalog/postgres.properties"
+      - ./modules/catalog/postgres/resources/trino/postgres.properties:/etc/starburst/catalog/postgres.properties
 
   postgres:
-    image: "postgres:${POSTGRES_VER}"
-    container_name: "postgres"
-    labels:
-      - "com.starburst.tests=minitrino"
-      - "com.starburst.tests.module.postgres=catalog-postgres"
+    image: postgres:${POSTGRES_VER}
+    container_name: postgres
     env_file:
-      - "./modules/catalog/postgres/resources/postgres/postgres.env"
+      - ./modules/catalog/postgres/resources/postgres/postgres.env
     ports:
-      - "5432:5432"
+      - 5432:5432
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.postgres=catalog-postgres

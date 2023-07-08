@@ -1,17 +1,17 @@
-version: "3.8"
+version: '3.8'
 services:
 
   trino:
     volumes:
-      - "./modules/catalog/sqlserver/resources/trino/sqlserver.properties:/etc/starburst/catalog/sqlserver.properties"
+      - ./modules/catalog/sqlserver/resources/trino/sqlserver.properties:/etc/starburst/catalog/sqlserver.properties
 
   sqlserver:
-    image: "mcr.microsoft.com/mssql/server:${SQLSERVER_VER}"
-    container_name: "sqlserver"
-    labels:
-      - "com.starburst.tests=minitrino"
-      - "com.starburst.tests.module.sqlserver=catalog-sqlserver"
+    image: mcr.microsoft.com/mssql/server:${SQLSERVER_VER}
+    container_name: sqlserver
     env_file:
-      - "./modules/catalog/sqlserver/resources/sqlserver/sqlserver.env"
+      - ./modules/catalog/sqlserver/resources/sqlserver/sqlserver.env
     ports:
       - 1433:1433
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.sqlserver=catalog-sqlserver

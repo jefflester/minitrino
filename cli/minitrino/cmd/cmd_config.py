@@ -34,13 +34,12 @@ def cli(ctx, reset):
     """Config command for Minitrino."""
 
     if not os.path.isdir(ctx.minitrino_user_dir):
-        ctx.logger.log(f"No {ctx.minitrino_user_dir} directory found. Creating...")
+        ctx.logger.info(f"No {ctx.minitrino_user_dir} directory found. Creating...")
         os.mkdir(ctx.minitrino_user_dir)
 
     if os.path.isfile(ctx.config_file) and not reset:
-        ctx.logger.log(
+        ctx.logger.verbose(
             f"Opening existing config file at path: {ctx.config_file}",
-            level=ctx.logger.verbose,
         )
         edit_file()
     elif os.path.isfile(ctx.config_file) and reset:
@@ -49,12 +48,11 @@ def cli(ctx, reset):
             write_template()
             edit_file()
         else:
-            ctx.logger.log(f"Opted out of recreating {ctx.minitrino_user_dir} file.")
+            ctx.logger.info(f"Opted out of recreating {ctx.minitrino_user_dir} file.")
     else:
-        ctx.logger.log(
+        ctx.logger.verbose(
             f"No config file found at path: {ctx.config_file}. "
             f"Creating template config file and opening for edits...",
-            level=ctx.logger.verbose,
         )
         write_template()
         edit_file()

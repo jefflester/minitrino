@@ -77,7 +77,7 @@ on GitHub. To set everything up, run:
 
 ```sh
   pip install minitrino
-  minitrino -v lib_install
+  minitrino -v lib-install
 ```
 
 Using this installation method, the `LIB_PATH` variable will point to
@@ -114,7 +114,7 @@ Each CLI version has its own respective library. To install the updated library,
 run:
 
 ```sh
-minitrino -v lib_install
+minitrino -v lib-install
 ```
 
 **Note**: Installing the new library will overwrite all modules and snapshots in

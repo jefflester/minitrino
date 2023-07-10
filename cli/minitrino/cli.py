@@ -20,13 +20,15 @@ class CommandLineInterface(click.MultiCommand):
         retval = []
         for filename in os.listdir(cmd_dir):
             if filename.endswith(".py") and filename.startswith("cmd_"):
-                retval.append(filename[4:-3])
+                retval.append(filename[4:-3].replace("_", "-"))
         retval.sort()
         return retval
 
     def get_command(self, ctx, name):
         try:
-            mod = __import__(f"minitrino.cmd.cmd_{name}", None, None, ["cli"])
+            mod = __import__(
+                f"minitrino.cmd.cmd_{name.replace('-', '_')}", None, None, ["cli"]
+            )
         except ImportError:
             return
         return mod.cli

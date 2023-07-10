@@ -21,7 +21,7 @@ SEP_LIC_MOUNT_PATH = "/etc/starburst/starburstdata.license:ro"
 DUMMY_LIC_MOUNT_PATH = "/etc/starburst/dummy.license:ro"
 TRINO_CONFIG = "config.properties"
 TRINO_JVM_CONFIG = "jvm.config"
-LIB_INDEPENDENT_CMDS = ["lib_install"]
+LIB_INDEPENDENT_CMDS = ["lib-install"]
 
 # Snapshots
 SNAPSHOT_ROOT_FILES = [

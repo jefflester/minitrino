@@ -8,6 +8,7 @@ import pkg_resources
 
 from minitrino import errors as err
 from minitrino.settings import DEFAULT_INDENT
+from minitrino.settings import MIN_SEP_VER
 
 from click import echo, style, prompt
 from textwrap import fill
@@ -262,12 +263,12 @@ def check_starburst_ver(ctx):
     starburst_ver = ctx.env.get_var("STARBURST_VER", "")
     error_msg = (
         f"Provided Starburst version '{starburst_ver}' is invalid. "
-        f"The provided version must be 388-e or higher."
+        f"The provided version must be {MIN_SEP_VER} or higher."
     )
 
     try:
         starburst_ver_int = int(starburst_ver[0:3])
-        if starburst_ver_int < 380 or "-e" not in starburst_ver:
+        if starburst_ver_int < MIN_SEP_VER or "-e" not in starburst_ver:
             raise err.UserError(error_msg)
     except:
         raise err.UserError(error_msg)

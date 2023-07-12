@@ -15,6 +15,7 @@ MODULE_ADMIN = "admin"
 MODULE_CATALOG = "catalog"
 MODULE_SECURITY = "security"
 MODULE_RESOURCES = "resources"
+MIN_SEP_VER = 388
 ETC_TRINO = "/etc/starburst"
 SEP_VOLUME_MOUNT = "${SEP_LIC_PATH}:${SEP_LIC_MOUNT_PATH}"
 SEP_LIC_MOUNT_PATH = "/etc/starburst/starburstdata.license:ro"

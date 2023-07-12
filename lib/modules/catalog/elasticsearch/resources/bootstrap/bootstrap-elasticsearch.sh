@@ -6,8 +6,13 @@
 
 set -euxo pipefail
 
+curl -fsSL https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh \
+    > /tmp/wait-for-it.sh \
+
+chmod +x /tmp/wait-for-it.sh
+
 echo "Waiting for Elasticsearch to come up..."
-/opt/minitrino/wait-for-it.sh elasticsearch:9200 --strict --timeout=60 -- echo "Elasticsearch service is up."
+/tmp/wait-for-it.sh elasticsearch:9200 --strict --timeout=60 -- echo "Elasticsearch service is up."
 
 echo "Creating user index..."
 curl -XPUT http://localhost:9200/user?pretty=true;

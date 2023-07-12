@@ -18,8 +18,6 @@ services:
     ports:
       - 9200:9200
       - 9300:9300
-    volumes:
-      - ./modules/resources/wait-for-it.sh:/opt/minitrino/wait-for-it.sh
     labels:
       - com.starburst.tests=minitrino
       - com.starburst.tests.module.elasticsearch=catalog-elasticsearch

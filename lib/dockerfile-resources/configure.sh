@@ -33,7 +33,7 @@ function configure_base() {
     chown --reference=/etc/starburst/config.properties "${TRINO_CLI_PATH}"
     ln -vs "${TRINO_CLI_PATH}"
     curl -fsSL https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh \
-        > /opt/minitrino/wait-for-it.sh \
+        > /opt/minitrino/wait-for-it.sh
     chmod +x /opt/minitrino/wait-for-it.sh
     echo "OK"
 }

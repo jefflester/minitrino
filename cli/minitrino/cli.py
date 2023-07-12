@@ -4,12 +4,7 @@
 import os
 import click
 
-from minitrino import settings
 from minitrino import components
-
-from pathlib import Path
-
-CONTEXT_SETTINGS = {"auto_envvar_prefix": "MINITRINO"}
 
 pass_environment = click.make_pass_decorator(components.Environment, ensure=True)
 
@@ -34,7 +29,7 @@ class CommandLineInterface(click.MultiCommand):
         return mod.cli
 
 
-@click.command(cls=CommandLineInterface, context_settings=CONTEXT_SETTINGS)
+@click.command(cls=CommandLineInterface)
 @click.option(
     "-v",
     "--verbose",

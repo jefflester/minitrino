@@ -228,9 +228,9 @@ These configs allow the user to customize the behavior of Minitrino.
 
 ### [MODULES] Section
 
-This section has only one default config: `SEP_LIC_PATH`. This is required if
-using licensed Starburst Enterprise features. It can point to any valid license
-on your filesystem.
+This section has only one default config: `LIC_PATH`. This is required if using
+licensed Starburst Enterprise features. It can point to any valid license on
+your filesystem.
 
 This section can also be used to set environment variables passed to containers
 provisioned by Minitrino. Environment variables are only passed to a container

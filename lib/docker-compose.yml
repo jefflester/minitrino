@@ -15,7 +15,7 @@ services:
     ports:
       - 8080:8080
     volumes:
-      - ${SEP_LIC_PATH}:${SEP_LIC_MOUNT_PATH}
+      - ${LIC_PATH}:${LIC_MOUNT_PATH}
     labels:
       - com.starburst.tests=minitrino
       - com.starburst.tests.module=trino 

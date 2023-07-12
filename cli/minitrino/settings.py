@@ -17,8 +17,8 @@ MODULE_SECURITY = "security"
 MODULE_RESOURCES = "resources"
 MIN_SEP_VER = 388
 ETC_TRINO = "/etc/starburst"
-SEP_VOLUME_MOUNT = "${SEP_LIC_PATH}:${SEP_LIC_MOUNT_PATH}"
-SEP_LIC_MOUNT_PATH = "/etc/starburst/starburstdata.license:ro"
+LIC_VOLUME_MOUNT = "${LIC_PATH}:${LIC_MOUNT_PATH}"
+LIC_MOUNT_PATH = "/etc/starburst/starburstdata.license:ro"
 DUMMY_LIC_MOUNT_PATH = "/etc/starburst/dummy.license:ro"
 TRINO_CONFIG = "config.properties"
 TRINO_JVM_CONFIG = "jvm.config"
@@ -53,7 +53,7 @@ LIB_PATH=
 TEXT_EDITOR=
 
 [MODULES]
-SEP_LIC_PATH=
+LIC_PATH=
 """
 
 PROVISION_SNAPSHOT_TEMPLATE = """

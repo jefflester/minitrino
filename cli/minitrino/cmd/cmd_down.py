@@ -6,7 +6,6 @@ import click
 
 from minitrino.cli import pass_environment
 from minitrino import utils
-from minitrino import errors as err
 from minitrino.settings import RESOURCE_LABEL
 
 

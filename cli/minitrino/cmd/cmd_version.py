@@ -1,9 +1,8 @@
 #!usr/bin/env/python3
 # -*- coding: utf-8 -*-
 
-import os
-import sys
 import click
+
 from minitrino.cli import pass_environment
 from minitrino import utils
 

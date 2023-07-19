@@ -27,3 +27,21 @@ You will see the ORC data stored in your local Minio bucket.
     docker exec -it trino bash 
     trino-cli
     trino> show schemas from hive;
+
+## Cleanup
+
+This module uses named volumes to persist MinIO and HMS data:
+
+    volumes:
+      postgres-hive-data:
+        labels:
+          - com.starburst.tests=minitrino
+          - com.starburst.tests.module.hive=catalog-hive
+      minio-hive-data:
+        labels:
+          - com.starburst.tests=minitrino
+          - com.starburst.tests.module.hive=catalog-hive
+
+To remove these volumes, run:
+
+    minitrino -v remove --volumes --label com.starburst.tests.module.hive=catalog-hive

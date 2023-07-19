@@ -145,7 +145,7 @@ class Environment:
                     f"CLI version {cli_ver} and library version {lib_ver} "
                     f"do not match. You can update the Minitrino library "
                     f"version to match the CLI version by running 'minitrino "
-                    f"lib_install'.",
+                    f"lib-install'.",
                 )
         except:
             pass

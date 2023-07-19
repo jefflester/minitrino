@@ -12,15 +12,15 @@ from minitrino import utils
 
 
 @click.command(
-    "lib_install",
-    help=("""Install the Minitrino library."""),
+    "lib-install",
+    help="Install the Minitrino library.",
 )
 @click.option(
     "-v",
     "--version",
     default="",
     type=str,
-    help=("""The version of the library to install."""),
+    help="Library version.",
 )
 @utils.exception_handler
 @pass_environment

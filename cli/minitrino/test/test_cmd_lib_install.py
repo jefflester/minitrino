@@ -24,7 +24,7 @@ def test_install():
     cleanup()
 
     # Install 0.0.0 since it's always around as a test release
-    result = helpers.execute_command(["-v", "lib_install", "--version", "0.0.0"])
+    result = helpers.execute_command(["-v", "lib-install", "--version", "0.0.0"])
 
     assert result.exit_code == 0
     assert os.path.isdir(os.path.join(helpers.MINITRINO_USER_DIR, "lib"))
@@ -39,7 +39,7 @@ def test_install_overwrite():
     helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     result = helpers.execute_command(
-        ["-v", "lib_install", "--version", "0.0.0"], command_input="y\n"
+        ["-v", "lib-install", "--version", "0.0.0"], command_input="y\n"
     )
 
     assert result.exit_code == 0
@@ -57,7 +57,7 @@ def test_invalid_ver():
 
     helpers.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    result = helpers.execute_command(["-v", "lib_install", "--version", "YEE-TRINO"])
+    result = helpers.execute_command(["-v", "lib-install", "--version", "YEE-TRINO"])
 
     assert result.exit_code == 1
     assert not os.path.isdir(os.path.join(helpers.MINITRINO_USER_DIR, "lib"))

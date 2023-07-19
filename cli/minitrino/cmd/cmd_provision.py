@@ -20,8 +20,8 @@ from minitrino import utils
 from minitrino import errors as err
 from minitrino.settings import RESOURCE_LABEL
 from minitrino.settings import ETC_TRINO
-from minitrino.settings import SEP_VOLUME_MOUNT
-from minitrino.settings import SEP_LIC_MOUNT_PATH
+from minitrino.settings import LIC_VOLUME_MOUNT
+from minitrino.settings import LIC_MOUNT_PATH
 from minitrino.settings import DUMMY_LIC_MOUNT_PATH
 from minitrino.settings import TRINO_CONFIG
 from minitrino.settings import TRINO_JVM_CONFIG
@@ -197,11 +197,11 @@ def check_enterprise(ctx, modules=[]):
         yaml_file = yaml.load(f, Loader=yaml.FullLoader)
     volumes = yaml_file.get("services", {}).get("trino", {}).get("volumes", [])
 
-    if SEP_VOLUME_MOUNT not in volumes:
+    if LIC_VOLUME_MOUNT not in volumes:
         raise err.UserError(
             f"The required license volume in the library's root docker-compose.yml "
             f"is either commented out or deleted: {yaml_path}. For reference, "
-            f"the proper volume mount is: '{SEP_VOLUME_MOUNT}'"
+            f"the proper volume mount is: '{LIC_VOLUME_MOUNT}'"
         )
 
     enterprise_modules = []
@@ -212,18 +212,18 @@ def check_enterprise(ctx, modules=[]):
     compose_env = ctx.env.get_section("MODULES")
 
     if enterprise_modules:
-        if not ctx.env.get_var("SEP_LIC_PATH", False):
+        if not ctx.env.get_var("LIC_PATH", False):
             raise err.UserError(
                 f"Module(s) {enterprise_modules} requires a Starburst license. "
                 f"You must provide a path to a Starburst license via the "
-                f"SEP_LIC_PATH environment variable"
+                f"LIC_PATH environment variable"
             )
-        compose_env.update({"SEP_LIC_MOUNT_PATH": SEP_LIC_MOUNT_PATH})
-    elif ctx.env.get_var("SEP_LIC_PATH", False):
-        compose_env.update({"SEP_LIC_MOUNT_PATH": SEP_LIC_MOUNT_PATH})
+        compose_env.update({"LIC_MOUNT_PATH": LIC_MOUNT_PATH})
+    elif ctx.env.get_var("LIC_PATH", False):
+        compose_env.update({"LIC_MOUNT_PATH": LIC_MOUNT_PATH})
     else:
-        compose_env.update({"SEP_LIC_PATH": "./modules/resources/dummy.license"})
-        compose_env.update({"SEP_LIC_MOUNT_PATH": DUMMY_LIC_MOUNT_PATH})
+        compose_env.update({"LIC_PATH": "./modules/resources/dummy.license"})
+        compose_env.update({"LIC_MOUNT_PATH": DUMMY_LIC_MOUNT_PATH})
     return compose_env
 
 

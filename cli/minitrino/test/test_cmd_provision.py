@@ -137,21 +137,21 @@ def test_enterprise():
         [
             "-v",
             "--env",
-            "SEP_LIC_PATH=/tmp/dummy.license",
+            "LIC_PATH=/tmp/dummy.license",
             "provision",
             "--module",
             "test",
         ]
     )
 
-    assert "SEP_LIC_PATH" and "/tmp/dummy.license" in result.output
+    assert "LIC_PATH" and "/tmp/dummy.license" in result.output
     cleanup()
 
     result = helpers.execute_command(["-v", "provision", "--module", "test"])
 
     assert result.exit_code == 0
-    assert "SEP_LIC_PATH" and "./modules/resources/dummy.license" in result.output
-    assert "SEP_LIC_MOUNT_PATH" and "/etc/starburst/dummy.license:ro" in result.output
+    assert "LIC_PATH" and "./modules/resources/dummy.license" in result.output
+    assert "LIC_MOUNT_PATH" and "/etc/starburst/dummy.license:ro" in result.output
 
     helpers.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()

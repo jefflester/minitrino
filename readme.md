@@ -12,7 +12,7 @@ Slack](https://img.shields.io/static/v1?logo=slack&logoColor=959DA5&label=Slack&
 
 -----
 
-**Latest Stable Release**: 2.0.4
+**Latest Stable Release**: 2.0.5
 
 -----
 
@@ -77,7 +77,7 @@ on GitHub. To set everything up, run:
 
 ```sh
   pip install minitrino
-  minitrino -v lib_install
+  minitrino -v lib-install
 ```
 
 Using this installation method, the `LIB_PATH` variable will point to
@@ -114,7 +114,7 @@ Each CLI version has its own respective library. To install the updated library,
 run:
 
 ```sh
-minitrino -v lib_install
+minitrino -v lib-install
 ```
 
 **Note**: Installing the new library will overwrite all modules and snapshots in
@@ -228,9 +228,9 @@ These configs allow the user to customize the behavior of Minitrino.
 
 ### [MODULES] Section
 
-This section has only one default config: `SEP_LIC_PATH`. This is required if
-using licensed Starburst Enterprise features. It can point to any valid license
-on your filesystem.
+This section has only one default config: `LIC_PATH`. This is required if using
+licensed Starburst Enterprise features. It can point to any valid license on
+your filesystem.
 
 This section can also be used to set environment variables passed to containers
 provisioned by Minitrino. Environment variables are only passed to a container

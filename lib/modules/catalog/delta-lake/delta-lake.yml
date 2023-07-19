@@ -25,7 +25,7 @@ services:
     image: naushadh/hive-metastore:latest
     container_name: metastore-delta-lake
     depends_on:
-      postgres-delta-lak:
+      postgres-delta-lake:
         condition: service_healthy
     env_file:
       - ./modules/catalog/delta-lake/resources/hms/hms.env

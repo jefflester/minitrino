@@ -39,20 +39,40 @@ services:
     image: minio/minio
     container_name: minio-delta-lake
     environment:
-      MINIO_ACCESS_KEY: access-key
-      MINIO_SECRET_KEY: secret-key
+      MINIO_ROOT_USER: access-key
+      MINIO_ROOT_PASSWORD: secret-key
     command: server --address :9000 --console-address :9002 /data
     ports:
       - :9000
       - 9002:9002
     volumes:
-      - ./modules/catalog/delta-lake/resources/minio/data/:/data
+      - minio-delta-lake-data:/data
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.delta-lake=catalog-delta-lake
+
+  create-minio-delta-lake-buckets:
+    image: minio/mc
+    container_name: create-minio-delta-lake-buckets
+    depends_on:
+      - minio-delta-lake
+    entrypoint: >
+      /bin/sh -c "
+      set -euxo pipefail;
+      /usr/bin/mc alias set minio http://minio-delta-lake:9000 access-key secret-key;
+      /usr/bin/mc mb minio/sample-bucket/wh/;
+      tail -f /dev/null;
+      "
     labels:
       - com.starburst.tests=minitrino
       - com.starburst.tests.module.delta-lake=catalog-delta-lake
 
 volumes:
   postgres-delta-lake-data:
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.delta-lake=catalog-delta-lake
+  minio-delta-lake-data:
     labels:
       - com.starburst.tests=minitrino
       - com.starburst.tests.module.delta-lake=catalog-delta-lake

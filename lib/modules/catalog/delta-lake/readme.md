@@ -29,3 +29,21 @@ This will create the table `delta.default.customer` and a corresponding
     docker exec -it trino bash 
     trino-cli
     trino> show schemas from delta;
+
+## Cleanup
+
+This module uses named volumes to persist MinIO and HMS data:
+
+    volumes:
+      postgres-delta-lake-data:
+        labels:
+          - com.starburst.tests=minitrino
+          - com.starburst.tests.module.delta-lake=catalog-delta-lake
+      minio-delta-lake-data:
+        labels:
+          - com.starburst.tests=minitrino
+          - com.starburst.tests.module.delta-lake=catalog-delta-lake
+
+To remove these volumes, run:
+
+    minitrino -v remove --volumes --label com.starburst.tests.module.delta-lake=catalog-delta-lake

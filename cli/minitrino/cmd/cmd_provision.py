@@ -476,17 +476,22 @@ def write_trino_cfg(ctx, c_restart=[], modules=[]):
 
     cfgs = []
     jvm_cfg = []
+    modules.append("trino")  # check if user placed configs in root compose yaml
 
     for module in modules:
-        yaml = ctx.modules.data.get(module, {}).get("yaml_dict")
+        if module == "trino":
+            with open(os.path.join(ctx.minitrino_lib_dir, "docker-compose.yml")) as f:
+                yaml_file = yaml.load(f, Loader=yaml.FullLoader)
+        else:
+            yaml_file = ctx.modules.data.get(module, {}).get("yaml_dict")
         usr_cfgs = (
-            yaml.get("services", {})
+            yaml_file.get("services", {})
             .get("trino", {})
             .get("environment", {})
             .get("CONFIG_PROPERTIES", [])
         )
         user_jvm_cfg = (
-            yaml.get("services", {})
+            yaml_file.get("services", {})
             .get("trino", {})
             .get("environment", {})
             .get("JVM_CONFIG", [])

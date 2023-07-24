@@ -54,13 +54,10 @@ services:
   create-minio-delta-lake-buckets:
     image: minio/mc
     container_name: create-minio-delta-lake-buckets
-    depends_on:
-      - minio-delta-lake
+    environment:
+      MINITRINO_BOOTSTRAP: bootstrap-create-buckets.sh
     entrypoint: >
       /bin/sh -c "
-      set -euxo pipefail;
-      /usr/bin/mc alias set minio http://minio-delta-lake:9000 access-key secret-key;
-      /usr/bin/mc mb minio/sample-bucket/wh/;
       tail -f /dev/null;
       "
     labels:

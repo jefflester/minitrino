@@ -56,13 +56,10 @@ services:
   create-minio-iceberg-buckets:
     image: minio/mc
     container_name: create-minio-iceberg-buckets
-    depends_on:
-      - minio-iceberg
+    environment:
+      MINITRINO_BOOTSTRAP: bootstrap-create-buckets.sh
     entrypoint: >
       /bin/sh -c "
-      set -euxo pipefail;
-      /usr/bin/mc alias set minio http://minio-iceberg:9000 access-key secret-key;
-      /usr/bin/mc mb minio/sample-bucket/wh/;
       tail -f /dev/null;
       "
     labels:

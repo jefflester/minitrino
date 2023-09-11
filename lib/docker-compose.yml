@@ -11,7 +11,7 @@ services:
         - com.starburst.tests.module=trino
     image: minitrino/trino:${STARBURST_VER}
     container_name: trino
-    restart: no
+    restart: 'no'
     ports:
       - 8080:8080
     volumes:

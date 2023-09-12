@@ -118,7 +118,9 @@ def stop_docker_daemon():
     if sys.platform.lower() == "darwin":
         return_code = subprocess.call("osascript -e 'quit app \"Docker\"'", shell=True)
     elif "linux" in sys.platform.lower():
-        return_code = subprocess.call("sudo service docker stop", shell=True)
+        return_code = subprocess.call(
+            "sudo service docker stop; sudo systemctl stop docker.socket", shell=True
+        )
     else:
         raise Exception(f"Incompatible testing platform: {sys.platform}")
     if return_code != 0:

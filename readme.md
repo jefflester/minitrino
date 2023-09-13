@@ -1,3 +1,7 @@
+<p align="center">
+    <img alt="Minitrino Logo" src=".github/img/minitrino-small.png" />
+</p>
+
 # Minitrino
 
 A command line tool that makes it easy to run modular Trino environments

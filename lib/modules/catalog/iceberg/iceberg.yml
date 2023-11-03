@@ -33,7 +33,7 @@ services:
   # ---------------------------------------------------------------------------
 
   minio-iceberg:
-    image: minio/minio
+    image: minio/minio:${MINIO_VER}
     container_name: minio-iceberg
     environment:
       MINIO_ROOT_USER: access-key
@@ -54,7 +54,7 @@ services:
       - com.starburst.tests.module.iceberg=catalog-iceberg
   
   create-minio-iceberg-buckets:
-    image: minio/mc
+    image: minio/mc:${MINIO_MC_VER}
     container_name: create-minio-iceberg-buckets
     environment:
       MINITRINO_BOOTSTRAP: bootstrap-create-buckets.sh

@@ -36,7 +36,7 @@ services:
       - com.starburst.tests.module.delta-lake=catalog-delta-lake
 
   minio-delta-lake:
-    image: minio/minio
+    image: minio/minio:${MINIO_VER}
     container_name: minio-delta-lake
     environment:
       MINIO_ROOT_USER: access-key
@@ -52,7 +52,7 @@ services:
       - com.starburst.tests.module.delta-lake=catalog-delta-lake
 
   create-minio-delta-lake-buckets:
-    image: minio/mc
+    image: minio/mc:${MINIO_MC_VER}
     container_name: create-minio-delta-lake-buckets
     environment:
       MINITRINO_BOOTSTRAP: bootstrap-create-buckets.sh

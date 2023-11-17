@@ -12,4 +12,4 @@ sudo keytool -import -noprompt -trustcacerts \
     -storepass changeit \
     -alias oauth2-server \
     -file /tmp/oauth2-server.pem \
-    -keystore /etc/pki/java/cacerts
+    -keystore /etc/ssl/certs/java/cacerts

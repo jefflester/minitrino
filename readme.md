@@ -5,7 +5,7 @@
 # Minitrino
 
 A command line tool that makes it easy to run modular Trino environments
-locally. Compatible with Starburst versions 388-e and later.
+locally. Compatible with Starburst versions 402-e and later.
 
 [![PyPI
 version](https://badge.fury.io/py/minitrino.svg)](https://badge.fury.io/py/minitrino)
@@ -16,7 +16,7 @@ Slack](https://img.shields.io/static/v1?logo=slack&logoColor=959DA5&label=Slack&
 
 -----
 
-**Latest Stable Release**: 2.0.7
+**Latest Stable Release**: 2.0.8
 
 -----
 
@@ -54,7 +54,6 @@ Slack](https://img.shields.io/static/v1?logo=slack&logoColor=959DA5&label=Slack&
       - [Minitrino Docker Labels](#minitrino-docker-labels)
     - [Test the New Catalog](#test-the-new-catalog)
     - [Bootstrap Scripts](#bootstrap-scripts)
-      - [Installing Shell Packages for Bootstrap Scripts](#installing-shell-packages-for-bootstrap-scripts)
     - [Managing Trino's `config.properties` and `jvm.config` Files](#managing-trinos-configproperties-and-jvmconfig-files)
       - [Preferable Method: Environment Variables](#preferable-method-environment-variables)
       - [Secondary Method: Bootstrap Scripts](#secondary-method-bootstrap-scripts)
@@ -607,16 +606,6 @@ services:
 ```
 
 The `elasticsearch` module is a good example of this.
-
-#### Installing Shell Packages for Bootstrap Scripts
-
-If you need to install a shell package for a bootstrap script, it is recommended
-that the package be added at the Dockerfile level instead of within the
-bootstrap script. This is to ensure compatibility between SEP Trino-based
-releases.
-
-To add the necessary package, simply update shell dependencies in
-`lib/dockerfile-resources/configure.sh`.
 
 ### Managing Trino's `config.properties` and `jvm.config` Files
 

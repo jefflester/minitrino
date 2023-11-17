@@ -6,9 +6,8 @@ on:
       - master
     paths:
       - cli/**
-      - lib/Dockerfile
       - lib/docker-compose.yml
-      - lib/dockerfile-resources/**
+      - lib/image/**
 
 jobs:
   test:

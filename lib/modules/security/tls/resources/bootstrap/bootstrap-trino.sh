@@ -40,6 +40,6 @@ keytool -import -v \
 	-trustcacerts \
 	-alias trino_trust \
 	-file "${SSL_DIR}"/trino_certificate.cer \
-	-keystore /etc/pki/java/cacerts \
+	-keystore /etc/ssl/certs/java/cacerts \
 	-storepass changeit \
 	-noprompt

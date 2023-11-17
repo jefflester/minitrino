@@ -64,7 +64,7 @@ def log_success(msg):
 
     click.echo(
         click.style(
-            f"[{datetime.now().strftime('%d/%m/%Y %H:%M:%S')}] [SUCCESS] ",
+            f"[{time.strftime('%d/%m/%Y %H:%M:%S', time.gmtime())} GMT] [SUCCESS] ",
             fg="green",
             bold=True,
         )
@@ -78,7 +78,7 @@ def log_status(msg):
 
     click.echo(
         click.style(
-            f"[{datetime.now().strftime('%d/%m/%Y %H:%M:%S')}] [RUNNING] ",
+            f"[{time.strftime('%d/%m/%Y %H:%M:%S', time.gmtime())} GMT] [RUNNING] ",
             fg="yellow",
             bold=True,
         )

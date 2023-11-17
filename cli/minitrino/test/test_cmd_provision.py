@@ -298,7 +298,7 @@ def test_duplicate_config_props():
     helpers.execute_command(["-v", "provision"])
 
     cmd_chunk = (
-        f"$'query.max-stage-count=85\nquery.max-stage-count=100"
+        f"'query.max-stage-count=85\nquery.max-stage-count=100"
         f"\nquery.max-execution-time=1h\nquery.max-execution-time=2h'"
     )
     subprocess.Popen(
@@ -308,7 +308,7 @@ def test_duplicate_config_props():
         universal_newlines=True,
     )
 
-    cmd_chunk = "$'-Xms1G\n-Xms1G'"
+    cmd_chunk = "'-Xms1G\n-Xms1G'"
     subprocess.Popen(
         f'docker exec -i trino sh -c "echo {cmd_chunk} >> /etc/starburst/jvm.config"',
         shell=True,

@@ -3,8 +3,9 @@ services:
   
   trino:
     build:
-      context: .
+      context: ./image/
       args:
+        UBUNTU_VER: ${UBUNTU_VER}
         STARBURST_VER: ${STARBURST_VER}
       labels:
         - com.starburst.tests=minitrino

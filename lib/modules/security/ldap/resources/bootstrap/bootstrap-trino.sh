@@ -31,7 +31,7 @@ do
 		-trustcacerts \
 		-alias "${CERT_FILE}" \
 		-file "${CERT_FILE}" \
-		-keystore /etc/pki/java/cacerts \
+		-keystore /etc/ssl/certs/java/cacerts \
 		-storepass changeit \
 		-noprompt;
 done;

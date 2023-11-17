@@ -15,7 +15,7 @@ MODULE_ADMIN = "admin"
 MODULE_CATALOG = "catalog"
 MODULE_SECURITY = "security"
 MODULE_RESOURCES = "resources"
-MIN_SEP_VER = 399
+MIN_SEP_VER = 402
 ETC_TRINO = "/etc/starburst"
 LIC_VOLUME_MOUNT = "${LIC_PATH}:${LIC_MOUNT_PATH}"
 LIC_MOUNT_PATH = "/etc/starburst/starburstdata.license:ro"
@@ -28,9 +28,8 @@ LIB_INDEPENDENT_CMDS = ["lib-install"]
 SNAPSHOT_ROOT_FILES = [
     "docker-compose.yml",
     "minitrino.env",
-    "Dockerfile",
     "version",
-    "dockerfile-resources",
+    "image",
 ]
 
 # Terminal

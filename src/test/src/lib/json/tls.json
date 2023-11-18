@@ -1,0 +1,50 @@
+{
+  "tests": [
+    {
+      "type": "query",
+      "sql": "SELECT 12345",
+      "trinoCliArgs": [
+        "--server 'https://trino:8443'",
+        "--truststore-path /etc/starburst/ssl/truststore.jks",
+        "--truststore-password changeit"
+      ],
+      "successCriteria": {
+        "rowCount": 1,
+        "contains": [
+          "12345"
+        ]
+      }
+    },
+    {
+      "type": "shell",
+      "container": "trino",
+      "command": "curl -v -k https://trino:8443",
+      "healthcheck": {
+        "retries": 30,
+        "command": "curl -X GET -H 'Accept: application/json' -H 'X-Trino-User: admin' 'trino:8080/v1/info/'",
+        "contains": [
+          "\"starting\":false"
+        ],
+        "container": "trino"
+      },
+      "successCriteria": {
+        "exitCode": 0,
+        "contains": [
+          "Connected to trino",
+          "port 8443",
+          "subject: CN=*.starburstdata.com"
+        ]
+      }
+    },
+    {
+      "type": "logs",
+      "container": "trino",
+      "successCriteria": {
+        "contains": [
+          "=== SERVER STARTED ==="
+        ]
+      },
+      "timeout": 60
+    }
+  ]
+}

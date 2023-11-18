@@ -1,0 +1,31 @@
+name: CLI Tests
+
+on:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - src/cli/**
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    steps:
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'      
+
+    - name: Check out code
+      uses: actions/checkout@v4
+
+    - name: Install project dependencies
+      run: |-
+        pip install --editable ./src/cli/
+        pip install --editable ./src/test/
+      
+    - name: Run CLI tests
+      run: |-
+        minitrino --help || exit 1
+        python ./src/test/src/cli/runner.py

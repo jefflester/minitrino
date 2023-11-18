@@ -1,0 +1,37 @@
+name: Dummy Release (0.0.0)
+
+on:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - src/lib/**
+
+jobs:
+  set_release_and_tag:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Delete and recreate release
+        run: |-
+          export TAG="0.0.0"
+          export DESCRIPTION="Used as a placeholder to give test builds access to the PR branch's module library."
+
+          echo "Checking if release exists..."
+          if gh release list | grep -q -e "${TAG}"; then
+            echo "Release ${TAG} found. Deleting release..."
+            gh release delete "${TAG}" -y --cleanup-tag
+          fi
+
+          echo "Creating dummy release from branch ${GITHUB_HEAD_REF}..."
+          gh release create "${TAG}" \
+            --prerelease \
+            --draft=false \
+            --title "${TAG}" \
+            --notes "${DESCRIPTION}" \
+            --target "${GITHUB_HEAD_REF}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.DUMMY_RELEASE_TOKEN }}

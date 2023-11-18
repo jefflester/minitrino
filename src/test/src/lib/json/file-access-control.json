@@ -1,0 +1,93 @@
+{
+  "tests": [
+    {
+      "type": "query",
+      "sql": "SELECT * FROM tpch.tiny.customer LIMIT 1",
+      "trinoCliArgs": [
+        "--server 'http://trino:8080'",
+        "--user admin"
+      ],
+      "successCriteria": {
+        "contains": [
+          "custkey",
+          "name",
+          "address"
+        ]
+      }
+    },
+    {
+      "type": "query",
+      "sql": "SELECT * FROM tpch.tiny.customer LIMIT 1",
+      "trinoCliArgs": [
+        "--server 'http://trino:8080'",
+        "--user platform"
+      ],
+      "successCriteria": {
+        "contains": [
+          "Access Denied"
+        ]
+      }
+    },
+    {
+      "type": "query",
+      "sql": "SELECT * FROM tpch.tiny.customer LIMIT 1",
+      "trinoCliArgs": [
+        "--server 'http://trino:8080'",
+        "--user metadata"
+      ],
+      "successCriteria": {
+        "contains": [
+          "Access Denied"
+        ]
+      }
+    },
+    {
+      "type": "query",
+      "sql": "SHOW TABLES IN system.metadata",
+      "trinoCliArgs": [
+        "--server 'http://trino:8080'",
+        "--user metadata"
+      ],
+      "successCriteria": {
+        "contains": [
+          "catalogs"
+        ]
+      }
+    },
+    {
+      "type": "query",
+      "sql": "SHOW TABLES IN system.runtime",
+      "trinoCliArgs": [
+        "--server 'http://trino:8080'",
+        "--user platform"
+      ],
+      "successCriteria": {
+        "contains": [
+          "nodes",
+          "queries"
+        ]
+      }
+    },
+    {
+      "type": "query",
+      "sql": "SHOW catalogs",
+      "trinoCliArgs": [
+        "--server 'http://trino:8080'",
+        "--user foo"
+      ],
+      "successCriteria": {
+        "rowCount": 0
+      }
+    },
+    {
+      "type": "logs",
+      "container": "trino",
+      "successCriteria": {
+        "contains": [
+          "=== SERVER STARTED ==="
+        ]
+      },
+      "timeout": 60
+    }
+  ]
+}

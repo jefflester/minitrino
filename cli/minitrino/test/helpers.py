@@ -4,12 +4,11 @@
 import os
 import re
 import docker
-import time
 import sys
 import subprocess
 import click
 
-from datetime import datetime
+from time import sleep, gmtime, strftime
 from click.testing import CliRunner
 from pathlib import Path
 from minitrino.cli import cli
@@ -64,7 +63,7 @@ def log_success(msg):
 
     click.echo(
         click.style(
-            f"[{time.strftime('%d/%m/%Y %H:%M:%S', time.gmtime())} GMT] [SUCCESS] ",
+            f"[{strftime('%d/%m/%Y %H:%M:%S', gmtime())} GMT] [SUCCESS] ",
             fg="green",
             bold=True,
         )
@@ -78,7 +77,7 @@ def log_status(msg):
 
     click.echo(
         click.style(
-            f"[{time.strftime('%d/%m/%Y %H:%M:%S', time.gmtime())} GMT] [RUNNING] ",
+            f"[{strftime('%d/%m/%Y %H:%M:%S', gmtime())} GMT] [RUNNING] ",
             fg="yellow",
             bold=True,
         )
@@ -109,7 +108,7 @@ def start_docker_daemon():
             break
         except:
             counter += 1
-            time.sleep(1)
+            sleep(1)
 
 
 def stop_docker_daemon():
@@ -127,7 +126,7 @@ def stop_docker_daemon():
         raise Exception("Failed to stop Docker daemon.")
 
     # Hard wait for daemon to stop
-    time.sleep(3)
+    sleep(3)
 
 
 def make_sample_config():

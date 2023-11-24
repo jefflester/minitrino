@@ -58,14 +58,14 @@ def start_docker_daemon():
     elif "linux" in sys.platform.lower():
         return_code = subprocess.call("sudo service docker start", shell=True)
     else:
-        raise Exception(f"Incompatible testing platform: {sys.platform}")
+        raise RuntimeError(f"Incompatible testing platform: {sys.platform}")
     if return_code != 0:
-        raise Exception("Failed to start Docker daemon.")
+        raise RuntimeError("Failed to start Docker daemon.")
 
     counter = 0
     while counter < 61:
         if counter == 61:
-            raise Exception("Docker daemon failed to start after one minute.")
+            raise TimeoutError("Docker daemon failed to start after one minute.")
         try:
             docker_client = docker.from_env()
             docker_client.ping()
@@ -85,9 +85,9 @@ def stop_docker_daemon():
             "sudo service docker stop; sudo systemctl stop docker.socket", shell=True
         )
     else:
-        raise Exception(f"Incompatible testing platform: {sys.platform}")
+        raise RuntimeError(f"Incompatible testing platform: {sys.platform}")
     if return_code != 0:
-        raise Exception("Failed to stop Docker daemon.")
+        raise RuntimeError("Failed to stop Docker daemon.")
 
     # Hard wait for daemon to stop
     sleep(3)

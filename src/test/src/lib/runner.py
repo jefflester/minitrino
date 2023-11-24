@@ -60,21 +60,25 @@ class ModuleTest:
         row_count = json_data.get("successCriteria", {}).get("rowCount", None)
 
         if not contains and row_count is None:
-            raise Exception(
+            raise KeyError(
                 "'contains' and/or 'rowCount' must be supplied in query success criteria."
             )
 
         # Wait for server to become available
         i = 0
         cmd = "curl -X GET -H 'Accept: application/json' -H 'X-Trino-User: admin' 'localhost:8080/v1/info/'"
-        while i <= 30:
+        while i <= 60:
             output = execute_command(cmd, "trino")
             if '"starting":false' in output.get("output", ""):
                 time.sleep(5)  # hard stop to ensure coordinator is ready
                 break
-            else:
+            elif i < 60:
                 time.sleep(1)
                 i += 1
+            else:
+                raise TimeoutError(
+                    "Timed out waiting for coordinator to become available"
+                )
 
         # Build command
         sql = json_data.get("sql", "")
@@ -106,7 +110,7 @@ class ModuleTest:
         exit_code = json_data.get("successCriteria", {}).get("exitCode", None)
 
         if not contains and exit_code is None:
-            raise Exception(
+            raise KeyError(
                 "'contains' and/or 'exitCode' must be supplied in shell success criteria."
             )
 
@@ -132,9 +136,7 @@ class ModuleTest:
                             time.sleep(1)
                             pass
                         else:
-                            assert c in output.get(
-                                "output", ""
-                            ), f"'{c}' not in healthcheck output"
+                            raise TimeoutError(f"'{c}' not in healthcheck output")
 
         # Run command
         cmd = json_data.get("command", "")
@@ -143,9 +145,10 @@ class ModuleTest:
 
         # Run assertions
         if exit_code is not None:
-            assert exit_code == output.get(
-                "return_code"
-            ), f"Unexpected return code: {output.get('return_code')} expected: {exit_code}"
+            cmd_exit_code = output.get("return_code")
+            assert (
+                exit_code == cmd_exit_code
+            ), f"Unexpected return code: {cmd_exit_code} expected: {exit_code}"
 
         for c in contains:
             assert c in output.get("output"), f"'{c}' not in command output"
@@ -173,7 +176,7 @@ class ModuleTest:
                         time.sleep(1)
                         i += 1
                     else:
-                        assert c in logs, f"'{c}' not found in container log output"
+                        raise TimeoutError(f"'{c}' not found in container log output")
 
     def validate(self, json_data={}):
         """Validates JSON input."""

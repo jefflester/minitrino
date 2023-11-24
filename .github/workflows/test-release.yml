@@ -34,4 +34,4 @@ jobs:
             --notes "${DESCRIPTION}" \
             --target "${GITHUB_HEAD_REF}"
         env:
-          GITHUB_TOKEN: ${{ secrets.TEST_RELEASE_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.MINITRINO_TOKEN }}

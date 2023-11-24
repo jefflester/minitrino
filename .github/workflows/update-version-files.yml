@@ -29,8 +29,8 @@ jobs:
         # Commit changes
         git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com"
         git config --global user.name "${GITHUB_ACTOR}"
-        git add ./readme.md ./src/lib/version ./src/cli/setup.py
+        git add ./src/lib/version ./src/cli/setup.py ./readme.md 
         git commit -m "Update version to ${BRANCH}"
         git push
       env:
-        GITHUB_TOKEN: ${{ secrets.TEST_RELEASE_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.MINITRINO_TOKEN }}

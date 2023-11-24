@@ -59,6 +59,8 @@ Slack](https://img.shields.io/static/v1?logo=slack&logoColor=959DA5&label=Slack&
       - [Secondary Method: Bootstrap Scripts](#secondary-method-bootstrap-scripts)
   - [Troubleshooting](#troubleshooting)
   - [Reporting Bugs and Contributing](#reporting-bugs-and-contributing)
+  - [Tests](#tests)
+    - [Running Tests](#running-tests)
 
 -----
 
@@ -93,13 +95,13 @@ CLI. If you encounter errors during installation, try running `sudo -H
 ./install.sh -v`.
 
 Using this installation method, the `LIB_PATH` variable will point to
-`${MINITRINO_REPOSITORY_DIRECTORY}/lib/`.
+`${REPO_DIRECTORY}/lib/`.
 
 ### Using Colima and Other Docker Contexts
 
-For users not operating on the default Docker Desktop context, you can set the
-`DOCKER_HOST` shell environment variable to point to the desired context's
-`.sock` file, e.g.:
+For users not operating on the default Docker Desktop context, the `DOCKER_HOST`
+environment variable can be used to point to the desired context's `.sock` file,
+e.g.:
 
 ```sh
 echo 'export DOCKER_HOST="unix://${HOME}/.colima/default/docker.sock"' >> ~/.bash_profile
@@ -113,15 +115,14 @@ To upgrade the Minitrino CLI, run:
 pip install minitrino --upgrade
 ```
 
-Each CLI version has its own respective library. To install the updated library,
-run:
+Each release has its own library. To install the updated library, run:
 
 ```sh
 minitrino -v lib-install
 ```
 
-**Note**: Installing the new library will overwrite all modules and snapshots in
-the current library. If you have customized modules or snapshot files in
+**Warning**: Installing the new library will overwrite all modules and snapshots
+in the current library. If you have customized modules or snapshot files in
 `lib/snapshots/`, make sure to take a backup of the `~/.minitrino/lib` directory
 prior to running this command in order to persist your local changes.
 
@@ -129,9 +130,9 @@ prior to running this command in order to persist your local changes.
 
 ## Workflow Examples
 
-Minitrino is best suited for local Trino development. This project is not
-intended for usage on a large scale, and is intentionally designed to limit the
-deployment to a single coordinator container.
+Minitrino is best suited for local Trino development and testing. This project
+is not intended for usage on a large scale, and is intentionally designed to
+limit the Trino deployment to a single coordinator container.
 
 ### Provision an Environment
 
@@ -147,7 +148,7 @@ Provision the `iceberg` and `oauth2` modules:
 minitrino -v provision -m postgres -m oauth2
 ```
 
-Append the running environment with a third module:
+Append the running environment with the `hive` module:
 
 ```sh
 minitrino -v provision -m postgres -m oauth2 -m hive
@@ -155,8 +156,9 @@ minitrino -v provision -m postgres -m oauth2 -m hive
 
 All environments expose the Starburst service on `localhost:8080`, meaning you
 can visit the web UI directly, or you can connect external clients, such as
-DBeaver, to the `localhost` service. The `trino` container shell can be directly
-accessed via:
+DBeaver, to the `localhost` service.
+
+The `trino` container can be directly accessed via:
 
 ```sh
 docker exec -it trino bash 
@@ -179,15 +181,21 @@ docker restart trino
 minitrino down
 ```
 
+To skip graceful shutdown and stop all containers immediately, run:
+
+```sh
+minitrino down --sig-kill
+```
+
 ### Remove Minitrino Resources
 
-To remove all images, run:
+Remove all Minitrino images:
 
 ```sh
 minitrino remove --images
 ```
 
-To remove images from a specific module, run:
+Remove images from a specific module:
 
 ```sh
 minitrino remove --images \
@@ -196,14 +204,24 @@ minitrino remove --images \
 
 Where `${MODULE_TYPE}` is one of: `admin`, `catalog`, `security`.
 
-You can also use the `remove` command to remove individual volumes with the
-`--volumes` option.
+Remove all Minitrino volumes:
+
+```sh
+minitrino remove --volumes
+```
+
+Remove volumes from a specific module:
+
+```sh
+minitrino remove --volumes \
+  --label com.starburst.tests.module.${MODULE}=${MODULE_TYPE}-${MODULE}
+```
 
 ### Snapshot a Customized Module
 
 Users designing and customizing their own modules can persist them with the
-`snapshot` command. For example, if a user has modified the `hive` module, they
-can persist their changes by running:
+`snapshot` command. For example, if a user modifies the `hive` module, they can
+persist their changes by running:
 
 ```sh
 minitrino snapshot --name ${SNAPSHOT_NAME} -m hive
@@ -270,48 +288,39 @@ The Starburst Trino service is defined in a Compose file at the library root,
 and all other services look up in the directory tree to reference the parent
 Trino service.
 
-A simplified library structure:
+The library structure:
 
-```sh
-lib
-├── Dockerfile
+```txt
+lib/
 ├── docker-compose.yml
+├── image
+│   ├── Dockerfile
+│   └── src
+│       ├── etc
+│       │   └── starburst
+│       │       └── catalog
+│       └── scripts
 ├── minitrino.env
 ├── modules
-│   ├── admin
-│   │   └── ...
-│   ├── catalog
-│   │   └── postgres
-│   │       ├── metadata.json
-│   │       ├── postgres.yml
-│   │       ├── readme.md
-│   │       └── resources
-│   │           ├── postgres
-│   │           │   └── postgres.env
-│   │           └── trino
-│   │               └── postgres.properties
-│   ├── resources
-│   └── security
-│       └── ...
+│   ├── admin
+│   ├── catalog
+│   ├── resources
+│   └── security
 ├── snapshots
 └── version
 ```
 
 ### Trino Dockerfile
 
-Minitrino modifies Starburst's Docker image by adding the Trino CLI to the image
-as well as by adding `sudo` privileges to the `trino` user. This is required for
-certain bootstrap scripts (i.e. using `microdnf` to install packages in a Trino
-container for a module).
+The Dockerfile installs Starburst binaries via a tarball along with various
+dependencies and utilities on an Ubuntu base for an ideal localized environment.
 
 -----
 
 ## Add New Modules (Tutorial)
 
-Adding new modules is relatively simple, but there are a few important
-guidelines to follow to ensure compatibility with the Minitrino CLI. Module
-design principals are the same all modules. The example below demonstrates the
-process of creating a new catalog module for a Postgres service.
+The following example demonstrates the creation of a new catalog module for a
+Postgres service.
 
 ### Create the Module Directory
 
@@ -346,9 +355,9 @@ EOF"
 
 -----
 
-**Note**: Passwords in the default modules tend to be `trinoRocks15`. For
+**Note**: Passwords in default modules tend to be `trinoRocks15`. For
 consistency throughout the library, it is recommended to use this as the
-password of choice for new module development.
+password of choice.
 
 -----
 
@@ -360,7 +369,7 @@ In `lib/modules/catalog/my-postgres/`, add a Docker Compose file:
 touch my-postgres.yml
 ```
 
-Notice the naming convention: `my-postgres.yml`. Giving the same root name of
+Note the naming convention: `my-postgres.yml`. Giving the same root name of
 "my-postgres" to both the parent directory `my-postgres/` and to the Docker
 Compose file `my-postgres.yml` will allow Minitrino to find the new catalog
 module.
@@ -388,8 +397,8 @@ and a password `trinoRocks15`.
 
 ### Add a Metadata File
 
-The `metadata.json` file allows Minitrino to obtain key information about the
-module. **It is required for a module to work with the CLI.**
+The `metadata.json` file exposes key information about the module. **It is
+required for a module to work with the CLI.**
 
 In `lib/modules/catalog/my-postgres/`, add a `metadata.json` file:
 
@@ -404,10 +413,12 @@ bash -c 'cat << EOF > metadata.json
 EOF'
 ```
 
+The keys in `metadata.json` are defined as follows:
+
 - `description`: describes the module.
 - `incompatibleModules`: restricts certain modules from being provisioned
-alongside the given module. The `*` wildcard is a supported convention if the
-module is incompatible with all other modules.
+alongside the module. The `*` wildcard is a supported convention if the module
+is incompatible with all other modules.
 - `dependentModules`: specifies which modules must be provisioned alongside the
 target. Dependent modules will be automatically provisioned with the `provision`
 command.
@@ -418,7 +429,7 @@ The metadata file information can be exposed via the `modules` command.
 ### Add a Readme File
 
 This step is not required for personal development, but it is required to commit
-a module to the Minitrino repository.
+a module to the repository.
 
 In `lib/modules/catalog/my-postgres/`, add a `readme.md` file:
 
@@ -471,29 +482,23 @@ services:
 
 ### Important Implementation Details: Paths and Labels
 
-We can observe a few things about the Compose file we just defined.
-
 #### Path References for Volumes and Build Contexts
 
-First, the volumes we mount *are not relative to the Compose file itself*, they
-are relative to the base `docker-compose.yml` file in the library root. This is
-because the CLI extends Compose files, meaning that all path references in child
-Compose files need to be relative to the positioning of the parent Compose file.
+Volumes mounted in Docker Compose files *are not relative to the Compose file
+itself*, they are relative to the base `docker-compose.yml` file in the library
+root. This is because the CLI extends Compose files, meaning that all path
+references in child Compose files need to be relative to the positioning of the
+parent Compose file.
 
-The base Compose file is determined when you execute a Docker Compose
-command––the first Compose file referenced in the command becomes the base file,
-and that happens to be the `docker-compose.yml` file in the library root. This
-is how Minitrino constructs these commands.
-
-If this is confusing, you can read more about extending Compose files on the
-[Docker docs](https://docs.docker.com/compose/extends/#multiple-compose-files).
+Additional information can be found about extending Compose files in the [Docker
+docs](https://docs.docker.com/compose/extends/#multiple-compose-files).
 
 #### Minitrino Docker Labels
 
-Secondly, notice the applied sets of labels to the Postgres service. These
-labels tell the CLI which resources to target when executing commands.
+The labels applied to the services defined in the Compose file tell the CLI
+which resources to target when executing commands.
 
-In general, there is no need to apply labels to the Trino service since they are
+Applying labels to the Trino service is typically unnecessary since they are
 already applied in the parent Compose file **unless** the module is an extension
 of the Trino service itself (i.e. the `biac` module). Labels should always be
 applied to:
@@ -507,14 +512,13 @@ Labels should be defined in pairs of two. The convention is:
 
 - The standard Minitrino resource label: `com.starburst.tests=minitrino`
 - A module-specific resource label:
-  `com.starburst.tests.module.${MODULE_NAME}=${MODULE_CATEGORY}-${MODULE_NAME}`
-  - For this label, the `module-type` should be one of: `admin`, `catalog`, or
-    `security`
+  `com.starburst.tests.module.${MODULE_NAME}=${MODULE_TYPE}-${MODULE_NAME}`
+  - Module type can be one of: `admin`, `catalog`, or `security`
   - This applies a unique label to the module, allowing it to be isolated when
     necessary
 
 In Compose files where multiple services are defined, all services should be
-labeled with the same label sets (see the `hive` for an example).
+labeled with the same label sets (see the `hive` module for an example).
 
 -----
 
@@ -560,13 +564,13 @@ file.
 
 ### Test the New Catalog
 
-We are all finished up. We can test our new catalog through the Minitrino CLI:
+Test the new catalog with the CLI:
 
 ```sh
 minitrino provision -m my-postgres
 ```
 
-We can now open a shell session in the `trino` container and run some tests:
+Open a shell session in the `trino` container and run some tests:
 
 ```sh
 docker exec -it trino bash 
@@ -579,8 +583,7 @@ trino> show catalogs;
 Minitrino supports container bootstrap scripts. These scripts **do not replace**
 the entrypoint (or default command) for a given container. The script is copied
 from the Minitrino library to the container, executed, and then removed from the
-container. Containers are restarted after each bootstrap script execution, **so
-the bootstrap scripts themselves should not restart the container's service**.
+container. Containers are restarted after each bootstrap script execution.
 
 If a bootstrap script has already executed in a container *and* the volume
 associated with the container still exists, Minitrino will not re-execute the
@@ -634,7 +637,7 @@ trino:
 #### Secondary Method: Bootstrap Scripts
 
 The `config.properties` and `jvm.config` files can also be modified directly
-with a Trino [bootstrap script](#bootstrap-scripts).
+with a [bootstrap script](#bootstrap-scripts).
 
 -----
 
@@ -686,3 +689,50 @@ Contributors have two options:
 
 In either case, please provide a comprehensive description of your changes with
 the PR.
+
+-----
+
+## Tests
+
+Tests are broken into CLI and library tests. PRs and updates to PRs targeting
+the `master` branch trigger the following workflows:
+
+- `.github/workflows/cli-tests.yml`
+- `.github/workflows/lib-tests.yml`
+- `.github/workflows/dummy-release.yml`
+
+CLI tests are built using [Click's CLI
+runner](https://click.palletsprojects.com/en/8.1.x/testing/) and thoroughly test
+the CLI's commands and options. They are stored in `./src/test/src/cli/`.
+
+Library tests are built using JSON files containing various tests for each
+module. They are stored in `./src/test/src/lib/`. The JSON specs for each test
+type are stored in `./src/test/src/lib/specs.py`, and new module tests are added
+in `./src/test/src/lib/json/`.
+
+### Running Tests
+
+The testing package can be installed by running the `install.sh` script or by
+installing the package directly via:
+
+```sh
+pip install --editable ./src/test/
+```
+
+To execute the CLI tests runner, run:
+
+```sh
+python ./src/test/src/cli/runner.py
+```
+
+To execute the library tests runner, run:
+
+```sh
+python ./src/test/src/lib/runner.py
+```
+
+To execute a specific module test, run:
+
+```sh
+python ./src/test/src/lib/runner.py ${MODULE}
+```

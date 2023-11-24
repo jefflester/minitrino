@@ -1,4 +1,4 @@
-name: Dummy Release (0.0.0)
+name: Test Release (0.0.0)
 
 on:
   pull_request:
@@ -26,7 +26,7 @@ jobs:
             gh release delete "${TAG}" -y --cleanup-tag
           fi
 
-          echo "Creating dummy release from branch ${GITHUB_HEAD_REF}..."
+          echo "Creating test release from branch ${GITHUB_HEAD_REF}..."
           gh release create "${TAG}" \
             --prerelease \
             --draft=false \
@@ -34,4 +34,4 @@ jobs:
             --notes "${DESCRIPTION}" \
             --target "${GITHUB_HEAD_REF}"
         env:
-          GITHUB_TOKEN: ${{ secrets.DUMMY_RELEASE_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.TEST_RELEASE_TOKEN }}

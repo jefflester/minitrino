@@ -699,7 +699,7 @@ the `master` branch trigger the following workflows:
 
 - `.github/workflows/cli-tests.yml`
 - `.github/workflows/lib-tests.yml`
-- `.github/workflows/dummy-release.yml`
+- `.github/workflows/test-release.yml`
 
 CLI tests are built using [Click's CLI
 runner](https://click.palletsprojects.com/en/8.1.x/testing/) and thoroughly test

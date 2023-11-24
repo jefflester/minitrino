@@ -1,0 +1,36 @@
+name: Update Version Files
+
+on:
+  create:
+    branches:
+      - '[0-9]+\.[0-9]+\.[0-9]+'
+
+jobs:
+  update-versions:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+
+    - name: Update version files
+      run: |-
+        BRANCH=$(echo "${GITHUB_REF#refs/heads/}")
+
+        # Update ./src/lib/version
+        echo "${BRANCH}" > ./src/lib/version
+        
+        # Update ./src/cli/setup.py
+        sed -i "s/version=\"[0-9]\.[0-9]\.[0-9]\"/version=\"${BRANCH}\"/" ./src/cli/setup.py
+
+        # Update ./readme.md
+        sed -i "s/\*\*Latest Stable Release\*\*: [0-9]\.[0-9]\.[0-9]/\*\*Latest Stable Release\*\*: ${BRANCH}/" ./readme.md
+        
+        # Commit changes
+        git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+        git config --global user.name "${GITHUB_ACTOR}"
+        git add ./readme.md ./src/lib/version ./src/cli/setup.py
+        git commit -m "Update version to ${BRANCH}"
+        git push
+      env:
+        GITHUB_TOKEN: ${{ secrets.TEST_RELEASE_TOKEN }}

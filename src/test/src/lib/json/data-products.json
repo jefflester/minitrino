@@ -1,0 +1,53 @@
+{
+  "tests": [
+    {
+      "type": "shell",
+      "name": "Create domain and data product",
+      "container": "trino",
+      "command": "curl -v -X POST -H 'Accept: application/json' -H 'X-Trino-User: admin' -H 'Content-Type: application/json' --data '{\"name\":\"test\",\"description\":\"test\", \"schemaLocation\":\"s3a://sample-bucket/test/\"}' 'http://trino:8080/api/v1/dataProduct/domains'",
+      "exitCode": 0,
+      "contains": [
+        "schemaLocation",
+        "s3a://sample-bucket/test/",
+        "createdAt",
+        "updatedAt"
+      ],
+      "healthcheck": {
+        "command": "curl -X GET -H 'Accept: application/json' -H 'X-Trino-User: admin' 'trino:8080/v1/info/'",
+        "container": "trino",
+        "retries": 30,
+        "contains": [
+          "\"starting\":false"
+        ]
+      },
+      "subCommands": [
+        {
+          "name": "Get domain id",
+          "command": "sh -c \"curl -s -X GET -H 'Accept: application/json' -H 'X-Trino-User: admin' 'http://trino:8080/api/v1/dataProduct/domains' | jq -r '.[0].id'\"",
+          "container": "trino",
+          "exitCode": 0
+        },
+        {
+          "name": "Create data product",
+          "command": "curl -v -X POST -H 'Accept: application/json' -H 'X-Trino-User: admin' -H 'Content-Type: application/json' --data '{\"catalogName\":\"hive\",\"dataDomainId\":\"${PREV_OUTPUT}\", \"name\":\"test\", \"summary\":\"test\"}' 'http://trino:8080/api/v1/dataProduct/products'",
+          "container": "trino",
+          "exitCode": 0,
+          "contains": [
+            "catalogName",
+            "dataDomainId",
+            "name"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "logs",
+      "name": "Ensure trino is running",
+      "container": "trino",
+      "contains": [
+        "=== SERVER STARTED ==="
+      ],
+      "timeout": 60
+    }
+  ]
+}

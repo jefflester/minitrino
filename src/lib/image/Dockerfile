@@ -10,6 +10,7 @@ RUN \
         telnet \
         sudo \
         vim \
+        jq \
         tree \
         less \
         iputils-ping \

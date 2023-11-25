@@ -4,17 +4,17 @@ services:
   trino:
     environment:
       CONFIG_PROPERTIES: |-
-        insights.jdbc.url=jdbc:postgresql://postgres-query-logger:5432/querylogger
+        insights.jdbc.url=jdbc:postgresql://postgres-backend-svc:5432/sep
         insights.jdbc.user=admin
         insights.jdbc.password=trinoRocks15
         insights.persistence-enabled=true
         insights.metrics-persistence-enabled=true
     volumes:
-      - ./modules/admin/insights/resources/trino/query_logger.properties:/etc/starburst/catalog/query_logger.properties
+      - ./modules/admin/insights/resources/trino/backend_svc.properties:/etc/starburst/catalog/backend_svc.properties
     
-  postgres-query-logger:
-    image: postgres:${POSTGRES_QUERY_LOGGER_VER}
-    container_name: postgres-query-logger
+  postgres-backend-svc:
+    image: postgres:${POSTGRES_SEP_BACKEND_SVC_VER}
+    container_name: postgres-backend-svc
     env_file:
       - ./modules/admin/insights/resources/postgres/postgres.env
     labels:

@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import re
 import sys
 import json
 import time
@@ -32,13 +33,13 @@ class ModuleTest:
 
         tests = json_data.get("tests", [])
         for t in tests:
-            self.validate(t)
+            self._validate(t)
 
         execute_command(f"minitrino -v provision -m {self.module} --no-rollback")
 
         for t in tests:
             common.log_status(
-                f"Module test type '{t.get('type')}' for module: '{module}'"
+                f"Running test type '{t.get('type')}' for module '{module}': '{t.get('name')}'"
             )
             if t.get("type") == "query":
                 self.test_query(t)
@@ -52,16 +53,16 @@ class ModuleTest:
 
         common.log_success(f"Module tests for module: '{module}'")
 
-    def test_query(self, json_data):
+    def test_query(self, json_data={}):
         "Runs a query inside the Trino container using the trino-cli."
 
         # Check inputs
-        contains = json_data.get("successCriteria", {}).get("contains", [])
-        row_count = json_data.get("successCriteria", {}).get("rowCount", None)
+        contains = json_data.get("contains", [])
+        row_count = json_data.get("rowCount", None)
 
         if not contains and row_count is None:
             raise KeyError(
-                "'contains' and/or 'rowCount' must be supplied in query success criteria."
+                "'contains' and/or 'rowCount' must be defined in query tests"
             )
 
         # Wait for server to become available
@@ -102,46 +103,27 @@ class ModuleTest:
                 row_count == query_row_count
             ), f"Expected row count: {row_count}, actual row count: {query_row_count}"
 
-    def test_shell(self, json_data):
+    def test_shell(self, json_data={}):
         """Runs a command in a container or on the host shell."""
 
         # Check inputs
-        contains = json_data.get("successCriteria", {}).get("contains", [])
-        exit_code = json_data.get("successCriteria", {}).get("exitCode", None)
+        contains = json_data.get("contains", [])
+        exit_code = json_data.get("exitCode", None)
 
         if not contains and exit_code is None:
             raise KeyError(
-                "'contains' and/or 'exitCode' must be supplied in shell success criteria."
+                "'contains' and/or 'exitCode' must be supplied in shell test criteria."
             )
 
         # Wait for service
         healthcheck = json_data.get("healthcheck", {})
         if healthcheck:
-            retry = healthcheck.get("retries", 0)
-            cmd = healthcheck.get("command", "")
-            hc_contains = healthcheck.get("contains", [])
-            container = healthcheck.get("container", None)
-            i = 0
-            for c in hc_contains:
-                while True:
-                    output = execute_command(cmd, container)
-                    try:
-                        assert c in output.get(
-                            "output", ""
-                        ), f"'{c}' not in healthcheck output"
-                        break
-                    except:
-                        if i <= retry:
-                            print("Health check did not succeed. Retrying...")
-                            time.sleep(1)
-                            pass
-                        else:
-                            raise TimeoutError(f"'{c}' not in healthcheck output")
+            self._execute_subcommand(healthcheck, healthcheck=True)
 
         # Run command
         cmd = json_data.get("command", "")
         container = json_data.get("container", None)
-        output = execute_command(cmd, container)
+        output = execute_command(cmd, container, json_data.get("env", {}))
 
         # Run assertions
         if exit_code is not None:
@@ -153,32 +135,79 @@ class ModuleTest:
         for c in contains:
             assert c in output.get("output"), f"'{c}' not in command output"
 
+        # Run subcommands
+        subcommands = json_data.get("subCommands", [])
+        if subcommands:
+            for s in subcommands:
+                output = self._execute_subcommand(
+                    s, prev_output=output.get("output", "")
+                )
+
     def test_logs(self, json_data):
         """Checks for matching strings in container logs."""
 
-        # Determine how long to check for matches before failing
-        timeout = get_container(json_data.get("timeout", None))
-        if not timeout:
-            timeout = 30
-
+        timeout = json_data.get("timeout", 30)
         container = get_container(json_data.get("container"))
 
         i = 0
-        for c in json_data.get("successCriteria", {}).get("contains", []):
-            while True:
-                logs = container.logs().decode()
-                try:
+        while True:
+            logs = container.logs().decode()
+            try:
+                for c in json_data.get("contains", []):
                     assert c in logs, f"'{c}' not found in container log output"
-                    break
-                except:
-                    if i <= timeout:
-                        print("Log text match not found. Retrying...")
-                        time.sleep(1)
-                        i += 1
-                    else:
-                        raise TimeoutError(f"'{c}' not found in container log output")
+                break
+            except:
+                if i <= timeout:
+                    print("Log text match not found. Retrying...")
+                    time.sleep(1)
+                    i += 1
+                else:
+                    raise TimeoutError(f"'{c}' not found in container log output")
 
-    def validate(self, json_data={}):
+    def _execute_subcommand(self, json_data={}, healthcheck=False, prev_output=""):
+        """Executes healthchecks and subcommands."""
+
+        if healthcheck:
+            cmd_type = "healthcheck"
+            retry = json_data.get("retries", 30)
+        else:
+            cmd_type = "subcommand"
+            retry = json_data.get("retries", 1)
+
+        cmd = re.sub(
+            r"\$\{PREV_OUTPUT\}", prev_output.strip(), json_data.get("command", "")
+        )
+        container = json_data.get("container", None)
+        contains = json_data.get("contains", [])
+        exit_code = json_data.get("exitCode", None)
+
+        if not contains and exit_code is None:
+            raise KeyError(
+                f"'contains' and/or 'exitCode' must be supplied in shell {cmd_type}."
+            )
+
+        i = 0
+        while True:
+            output = execute_command(cmd, container, json_data.get("env", {}))
+            try:
+                for c in contains:
+                    assert c in output.get(
+                        "output", ""
+                    ), f"'{c}' not in {cmd_type} output"
+                cmd_exit_code = output.get("return_code")
+                if isinstance(exit_code, int):
+                    assert (
+                        exit_code == cmd_exit_code
+                    ), f"Unexpected return code: {cmd_exit_code} expected: {exit_code}"
+                return output
+            except:
+                if i <= retry:
+                    print(f"{cmd_type.title()} did not succeed. Retrying...")
+                    time.sleep(1)
+                else:
+                    raise TimeoutError(f"'{c}' not in {cmd_type} output")
+
+    def _validate(self, json_data={}):
         """Validates JSON input."""
 
         test_type = json_data.get("type", "")

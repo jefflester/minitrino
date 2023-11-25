@@ -20,10 +20,10 @@ def execute_command(cmd="", container=None, env={}):
     if container:
         return execute_in_container(cmd, container, env)
     else:
-        return execute_in_shell(cmd)
+        return execute_in_shell(cmd, env)
 
 
-def execute_in_shell(cmd=""):
+def execute_in_shell(cmd="", env={}):
     """Executes a command in the host shell."""
 
     print(f"Executing command on host shell: {cmd}")
@@ -35,6 +35,7 @@ def execute_in_shell(cmd=""):
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         universal_newlines=True,
+        env={**os.environ, **env},
     )
 
     output = ""

@@ -1,0 +1,31 @@
+{
+  "tests": [
+    {
+      "type": "shell",
+      "name": "Ensure oauth2 server is accessible",
+      "container": "trino",
+      "command": "echo 'pass'",
+      "exitCode": 0,
+      "healthcheck": {
+        "command": "curl -v -k https://host.docker.internal:8100/default/.well-known/openid-configuration",
+        "container": "trino",
+        "retries": 30,
+        "exitCode": 0,
+        "contains": [
+          "issuer",
+          "authorization_endpoint",
+          "end_session_endpoint"
+        ]
+      }
+    },
+    {
+      "type": "logs",
+      "name": "Ensure trino is running",
+      "container": "trino",
+      "contains": [
+        "=== SERVER STARTED ==="
+      ],
+      "timeout": 60
+    }
+  ]
+}

@@ -10,4 +10,4 @@ The `hive` and `insights` modules are dependencies of this module.
     minitrino --env STARBURST_VER=<ver> provision --module data-products
     docker exec -it trino bash 
     trino-cli
-    trino> show schemas from query_logger;
+    trino> show schemas from backend_svc;

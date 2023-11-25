@@ -2,91 +2,84 @@
   "tests": [
     {
       "type": "query",
+      "name": "Test admin user query",
       "sql": "SELECT * FROM tpch.tiny.customer LIMIT 1",
       "trinoCliArgs": [
         "--server 'http://trino:8080'",
         "--user admin"
       ],
-      "successCriteria": {
-        "contains": [
-          "custkey",
-          "name",
-          "address"
-        ]
-      }
+      "contains": [
+        "custkey",
+        "name",
+        "address"
+      ]
     },
     {
       "type": "query",
       "sql": "SELECT * FROM tpch.tiny.customer LIMIT 1",
+      "name": "Test platform user query (access denied)",
       "trinoCliArgs": [
         "--server 'http://trino:8080'",
         "--user platform"
       ],
-      "successCriteria": {
-        "contains": [
-          "Access Denied"
-        ]
-      }
+      "contains": [
+        "Access Denied"
+      ]
     },
     {
       "type": "query",
+      "name": "Test metadata user query (access denied)",
       "sql": "SELECT * FROM tpch.tiny.customer LIMIT 1",
       "trinoCliArgs": [
         "--server 'http://trino:8080'",
         "--user metadata"
       ],
-      "successCriteria": {
-        "contains": [
-          "Access Denied"
-        ]
-      }
+      "contains": [
+        "Access Denied"
+      ]
     },
     {
       "type": "query",
+      "name": "Test metadata query (success)",
       "sql": "SHOW TABLES IN system.metadata",
       "trinoCliArgs": [
         "--server 'http://trino:8080'",
         "--user metadata"
       ],
-      "successCriteria": {
-        "contains": [
-          "catalogs"
-        ]
-      }
+      "contains": [
+        "catalogs"
+      ]
     },
     {
       "type": "query",
+      "name": "Test platform user query (success)",
       "sql": "SHOW TABLES IN system.runtime",
       "trinoCliArgs": [
         "--server 'http://trino:8080'",
         "--user platform"
       ],
-      "successCriteria": {
-        "contains": [
-          "nodes",
-          "queries"
-        ]
-      }
+      "contains": [
+        "nodes",
+        "queries"
+      ]
     },
     {
       "type": "query",
+      "name": "Test random user query - verify no catalogs",
       "sql": "SHOW catalogs",
       "trinoCliArgs": [
         "--server 'http://trino:8080'",
         "--user foo"
       ],
-      "successCriteria": {
-        "rowCount": 0
-      }
+      "rowCount": 0
     },
     {
       "type": "logs",
+      "name": "Ensure trino is running",
       "container": "trino",
-      "successCriteria": {
-        "contains": [
-          "=== SERVER STARTED ==="
-        ]
-      },
+      "contains": [
+        "=== SERVER STARTED ==="
+      ],
       "timeout": 60
     }
   ]

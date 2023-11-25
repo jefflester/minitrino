@@ -708,7 +708,8 @@ the CLI's commands and options. They are stored in `./src/test/src/cli/`.
 Library tests are built using JSON files containing various tests for each
 module. They are stored in `./src/test/src/lib/`. The JSON specs for each test
 type are stored in `./src/test/src/lib/specs.py`, and new module tests are added
-in `./src/test/src/lib/json/`.
+in `./src/test/src/lib/json/`. Tests are executed in the order they are defined
+in the JSON files.
 
 ### Running Tests
 

@@ -1,14 +1,14 @@
-name: Test Release (0.0.0)
+name: Create Test Release (0.0.0) from PR Branch
 
 on:
   pull_request:
     branches:
       - master
     paths:
-      - src/lib/**
+      - src/**
 
 jobs:
-  set_release_and_tag:
+  set-test-release-and-tag:
     runs-on: ubuntu-latest
     steps:
 
@@ -17,8 +17,8 @@ jobs:
 
       - name: Delete and recreate release
         run: |-
-          export TAG="0.0.0"
-          export DESCRIPTION="Used as a placeholder to give test builds access to the PR branch's module library."
+          TAG="0.0.0"
+          DESCRIPTION="Used as a placeholder to give test builds access to the PR branch's module library."
 
           echo "Checking if release exists..."
           if gh release list | grep -q -e "${TAG}"; then

@@ -1,0 +1,41 @@
+name: Create Draft Release from PR Branch
+
+on:
+  workflow_run:   
+    workflows: [lib-tests, cli-tests]
+    types:
+      - completed
+
+jobs:
+  set-branch-release-and-tag:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Create release
+        run: |-
+          RELEASE_NOTES=./release-notes/"${GITHUB_HEAD_REF}".md
+          if [ ! -f "${RELEASE_NOTES}" ]; then
+            echo "Release notes file not found at ${RELEASE_NOTES}. Exiting..."
+            exit 1
+          fi
+
+          DESCRIPTION=$(cat "${RELEASE_NOTES}")
+
+          echo "Checking if release exists..."
+          if gh release list | grep -q -e "${GITHUB_HEAD_REF}"; then
+            echo "Release ${GITHUB_HEAD_REF} found. Deleting release..."
+            gh release delete "${GITHUB_HEAD_REF}" -y --cleanup-tag
+          fi
+
+          echo "Creating release from branch ${GITHUB_HEAD_REF}..."
+          gh release create "${GITHUB_HEAD_REF}" \
+            --prerelease \
+            --draft=true \
+            --title "${GITHUB_HEAD_REF}" \
+            --notes "${DESCRIPTION}" \
+            --target "${GITHUB_HEAD_REF}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.MINITRINO_TOKEN }}

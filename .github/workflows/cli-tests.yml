@@ -8,7 +8,7 @@ on:
       - src/cli/**
 
 jobs:
-  test:
+  cli-tests:
     runs-on: ubuntu-22.04
     steps:
 

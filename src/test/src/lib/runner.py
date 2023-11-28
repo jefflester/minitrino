@@ -51,8 +51,6 @@ class ModuleTest:
                 f"Module test type '{t.get('type')}' for module: '{module}'"
             )
 
-        common.log_success(f"Module tests for module: '{module}'")
-
     def test_query(self, json_data={}):
         "Runs a query inside the Trino container using the trino-cli."
 

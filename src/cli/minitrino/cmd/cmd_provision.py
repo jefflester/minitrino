@@ -84,7 +84,7 @@ def cli(ctx, modules, no_rollback, docker_native):
     modules = append_running_modules(modules)
     modules = utils.check_dependent_modules(ctx, modules)
     check_compatibility(modules)
-    compose_env = check_enterprise(modules)
+    check_enterprise(modules)
     check_volumes(modules)
 
     if not modules:
@@ -102,16 +102,11 @@ def cli(ctx, modules, no_rollback, docker_native):
     try:
         cmd_chunk = chunk(modules)
 
-        # Module env variables shared with compose should be from the modules
-        # section of environment variables and any extra variables provided by the
-        # user that didn't fit into any other section
-
-        compose_env.update(ctx.env.get_section("EXTRA"))
         if is_apple_m1():
-            compose_env.update({"MODULE_PLATFORM": "linux/amd64"})
-        compose_cmd = build_command(docker_native, compose_env, cmd_chunk)
+            ctx.env.update({"MODULE_PLATFORM": "linux/amd64"})
+        compose_cmd = build_command(docker_native, cmd_chunk)
 
-        ctx.cmd_executor.execute_commands(compose_cmd, environment=compose_env)
+        ctx.cmd_executor.execute_commands(compose_cmd, environment=ctx.env)
         initialize_containers()
 
         c_restart = execute_bootstraps(modules)
@@ -193,22 +188,19 @@ def check_enterprise(ctx, modules=[]):
         if ctx.modules.data.get(module, {}).get("enterprise", False):
             enterprise_modules.append(module)
 
-    compose_env = ctx.env.get_section("MODULES")
-
     if enterprise_modules:
-        if not ctx.env.get_var("LIC_PATH", False):
+        if not ctx.env.get("LIC_PATH", False):
             raise err.UserError(
                 f"Module(s) {enterprise_modules} requires a Starburst license. "
                 f"You must provide a path to a Starburst license via the "
                 f"LIC_PATH environment variable"
             )
-        compose_env.update({"LIC_MOUNT_PATH": LIC_MOUNT_PATH})
-    elif ctx.env.get_var("LIC_PATH", False):
-        compose_env.update({"LIC_MOUNT_PATH": LIC_MOUNT_PATH})
+        ctx.env.update({"LIC_MOUNT_PATH": LIC_MOUNT_PATH})
+    elif ctx.env.get("LIC_PATH", False):
+        ctx.env.update({"LIC_MOUNT_PATH": LIC_MOUNT_PATH})
     else:
-        compose_env.update({"LIC_PATH": "./modules/resources/dummy.license"})
-        compose_env.update({"LIC_MOUNT_PATH": DUMMY_LIC_MOUNT_PATH})
-    return compose_env
+        ctx.env.update({"LIC_PATH": "./modules/resources/dummy.license"})
+        ctx.env.update({"LIC_MOUNT_PATH": DUMMY_LIC_MOUNT_PATH})
 
 
 @pass_environment
@@ -259,13 +251,13 @@ def chunk(ctx, modules=[]):
 
 
 @pass_environment
-def build_command(ctx, docker_native="", compose_env={}, chunk=""):
+def build_command(ctx, docker_native="", chunk=""):
     """Builds a formatted docker compose command for shell execution. Returns a
     docker compose command string."""
 
     cmd = []
     compose_env_string = ""
-    for k, v in compose_env.items():
+    for k, v in ctx.env.items():
         compose_env_string += f'{k.upper()}="{v}" '
 
     cmd.extend(

@@ -2,7 +2,9 @@
 # -*- coding: utf-8 -*-
 
 # TODO: Test docker host
-# TODO: Test symlink paths (should work with os.environ() registered in subproc)
+
+import os
+import subprocess
 
 import src.common as common
 import src.cli.helpers as helpers
@@ -64,12 +66,55 @@ def test_env():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
+    # User environment variable
     result = helpers.execute_command(
         ["-v", "--env", "COMPOSE_PROJECT_NAME=test", "version"]
     )
 
     assert result.exit_code == 0
     assert "COMPOSE_PROJECT_NAME" and "test" in result.output
+
+    # Shell environment variable
+    result = helpers.execute_command(
+        ["-v", "version"],
+        env={"COMPOSE_PROJECT_NAME": "test"},
+    )
+
+    assert result.exit_code == 0
+    assert "COMPOSE_PROJECT_NAME" and "test" in result.output
+
+    # Config environment variable
+    helpers.make_sample_config()
+    subprocess.call(
+        f'bash -c "cat << EOF >> {common.CONFIG_FILE}\n'
+        f"COMPOSE_PROJECT_NAME=test\n"
+        f'EOF"',
+        shell=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+    result = helpers.execute_command(
+        ["-v", "version"],
+    )
+
+    assert result.exit_code == 0
+    assert "COMPOSE_PROJECT_NAME" and "test" in result.output
+
+    subprocess.call(
+        f'bash -c "rm {common.CONFIG_FILE}\n"',
+        shell=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+    # mintirino.env environment variable
+    result = helpers.execute_command(
+        ["-v", "version"],
+    )
+
+    assert result.exit_code == 0
+    assert "COMPOSE_PROJECT_NAME" and "minitrino" in result.output
 
     common.log_success(cast(FrameType, currentframe()).f_code.co_name)
 

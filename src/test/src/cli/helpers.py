@@ -26,14 +26,14 @@ class MinitrinoResult:
         self.exit_code = exit_code
 
 
-def execute_command(command=[], print_output=True, command_input=""):
+def execute_command(command=[], print_output=True, command_input="", env={}):
     """Executes a command through the Click CliRunner."""
 
     runner = CliRunner()
     if not command_input:
-        result = runner.invoke(cli, command)
+        result = runner.invoke(cli, command, env=env)
     else:
-        result = runner.invoke(cli, command, input=command_input)
+        result = runner.invoke(cli, command, input=command_input, env=env)
     if print_output:
         print(f"Output of command [minitrino {' '.join(command)}]:\n{result.output}")
 
@@ -48,12 +48,12 @@ def make_sample_config():
 
     subprocess.call(
         f'bash -c "cat << EOF > {CONFIG_FILE}\n'
-        f"[CLI]\n"
+        f"[config]\n"
         f"LIB_PATH=\n"
-        f"\n"
-        f"[MODULES]\n"
-        f"S3_ACCESS_KEY=example\n"
-        f'S3_SECRET_KEY=example\n"',
+        f"STARBURST_VER=\n"
+        f'TEXT_EDITOR=\n"'
+        f'LIC_PATH=\n"',
+        f'SECRET_KEY=abc123\n"',
         shell=True,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,

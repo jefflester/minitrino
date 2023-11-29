@@ -15,8 +15,10 @@ from pathlib import Path
 USER_HOME_DIR = os.path.expanduser("~")
 MINITRINO_USER_DIR = os.path.abspath(os.path.join(USER_HOME_DIR, ".minitrino"))
 CONFIG_FILE = os.path.abspath(os.path.join(MINITRINO_USER_DIR, "minitrino.cfg"))
-MINITRINO_LIB_DIR = Path(os.path.abspath(__file__)).resolve().parents[3]
-SNAPSHOT_DIR = os.path.join(MINITRINO_LIB_DIR, "src", "lib", "snapshots")
+MINITRINO_LIB_DIR = os.path.join(
+    Path(os.path.abspath(__file__)).resolve().parents[2], "lib"
+)
+SNAPSHOT_DIR = os.path.join(MINITRINO_LIB_DIR, "snapshots")
 SNAPSHOT_FILE = os.path.join(SNAPSHOT_DIR, "test.tar.gz")
 MINITRINO_USER_SNAPSHOTS_DIR = os.path.join(MINITRINO_USER_DIR, "snapshots")
 # -----------------------------------------------------------------------------------

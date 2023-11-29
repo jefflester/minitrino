@@ -47,11 +47,12 @@ SCRUB_KEYS = [
 
 # Templates
 CONFIG_TEMPLATE = """
-[CLI]
+[config]
+# defaults to ~/.minitrino/lib
 LIB_PATH=
-TEXT_EDITOR=
 
-[MODULES]
+STARBURST_VER=
+TEXT_EDITOR=
 LIC_PATH=
 """
 

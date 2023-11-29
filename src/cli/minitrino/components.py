@@ -84,7 +84,7 @@ class Environment:
         try:
             # Try to get `LIB_path` var - handle exception if `env` attribute is
             # not yet set
-            lib_dir = self.env.get_var("LIB_PATH", "")
+            lib_dir = self.env.get("LIB_PATH", "")
         except:
             pass
 
@@ -198,91 +198,68 @@ class Environment:
             return None, None
 
 
-class EnvironmentVariables:
-    """Gathers all Minitrino variables into a single source of truth.
+class EnvironmentVariables(dict):
+    """Exposes all Minitrino variables.
 
     ### Parameters
     - `ctx`: Instantiated Environment object (with user input already accounted
       for).
 
-    ### Public Attributes
-    - `env`: Dictionary containing all environment variables.
-
-    ### Public Methods
-    - `get_var()`: Gets an environment variable from a specific section and key.
-    - `get_section()`: Gets a a section from the environment variable dict.
-
     ### Usage
     ```python
     # ctx object has an instantiated EnvironmentVariables object
-    env_variable = ctx.env.get_var("STARBURST_VER", "388-e")
-    env_section = ctx.env.get_section("MODULES")
+    env_variable = ctx.env.get("STARBURST_VER", "388-e")
     ```"""
 
     @utils.exception_handler
     def __init__(self, ctx=None):
+        super().__init__()
         if not ctx:
             raise utils.handle_missing_param(list(locals().keys()))
 
-        self.env = {}
         self._ctx = ctx
 
-        self._parse_minitrino_config()
         self._parse_user_env()
+        self._parse_os_env()
+        self._parse_minitrino_config()
 
-    def get_var(self, key="", default=None):
-        """Gets and returns a variable from a section of the environment
-        variables. Since it is assumed there will not be duplicate environment
-        variables between sections, the first-match is returned.
+    def _parse_user_env(self):
+        """Parses user-provided environment variables for the current
+        command. Highest precedence in environment variable order, loaded
+        first."""
 
-        ### Parameters
-        - `key`: The key to search for.
-        - `default` The default value to return if the key is not found."""
+        if not self._ctx._user_env:
+            return
 
-        if not key:
-            raise utils.handle_missing_param(["key"])
+        for env_var in self._ctx._user_env:
+            env_var = utils.parse_key_value_pair(env_var, err_type=err.UserError)
+            self[env_var[0]] = env_var[1]
 
-        for section_k, section_v in self.env.items():
-            if isinstance(section_v, dict):
-                for section_dict_k, section_dict_v in section_v.items():
-                    if section_dict_k.upper() == key.upper():
-                        return section_dict_v
-        return default
+    def _parse_os_env(self):
+        """Parses environment variables from the user's shell. Middle
+        precedence in environment variable order, loaded second."""
 
-    def get_section(self, section=""):
-        """Gets and returns a section from the environment variables. If the
-        section doesn't exist, an empty dict is returned.
-
-        ### Parameters
-        - `section`: The section to return, if it exists."""
-
-        if not section:
-            raise utils.handle_missing_param(list(locals().keys()))
-
-        return self.env.get(section.upper(), {})
+        append = ["LIB_PATH", "STARBURST_VER", "TEXT_EDITOR", "LIC_PATH"]
+        for k, v in os.environ.items():
+            k = k.upper()
+            if k in append and not self.get(k, None):
+                self[k] = v
 
     def _parse_minitrino_config(self):
         """Parses the Minitrino config file and adds it to the env
-        dictionary."""
+        dictionary. Middle precedence in environment variable order, loaded
+        third."""
 
         if not os.path.isfile(self._ctx.config_file):
             return
 
-        # Catch this and provide a useful message, as it can be tricky to track
-        # down otherwise
         try:
             config = ConfigParser()
             config.optionxform = str  # Preserve case
             config.read(self._ctx.config_file)
-            for section in config.sections():
-                for k, v in config.items(section):
-                    # Skip if the key exists in any section
-                    if self.get_var(k, False):
-                        continue
-                    # Account for empty section
-                    if not self.env.get(section, False):
-                        self.env[section] = {}
-                    self.env[section][k] = v
+            for k, v in config.items("config"):
+                if not self.get(k, None) and v:
+                    self[k.upper()] = v
         except Exception as e:
             utils.handle_exception(
                 e,
@@ -290,10 +267,8 @@ class EnvironmentVariables:
             )
 
     def _parse_library_env(self):
-        """Parses the Minitrino library's root `minitrino.env` file. All config from
-        this file is added to the 'MODULES' section of the environment
-        dictionary since this file explicitly defines the versions of the module
-        services."""
+        """Parses the Minitrino library's `minitrino.env` file. Lowest
+        precedence in environment variable order, loaded last."""
 
         env_file = os.path.join(self._ctx.minitrino_lib_dir, "minitrino.env")
         if not os.path.isfile(env_file):
@@ -303,75 +278,20 @@ class EnvironmentVariables:
                 f"present in that library?",
             )
 
-        # Check if modules section was added from Minitrino config file parsing
-        section = self.env.get("MODULES", None)
-        if not isinstance(section, dict):
-            self.env["MODULES"] = {}
-
         with open(env_file, "r") as f:
             for env_var in f:
                 env_var = utils.parse_key_value_pair(env_var, err_type=err.UserError)
                 if env_var is None:
                     continue
-                # Skip if the key exists in any section
-                if self.get_var(env_var[0], False):
-                    continue
-                self.env["MODULES"][env_var[0]] = env_var[1]
-
-    def _parse_user_env(self):
-        """Parses user-provided environment variables for the current
-        command."""
-
-        if not self._ctx._user_env:
-            return
-
-        user_env_dict = {}
-        for env_var in self._ctx._user_env:
-            env_var = utils.parse_key_value_pair(env_var, err_type=err.UserError)
-            user_env_dict[env_var[0]] = env_var[1]
-
-        # Loop through user-provided environment variables and check for matches
-        # in each section dict. If the variable key is in the section dict, it
-        # needs to be identified and replaced with the user's `--env` value,
-        # effectively overriding the original value.
-        #
-        # We build a new dict to prevent issues with changing dict size while
-        # iterating.
-        #
-        # Any variable keys that do not match with an existing key will be added
-        # to the section dict "EXTRA".
-
-        new_dict = {}
-        for section_k, section_v in self.env.items():
-            if not isinstance(section_v, dict):
-                raise err.MinitrinoError(
-                    f"Invalid environment dictionary. Expected nested dictionaries. "
-                    f"Received dictionary:\n"
-                    f"{json.dumps(self.env, indent=2)}"
-                )
-            delete_keys = []
-            for user_k, user_v in user_env_dict.items():
-                if user_k in section_v:
-                    if new_dict.get(section_k, None) is None:
-                        new_dict[section_k] = section_v
-                    new_dict[section_k][user_k] = user_v
-                    delete_keys.append(user_k)
-                else:
-                    new_dict[section_k] = section_v
-            for delete_key in delete_keys:
-                del user_env_dict[delete_key]
-
-        if user_env_dict:
-            self.env["EXTRA"] = {}
-            for k, v in user_env_dict.items():
-                self.env["EXTRA"][k] = v
+                if not self.get(env_var[0], None):
+                    self[env_var[0]] = env_var[1]
 
     def _log_env_vars(self):
         """Logs environment variables."""
 
-        if self.env:
+        if self:
             self._ctx.logger.verbose(
-                f"Registered environment variables:\n{json.dumps(self.env, indent=2)}",
+                f"Registered environment variables:\n{json.dumps(self, indent=2)}",
             )
 
 

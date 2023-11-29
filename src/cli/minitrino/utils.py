@@ -260,7 +260,7 @@ def check_lib(ctx):
 def check_starburst_ver(ctx):
     """Checks if a proper Starburst version is provided."""
 
-    starburst_ver = ctx.env.get_var("STARBURST_VER", "")
+    starburst_ver = ctx.env.get("STARBURST_VER", "")
     error_msg = (
         f"Provided Starburst version '{starburst_ver}' is invalid. "
         f"The provided version must be {MIN_SEP_VER}-e or higher."

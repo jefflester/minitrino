@@ -30,7 +30,7 @@ jobs:
         echo "${LIC_DATA}" > ~/starburstdata.license
         mkdir ~/.minitrino/
         cat <<EOF > ~/.minitrino/minitrino.cfg
-        [MODULES]
+        [config]
         LIC_PATH=~/starburstdata.license
         EOF
       env:

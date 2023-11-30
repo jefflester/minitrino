@@ -65,7 +65,7 @@ def write_template(ctx):
     with open(ctx.config_file, "w") as config_file:
         config_file.write(CONFIG_TEMPLATE.lstrip())
 
-    editor = ctx.env.get(key="TEXT_EDITOR", default=None)
+    editor = ctx.env.get("TEXT_EDITOR", None)
     if not editor:
         editor = None
 
@@ -75,7 +75,7 @@ def edit_file(ctx):
     """Gets the editor from user configuration and passes to the Click edit
     function if the value is present."""
 
-    editor = ctx.env.get(key="TEXT_EDITOR", default=None)
+    editor = ctx.env.get("TEXT_EDITOR", None)
     if not editor:
         editor = None
 

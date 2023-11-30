@@ -11,7 +11,6 @@ import re
 import stat
 import hashlib
 import time
-import platform
 import click
 import yaml
 
@@ -101,9 +100,6 @@ def cli(ctx, modules, no_rollback, docker_native):
 
     try:
         cmd_chunk = chunk(modules)
-
-        if is_apple_m1():
-            ctx.env.update({"MODULE_PLATFORM": "linux/amd64"})
         compose_cmd = build_command(docker_native, cmd_chunk)
 
         ctx.cmd_executor.execute_commands(compose_cmd, environment=ctx.env)
@@ -218,24 +214,6 @@ def check_volumes(ctx, modules=[]):
                 f"Module '{module}' has persistent volumes associated with it. "
                 f"To delete these volumes, remember to run `minitrino remove --volumes`.",
             )
-
-
-@pass_environment
-def is_apple_m1(ctx):
-    """Checks the host platform to determine if MODULE_PLATFORM needs to
-    be set."""
-
-    ctx.logger.verbose(
-        "Checking host platform...",
-    )
-
-    if "arm64" == os.uname().machine.lower() and platform.processor().lower() == "arm":
-        ctx.logger.verbose(
-            f"Host machine running on Apple M1 architecture. "
-            f"Images will pull in a best-effort fashion.",
-        )
-        return True
-    return False
 
 
 @pass_environment

@@ -8,7 +8,7 @@ services:
   db2:
     image: ibmcom/db2:${DB2_VER}
     container_name: db2
-    platform: ${MODULE_PLATFORM}
+    platform: linux/amd64
     env_file:
       - ./modules/catalog/db2/resources/db2/db2.env
     privileged: true

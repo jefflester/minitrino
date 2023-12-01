@@ -6,7 +6,7 @@ services:
       - ./modules/catalog/iceberg/resources/trino/iceberg.properties:/etc/starburst/catalog/iceberg.properties
 
   iceberg-rest:
-    image: tabulario/iceberg-rest:0.5.0
+    image: tabulario/iceberg-rest:${ICEBERG_REST_VER}
     container_name: iceberg-rest
     environment:
       AWS_ACCESS_KEY_ID: access-key

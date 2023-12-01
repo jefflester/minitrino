@@ -21,9 +21,9 @@ services:
       - com.starburst.tests=minitrino
       - com.starburst.tests.module.hive=catalog-hive
 
-  metastore-minio:
+  metastore-hive:
     image: naushadh/hive-metastore:latest
-    container_name: metastore-minio
+    container_name: metastore-hive
     depends_on:
       postgres-hive:
         condition: service_healthy

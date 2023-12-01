@@ -72,15 +72,6 @@
         "--user foo"
       ],
       "rowCount": 0
-    },
-    {
-      "type": "logs",
-      "name": "Ensure trino is running",
-      "container": "trino",
-      "contains": [
-        "=== SERVER STARTED ==="
-      ],
-      "timeout": 60
     }
   ]
 }

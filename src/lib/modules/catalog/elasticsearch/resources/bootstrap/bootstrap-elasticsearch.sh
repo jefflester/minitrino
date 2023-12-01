@@ -15,65 +15,59 @@ echo "Waiting for Elasticsearch to come up..."
 /tmp/wait-for-it.sh elasticsearch:9200 --strict --timeout=60 -- echo "Elasticsearch service is up."
 
 echo "Creating user index..."
-curl -XPUT http://localhost:9200/user?pretty=true;
+curl -XPUT -H 'Content-Type: application/json' http://elasticsearch:9200/user?pretty=true -d'
+{
+  "settings" : {
+    "index" : {
+      "number_of_replicas" : 0
+    }
+  }
+}'
 
 echo "Creating user mapping..."
-curl -XPUT http://localhost:9200/user/_mapping/profile?include_type_name=true -H 'Content-Type: application/json' -d '
+curl -XPUT 'http://elasticsearch:9200/user/_mapping' -H 'Content-Type: application/json' -d '
 {
-    "profile" : {
-        "properties" : {
-            "full_name" : { "type" : "text", "store" : true },
-            "bio" : { "type" : "text", "store" : true },
-            "age" : { "type" : "integer" },
-            "location" : { "type" : "text" },
-            "enjoys_coffee" : { "type" : "boolean" },
-            "created_on" : { "type" : "date" }
-        }
+    "properties" : {
+        "full_name" : { "type" : "text", "store" : true },
+        "bio" : { "type" : "text", "store" : true },
+        "age" : { "type" : "integer" },
+        "location" : { "type" : "text" },
+        "enjoys_coffee" : { "type" : "boolean" },
+        "created_on" : { "type" : "date" }
     }
 }
 ';
 
-echo "Creating user profile records..."
-curl -XPOST http://localhost:9200/user/profile/1?pretty=true -H 'Content-Type: application/json' -d '
-{
-    "full_name" : "Andrew Puch",
-    "bio" : "My name is Andrew. I have a short bio.",
-    "age" : 26,
-    "location" : "41.1246110,-73.4232880",
-    "enjoys_coffee" : true,
-    "created_on" : "2015-05-02T14:45:10.000-04:00"
-}
-';
+sudo pip install faker requests
 
-curl -XPOST http://localhost:9200/user/profile/2?pretty=true -H 'Content-Type: application/json' -d '
-{
-    "full_name" : "Elon Musk",
-    "bio" : "Elon Musk is a moderately successful person.",
-    "age" : 43,
-    "location" : "37.7749290,-122.4194160",
-    "enjoys_coffee" : false,
-    "created_on" : "2015-05-02T15:45:10.000-04:00"
-}
-';
+cat << EOF > /tmp/generate_es_users.py
+import json
+import requests
+from faker import Faker
 
-curl -XPOST http://localhost:9200/user/profile/3?pretty=true -H 'Content-Type: application/json' -d '
-{
-    "full_name" : "Some Hacker",
-    "bio" : "I am a haxor user who you should end up deleting.",
-    "age" : 1000,
-    "location" : "37.7749290,-122.4194160",
-    "enjoys_coffee" : true,
-    "created_on" : "2015-05-02T16:45:10.000-04:00"
-}
-';
+fake = Faker()
 
-curl -XPOST http://localhost:9200/user/profile/4?pretty=true -H 'Content-Type: application/json' -d '
-{
-    "full_name" : "Julian Spring",
-    "bio" : "Starburst superuser.",
-    "age" : 7,
-    "location" : "37.7749290,-122.4194160",
-    "enjoys_coffee" : true,
-    "created_on" : "2016-03-02T16:45:10.000-04:00"
-}
-';
+for i in range(1, 500):
+    user = {
+        "full_name": fake.name(),
+        "bio": f"My name is {fake.first_name()}. {fake.sentence()}",
+        "age": fake.random_int(min=20, max=60),
+        "location": f"{fake.latitude()},{fake.longitude()}",
+        "enjoys_coffee": fake.boolean(),
+        "created_on": fake.date_time_this_decade().isoformat()
+    }
+
+    response = requests.post(
+        f"http://elasticsearch:9200/user/_doc/{i}?pretty=true",
+        headers={"Content-Type": "application/json"},
+        data=json.dumps(user)
+    )
+
+    print(f"Created user {i}, response: {response.status_code}")
+EOF
+
+# Make the Python script executable
+chmod +x /tmp/generate_es_users.py
+
+# Execute the Python script
+python3 /tmp/generate_es_users.py

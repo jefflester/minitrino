@@ -2,6 +2,8 @@ version: '3.8'
 services:
   
   trino:
+    environment:
+      MINITRINO_BOOTSTRAP: bootstrap-elasticsearch.sh
     volumes:
       - ./modules/catalog/elasticsearch/resources/trino/elasticsearch.properties:/etc/starburst/catalog/elasticsearch.properties
 
@@ -9,11 +11,11 @@ services:
     image: elasticsearch:${ELASTICSEARCH_VER}
     container_name: elasticsearch
     environment:
-      MINITRINO_BOOTSTRAP: bootstrap-elasticsearch.sh
       discovery.type: single-node
       bootstrap.memory_lock: true
       network.host: 0.0.0.0
       network.bind_host: 0.0.0.0
+      xpack.security.enabled: "false"
       ES_JAVA_OPTS: -Xms256m -Xmx256m
     ports:
       - 9200:9200

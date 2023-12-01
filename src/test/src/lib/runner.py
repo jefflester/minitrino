@@ -81,7 +81,7 @@ class ModuleTest:
 
         # Build command
         sql = json_data.get("sql", "")
-        cmd = f"trino-cli --debug --output-format CSV_HEADER --execute '{sql}'"
+        cmd = f'trino-cli --debug --output-format CSV_HEADER --execute "{sql}"'
         args = json_data.get("trinoCliArgs", [])
 
         if args:

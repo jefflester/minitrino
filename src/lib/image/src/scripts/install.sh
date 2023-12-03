@@ -53,5 +53,14 @@ chmod -v +x "${TRINO_CLI_PATH}"
 chown -R "${USER}":"${GROUP}" "${TRINO_CLI_PATH}"
 ln -vs "${TRINO_CLI_PATH}"
 
+echo "Installing wait-for-it..."
+WAIT_FOR_IT_PATH=/usr/local/bin/wait-for-it
+WAIT_FOR_IT_URL=https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh
+
+curl -fsSL "${WAIT_FOR_IT_URL}" > "${WAIT_FOR_IT_PATH}"
+chmod -v +x "${WAIT_FOR_IT_PATH}"
+chown -R "${USER}":"${GROUP}" "${WAIT_FOR_IT_PATH}"
+ln -vs "${WAIT_FOR_IT_PATH}"
+
 echo "Cleaning up /tmp/..."
 rm -rf /tmp/*

@@ -3,13 +3,8 @@
 set -euxo pipefail
 export LDAPTLS_REQCERT=never
 
-curl -fsSL https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh \
-    > /tmp/wait-for-it.sh
-
-chmod +x /tmp/wait-for-it.sh
-
 echo "Waiting for LDAP to come up..."
-/tmp/wait-for-it.sh ldap:636 --strict --timeout=60 -- echo "LDAP service is up."
+wait-for-it ldap:636 --strict --timeout=60 -- echo "LDAP service is up."
 
 echo "Getting LDAP certificate..."
 LDAP_URI=$(cat /etc/starburst/password-authenticator.properties | grep "ldaps" | sed -r "s/^.*ldaps:\/\/(.+:[0-9]+).*$/\1/")

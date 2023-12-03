@@ -6,7 +6,7 @@ services:
       - ./modules/catalog/hive/resources/trino/hive.properties:/etc/starburst/catalog/hive.properties
 
   postgres-hive:
-    image: postgres:${POSTGRES_HIVE_VER}
+    image: postgres:${POSTGRES_HMS_VER}
     container_name: postgres-hive
     healthcheck:
       test: [ 'CMD-SHELL', 'pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}']

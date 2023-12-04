@@ -1,0 +1,31 @@
+{
+  "tests": [
+    {
+      "type": "query",
+      "name": "Test password",
+      "sql": "SELECT 12345",
+      "trinoCliArgs": [
+        "--server 'https://trino:8443'",
+        "--user admin",
+        "--truststore-path /etc/starburst/ssl/truststore.jks",
+        "--truststore-password changeit",
+        "--password"
+      ],
+      "contains": [
+        "12345"
+      ],
+      "env": {
+        "TRINO_PASSWORD": "trinoRocks15"
+      }
+    },
+    {
+      "type": "logs",
+      "name": "Ensure trino is running",
+      "container": "trino",
+      "contains": [
+        "=== SERVER STARTED ==="
+      ],
+      "timeout": 60
+    }
+  ]
+}

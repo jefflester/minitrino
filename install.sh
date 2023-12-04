@@ -12,20 +12,19 @@ function install() {
 
     if [[ $1 == "-v" ]]; then
         set -ex
-        echo "Installing minitrino CLI..."
-        "${PIP}" install --editable "${BASH_SOURCE%/*}"/cli/
     else
         set -e
-        echo "Installing minitrino CLI..."
-        "${PIP}" install -q --editable "${BASH_SOURCE%/*}"/cli/
     fi
+
+    echo "Installing Minitrino CLI and test modules..."
+    "${PIP}" install -q --editable "${BASH_SOURCE%/*}"/src/cli/
+    "${PIP}" install -q --editable "${BASH_SOURCE%/*}"/src/test/
 }
 
-time install $1
+time install "$1"
 
 echo -e "\nInstallation complete! Start with the CLI by configuring it running 'minitrino config' \
 (you can do this later). Alternatively, get started immediately with 'minitrino provision'.\n"
 
 minitrino
-
 echo -e "\n"

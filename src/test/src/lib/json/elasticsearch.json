@@ -1,0 +1,49 @@
+{
+  "tests": [
+    {
+      "type": "shell",
+      "name": "Ensure Elasticsearch is running",
+      "container": "trino",
+      "command": "echo 'pass'",
+      "exitCode": 0,
+      "healthcheck": {
+        "command": "curl -v -k elasticsearch:9200/_cluster/health/user",
+        "container": "trino",
+        "retries": 30,
+        "exitCode": 0,
+        "contains": [
+          "\"status\":\"green\"",
+          "\"active_shards\":1"
+        ]
+      }
+    },
+    {
+      "type": "query",
+      "name": "Test schema list",
+      "sql": "SHOW SCHEMAS IN elasticsearch",
+      "trinoCliArgs": [
+        "--server 'http://trino:8080'",
+        "--user admin"
+      ],
+      "contains": [
+        "default",
+        "information_schema",
+        "system"
+      ]
+    },
+    {
+      "type": "query",
+      "name": "Test table select",
+      "sql": "SELECT * FROM elasticsearch.default.user LIMIT 10",
+      "trinoCliArgs": [
+        "--server 'http://trino:8080'",
+        "--user admin"
+      ],
+      "contains": [
+        "age",
+        "bio",
+        "full_name"
+      ]
+    }
+  ]
+}

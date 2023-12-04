@@ -1,0 +1,43 @@
+name: Update Version Files on New Release Branch
+
+on:
+  create:
+    branches:
+      - '[0-9]+\.[0-9]+\.[0-9]+'
+
+jobs:
+  update-versions:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Update version files
+        env:
+          GITHUB_TOKEN: ${{ secrets.MINITRINO_TOKEN }}
+        run: |-
+          BRANCH=$(echo "${GITHUB_REF#refs/heads/}")
+          if [[ "$GITHUB_REF" == "$BRANCH" ]]; then
+            echo "This workflow can only be triggered by a branch"
+            exit 0
+          fi
+          
+          echo "Updating version files to version ${BRANCH}"
+          echo "Update ./src/lib/version"
+          echo "${BRANCH}" > ./src/lib/version
+          
+          echo "Update ./src/cli/setup.py"
+          sed -i "s|version=\"[0-9]\.[0-9]\.[0-9]\"|version=\"${BRANCH}\"|" ./src/cli/setup.py
+
+          echo "Update ./readme.md"
+          sed -i "s|\*\*Latest Stable Release\*\*: [0-9]\.[0-9]\.[0-9]|\*\*Latest Stable Release\*\*: ${BRANCH}|" ./readme.md
+          
+          if [[ -n $(git status --porcelain) ]]; then
+            echo "Commit version changes"
+            git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+            git config --global user.name "${GITHUB_ACTOR}"
+            git add ./src/lib/version ./src/cli/setup.py ./readme.md
+            git commit -m "Update version files to ${BRANCH}"
+            git push
+          else
+            echo "No version changes to commit"
+          fi

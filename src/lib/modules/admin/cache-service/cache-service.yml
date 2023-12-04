@@ -1,0 +1,22 @@
+version: '3.8'
+services:
+
+  trino:
+    environment:
+      MINITRINO_BOOTSTRAP: bootstrap-trino.sh
+    volumes:
+      - ./modules/admin/cache-service/resources/trino/rules.json:/etc/starburst/rules.json
+      - ./modules/admin/cache-service/resources/trino/cache.properties:/etc/starburst/cache.properties
+      - ./modules/admin/cache-service/resources/trino/cache_svc.properties:/etc/starburst/catalog/cache_svc.properties
+      - ./modules/admin/cache-service/resources/trino/hive_mv_tsr.properties:/etc/starburst/catalog/hive_mv_tsr.properties
+    ports:
+      - 8180:8180
+
+  cache-svc-backend:
+    image: postgres:${POSTGRES_SEP_CACHE_SVC_VER}
+    container_name: cache-svc-backend
+    env_file:
+      - ./modules/admin/cache-service/resources/postgres/cache-svc.env
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.cache-service=admin-cache-service

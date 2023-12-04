@@ -9,13 +9,13 @@ on:
 
 jobs:
   set-test-release-and-tag:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
-
       - name: Check out code
         uses: actions/checkout@v4
-
       - name: Delete and recreate release
+        env:
+          GITHUB_TOKEN: ${{ secrets.MINITRINO_TOKEN }}
         run: |-
           TAG="0.0.0"
           DESCRIPTION="Used as a placeholder to give test builds access to the PR branch's module library."
@@ -33,5 +33,3 @@ jobs:
             --title "${TAG}" \
             --notes "${DESCRIPTION}" \
             --target "${GITHUB_HEAD_REF}"
-        env:
-          GITHUB_TOKEN: ${{ secrets.MINITRINO_TOKEN }}

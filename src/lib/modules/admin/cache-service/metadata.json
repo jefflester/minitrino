@@ -1,0 +1,6 @@
+{
+  "description": "Cache service module",
+  "incompatibleModules": [],
+  "dependentModules": ["hive", "postgres", "insights"],
+  "enterprise": true
+}

@@ -22,7 +22,7 @@ services:
       - com.starburst.tests.module.hive=catalog-hive
 
   metastore-hive:
-    image: naushadh/hive-metastore:latest
+    image: jefflester/hive-metastore:${HMS_VER}
     container_name: metastore-hive
     depends_on:
       postgres-hive:
@@ -54,11 +54,15 @@ services:
   create-minio-buckets:
     image: minio/mc:${MINIO_MC_VER}
     container_name: create-minio-buckets
-    environment:
-      MINITRINO_BOOTSTRAP: bootstrap-create-buckets.sh
-    entrypoint: >
+    entrypoint: |
       /bin/sh -c "
-      tail -f /dev/null;
+      curl -fsSL https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh > /tmp/wait-for-it.sh && \
+      chmod +x /tmp/wait-for-it.sh && \
+      echo 'Waiting for MinIO to come up...' && \
+      /tmp/wait-for-it.sh minio:9000 --strict --timeout=60 -- echo 'MinIO service is up.' && \
+      /usr/bin/mc alias set minio http://minio:9000 access-key secret-key && \
+      /usr/bin/mc mb minio/sample-bucket/wh/ && \
+      tail -f /dev/null
       "
     labels:
       - com.starburst.tests=minitrino

@@ -32,6 +32,10 @@ echo "Copying run-starburst script..."
 cp /tmp/run-starburst /usr/lib/starburst/bin/
 chmod +x /usr/lib/starburst/bin/run-starburst
 
+echo "Copying run-minitrino.sh script..."
+cp /tmp/run-minitrino.sh /usr/lib/starburst/bin/
+chmod +x /usr/lib/starburst/bin/run-minitrino.sh
+
 echo "Setting directory ownership and permissions..."
 chown -R "${USER}":"${GROUP}" \
     /usr/lib/starburst/ \

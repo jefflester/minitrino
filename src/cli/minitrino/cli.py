@@ -46,12 +46,9 @@ class CommandLineInterface(click.MultiCommand):
     help=(
         """Add or override environment variables. 
 
-        Environment variables are sourced from the Minitrino library's root
-        'minitrino.env' file as well as the user config file in
-        '~/.minitrino/minitrino.cfg'. Variables supplied by this option will
-        override values from either of those sources. The variables will also be
-        passed to the environment of the shell executing commands during the
-        'provision' command."""
+        To learn more about environment variables and the order of precedence,
+        visit the project wiki at:
+        https://github.com/jefflester/minitrino/wiki/Environment-Variables-and-Config"""
     ),
 )
 @pass_environment

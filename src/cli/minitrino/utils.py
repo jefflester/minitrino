@@ -29,13 +29,13 @@ class Logger:
       determined by user input when the logger is instantiated from the
       Environment class.
 
-    ### Public Attributes
-    - `info`: Info log level.
-    - `warn`: Warn log level.
-    - `error`: Error log level.
-    - `verbose`: Verbose log level.
+    ### Attributes
+    - `INFO`: Info log level.
+    - `WARN`: Warn log level.
+    - `ERROR`: Error log level.
+    - `VERBOSE`: Verbose log level.
 
-    ### Public Methods
+    ### Methods
     - `log()`: Logs a message to the user's terminal. Level must be specified,
       defaults to INFO.
     - `info()`: Logs an info message

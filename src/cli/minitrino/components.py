@@ -70,20 +70,15 @@ class Environment:
     def minitrino_lib_dir(self):
         """The directory of the Minitrino library. The directory can be
         determined in four ways (this is the order of precedence):
-        1. Passing `LIB_PATH` to the CLI's `--env` option sets the library
-            directory for the current command.
-        2. The `minitrino.cfg` file's `LIB_PATH` variable sets the library
-            directory if present.
-        3. The path `~/.minitrino/lib/` is used as the default lib path if the
-            `LIB_PATH` var is not found.
+        1. Pass `LIB_PATH` to the CLI via `-e`/ `--env`.
+        2. Export `LIB_PATH` as a shell environment variable.
+        3. Set `LIB_PATH` in `minitrino.cfg`.
         4. As a last resort, Minitrino will check to see if the library exists
-            in relation to the positioning of the `components.py` file and
-            assumes the project is being run out of a cloned repository."""
+           in relation to the positioning of the `components.py` file and
+           assumes the project is being run out of a cloned repository."""
 
         lib_dir = ""
         try:
-            # Try to get `LIB_path` var - handle exception if `env` attribute is
-            # not yet set
             lib_dir = self.env.get("LIB_PATH", "")
         except:
             pass
@@ -98,18 +93,9 @@ class Environment:
             os.path.join(lib_dir, "minitrino.env")
         ):
             raise err.UserError(
-                "You must provide a path to a compatible Minitrino library.",
-                f"You can point to a Minitrino library a few different "
-                f"ways:\n(1) You can set the 'LIB_PATH' variable in your "
-                f"Minitrino config via the command 'minitrino config'--this "
-                f"should be placed under the '[CLI]' section.\n(2) You can "
-                f"pass in 'LIB_PATH' as an environment variable for the current "
-                f"command, e.g. 'minitrino -e LIB_PATH=<path/to/lib> ...'\n"
-                f"(3) If the above variable is not found, Minitrino will check "
-                f"if '~/.minitrino/lib/' is a valid directory.\n(4) "
-                f"If you are running Minitrino out of a cloned repo, the library "
-                f"path will be automatically detected without the need to perform "
-                f"any of the above.",
+                "You must provide a path to a compatible Minitrino library ",
+                f"via `LIB_PATH` or by placing the library in the default location, "
+                f"~/.minitrino/lib",
             )
         return lib_dir
 

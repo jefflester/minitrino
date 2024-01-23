@@ -37,6 +37,7 @@ ENV STARBURST_VER=${STARBURST_VER}
 COPY --from=mid /usr/lib/starburst/bin/run-starburst /tmp/
 
 ADD ./src/scripts/install.sh /tmp/
+ADD ./src/scripts/run-minitrino.sh /tmp/
 ADD ./src/etc/starburst /etc/starburst
 
 RUN \
@@ -47,4 +48,4 @@ EXPOSE 8080
 USER ${USER}:${GROUP}
 WORKDIR /etc/starburst/
 ENV LANG=en_US.UTF-8
-CMD ["/usr/lib/starburst/bin/run-starburst"]
+CMD ["/bin/sh", "-c", "/usr/lib/starburst/bin/run-minitrino.sh"]

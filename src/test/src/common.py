@@ -65,7 +65,7 @@ def start_docker_daemon():
         raise RuntimeError("Failed to start Docker daemon.")
 
     counter = 0
-    while counter < 61:
+    while counter <= 61:
         if counter == 61:
             raise TimeoutError("Docker daemon failed to start after one minute.")
         try:

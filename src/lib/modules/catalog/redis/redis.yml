@@ -1,0 +1,21 @@
+version: '3.8'
+services:
+
+  trino:
+    volumes:
+      - ./modules/catalog/redis/resources/trino/redis.properties:/etc/starburst/catalog/redis.properties
+
+  redis:
+    image: redislabs/redis:${REDIS_VER}
+    container_name: redis
+    environment:
+      MINITRINO_BOOTSTRAP: bootstrap.sh
+    cap_add:
+      - SYS_RESOURCE
+    ports:
+      - 7443:8443 # RedisInsight - https://localhost:7443
+      - 9443:9443 # REST API - https://localhost:9443
+      - 12000:12000 # Client connection port
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.redis=catalog-redis

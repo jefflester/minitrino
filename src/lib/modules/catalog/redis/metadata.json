@@ -1,0 +1,5 @@
+{
+    "description": "Creates a Redis catalog using the standard Redis connector.",
+    "incompatibleModules": [],
+    "enterprise": false
+}

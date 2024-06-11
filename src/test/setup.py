@@ -7,5 +7,5 @@ setup(
     name="minitrino-tests",
     version="0.0",
     packages=["src", "src/cli", "src/lib"],
-    install_requires=["minitrino", "jsonschema", "requests==2.31.0"],
+    install_requires=["minitrino", "jsonschema", "requests==2.32.2"],
 )

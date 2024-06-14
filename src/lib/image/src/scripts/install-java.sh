@@ -21,4 +21,4 @@ else
 fi
 
 echo "Installing Java version $JAVA_VER"
-apt-get install -y openjdk-${JAVA_VER}-jdk
+apt-get update && apt-get install -y openjdk-${JAVA_VER}-jdk

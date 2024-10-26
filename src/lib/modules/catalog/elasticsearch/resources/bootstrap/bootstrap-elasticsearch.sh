@@ -33,7 +33,7 @@ curl -XPUT 'http://elasticsearch:9200/user/_mapping' -H 'Content-Type: applicati
 }
 ';
 
-sudo pip install faker requests --timeout=30 --retries=5
+sudo pip install faker requests
 
 cat << EOF > /tmp/generate_es_users.py
 import json

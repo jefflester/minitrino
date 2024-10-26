@@ -1,6 +1,6 @@
-ARG STARBURST_VER
+# -- Base layer --
 ARG UBUNTU_VER
-
+ARG STARBURST_VER
 FROM ubuntu:${UBUNTU_VER} AS base
 
 RUN \
@@ -21,18 +21,23 @@ RUN \
         python-is-python3 \
         python3-pip
 
+# -- Mid layer --
 ARG STARBURST_VER
 FROM starburstdata/starburst-enterprise:${STARBURST_VER} AS mid
 
+# -- Final layer --
 FROM base AS final
 
+ARG STARBURST_VER
 ARG USER=starburst
 ARG UID=1000
 ARG GROUP=root
 ARG GID=0
 
-ARG STARBURST_VER
 ENV STARBURST_VER=${STARBURST_VER}
+ENV SDKMAN_DIR="/home/${USER}/.sdkman"
+ENV JAVA_HOME="/home/${USER}/.sdkman/candidates/java/current"
+ENV PATH="/home/${USER}/.sdkman/candidates/java/current/bin:${PATH}"
 
 COPY --from=mid /etc/starburst/jvm.config /tmp/
 COPY --from=mid /usr/lib/starburst/bin/run-starburst /tmp/
@@ -46,11 +51,6 @@ RUN \
     bash /tmp/install.sh ${USER} ${GROUP} ${UID} ${GID}
 
 ADD ./src/scripts/install-java.sh /tmp/
-
-# Set JAVA_HOME and add it to PATH
-ENV SDKMAN_DIR="/home/${USER}/.sdkman" \
-    JAVA_HOME="/home/${USER}/.sdkman/candidates/java/current" \
-    PATH="/home/${USER}/.sdkman/candidates/java/current/bin:${PATH}"
 
 RUN \
     chmod +x /tmp/install-java.sh && \

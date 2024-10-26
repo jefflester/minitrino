@@ -50,6 +50,8 @@ chmod -R g=u \
 
 echo "Copying jvm.config..."
 cp /tmp/jvm.config /etc/starburst/
+chmod g+w /etc/starburst/jvm.config
+chown "${USER}":"${GROUP}" /etc/starburst/jvm.config
 
 echo "Installing trino-cli..."
 TRINO_CLI_PATH=/usr/local/bin/trino-cli
@@ -57,7 +59,7 @@ CLI_URL=https://repo1.maven.org/maven2/io/trino/trino-cli/"${TRINO_DIST}"/trino-
 
 curl -fsSL "${CLI_URL}" > "${TRINO_CLI_PATH}"
 chmod -v +x "${TRINO_CLI_PATH}"
-chown -R "${USER}":"${GROUP}" "${TRINO_CLI_PATH}"
+chown "${USER}":"${GROUP}" "${TRINO_CLI_PATH}"
 ln -vs "${TRINO_CLI_PATH}"
 
 echo "Installing wait-for-it..."
@@ -66,7 +68,7 @@ WAIT_FOR_IT_URL=https://raw.githubusercontent.com/vishnubob/wait-for-it/master/w
 
 curl -fsSL "${WAIT_FOR_IT_URL}" > "${WAIT_FOR_IT_PATH}"
 chmod -v +x "${WAIT_FOR_IT_PATH}"
-chown -R "${USER}":"${GROUP}" "${WAIT_FOR_IT_PATH}"
+chown "${USER}":"${GROUP}" "${WAIT_FOR_IT_PATH}"
 ln -vs "${WAIT_FOR_IT_PATH}"
 
 echo "Cleaning up /tmp/..."

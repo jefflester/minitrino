@@ -6,7 +6,7 @@ certificate.
 ## Client Keystore and Truststore
 
 The Java keystore and truststore needed for clients and drivers to securely
-connect to Trino are located in a volume mount `~/.minitrino/ssl`. These two
+connect to Trino are located in a volume mount `~/.minitrino/tls-mnt`. These two
 files are transient and will be automatically replaced whenever Minitrino is
 provisioned with a security module that enables SSL.
 
@@ -16,14 +16,14 @@ Via Docker:
 
     docker exec -it trino trino-cli \
         --server https://trino:8443 \
-        --truststore-path /etc/starburst/ssl/truststore.jks \
+        --truststore-path /etc/starburst/tls-mnt/truststore.jks \
         --truststore-password changeit
 
 Via Host Machine:
 
     trino-cli-xxx-executable.jar \
         --server https://localhost:8443 \
-        --truststore-path ~/.minitrino/ssl/truststore.jks 
+        --truststore-path ~/.minitrino/tls-mnt/truststore.jks 
         --truststore-password changeit
 
 ## Accessing the Trino Web UI

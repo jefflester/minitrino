@@ -214,9 +214,24 @@ class ModuleTest:
 
 
 def main():
-    """Minitrino library test runner. To run a specific module test, invoke this
-    file with a module name as an arg, i.e. `python runner.py ldap`."""
+    """Minitrino library test runner.
 
+    To run a specific module test, invoke this file with a module name as an
+    arg, i.e. `python runner.py ldap`.
+
+    If `--remove-images` is supplied as an argument, then all images (except the
+    `minitrino/trino` image) will be removed after each test. This is used to
+    ensure the tests don't consume all the disk space on the GitHub Actions
+    runner."""
+
+    remove_images = False
+    for i, arg in enumerate(sys.argv):
+        if "--remove-images" in arg:
+            sys.argv.pop(i)
+            remove_images = True
+            break
+
+    # Grab the module if supplied
     if len(sys.argv) == 2:
         run_only = sys.argv[1]
     else:
@@ -233,7 +248,7 @@ def main():
         with open(os.path.join(tests, t)) as f:
             json_data = json.load(f)
         ModuleTest(json_data, module)
-        cleanup()
+        cleanup(remove_images)
 
 
 if __name__ == "__main__":

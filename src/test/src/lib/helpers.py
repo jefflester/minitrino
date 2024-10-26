@@ -104,8 +104,18 @@ def get_container(container_name=""):
             return c
 
 
-def cleanup():
-    "Removes running Minitrino environments and deletes volumes."
+def cleanup(remove_images=False):
+    """Removes running Minitrino environments and deletes volumes. If specified,
+    also removes images."""
 
     execute_command("minitrino -v down --sig-kill")
     execute_command("minitrino -v remove --volumes")
+
+    if remove_images:
+        print("Removing images...")
+        execute_command(
+            'docker images -q | grep -v "$(docker images minitrino/trino -q)" | xargs -r docker rmi'
+        )
+
+    print("Disk space usage:")
+    execute_command("df -h")

@@ -48,13 +48,20 @@ chmod -R g=u \
     /etc/starburst/ \
     /home/starburst/
 
+echo "Copying jvm.config..."
+cp /tmp/jvm.config /etc/starburst/
+chmod g+w /etc/starburst/jvm.config
+chown "${USER}":"${GROUP}" /etc/starburst/jvm.config
+echo "-Djavax.net.ssl.trustStore=/etc/starburst/tls-jvm/cacerts" >> /etc/starburst/jvm.config
+echo "-Djavax.net.ssl.trustStorePassword=changeit" >> /etc/starburst/jvm.config
+
 echo "Installing trino-cli..."
 TRINO_CLI_PATH=/usr/local/bin/trino-cli
 CLI_URL=https://repo1.maven.org/maven2/io/trino/trino-cli/"${TRINO_DIST}"/trino-cli-"${TRINO_DIST}"-executable.jar
 
 curl -fsSL "${CLI_URL}" > "${TRINO_CLI_PATH}"
 chmod -v +x "${TRINO_CLI_PATH}"
-chown -R "${USER}":"${GROUP}" "${TRINO_CLI_PATH}"
+chown "${USER}":"${GROUP}" "${TRINO_CLI_PATH}"
 ln -vs "${TRINO_CLI_PATH}"
 
 echo "Installing wait-for-it..."
@@ -63,7 +70,7 @@ WAIT_FOR_IT_URL=https://raw.githubusercontent.com/vishnubob/wait-for-it/master/w
 
 curl -fsSL "${WAIT_FOR_IT_URL}" > "${WAIT_FOR_IT_PATH}"
 chmod -v +x "${WAIT_FOR_IT_PATH}"
-chown -R "${USER}":"${GROUP}" "${WAIT_FOR_IT_PATH}"
+chown "${USER}":"${GROUP}" "${WAIT_FOR_IT_PATH}"
 ln -vs "${WAIT_FOR_IT_PATH}"
 
 echo "Cleaning up /tmp/..."

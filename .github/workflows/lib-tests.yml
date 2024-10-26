@@ -33,4 +33,4 @@ jobs:
           EOF
       - name: Run library tests
         run: |-
-          python ./src/test/src/lib/runner.py
+          python ./src/test/src/lib/runner.py --remove-images

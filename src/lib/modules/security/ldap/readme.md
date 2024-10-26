@@ -8,7 +8,7 @@ This module provisions an LDAP server for authenticating users in Trino.
     docker exec -it trino bash 
     
     trino-cli --server https://trino:8443 \
-       --truststore-path /etc/starburst/ssl/truststore.jks --truststore-password changeit \
+       --truststore-path /etc/starburst/tls-mnt/truststore.jks --truststore-password changeit \
        --user bob --password
 
     trino> show schemas from tpch;

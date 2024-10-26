@@ -3,7 +3,7 @@
 set -euxo pipefail
 
 echo "Setting variables..."
-SSL_DIR=/etc/starburst/ssl
+SSL_DIR=/etc/starburst/tls-mnt
 
 echo "Removing pre-existing SSL resources..."
 rm -rf "${SSL_DIR}"/* 
@@ -40,6 +40,6 @@ keytool -import -v \
 	-trustcacerts \
 	-alias trino_trust \
 	-file "${SSL_DIR}"/trino_certificate.cer \
-	-keystore /etc/ssl/certs/java/cacerts \
+	-keystore /etc/starburst/tls-jvm/cacerts \
 	-storepass changeit \
 	-noprompt

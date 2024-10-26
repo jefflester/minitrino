@@ -6,7 +6,7 @@
       "sql": "SELECT 12345",
       "trinoCliArgs": [
         "--server 'https://trino:8443'",
-        "--truststore-path /etc/starburst/ssl/truststore.jks",
+        "--truststore-path /etc/starburst/tls-mnt/truststore.jks",
         "--truststore-password changeit"
       ],
       "rowCount": 1,

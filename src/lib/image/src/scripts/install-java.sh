@@ -7,6 +7,7 @@
 
 set -euxo pipefail
 
+USER_HOME=$(eval echo "~$1")
 TRINO_DIST="${STARBURST_VER:0:3}"
 
 if [ "$TRINO_DIST" -ge 413 ] && [ "$TRINO_DIST" -le 435 ]; then
@@ -14,11 +15,17 @@ if [ "$TRINO_DIST" -ge 413 ] && [ "$TRINO_DIST" -le 435 ]; then
 elif [ "$TRINO_DIST" -ge 436 ] && [ "$TRINO_DIST" -le 446 ]; then
     JAVA_VER=21
 elif [ "$TRINO_DIST" -ge 447 ]; then
-    JAVA_VER=22
+    JAVA_VER=22.0.1
 else
     echo "Invalid Trino version. Exiting..."
     exit 1
 fi
 
-echo "Installing Java version $JAVA_VER"
-apt-get update && apt-get install -y openjdk-${JAVA_VER}-jdk
+echo "Installing Java version $JAVA_VER for user $1"
+
+# Switch to target user to install SDKMAN and Java
+su - "$1" -c "bash -c '
+    curl -s https://get.sdkman.io | bash && \
+    source $USER_HOME/.sdkman/bin/sdkman-init.sh && \
+    sdk install java ${JAVA_VER}-tem --disableUsage
+'"

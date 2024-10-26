@@ -48,6 +48,9 @@ chmod -R g=u \
     /etc/starburst/ \
     /home/starburst/
 
+echo "Copying jvm.config..."
+cp /tmp/jvm.config /etc/starburst/
+
 echo "Installing trino-cli..."
 TRINO_CLI_PATH=/usr/local/bin/trino-cli
 CLI_URL=https://repo1.maven.org/maven2/io/trino/trino-cli/"${TRINO_DIST}"/trino-cli-"${TRINO_DIST}"-executable.jar

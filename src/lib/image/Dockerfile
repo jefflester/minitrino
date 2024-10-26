@@ -13,6 +13,7 @@ RUN \
         jq \
         tree \
         less \
+        zip unzip \
         iputils-ping \
         ldap-utils \
         apache2-utils \
@@ -33,17 +34,27 @@ ARG GID=0
 ARG STARBURST_VER
 ENV STARBURST_VER=${STARBURST_VER}
 
+COPY --from=mid /etc/starburst/jvm.config /tmp/
 COPY --from=mid /usr/lib/starburst/bin/run-starburst /tmp/
 
 ADD ./src/scripts/install.sh /tmp/
-ADD ./src/scripts/install-java.sh /tmp/
 ADD ./src/scripts/run-minitrino.sh /tmp/
 ADD ./src/etc/starburst /etc/starburst
 
 RUN \
-    chmod +x /tmp/install.sh /tmp/install-java.sh  && \
-    bash /tmp/install-java.sh ${USER} ${GROUP} ${UID} ${GID} && \
+    chmod +x /tmp/install.sh && \
     bash /tmp/install.sh ${USER} ${GROUP} ${UID} ${GID}
+
+ADD ./src/scripts/install-java.sh /tmp/
+
+# Set JAVA_HOME and add it to PATH
+ENV SDKMAN_DIR="/home/${USER}/.sdkman" \
+    JAVA_HOME="/home/${USER}/.sdkman/candidates/java/current" \
+    PATH="/home/${USER}/.sdkman/candidates/java/current/bin:${PATH}"
+
+RUN \
+    chmod +x /tmp/install-java.sh && \
+    bash /tmp/install-java.sh ${USER} 
 
 EXPOSE 8080
 USER ${USER}:${GROUP}

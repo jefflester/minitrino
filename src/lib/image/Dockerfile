@@ -52,12 +52,12 @@ RUN \
 
 ADD ./src/scripts/install-java.sh /tmp/
 
-RUN \
-    chmod +x /tmp/install-java.sh && \
-    bash /tmp/install-java.sh ${USER} 
+RUN chmod +x /tmp/install-java.sh
+
+USER ${USER}:${GROUP}
+RUN bash /tmp/install-java.sh ${USER} 
 
 EXPOSE 8080
-USER ${USER}:${GROUP}
 WORKDIR /etc/starburst/
 ENV LANG=en_US.UTF-8
 CMD ["/bin/sh", "-c", "/usr/lib/starburst/bin/run-minitrino.sh"]

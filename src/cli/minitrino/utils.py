@@ -247,7 +247,11 @@ def check_daemon(docker_client):
         raise err.UserError(
             f"Error when pinging the Docker server. Is the Docker daemon running?\n"
             f"Error from Docker: {str(e)}",
-            "You may need to initialize your Docker daemon.",
+            f"You may need to initialize your Docker daemon. If Docker is already "
+            f"running, check if you are using a non-default Docker context (e.g. Colima), "
+            f"and if so, add `DOCKER_HOST` to your `bash_profile` and point to the relevant "
+            f"`.sock` file. For more help, visit: \n"
+            f"https://github.com/jefflester/minitrino/wiki/Installation-and-Upgrades",
         )
 
 

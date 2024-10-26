@@ -29,3 +29,9 @@ bash -c "
 source $USER_HOME/.sdkman/bin/sdkman-init.sh && \
 sdk install java ${JAVA_VER}-tem --disableUsage
 "
+
+echo "Copying cacerts..."
+mkdir /etc/starburst/tls-jvm/
+cp "$(find / -type f -name 'cacerts' 2>/dev/null)" /etc/starburst/tls-jvm/
+chown "${USER}":"${GROUP}" /etc/starburst/tls-jvm/cacerts
+chmod 644 /etc/starburst/tls-jvm/cacerts

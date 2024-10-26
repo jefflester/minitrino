@@ -52,6 +52,8 @@ echo "Copying jvm.config..."
 cp /tmp/jvm.config /etc/starburst/
 chmod g+w /etc/starburst/jvm.config
 chown "${USER}":"${GROUP}" /etc/starburst/jvm.config
+echo "-Djavax.net.ssl.trustStore=/etc/starburst/tls-jvm/cacerts" >> /etc/starburst/jvm.config
+echo "-Djavax.net.ssl.trustStorePassword=changeit" >> /etc/starburst/jvm.config
 
 echo "Installing trino-cli..."
 TRINO_CLI_PATH=/usr/local/bin/trino-cli

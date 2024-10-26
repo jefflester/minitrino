@@ -7,7 +7,7 @@
       "trinoCliArgs": [
         "--server 'https://trino:8443'",
         "--user admin",
-        "--truststore-path /etc/starburst/ssl/truststore.jks",
+        "--truststore-path /etc/starburst/tls-mnt/truststore.jks",
         "--truststore-password changeit",
         "--password"
       ],

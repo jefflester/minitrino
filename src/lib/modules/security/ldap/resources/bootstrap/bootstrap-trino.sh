@@ -12,7 +12,7 @@ LDAP_HOST=$(echo "${LDAP_URI}" | cut -d ':' -f 1)
 LDAP_PORT=$(echo "${LDAP_URI}" | cut -d ':' -f 2)
 LDAP_IP=$(ping -c 1 "${LDAP_HOST}" | grep "PING ${LDAP_HOST}" | sed -r "s/^.+\(([0-9]+(\.[0-9]+)+)\).+$/\1/")
 
-LDAP_CERTS=/etc/starburst/ssl/ldap/
+LDAP_CERTS=/tmp/ldap-tls/
 if [ ! -d "${LDAP_CERTS}" ]; then
 	mkdir -p "${LDAP_CERTS}"
 fi
@@ -31,7 +31,7 @@ do
 		-trustcacerts \
 		-alias "${CERT_FILE}" \
 		-file "${CERT_FILE}" \
-		-keystore /etc/ssl/certs/java/cacerts \
+		-keystore /etc/starburst/tls-jvm/cacerts \
 		-storepass changeit \
 		-noprompt;
 done;

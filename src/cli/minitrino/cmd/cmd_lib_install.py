@@ -49,7 +49,9 @@ def cli(ctx, version):
 
 @pass_environment
 def download_and_extract(ctx, version=""):
-    github_uri = f"https://github.com/jefflester/minitrino/archive/{version}.tar.gz"
+    github_uri = (
+        f"https://github.com/jefflester/minitrino/archive/refs/tags/{version}.tar.gz"
+    )
     tarball = os.path.join(ctx.minitrino_user_dir, f"{version}.tar.gz")
     file_basename = f"minitrino-{version}"  # filename after unpacking
     lib_dir = os.path.join(ctx.minitrino_user_dir, file_basename, "src", "lib")

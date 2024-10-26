@@ -25,8 +25,9 @@ function install() {
     "${PIP}" install -q --upgrade pip setuptools wheel
 
     echo "Installing Minitrino CLI and test modules..."
-    "${PIP}" install -q --editable "${SCRIPT_DIR}/src/cli/"
-    "${PIP}" install -q --editable "${SCRIPT_DIR}/src/test/"
+    "${PIP}" install -q --editable "${SCRIPT_DIR}/src/cli/" --use-pep517
+    "${PIP}" install -q --editable "${SCRIPT_DIR}/src/test/" --use-pep517
+
 }
 
 time install "$1"

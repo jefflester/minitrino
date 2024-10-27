@@ -3,6 +3,7 @@
 
 import sys
 import click
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from minitrino.cli import pass_environment
 from minitrino import utils
@@ -50,30 +51,56 @@ def cli(ctx, sig_kill, keep):
         ctx.logger.info("No containers to bring down.")
         sys.exit(0)
 
-    if sig_kill:
-        stop_timeout = 1
-        ctx.logger.verbose(
-            "Stopping Minitrino containers with sig-kill...",
-        )
-    else:
-        stop_timeout = 10
-
-    # Stop
-    for container in containers:
+    # Helper function to stop a container
+    def stop_container(container):
         identifier = utils.generate_identifier(
             {"ID": container.short_id, "Name": container.name}
         )
         if container.status == "running":
-            container.stop(timeout=stop_timeout)
+            if sig_kill:
+                container.kill()
+            else:
+                container.stop()
             ctx.logger.verbose(f"Stopped container: {identifier}")
+        return container
 
-    # Remove
+    # Helper function to remove a container
+    def remove_container(container):
+        identifier = utils.generate_identifier(
+            {"ID": container.short_id, "Name": container.name}
+        )
+        container.remove()
+        ctx.logger.verbose(f"Removed container: {identifier}")
+
+    # Stop containers in parallel
+    with ThreadPoolExecutor() as executor:
+        stop_futures = {
+            executor.submit(stop_container, container): container
+            for container in containers
+        }
+        for future in as_completed(stop_futures):
+            container = stop_futures[future]
+            try:
+                future.result()
+            except Exception as e:
+                ctx.logger.error(
+                    f"Error stopping container '{container.name}': {str(e)}"
+                )
+
+    # Remove containers in parallel if not keeping them
     if not keep:
-        for container in containers:
-            identifier = utils.generate_identifier(
-                {"ID": container.short_id, "Name": container.name}
-            )
-            container.remove()
-            ctx.logger.verbose(f"Removed container: {identifier}")
+        with ThreadPoolExecutor() as executor:
+            remove_futures = {
+                executor.submit(remove_container, container): container
+                for container in containers
+            }
+            for future in as_completed(remove_futures):
+                container = remove_futures[future]
+                try:
+                    future.result()
+                except Exception as e:
+                    ctx.logger.error(
+                        f"Error removing container '{container.name}': {str(e)}"
+                    )
 
     ctx.logger.info("Brought down all Minitrino containers.")

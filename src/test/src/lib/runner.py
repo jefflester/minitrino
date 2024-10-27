@@ -36,6 +36,7 @@ class ModuleTest:
             self._validate(t)
 
         self.run_tests(tests)
+        cleanup()
         self.run_tests(tests, True)
 
     def run_tests(self, tests=[], workers=False):

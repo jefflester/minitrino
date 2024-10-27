@@ -75,9 +75,24 @@ jobs:
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
-        run: twine upload src/cli/dist/*
+        run: |-
+          if python -m twine check "https://pypi.org/pypi/minitrino/${PACKAGE_VERSION}/json" | grep -q "404 Not Found"; then
+            twine upload src/cli/dist/*
+          else
+            echo "Package version ${GITHUB_HEAD_REF} already exists on PyPI. Skipping upload."
+          fi
       - name: Check package
         run: |-
+          MAX_ATTEMPTS=5
+          ATTEMPT=1
           pip uninstall -y minitrino
-          pip install minitrino==${GITHUB_HEAD_REF}
+          until pip install minitrino==${GITHUB_HEAD_REF} --no-cache-dir; do
+            if [ $ATTEMPT -ge $MAX_ATTEMPTS ]; then
+              echo "Failed to install the latest version after $ATTEMPT attempts."
+              exit 1
+            fi
+            echo "Attempt $ATTEMPT failed. Retrying in 30 seconds..."
+            ATTEMPT=$((ATTEMPT+1))
+            sleep 30
+          done
           minitrino --help || exit 1

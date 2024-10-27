@@ -76,10 +76,13 @@ jobs:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
         run: |-
-          if python -m twine check "https://pypi.org/pypi/minitrino/${PACKAGE_VERSION}/json" | grep -q "404 Not Found"; then
-            twine upload src/cli/dist/*
-          else
+          PYPI_URL="https://pypi.org/pypi/minitrino/${GITHUB_HEAD_REF}/json"
+          RESPONSE=$(curl --silent "${PYPI_URL}")
+          if echo "${RESPONSE}" | grep -q "\"${GITHUB_HEAD_REF}\""; then
             echo "Package version ${GITHUB_HEAD_REF} already exists on PyPI. Skipping upload."
+          else
+            echo "Uploading package version ${GITHUB_HEAD_REF} to PyPI..."
+            twine upload src/cli/dist/*
           fi
       - name: Check package
         run: |-

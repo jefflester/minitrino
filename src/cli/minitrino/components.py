@@ -324,10 +324,12 @@ class Modules:
                     if "com.starburst.tests" in k and _id in v:
                         modules.append(v.lower().strip().replace(_id, ""))
                         label_set[k] = v
-            # All containers except the trino container must have
+            # All containers except the trino containers must have
             # module-specific labels. The trino container only has module labels
             # if a module applies labels to it
-            if not label_set and container.name != "trino":
+            if not label_set and not (
+                "trino-worker" in container.name or container.name == "trino"
+            ):
                 raise err.UserError(
                     f"Missing Minitrino labels for container '{container.name}'.",
                     f"Check this module's 'docker-compose.yml' file and ensure you are "

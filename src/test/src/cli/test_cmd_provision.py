@@ -31,6 +31,7 @@ def main():
     test_duplicate_config_props()
     test_incompatible_modules()
     test_provision_append()
+    test_workers()
 
 
 def test_standalone():
@@ -377,6 +378,48 @@ def test_provision_append():
     assert result.exit_code == 0
     assert "Identified the following running modules" in result.output
     assert len(containers) == 3  # trino, test, and postgres
+
+    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
+    cleanup()
+
+
+def test_workers():
+    """Verifies that worker provisioning works."""
+
+    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
+
+    # Provision 1 worker
+    result = helpers.execute_command(["-v", "provision", "--workers", "1"])
+    containers = get_containers()
+
+    assert result.exit_code == 0
+    assert "started worker container: 'trino-worker-1'" in result.output
+    assert len(containers) == 2  # trino, trino worker
+
+    # Provision a second worker
+    result = helpers.execute_command(["-v", "provision", "--workers", "2"])
+    containers = get_containers()
+
+    assert result.exit_code == 0
+    assert "started worker container: 'trino-worker-2'" in result.output
+    assert len(containers) == 3  # trino, (2) trino worker
+
+    # Downsize workers (remove worker 2)
+    result = helpers.execute_command(["-v", "provision", "--workers", "1"])
+    containers = get_containers()
+
+    assert result.exit_code == 0
+    assert "Removed excess worker" and "trino-worker-2" in result.output
+    assert len(containers) == 2  # trino, trino worker
+
+    # Provision a module in a running environment with a worker already present,
+    # but don't specify any workers
+    result = helpers.execute_command(["-v", "provision", "--module", "test"])
+    containers = get_containers()
+
+    assert result.exit_code == 0
+    assert "Restarting container 'trino-worker-1'" in result.output
+    assert len(containers) == 3  # trino, trino worker, test
 
     common.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()

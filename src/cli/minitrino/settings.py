@@ -56,6 +56,11 @@ TEXT_EDITOR=
 LIC_PATH=
 """
 
+WORKER_CONFIG_PROPS = """coordinator=false
+http-server.http.port=8080
+discovery.uri=http://trino:8080
+internal-communication.shared-secret=bWluaXRyaW5vUm9ja3MxNQo="""
+
 PROVISION_SNAPSHOT_TEMPLATE = """
 #!/usr/bin/env bash
 

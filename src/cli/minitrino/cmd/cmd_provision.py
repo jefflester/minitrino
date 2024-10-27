@@ -24,8 +24,10 @@ from minitrino.settings import LIC_MOUNT_PATH
 from minitrino.settings import DUMMY_LIC_MOUNT_PATH
 from minitrino.settings import TRINO_CONFIG
 from minitrino.settings import TRINO_JVM_CONFIG
+from minitrino.settings import WORKER_CONFIG_PROPS
 
 from docker.errors import NotFound
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 @click.command(
@@ -43,6 +45,14 @@ from docker.errors import NotFound
     type=str,
     multiple=True,
     help=("""A specific module to provision."""),
+)
+@click.option(
+    "-w",
+    "--workers",
+    "workers",
+    default=0,
+    type=int,
+    help=("""The number of workers to provision (default: 0)."""),
 )
 @click.option(
     "-n",
@@ -72,7 +82,7 @@ from docker.errors import NotFound
 )
 @utils.exception_handler
 @pass_environment
-def cli(ctx, modules, no_rollback, docker_native):
+def cli(ctx, modules, workers, no_rollback, docker_native):
     """Provision command for Minitrino. If the resulting docker compose command
     is unsuccessful, the function exits with a non-zero status code."""
 
@@ -108,6 +118,7 @@ def cli(ctx, modules, no_rollback, docker_native):
         c_restart = execute_bootstraps(modules)
         c_restart = write_trino_cfg(c_restart, modules)
         check_dup_cfgs()
+        c_restart = provision_workers(c_restart, workers)
         restart_containers(c_restart)
         ctx.logger.info(f"Environment provisioning complete.")
 
@@ -599,15 +610,34 @@ def restart_containers(ctx, c_restart=[]):
 
     c_restart = list(set(c_restart))
 
-    for container in c_restart:
+    def restart_container(container_name):
+        """Helper function to restart a single container."""
         try:
-            container = ctx.docker_client.containers.get(container)
+            container = ctx.docker_client.containers.get(container_name)
             ctx.logger.verbose(f"Restarting container '{container.name}'...")
             container.restart()
+            ctx.logger.verbose(f"Container '{container.name}' restarted successfully.")
         except NotFound:
             raise err.MinitrinoError(
-                f"Attempting to restart container '{container.name}', but the container was not found."
+                f"Attempting to restart container '{container_name}', but the container was not found."
             )
+
+    with ThreadPoolExecutor() as executor:
+        futures = {
+            executor.submit(restart_container, container): container
+            for container in c_restart
+        }
+
+        for future in as_completed(futures):
+            container_name = futures[future]
+            try:
+                future.result()
+            except err.MinitrinoError as e:
+                ctx.logger.error(
+                    f"Error while restarting container '{container_name}': {str(e)}"
+                )
+
+    ctx.logger.info("All specified containers have been restarted.")
 
 
 @pass_environment
@@ -632,6 +662,116 @@ def initialize_containers(ctx):
 
 
 @pass_environment
+def provision_workers(ctx, c_restart=[], workers=0):
+    """Provisions (or updates) workers.
+
+    Scenarios:
+
+    1. No workers are specified and no workers are running: do nothing.
+    2. The user specifies a worker count and no workers exist: the specified
+       number of workers are provisioned.
+    3. The user does not specify a worker count, but there are active workers:
+       the worker count will be set to the number of running workers.
+    4. The user specifies a worker count greater than the number of active
+       workers: the worker count will increase to the specified number.
+    5. The user specifies a worker count less than the number of active workers:
+       the worker with the highest iterator is removed from the network.
+
+    I am enumerating all cases for my own sanity.
+    """
+
+    # Check for running worker containers
+    containers = ctx.docker_client.containers.list()
+    worker_containers = [
+        c.name
+        for c in containers
+        if c.name.startswith("trino-worker-")
+        and c.labels.get("com.starburst.tests") == "minitrino"
+    ]
+
+    # Scenario 1
+    if workers == 0 and len(worker_containers) == 0:
+        return c_restart
+    # Scenario 2
+    if workers > len(worker_containers):
+        pass
+    # Scenario 3
+    if workers == 0 and len(worker_containers) > 0:
+        workers = len(worker_containers)
+    # Scenario 4
+    if workers > len(worker_containers):
+        pass
+    # Scenario 5
+    if workers < len(worker_containers):
+        worker_containers.sort(reverse=True)
+        excess = len(worker_containers) - workers
+        remove = worker_containers[:excess]
+        for c in remove:
+            c = ctx.docker_client.containers.get(c)
+            c.kill()
+            c.remove()
+            identifier = utils.generate_identifier({"ID": c.short_id, "Name": c.name})
+            ctx.logger.warn(f"Removed excess worker: {identifier}")
+
+    worker_img = f"minitrino/trino:{ctx.env.get('STARBURST_VER')}"
+    source_directory = "/etc/starburst"
+    network_name = "minitrino_default"
+
+    coordinator = ctx.docker_client.containers.get("trino")
+
+    for i in range(1, workers + 1):
+        worker_name = f"trino-worker-{i}"
+        try:
+            worker = ctx.docker_client.containers.get(worker_name)
+        except NotFound:
+            worker = ctx.docker_client.containers.run(
+                worker_img,
+                name=worker_name,
+                detach=True,
+                network=network_name,
+                labels={
+                    "com.starburst.tests": "minitrino",
+                    "com.starburst.tests.module": "trino",
+                },
+            )
+            ctx.logger.verbose(
+                f"Created and started worker container: '{worker_name}' in network '{network_name}'"
+            )
+
+        # Copy the source directory from the coordinator to the worker container
+        tar_path = "/tmp/starburst.tar.gz"
+        ctx.cmd_executor.execute_commands(
+            f"tar czf {tar_path} -C /etc starburst",
+            container=coordinator,
+            docker_user="starburst",
+        )
+
+        # Copy the tar file from the coordinator container
+        bits, _ = coordinator.get_archive(tar_path)
+        tar_stream = b"".join(bits)
+
+        # Put the tar file into the new worker container & extract
+        worker.put_archive("/tmp", tar_stream)
+        ctx.cmd_executor.execute_commands(
+            f"tar xzf /tmp/starburst.tar.gz -C /etc",
+            container=worker,
+            docker_user="starburst",
+        )
+
+        # Overwrite worker config.properties
+        ctx.cmd_executor.execute_commands(
+            f"bash -c \"echo '{WORKER_CONFIG_PROPS}' > {ETC_TRINO}/config.properties\"",
+            container=worker,
+            docker_user="starburst",
+        )
+
+        c_restart.append(worker_name)
+        ctx.logger.verbose(f"Copied {source_directory} to '{worker_name}'")
+
+    return c_restart
+
+
+@pass_environment
 def rollback(ctx, no_rollback):
     """Rolls back the provisioning command in the event of an error."""
 
@@ -652,5 +792,5 @@ def rollback(ctx, no_rollback):
     )
 
     for container in containers:
-        container.stop()
+        container.kill()
         container.remove()

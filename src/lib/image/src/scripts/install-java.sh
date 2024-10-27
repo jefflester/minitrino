@@ -27,7 +27,8 @@ curl -s https://get.sdkman.io | bash
 
 bash -c "
 source $USER_HOME/.sdkman/bin/sdkman-init.sh && \
-sdk install java ${JAVA_VER}-tem --disableUsage
+sdk install java ${JAVA_VER}-tem --disableUsage && \
+sdk flush temp
 "
 
 echo "Copying cacerts..."

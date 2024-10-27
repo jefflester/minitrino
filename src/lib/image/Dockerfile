@@ -19,7 +19,9 @@ RUN \
         apache2-utils \
         python3 \
         python-is-python3 \
-        python3-pip
+        python3-pip && \
+        apt-get clean && \
+        rm -rf /var/lib/apt/lists/*
 
 # -- Mid layer --
 ARG STARBURST_VER

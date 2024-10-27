@@ -35,11 +35,23 @@ class ModuleTest:
         for t in tests:
             self._validate(t)
 
-        execute_command(f"minitrino -v provision -m {self.module} --no-rollback")
+        self.run_tests(tests)
+        cleanup()
+        self.run_tests(tests, True)
+
+    def run_tests(self, tests=[], workers=False):
+        """Runs module tests."""
+
+        if not workers:
+            execute_command(f"minitrino -v provision -m {self.module} --no-rollback")
+        else:
+            execute_command(
+                f"minitrino -v provision -m {self.module} --workers 1 --no-rollback"
+            )
 
         for t in tests:
             common.log_status(
-                f"Running test type '{t.get('type')}' for module '{module}': '{t.get('name')}'"
+                f"Running test type '{t.get('type')}' for module '{self.module}': '{t.get('name')}'"
             )
             if t.get("type") == "query":
                 self.test_query(t)
@@ -48,7 +60,7 @@ class ModuleTest:
             if t.get("type") == "logs":
                 self.test_logs(t)
             common.log_success(
-                f"Module test type '{t.get('type')}' for module: '{module}'"
+                f"Module test type '{t.get('type')}' for module: '{self.module}'"
             )
 
     def test_query(self, json_data={}):

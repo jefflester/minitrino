@@ -32,6 +32,7 @@ setup(
         "colorama",
         "docker==7.1.0",
         "PyYAML",
+        "requests>=2.32.2"
     ],
     entry_points={"console_scripts": ["minitrino=minitrino.cli:cli"]},
 )

@@ -174,11 +174,28 @@ class Environment:
         calls that execute in each command that requires an accessible Docker
         service."""
 
-        docker_url = os.environ.get("DOCKER_HOST", "")
+        self.logger.verbose(
+            "Attempting to locate Docker socket file for current Docker context..."
+        )
 
         try:
-            docker_client = docker.DockerClient(base_url=docker_url)
-            api_client = docker.APIClient(base_url=docker_url)
+            output = self.cmd_executor.execute_commands(
+                "docker context inspect", suppress_output=True
+            )
+            context = json.loads(output[0].get("output", ""))[0]
+            socket = context["Endpoints"]["docker"].get("Host", "")
+        except Exception as e:
+            raise err.MinitrinoError(
+                f"Failed to locate Docker socket file. Error: {str(e)}"
+            )
+
+        self.logger.verbose(
+            f"Docker socket file for current context '{context['Name']}' located at: {socket}"
+        )
+
+        try:
+            docker_client = docker.DockerClient(base_url=socket)
+            api_client = docker.APIClient(base_url=socket)
             self.docker_client, self.api_client = docker_client, api_client
         except:
             return None, None
@@ -514,6 +531,8 @@ class CommandExecutor:
                     started_stream = True
                 self._ctx.logger.verbose(output_line, stream=True)
                 output += output_line
+        else:
+            output, _ = process.communicate()
 
         if process.returncode != 0 and kwargs.get("trigger_error", True):
             raise err.MinitrinoError(

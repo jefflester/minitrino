@@ -59,6 +59,18 @@
         "name",
         "address"
       ]
+    },
+    {
+      "type": "query",
+      "name": "Test table list",
+      "sql": "SHOW TABLES IN iceberg.test_schema",
+      "trinoCliArgs": [
+        "--server 'http://trino:8080'",
+        "--user admin"
+      ],
+      "contains": [
+        "test_table"
+      ]
     }
   ]
 }

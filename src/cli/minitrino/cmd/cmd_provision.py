@@ -98,7 +98,7 @@ def cli(ctx, modules, workers, no_rollback, docker_native):
 
     if not modules:
         ctx.logger.info(
-            f"No modules specified. Provisioning standalone Trino container..."
+            f"No modules specified. Provisioning standalone Trino cluster..."
         )
     else:
         for module in modules:
@@ -732,7 +732,7 @@ def provision_workers(ctx, c_restart=[], workers=0):
                 labels={
                     "com.starburst.tests": "minitrino",
                     "com.starburst.tests.module": "trino",
-                    "com.docker.compose.service": worker_name,  # OrbStack dashboard doesn't display the container name correctly w/out this
+                    # "com.docker.compose.service": worker_name,  # OrbStack dashboard doesn't display the container name correctly w/out this
                 },
             )
             ctx.logger.verbose(

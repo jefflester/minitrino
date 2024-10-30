@@ -390,6 +390,22 @@ def test_provision_append():
     etc_ls, _ = etc_ls.communicate()
     assert "postgres.properties" in etc_ls
 
+    # Add one more module
+    result = helpers.execute_command(["-v", "provision", "--module", "mysql"])
+    etc_ls = subprocess.Popen(
+        f"docker exec -i trino ls /etc/starburst/catalog/",
+        shell=True,
+        stdout=subprocess.PIPE,
+        universal_newlines=True,
+    )
+    etc_ls, _ = etc_ls.communicate()
+    assert "mysql.properties" and "postgres.properties" in etc_ls
+
+    containers = get_containers()
+
+    assert result.exit_code == 0
+    assert len(containers) == 4  # trino, test, postgres, and mysql
+
     common.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()
 

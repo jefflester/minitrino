@@ -272,7 +272,7 @@ def test_existing_user_config():
             "-v",
             "provision",
             "--module",
-            "test",
+            "tls",
         ]
     )
 
@@ -281,7 +281,7 @@ def test_existing_user_config():
             "-v",
             "provision",
             "--module",
-            "test",
+            "tls",
         ]
     )
 

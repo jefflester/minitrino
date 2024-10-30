@@ -257,7 +257,7 @@ def build_command(ctx, docker_native="", chunk=""):
             os.path.join(ctx.minitrino_lib_dir, "docker-compose.yml"),
             " \\\n",
             chunk,  # Module YAML paths
-            "up -d --no-recreate",
+            "up -d",
         ]
     )
 

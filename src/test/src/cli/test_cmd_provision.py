@@ -379,6 +379,17 @@ def test_provision_append():
     assert "Identified the following running modules" in result.output
     assert len(containers) == 3  # trino, test, and postgres
 
+    # Ensure new volume mount was activated; indicates Trino container was
+    # properly recreated
+    etc_ls = subprocess.Popen(
+        f"docker exec -i trino ls /etc/starburst/catalog/",
+        shell=True,
+        stdout=subprocess.PIPE,
+        universal_newlines=True,
+    )
+    etc_ls, _ = etc_ls.communicate()
+    assert "postgres.properties" in etc_ls
+
     common.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()
 

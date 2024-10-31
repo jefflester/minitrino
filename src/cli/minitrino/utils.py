@@ -112,9 +112,6 @@ class Logger:
         - `msg`: The prompt message
         - `input_type`: The object type to check the input for"""
 
-        if not msg:
-            raise handle_missing_param(["msg"])
-
         try:
             msg = str(msg)
         except:
@@ -163,9 +160,6 @@ def handle_exception(error=Exception, additional_msg="", skip_traceback=False):
       user's terminal. Defaults to `True` for user errors, but it is `False`
       otherwise."""
 
-    if not isinstance(error, Exception):
-        raise handle_missing_param(["error"])
-
     if isinstance(error, err.UserError):
         error_msg = error.msg
         exit_code = error.exit_code
@@ -212,29 +206,6 @@ def exception_handler(func):
             handle_exception(e)
 
     return wrapper
-
-
-def handle_missing_param(params=[]):
-    """Handles missing parameters required for function calls. This should be
-    used to signal a programmatic error, not a user error.
-
-    ### Parameters
-    - `params`: List of parameter names that are required.
-
-    ### Usage
-    ```python
-    # All params are required
-    if not param:
-        raise handle_missing_param(list(locals().keys()))
-    # Two params are required
-    if not param:
-        raise handle_missing_param(["module", "path"])
-    ```"""
-
-    if not params:
-        raise handle_missing_param(list(locals().keys()))
-
-    return err.MinitrinoError(f"Parameters {params} required to execute function.")
 
 
 def check_daemon(docker_client):
@@ -306,9 +277,6 @@ def generate_identifier(identifiers=None):
         {"ID": container.short_id, "Name": container.name}
     ) # Will Spit out -> "[ID: 12345] [Name: trino]"
     ```"""
-
-    if not identifiers:
-        raise handle_missing_param(list(locals().keys()))
 
     identifier = []
     for key, value in identifiers.items():

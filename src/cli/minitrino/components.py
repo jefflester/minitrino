@@ -217,11 +217,8 @@ class EnvironmentVariables(dict):
     @utils.exception_handler
     def __init__(self, ctx=None):
         super().__init__()
-        if not ctx:
-            raise utils.handle_missing_param(list(locals().keys()))
 
         self._ctx = ctx
-
         self._parse_user_env()
         self._parse_os_env()
         self._parse_minitrino_config()
@@ -313,9 +310,6 @@ class Modules:
 
     @utils.exception_handler
     def __init__(self, ctx=None):
-        if not ctx:
-            raise utils.handle_missing_param(list(locals().keys()))
-
         self.data = {}
         self._ctx = ctx
         self._load_modules()
@@ -450,9 +444,6 @@ class CommandExecutor:
 
     @utils.exception_handler
     def __init__(self, ctx=None):
-        if not ctx:
-            raise utils.handle_missing_param(list(locals().keys()))
-
         self._ctx = ctx
 
     def execute_commands(self, *args, **kwargs):

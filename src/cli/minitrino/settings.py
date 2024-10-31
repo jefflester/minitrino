@@ -6,7 +6,6 @@ RESOURCE_LABEL = "com.starburst.tests=minitrino"
 MODULE_LABEL_KEY_ROOT = "com.starburst.tests.module"
 
 # Generic Constants
-CONTAINER = "container"
 IMAGE = "image"
 VOLUME = "volume"
 LIB = "lib"
@@ -18,11 +17,10 @@ MODULE_RESOURCES = "resources"
 MIN_SEP_VER = 413
 ETC_TRINO = "/etc/starburst"
 LIC_VOLUME_MOUNT = "${LIC_PATH}:${LIC_MOUNT_PATH}"
-LIC_MOUNT_PATH = "/etc/starburst/starburstdata.license:ro"
-DUMMY_LIC_MOUNT_PATH = "/etc/starburst/dummy.license:ro"
+LIC_MOUNT_PATH = f"{ETC_TRINO}/starburstdata.license:ro"
+DUMMY_LIC_MOUNT_PATH = f"{ETC_TRINO}/dummy.license:ro"
 TRINO_CONFIG = "config.properties"
 TRINO_JVM_CONFIG = "jvm.config"
-LIB_INDEPENDENT_CMDS = ["lib-install"]
 
 # Snapshots
 SNAPSHOT_ROOT_FILES = [

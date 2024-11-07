@@ -3,7 +3,7 @@
 
 import src.cli.test_misc
 
-# import src.cli.test_cmd_config
+import src.cli.test_cmd_config
 import src.cli.test_cmd_down
 import src.cli.test_cmd_provision
 import src.cli.test_cmd_remove
@@ -17,7 +17,7 @@ def main():
     """Minitrino CLI test runner."""
 
     src.cli.test_misc.main()
-    # src.cli.test_cmd_config.main()
+    src.cli.test_cmd_config.main()
     src.cli.test_cmd_down.main()
     src.cli.test_cmd_provision.main()
     src.cli.test_cmd_remove.main()

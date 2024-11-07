@@ -10,8 +10,6 @@ class MinitrinoError(Exception):
     exit_code = 1
 
     def __init__(self, msg=""):
-        if not msg:
-            raise utils.handle_missing_param(list(locals().keys()))
         super().__init__(msg)
         self.msg = msg
 
@@ -30,8 +28,6 @@ class UserError(MinitrinoError):
     exit_code = 2
 
     def __init__(self, msg="", hint_msg=""):
-        if not msg:
-            raise utils.handle_missing_param("msg")
         if hint_msg:
             super().__init__(f"User error: {msg}\nHint: {hint_msg}")
         else:

@@ -181,7 +181,7 @@ def test_invalid_lib():
     result = helpers.execute_command(["-v", "--env", "LIB_PATH=/tmp/", "modules"])
 
     assert result.exit_code == 2
-    assert "You must provide a path to a compatible Minitrino library" in result.output
+    assert "This operation requires a library to be installed" in result.output
 
     # Fake directory
     result = helpers.execute_command(
@@ -189,7 +189,7 @@ def test_invalid_lib():
     )
 
     assert result.exit_code == 2
-    assert "You must provide a path to a compatible Minitrino library" in result.output
+    assert "This operation requires a library to be installed" in result.output
 
     common.log_success(cast(FrameType, currentframe()).f_code.co_name)
 

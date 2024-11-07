@@ -17,38 +17,26 @@ from functools import wraps
 
 
 class Logger:
-    """Minitrino logging class. The logger does not log to a file; it uses
-    `click.echo()` to print text to the user's terminal.
-
-    The log level will affect the prefix color (i.e. the '[i]' in info messages
-    is blue) and the message prefix (the prefix for the warning logs is '[w]').
+    """Minitrino logging class. Outputs to the user's terminal using `click.echo()`
+    with color-coded levels and optional verbosity.
 
     ### Parameters
-    - `log_verbose`: If `True`, log messages flagged as verbose will be logged.
-      If `False`, verbose messages will not be logged. This is dynamically
-      determined by user input when the logger is instantiated from the
-      Environment class.
+    - `log_verbose`: If `True`, verbose messages will be logged; otherwise, they're
+      suppressed.
 
     ### Attributes
-    - `INFO`: Info log level.
-    - `WARN`: Warn log level.
-    - `ERROR`: Error log level.
-    - `VERBOSE`: Verbose log level.
+    - `INFO`, `WARN`, `ERROR`, `VERBOSE`: Log level configurations.
 
     ### Methods
-    - `log()`: Logs a message to the user's terminal. Level must be specified,
-      defaults to INFO.
-    - `info()`: Logs an info message
-    - `warn()`: Logs a warning message
-    - `error()`: Logs an error message
-    - `verbose()`: Logs a verbose message
-    - `prompt_msg()`: Logs a prompt message and returns the user's input."""
+    - `log()`: Logs a message to the terminal with specified level and format.
+    - `info()`, `warn()`, `error()`, `verbose()`: Convenience methods for logging.
+    - `prompt_msg()`: Logs a prompt message and returns user input."""
 
     def __init__(self, log_verbose=False):
         self.INFO = {"prefix": "[i]  ", "prefix_color": "cyan"}
         self.WARN = {"prefix": "[w]  ", "prefix_color": "yellow"}
         self.ERROR = {"prefix": "[e]  ", "prefix_color": "red"}
-        self.VERBOSE = {"prefix": "[i]  ", "prefix_color": "cyan", "verbose": True}
+        self.VERBOSE = {"prefix": "[v]  ", "prefix_color": "magenta", "verbose": True}
 
         self._log_verbose = log_verbose
 
@@ -57,40 +45,26 @@ class Logger:
 
         ### Parameters
         - `*args`: Messages to log.
-        - `level`: The level of the log message (info, warn, error, and
-          verbose).
-        - `stream`: If `True`, the logger will not apply a prefix to each line
-          streamed to the console."""
+        - `level`: The level of the log message (info, warn, error, verbose).
+        - `stream`: If `True`, the logger will not apply a prefix to each line streamed
+          to the console.
+        """
 
         if not level:
             level = self.INFO
 
-        # Skip verbose messages unless verbose mode is enabled
-        if not self._log_verbose and level == self.VERBOSE:
-            return
-
         for msg in args:
-            # Ensure the message can be a string
-            try:
-                msg = str(msg)
-            except:
-                raise err.MinitrinoError(
-                    f"A string is required for {self.log.__name__}."
-                )
-            msgs = msg.replace("\r", "\n").split("\n")
-            # Log each message
+            msgs = str(msg).replace("\r", "\n").split("\n")
+
             for i, msg in enumerate(msgs):
                 msg = self._format(msg)
                 if not msg:
                     continue
-                if stream or i > 0:
-                    msg_prefix = DEFAULT_INDENT
-                else:
-                    msg_prefix = style(
-                        level.get("prefix", ""),
-                        fg=level.get("prefix_color", ""),
-                        bold=True,
-                    )
+                msg_prefix = (
+                    DEFAULT_INDENT
+                    if stream or i > 0
+                    else style(level["prefix"], fg=level["prefix_color"], bold=True)
+                )
                 echo(f"{msg_prefix}{msg}")
 
     def info(self, *args, stream=False):
@@ -103,31 +77,23 @@ class Logger:
         self.log(*args, level=self.ERROR, stream=stream)
 
     def verbose(self, *args, stream=False):
-        self.log(*args, level=self.VERBOSE, stream=stream)
+        if self._log_verbose:
+            self.log(*args, level=self.VERBOSE, stream=stream)
 
-    def prompt_msg(self, msg="", input_type=str):
+    def prompt_msg(self, msg=""):
         """Logs a prompt message and returns the user's input.
 
         ### Parameters
-        - `msg`: The prompt message
-        - `input_type`: The object type to check the input for"""
+        - `msg`: The prompt message"""
 
-        if not msg:
-            raise handle_missing_param(["msg"])
-
-        try:
-            msg = str(msg)
-        except:
-            raise err.MinitrinoError(f"A string is required for {self.log.__name__}.")
-
-        msg = self._format(msg)
+        msg = self._format(str(msg))
         styled_prefix = style(
-            self.INFO.get("prefix", ""), fg=self.INFO.get("prefix_color", ""), bold=True
+            self.INFO["prefix"], fg=self.INFO["prefix_color"], bold=True
         )
 
         return prompt(
             f"{styled_prefix}{msg}",
-            type=input_type,
+            type=str,
         )
 
     def _format(self, msg):
@@ -162,9 +128,6 @@ def handle_exception(error=Exception, additional_msg="", skip_traceback=False):
     - `skip_traceback`: If `True`, the traceback will not be printed to the
       user's terminal. Defaults to `True` for user errors, but it is `False`
       otherwise."""
-
-    if not isinstance(error, Exception):
-        raise handle_missing_param(["error"])
 
     if isinstance(error, err.UserError):
         error_msg = error.msg
@@ -212,29 +175,6 @@ def exception_handler(func):
             handle_exception(e)
 
     return wrapper
-
-
-def handle_missing_param(params=[]):
-    """Handles missing parameters required for function calls. This should be
-    used to signal a programmatic error, not a user error.
-
-    ### Parameters
-    - `params`: List of parameter names that are required.
-
-    ### Usage
-    ```python
-    # All params are required
-    if not param:
-        raise handle_missing_param(list(locals().keys()))
-    # Two params are required
-    if not param:
-        raise handle_missing_param(["module", "path"])
-    ```"""
-
-    if not params:
-        raise handle_missing_param(list(locals().keys()))
-
-    return err.MinitrinoError(f"Parameters {params} required to execute function.")
 
 
 def check_daemon(docker_client):
@@ -306,9 +246,6 @@ def generate_identifier(identifiers=None):
         {"ID": container.short_id, "Name": container.name}
     ) # Will Spit out -> "[ID: 12345] [Name: trino]"
     ```"""
-
-    if not identifiers:
-        raise handle_missing_param(list(locals().keys()))
 
     identifier = []
     for key, value in identifiers.items():

@@ -18,6 +18,7 @@ from minitrino.settings import MODULE_ROOT
 from minitrino.settings import MODULE_ADMIN
 from minitrino.settings import MODULE_SECURITY
 from minitrino.settings import MODULE_CATALOG
+from minitrino.settings import CONFIG_TEMPLATE
 
 
 class Environment:
@@ -26,21 +27,22 @@ class Environment:
     CLI's entrypoint, as it depends on user-provided inputs.
 
     ### Public Attributes (Interactive)
+
     - `logger`: A `minitrino.utils.Logger` object.
     - `env`: An `EnvironmentVariables` object containing all CLI environment
         variables, subdivided by sections when possible.
-    - `modules`: A `Modules` object containing metadata about Minitrino
-      modules.
+    - `modules`: A `Modules` object containing metadata about Minitrino modules.
     - `cmd_executor`: A `CommandExecutor` object to execute shell commands in
       the host shell and inside containers.
     - `docker_client`: A `docker.DockerClient` object.
     - `api_client`: A `docker.APIClient` object.
 
     ### Public Attributes (Static)
+
     - `verbose`: If `True`, logs flagged as verbose to are sent to stdout.
     - `user_home_dir`: The home directory of the current user.
-    - `minitrino_user_dir`: The location of the Minitrino directory relative
-      to the user home directory (~/.minitrino/).
+    - `minitrino_user_dir`: The location of the Minitrino directory relative to
+      the user home directory (~/.minitrino/).
     - `config_file`: The location of the user's minitrino.cfg file.
     - `snapshot_dir`: The location of the user's snapshot directory (this is
         essentially a temporary directory, as 'permanent' snapshot tarballs are
@@ -65,17 +67,23 @@ class Environment:
         self.minitrino_user_dir = self._handle_minitrino_user_dir()
         self.config_file = self._get_config_file()
         self.snapshot_dir = os.path.join(self.minitrino_user_dir, "snapshots")
+        self._minitrino_lib_dir = None
 
     @property
     def minitrino_lib_dir(self):
-        """The directory of the Minitrino library. The directory can be
-        determined in four ways (this is the order of precedence):
-        1. Pass `LIB_PATH` to the CLI via `-e`/ `--env`.
-        2. Export `LIB_PATH` as a shell environment variable.
-        3. Set `LIB_PATH` in `minitrino.cfg`.
-        4. As a last resort, Minitrino will check to see if the library exists
-           in relation to the positioning of the `components.py` file and
-           assumes the project is being run out of a cloned repository."""
+        if not self._minitrino_lib_dir:
+            self._minitrino_lib_dir = self._get_minitrino_lib_dir()
+        return self._minitrino_lib_dir
+
+    def _get_minitrino_lib_dir(self):
+        """Gets the library directory. The directory can be determined in the
+        following order of precedence:
+
+        1. Pass `LIB_PATH` via env (`--env` option, OS env, or Minitrino config
+           file)
+        2. Check to see if the library exists in relation to the positioning of
+           the `components.py`file and assume the project is running in a
+           repository."""
 
         lib_dir = ""
         try:
@@ -93,37 +101,32 @@ class Environment:
             os.path.join(lib_dir, "minitrino.env")
         ):
             raise err.UserError(
-                "You must provide a path to a compatible Minitrino library ",
-                f"via `LIB_PATH` or by placing the library in the default location, "
-                f"~/.minitrino/lib",
+                "This operation requires a library to be installed.",
+                f"The library can be installed in the default location (~/.minitrino/lib) "
+                f"via the `lib-install` command, or it can be pointed to with the `LIB_PATH` "
+                f"environment variable.",
             )
+
+        self.logger.verbose(
+            f"Library path set to: {lib_dir}",
+        )
         return lib_dir
 
     @utils.exception_handler
     def _user_init(self, verbose=False, user_env=[]):
         """Initialize attributes that depend on user-provided input."""
 
-        # Update static attributes
+        # Set attributes
         self.verbose = verbose
         self._user_env = user_env
-
-        # Instantiate/update interactive attributes
         self.logger = utils.Logger(self.verbose)
         self.env = EnvironmentVariables(self)
 
-        # Skip the library-related procedures if the library is not found
         try:
-            if self.minitrino_lib_dir:
-                self.logger.verbose(
-                    f"Library path set to: {self.minitrino_lib_dir}",
-                )
-
-            # Now that we know where the library is, we can try to parse the env
-            # file and obtain all of the modules
+            # Attempt to parse lib env file & fetch modules
             self.env._parse_library_env()
             self.modules = Modules(self)
 
-            # Warn the user if the library and CLI vers don't match
             cli_ver = utils.get_cli_ver()
             lib_ver = utils.get_lib_ver(self.minitrino_lib_dir)
             if cli_ver != lib_ver:
@@ -133,7 +136,7 @@ class Environment:
                     f"version to match the CLI version by running 'minitrino "
                     f"lib-install'.",
                 )
-        except:
+        except:  # Skip lib-related procedures if the lib is not found
             pass
 
         self.env._log_env_vars()
@@ -142,8 +145,8 @@ class Environment:
 
     def _handle_minitrino_user_dir(self):
         """Checks if a Minitrino directory exists in the user home directory.
-        If it does not, it is created. The path to the Minitrino user home
-        directory is returned."""
+        If not, it is created. The path to the Minitrino user home directory is
+        returned."""
 
         minitrino_user_dir = os.path.abspath(
             os.path.join(self.user_home_dir, ".minitrino")
@@ -153,9 +156,8 @@ class Environment:
         return minitrino_user_dir
 
     def _get_config_file(self):
-        """Returns the correct filepath for the minitrino.cfg file. Adds to
-        initialization warnings if the file does not exist, but will return the
-        path regardless."""
+        """Returns the file path of the minitrino.cfg file. Warns if the file
+        path regardless for future creation."""
 
         config_file = os.path.join(self.minitrino_user_dir, "minitrino.cfg")
         if not os.path.isfile(config_file):
@@ -167,12 +169,8 @@ class Environment:
 
     def _get_docker_clients(self):
         """Gets DockerClient and APIClient objects. Returns a tuple of DockerClient
-        and APIClient objects, respectively.
-
-        If there is an error fetching the clients, None types will be returned
-        for each client. The lack of clients should be caught by check_daemon()
-        calls that execute in each command that requires an accessible Docker
-        service."""
+        and APIClient objects, respectively. Returns None types for each client
+        if they fail to fetch."""
 
         self.logger.verbose(
             "Attempting to locate Docker socket file for current Docker context..."
@@ -205,31 +203,28 @@ class EnvironmentVariables(dict):
     """Exposes all Minitrino variables.
 
     ### Parameters
+
     - `ctx`: Instantiated Environment object (with user input already accounted
       for).
 
     ### Usage
-    ```python
-    # ctx object has an instantiated EnvironmentVariables object
+
+    ```python # ctx object has an instantiated EnvironmentVariables object
     env_variable = ctx.env.get("STARBURST_VER", "388-e")
     ```"""
 
     @utils.exception_handler
     def __init__(self, ctx=None):
         super().__init__()
-        if not ctx:
-            raise utils.handle_missing_param(list(locals().keys()))
 
         self._ctx = ctx
-
         self._parse_user_env()
         self._parse_os_env()
         self._parse_minitrino_config()
 
     def _parse_user_env(self):
         """Parses user-provided environment variables for the current
-        command. Highest precedence in environment variable order, loaded
-        first."""
+        command."""
 
         if not self._ctx._user_env:
             return
@@ -239,8 +234,7 @@ class EnvironmentVariables(dict):
             self[env_var[0]] = env_var[1]
 
     def _parse_os_env(self):
-        """Parses environment variables from the user's shell. Middle
-        precedence in environment variable order, loaded second."""
+        """Parses environment variables from the user's shell."""
 
         append = ["LIB_PATH", "STARBURST_VER", "TEXT_EDITOR", "LIC_PATH"]
         for k, v in os.environ.items():
@@ -250,8 +244,7 @@ class EnvironmentVariables(dict):
 
     def _parse_minitrino_config(self):
         """Parses the Minitrino config file and adds it to the env
-        dictionary. Middle precedence in environment variable order, loaded
-        third."""
+        dictionary."""
 
         if not os.path.isfile(self._ctx.config_file):
             return
@@ -264,14 +257,19 @@ class EnvironmentVariables(dict):
                 if not self.get(k, None) and v:
                     self[k.upper()] = v
         except Exception as e:
-            utils.handle_exception(
-                e,
-                additional_msg=f"Failed to parse config file: {self._ctx.config_file}",
+            self._ctx.logger.warn(
+                f"Failed to parse config file {self._ctx.config_file} with error:\n{str(e)}\n"
+                f"Variables set in the config file will not be loaded. "
+                f"You can reset your configuration file with `minitrino config --reset` or "
+                f"edit it manually with `minitrino config`. The valid config file structure is: \n"
+                f"{CONFIG_TEMPLATE}"
             )
+            return
 
     def _parse_library_env(self):
         """Parses the Minitrino library's `minitrino.env` file. Lowest
-        precedence in environment variable order, loaded last."""
+        precedence in environment variable order, loaded during
+        `_user_init()`."""
 
         env_file = os.path.join(self._ctx.minitrino_lib_dir, "minitrino.env")
         if not os.path.isfile(env_file):
@@ -313,9 +311,6 @@ class Modules:
 
     @utils.exception_handler
     def __init__(self, ctx=None):
-        if not ctx:
-            raise utils.handle_missing_param(list(locals().keys()))
-
         self.data = {}
         self._ctx = ctx
         self._load_modules()
@@ -441,18 +436,17 @@ class CommandExecutor:
     handling of stdout/stderr output.
 
     ### Parameters
+
     - `ctx`: Instantiated Environment object (with user input already accounted
       for).
 
     ### Public Methods
+
     - `execute_commands()`: Executes commands in the user's shell or inside of a
         container."""
 
     @utils.exception_handler
     def __init__(self, ctx=None):
-        if not ctx:
-            raise utils.handle_missing_param(list(locals().keys()))
-
         self._ctx = ctx
 
     def execute_commands(self, *args, **kwargs):
@@ -460,6 +454,7 @@ class CommandExecutor:
         Returns output as well as stores the output in the `output` attribute.
 
         ### Parameters
+
         - `args`: Commands that will be executed in the order provided.
 
         Keyword Arguments:
@@ -476,6 +471,7 @@ class CommandExecutor:
           container (default: `root`).
 
         ### Return Values
+
         - A list of dicts with each dict containing the following keys:
             - `command`: the original command passed to the function
             - `output`: the combined output of stdout and stderr

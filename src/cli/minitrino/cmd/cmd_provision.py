@@ -319,9 +319,6 @@ def execute_container_bootstrap(ctx, bootstrap="", container_name="", yaml_file=
 
     Returns `False` if the script is not executed and `True` if it is."""
 
-    if any((not bootstrap, not container_name, not yaml_file)):
-        raise utils.handle_missing_param(list(locals().keys()))
-
     bootstrap_file = os.path.join(
         os.path.dirname(yaml_file), "resources", "bootstrap", bootstrap
     )
@@ -714,7 +711,6 @@ def provision_workers(ctx, c_restart=[], workers=0):
             ctx.logger.warn(f"Removed excess worker: {identifier}")
 
     worker_img = f"minitrino/trino:{ctx.env.get('STARBURST_VER')}"
-    source_directory = "/etc/starburst"
     network_name = "minitrino_default"
 
     coordinator = ctx.docker_client.containers.get("trino")
@@ -761,13 +757,13 @@ def provision_workers(ctx, c_restart=[], workers=0):
 
         # Overwrite worker config.properties
         ctx.cmd_executor.execute_commands(
-            f"bash -c \"echo '{WORKER_CONFIG_PROPS}' > {ETC_TRINO}/config.properties\"",
+            f"bash -c \"echo '{WORKER_CONFIG_PROPS}' > {ETC_TRINO}/{TRINO_CONFIG}\"",
             container=worker,
             docker_user="starburst",
         )
 
         c_restart.append(worker_name)
-        ctx.logger.verbose(f"Copied {source_directory} to '{worker_name}'")
+        ctx.logger.verbose(f"Copied {ETC_TRINO} to '{worker_name}'")
 
     return c_restart
 

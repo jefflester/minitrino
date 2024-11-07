@@ -27,7 +27,7 @@ class Environment:
     CLI's entrypoint, as it depends on user-provided inputs.
 
     ### Public Attributes (Interactive)
-    
+
     - `logger`: A `minitrino.utils.Logger` object.
     - `env`: An `EnvironmentVariables` object containing all CLI environment
         variables, subdivided by sections when possible.
@@ -38,7 +38,7 @@ class Environment:
     - `api_client`: A `docker.APIClient` object.
 
     ### Public Attributes (Static)
-    
+
     - `verbose`: If `True`, logs flagged as verbose to are sent to stdout.
     - `user_home_dir`: The home directory of the current user.
     - `minitrino_user_dir`: The location of the Minitrino directory relative to
@@ -203,12 +203,12 @@ class EnvironmentVariables(dict):
     """Exposes all Minitrino variables.
 
     ### Parameters
-    
+
     - `ctx`: Instantiated Environment object (with user input already accounted
       for).
 
     ### Usage
-    
+
     ```python # ctx object has an instantiated EnvironmentVariables object
     env_variable = ctx.env.get("STARBURST_VER", "388-e")
     ```"""
@@ -441,7 +441,7 @@ class CommandExecutor:
       for).
 
     ### Public Methods
-    
+
     - `execute_commands()`: Executes commands in the user's shell or inside of a
         container."""
 
@@ -454,7 +454,7 @@ class CommandExecutor:
         Returns output as well as stores the output in the `output` attribute.
 
         ### Parameters
-        
+
         - `args`: Commands that will be executed in the order provided.
 
         Keyword Arguments:
@@ -471,7 +471,7 @@ class CommandExecutor:
           container (default: `root`).
 
         ### Return Values
-        
+
         - A list of dicts with each dict containing the following keys:
             - `command`: the original command passed to the function
             - `output`: the combined output of stdout and stderr

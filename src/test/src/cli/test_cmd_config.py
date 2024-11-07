@@ -11,7 +11,7 @@ from inspect import currentframe
 from types import FrameType
 from typing import cast
 
-CMD = ["-e", "TEXT_EDITOR=cat", "config"]
+CMD = ["-v", "-e", "TEXT_EDITOR=cat", "config"]
 
 
 def main():

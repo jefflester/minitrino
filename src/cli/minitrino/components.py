@@ -18,6 +18,7 @@ from minitrino.settings import MODULE_ROOT
 from minitrino.settings import MODULE_ADMIN
 from minitrino.settings import MODULE_SECURITY
 from minitrino.settings import MODULE_CATALOG
+from minitrino.settings import CONFIG_TEMPLATE
 
 
 class Environment:
@@ -261,10 +262,14 @@ class EnvironmentVariables(dict):
                 if not self.get(k, None) and v:
                     self[k.upper()] = v
         except Exception as e:
-            utils.handle_exception(
-                e,
-                additional_msg=f"Failed to parse config file: {self._ctx.config_file}",
+            self._ctx.logger.warn(
+                f"Failed to parse config file {self._ctx.config_file} with error:\n{str(e)}\n"
+                f"Variables set in the config file will not be loaded. "
+                f"You can reset your configuration file with `minitrino config --reset` or "
+                f"edit it manually with `minitrino config`. The valid config file structure is: \n"
+                f"{CONFIG_TEMPLATE}"
             )
+            return
 
     def _parse_library_env(self):
         """Parses the Minitrino library's `minitrino.env` file. Lowest

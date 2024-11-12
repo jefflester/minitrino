@@ -1,11 +1,21 @@
 # MySQL Connector Module
 
-This module provisions a standalone MySQL service. Other modules that uses MySQL
-as a backend will need a more unique name to avoid conflicts with this one.
+This module provisions a standalone MySQL service. By default, it is exposed
+both to the internal Docker network and the host via:
+
+```yaml
+ports:
+  - 3306:3306
+```
+
+This will allow you to connect to the service from any SQL client that supports
+MySQL drivers on `localhost:3306`.
 
 ## Usage
 
-    minitrino --env STARBURST_VER=<ver> provision --module mysql
-    docker exec -it trino bash 
-    trino-cli
-    trino> show schemas from mysql;
+```sh
+minitrino provision -m mysql
+docker exec -it trino bash 
+trino-cli
+trino> show schemas from mysql;
+```

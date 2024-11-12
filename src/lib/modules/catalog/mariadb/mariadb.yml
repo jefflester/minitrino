@@ -1,0 +1,18 @@
+services:
+
+  trino:
+    volumes:
+      - ./modules/catalog/mariadb/resources/trino/mariadb.properties:/etc/starburst/catalog/mariadb.properties
+
+  mariadb:
+    image: mariadb:${MARIADB_VER}
+    container_name: mariadb
+    environment:
+      MINITRINO_BOOTSTRAP: bootstrap.sh
+    env_file:
+      - ./modules/catalog/mariadb/resources/mariadb/mariadb.env
+    ports:
+      - :3306
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.mariadb=catalog-mariadb

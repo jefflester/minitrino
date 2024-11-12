@@ -1,0 +1,5 @@
+{
+    "description": "Creates a MariaDB catalog using the standard MariaDB connector.",
+    "incompatibleModules": [],
+    "enterprise": false
+}

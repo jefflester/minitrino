@@ -22,7 +22,8 @@
       ],
       "contains": [
         "information_schema",
-        "test_schema"
+        "test_schema",
+        "minitrino"
       ]
     },
     {

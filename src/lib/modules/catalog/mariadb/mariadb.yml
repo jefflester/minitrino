@@ -8,7 +8,7 @@ services:
     image: mariadb:${MARIADB_VER}
     container_name: mariadb
     environment:
-      MINITRINO_BOOTSTRAP: bootstrap.sh
+      MINITRINO_BOOTSTRAP: bootstrap-mariadb.sh
     env_file:
       - ./modules/catalog/mariadb/resources/mariadb/mariadb.env
     ports:

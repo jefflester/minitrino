@@ -16,6 +16,13 @@ services:
       - 8080:8080
     volumes:
       - ${LIC_PATH}:${LIC_MOUNT_PATH}
+      - catalogs:/etc/starburst/catalog
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module=trino 
+
+volumes:
+  catalogs:
     labels:
       - com.starburst.tests=minitrino
       - com.starburst.tests.module=trino 

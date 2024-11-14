@@ -32,6 +32,7 @@ def main():
     test_incompatible_modules()
     test_provision_append()
     test_workers()
+    test_catalogs_volume()
 
 
 def test_standalone():
@@ -447,6 +448,54 @@ def test_workers():
     assert result.exit_code == 0
     assert "Restarting container 'trino-worker-1'" in result.output
     assert len(containers) == 3  # trino, trino worker, test
+
+    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
+    cleanup()
+
+
+def test_catalogs_volume():
+    """Verifies that the `catalogs` named volume functions as expected."""
+
+    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
+
+    result = helpers.execute_command(["-v", "provision", "--module", "hive"])
+    assert result.exit_code == 0
+
+    hive = subprocess.Popen(
+        f"docker exec -i trino cat /etc/starburst/catalog/hive.properties",
+        shell=True,
+        stdout=subprocess.PIPE,
+        universal_newlines=True,
+    )
+
+    hive, _ = hive.communicate()
+    assert "connector.name=hive" in hive
+
+    cleanup()
+
+    result = helpers.execute_command(
+        ["-v", "provision", "--module", "hive", "--module", "delta-lake"]
+    )
+    assert result.exit_code == 0
+    assert "Removed 'minitrino_catalogs' volume" in result.output
+
+    hive = subprocess.Popen(
+        f"docker exec -i trino cat /etc/starburst/catalog/hive.properties",
+        shell=True,
+        stdout=subprocess.PIPE,
+        universal_newlines=True,
+    )
+
+    delta = subprocess.Popen(
+        f"docker exec -i trino cat /etc/starburst/catalog/delta.properties",
+        shell=True,
+        stdout=subprocess.PIPE,
+        universal_newlines=True,
+    )
+
+    hive, _ = hive.communicate()
+    delta, _ = delta.communicate()
+    assert "connector.name=hive" in hive and "connector.name=delta-lake" in delta
 
     common.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()

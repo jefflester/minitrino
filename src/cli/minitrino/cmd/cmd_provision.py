@@ -212,8 +212,17 @@ def check_enterprise(ctx, modules=[]):
 
 @pass_environment
 def check_volumes(ctx, modules=[]):
-    """Checks if any of the modules have persistent volumes and issues a warning
-    to the user if so."""
+    """Removes `minitrino_catalogs` volume if it exists, and also checks if any of
+    the modules have persistent volumes and issues a warning to the user if so."""
+
+    try:
+        volume_name = "minitrino_catalogs"
+        ctx.logger.verbose(f"Removing '{volume_name}' volume if exists...")
+        volume = ctx.docker_client.volumes.get(volume_name)
+        volume.remove()
+        ctx.logger.verbose(f"Removed '{volume_name}' volume.")
+    except:
+        pass
 
     ctx.logger.verbose(
         "Checking modules for persistent volumes...",
@@ -257,7 +266,7 @@ def build_command(ctx, docker_native="", chunk=""):
             os.path.join(ctx.minitrino_lib_dir, "docker-compose.yml"),
             " \\\n",
             chunk,  # Module YAML paths
-            "up -d",
+            "up -d --force-recreate",
         ]
     )
 

@@ -75,3 +75,8 @@ changes to take effect:
     exit
 
     docker restart trino
+
+The properties file can also be edited directly from the module directory prior
+to provisioning the module:
+
+    lib/modules/catalog/<module>/resources/trino/<module>.properties

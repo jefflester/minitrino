@@ -2,13 +2,13 @@
 
 A module which utilizes Trino's [file-based system access control
 plugin](https://docs.starburst.io/latest/security/file-system-access-control.html).
-This also makes used of the [file-based group
+This module also makes used of the [file-based group
 provider](https://docs.starburst.io/latest/security/group-file.html).
 
 ## Policies
 
 The access policy is located in the `rules.json` file which defines groups of
-users that map to a certain access control permission. The users for the groups
+users that map to certain access control permissions. The users for the groups
 are defined in the `groups.txt` file.
 
 - Users in the `sepadmins` group have full access to all objects within Trino

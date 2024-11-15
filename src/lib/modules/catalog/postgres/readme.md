@@ -1,8 +1,13 @@
-# Postgres Connector Module
+# Postgres Catalog Module
 
-This module provisions a standalone Postgres service. It is named uniquely to
-avoid conflicts with other modules that may use Trino as a backend, such as the
-`hive-s3` module.
+This module provisions a standalone Postgres service. By default, it is exposed
+both to the internal Docker network and the host via:
+
+    ports:
+      - 5432:5432
+
+This will allows users to connect to the service from any SQL client that
+supports Postgres drivers on `localhost:5432`.
 
 ## Usage
 

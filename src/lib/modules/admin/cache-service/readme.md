@@ -18,6 +18,10 @@ For troubleshooting, the bootstrap script enables debug logging for
 with the cache service. The JMX dump tables can be queried in the `jmx.history`
 schema.
 
+## Usage
+
+    minitrino --env STARBURST_VER=<ver> provision --module cache-service
+
 ## Table Scan Redirections (TSRs)
 
 The `rules.json` file configures two tables for TSRs: `postgres.public.customer`
@@ -29,3 +33,17 @@ cache service operations as they occur.
 
 An example MV is created in `hive_mv_tsr.mvs.example`. Any number of MVs can be
 added to this catalog, and MVs can pull data from any data source.
+
+## Editing the `hive_mv_tsr.properties` File
+
+This module uses a roundabout way to mount the `hive_mv_tsr.properties` file
+that allows for edits to be made to the file inside the Trino container without
+the source file being modified on the host. To edit the file, exec into the
+Trino container, make the desired changes, and then restart the container for
+the changes to take effect:
+
+    docker exec -it trino bash 
+    vi /etc/starburst/catalog/hive_mv_tsr.properties
+    exit
+
+    docker restart trino

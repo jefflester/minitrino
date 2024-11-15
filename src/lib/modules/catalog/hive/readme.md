@@ -1,17 +1,19 @@
-# Hive Module
+# Hive Catalog Module
 
-This module uses Minio as a local S3 service. You can write data to this service
-and the files will be written to your machine. You can read more about Minio
-[here](https://docs.min.io/docs/minio-docker-quickstart-guide.html). This module
-also uses a Hive metastore (HMS) container along with a Postgres container for
-the HMS's backend storage. The HMS image is based off of naushadh's repository
-[here](https://github.com/naushadh/hive-metastore) (refer to his repository for
-additional documentation on the HMS image and configuration options).
+This module deploys the necessary components for a Delta Lake environment.
 
-You can access the Minio UI at `http://localhost:9001` with `access-key` and
+- **Object storage**: served via MinIO (`minio` container and bootstrapped by
+  `create-minio-buckets`)
+- **Metastore**: served via a Hive metastore (`metastore-hive` container backed
+  by `postgres-hive` for storage)
+  - The HMS image is based off of naushadh's repository
+    [here](https://github.com/naushadh/hive-metastore) (refer to his repository
+    for additional documentation on the HMS image and configuration options)
+
+The MinIO UI can be viewed at `http://localhost:9001` using `access-key` and
 `secret-key` for credentials.
 
-You can create a table with ORC data with Trino very quickly:
+Tables backed by ORC data files can be easily created:
 
     trino> create schema hive.tiny with (location='s3a://sample-bucket/wh/tiny/');
     CREATE SCHEMA
@@ -19,7 +21,7 @@ You can create a table with ORC data with Trino very quickly:
     trino> create table hive.tiny.customer as select * from tpch.tiny.customer;
     CREATE TABLE: 1500 rows
 
-You will see the ORC data stored in your local Minio bucket.
+The ORC data files can be viewed directly in the MinIO bucket via the MinIO UI.
 
 ## Usage
 
@@ -28,9 +30,9 @@ You will see the ORC data stored in your local Minio bucket.
     trino-cli
     trino> show schemas from hive;
 
-## Cleanup
+## Persistent Storage
 
-This module uses named volumes to persist MinIO and HMS data:
+This module uses named volumes to persist MinIO and metastore data:
 
     volumes:
       postgres-hive-data:
@@ -42,6 +44,31 @@ This module uses named volumes to persist MinIO and HMS data:
           - com.starburst.tests=minitrino
           - com.starburst.tests.module.hive=catalog-hive
 
+The user-facing implication is that the data in the Hive metastore and the data
+files stored in MinIO are retained even after shutting down and/or removing the
+environment's containers. Minitrino issues a warning about this whenever a
+module with named volumes is deployed––be sure to look out for these warnings:
+
+    [w]  Module '<module>' has persistent volumes associated with it. To delete these volumes, remember to run `minitrino remove --volumes`.
+
 To remove these volumes, run:
 
     minitrino -v remove --volumes --label com.starburst.tests.module.hive=catalog-hive
+
+Or, remove them directly using the Docker CLI:
+
+    docker volume rm minitrino_postgres-hive-data minitrino_minio-hive-data
+
+## Editing the `hive.properties` File
+
+This module uses a roundabout way to mount the `hive.properties` file that
+allows for edits to be made to the file inside the Trino container without the
+source file being modified on the host. To edit the file, exec into the Trino
+container, make the desired changes, and then restart the container for the
+changes to take effect:
+
+    docker exec -it trino bash 
+    vi /etc/starburst/catalog/hive.properties
+    exit
+
+    docker restart trino

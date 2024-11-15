@@ -1,11 +1,13 @@
-# SQL Server Connector Module
+# SQL Server Catalog Module
 
-This module provisions a standalone SQL Server service.
+This module provisions a standalone SQL Server service. By default, it is
+exposed both to the internal Docker network and the host via:
 
-Default database created is `master`.
+    ports:
+      - 1433:1433
 
-Note that the 2017 version of SQL Server is used by default, as previous
-versions were only available on Windows and do not have Docker containers.
+This will allows users to connect to the service from any SQL client that
+supports SQL Server drivers on `localhost:1433`.
 
 ## Usage
 

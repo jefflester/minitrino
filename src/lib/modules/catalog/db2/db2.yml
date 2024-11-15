@@ -7,7 +7,6 @@ services:
   db2:
     image: ibmcom/db2:${DB2_VER}
     container_name: db2
-    platform: linux/amd64
     env_file:
       - ./modules/catalog/db2/resources/db2/db2.env
     privileged: true
@@ -15,8 +14,6 @@ services:
     stdin_open: true
     ports:
       - 50000:50000
-    volumes:
-      - ./modules/catalog/db2/resources/db2/db2-storage/:/database
     labels:
       - com.starburst.tests=minitrino
       - com.starburst.tests.module.db2=catalog-db2

@@ -9,7 +9,6 @@
 import os
 import re
 import stat
-import hashlib
 import time
 import click
 import yaml
@@ -113,7 +112,6 @@ def cli(ctx, modules, workers, no_rollback, docker_native):
         compose_cmd = build_command(docker_native, cmd_chunk)
 
         ctx.cmd_executor.execute_commands(compose_cmd, environment=ctx.env)
-        initialize_containers()
 
         c_restart = execute_bootstraps(modules)
         c_restart = write_trino_cfg(c_restart, modules)
@@ -314,19 +312,14 @@ def execute_bootstraps(ctx, modules=[]):
             # If there is not container name, the service name becomes the name
             # of the container
             container_name = service[0]
-        if execute_container_bootstrap(bootstrap, container_name, service[2]):
-            containers.append(container_name)
+        execute_container_bootstrap(bootstrap, container_name, service[2])
+        containers.append(container_name)
     return containers
 
 
 @pass_environment
 def execute_container_bootstrap(ctx, bootstrap="", container_name="", yaml_file=""):
-    """Executes a single bootstrap inside a container. If the
-    `/opt/minitrino/bootstrap-status.txt` file has the same checksum as the
-    bootstrap script that is about to be executed, the boostrap script is
-    skipped.
-
-    Returns `False` if the script is not executed and `True` if it is."""
+    """Executes a single bootstrap inside a container."""
 
     bootstrap_file = os.path.join(
         os.path.dirname(yaml_file), "resources", "bootstrap", bootstrap
@@ -344,22 +337,6 @@ def execute_container_bootstrap(ctx, bootstrap="", container_name="", yaml_file=
         st.st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH,
     )
 
-    checksum = hashlib.md5(open(bootstrap_file, "rb").read()).hexdigest()
-    container = ctx.docker_client.containers.get(container_name)
-
-    # Check if this script has already been executed
-    output = ctx.cmd_executor.execute_commands(
-        "cat /opt/minitrino/bootstrap-status.txt",
-        container=container,
-        trigger_error=False,
-    )
-
-    if f"{checksum}" in output[0].get("output", ""):
-        ctx.logger.verbose(
-            f"Bootstrap already executed in container '{container_name}'. Skipping.",
-        )
-        return False
-
     ctx.logger.verbose(
         f"Executing bootstrap script in container '{container_name}'...",
     )
@@ -368,18 +345,15 @@ def execute_container_bootstrap(ctx, bootstrap="", container_name="", yaml_file=
         f"docker cp {bootstrap_file} {container_name}:/tmp/"
     )
 
-    # Record executed file checksum
+    container = ctx.docker_client.containers.get(container_name)
     ctx.cmd_executor.execute_commands(
         f"/tmp/{os.path.basename(bootstrap_file)}",
-        f'bash -c "echo {checksum} >> /opt/minitrino/bootstrap-status.txt"',
         container=container,
     )
 
     ctx.logger.verbose(
         f"Successfully executed bootstrap script in container '{container_name}'.",
     )
-
-    return True
 
 
 def split_cfg(cfgs=""):
@@ -478,24 +452,6 @@ def write_trino_cfg(ctx, c_restart=[], modules=[]):
 
     cfgs = handle_password_authenticators(cfgs)
 
-    checksum_file = "/opt/minitrino/user-config.txt"
-    checksum_data = bytes(str([cfgs, jvm_cfg]), "utf-8")
-    checksum = hashlib.md5(checksum_data).hexdigest()
-
-    output = ctx.cmd_executor.execute_commands(
-        f"cat {checksum_file}",
-        container=trino_container,
-        trigger_error=False,
-    )
-
-    old_checksum = output[0].get("output", "").strip().lower()
-    if not "no such file or directory" in old_checksum:
-        if old_checksum == checksum:
-            ctx.logger.verbose(
-                "User-defined config already added to config files. Skipping...",
-            )
-            return c_restart
-
     ctx.logger.verbose(
         "Checking Trino server status before updating configs...",
     )
@@ -565,11 +521,6 @@ def write_trino_cfg(ctx, c_restart=[], modules=[]):
 
     if not "trino" in c_restart:
         c_restart.append("trino")
-
-    ctx.logger.verbose("Recording config checksum...")
-    output = ctx.cmd_executor.execute_commands(
-        f'bash -c "echo {checksum} > {checksum_file}"', container=trino_container
-    )
 
     return c_restart
 
@@ -644,27 +595,6 @@ def restart_containers(ctx, c_restart=[]):
                 )
 
     ctx.logger.info("All specified containers have been restarted.")
-
-
-@pass_environment
-def initialize_containers(ctx):
-    """Initializes each container with /opt/minitrino/ directory."""
-
-    containers = ctx.docker_client.containers.list(filters={"label": RESOURCE_LABEL})
-    for container in containers:
-        output = ctx.cmd_executor.execute_commands(
-            "mkdir -p /opt/minitrino/",
-            container=container,
-            trigger_error=False,
-        )
-        if output[0].get("return_code", None) in [0, 126]:
-            continue
-        else:
-            raise err.MinitrinoError(
-                f"Command failed.\n"
-                f"Output: {output[0].get('output', '').strip()}\n"
-                f"Exit code: {output[0].get('return_code', None)}"
-            )
 
 
 @pass_environment

@@ -195,25 +195,6 @@ def test_bootstrap_script(result):
     common.log_success(cast(FrameType, currentframe()).f_code.co_name)
 
 
-def test_bootstrap_re_execute():
-    """Ensures that bootstrap scripts do not execute if they have already
-    executed."""
-
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
-
-    result = helpers.execute_command(["-v", "provision", "--module", "test"])
-
-    assert result.exit_code == 0
-    assert all(
-        (
-            "Bootstrap already executed in container 'trino'. Skipping.",
-            "Bootstrap already executed in container 'test'. Skipping.",
-        )
-    )
-
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-
-
 def test_valid_user_config():
     """Ensures that valid, user-defined Trino/JVM config can be successfully
     appended to Trino config files."""
@@ -257,37 +238,6 @@ def test_valid_user_config():
             "query.max-execution-time=1h" in trino_config,
         )
     )
-
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-    cleanup()
-
-
-def test_existing_user_config():
-    """Ensures that already-propagated configs are not propagated again, thus
-    avoiding unnecessary container restarts."""
-
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
-
-    helpers.execute_command(
-        [
-            "-v",
-            "provision",
-            "--module",
-            "tls",
-        ]
-    )
-
-    result = helpers.execute_command(
-        [
-            "-v",
-            "provision",
-            "--module",
-            "tls",
-        ]
-    )
-
-    assert result.exit_code == 0
-    assert "User-defined config already added to config files" in result.output
 
     common.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()

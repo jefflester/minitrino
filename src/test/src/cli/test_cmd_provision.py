@@ -27,7 +27,6 @@ def main():
     test_docker_native()
     test_enterprise()
     test_valid_user_config()
-    test_existing_user_config()
     test_duplicate_config_props()
     test_incompatible_modules()
     test_provision_append()

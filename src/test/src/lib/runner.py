@@ -210,12 +210,15 @@ class ModuleTest:
                         exit_code == cmd_exit_code
                     ), f"Unexpected return code: {cmd_exit_code} expected: {exit_code}"
                 return output
-            except:
-                if i <= retry:
+            except AssertionError as e:
+                if i < retry:
                     print(f"{cmd_type.title()} did not succeed. Retrying...")
+                    i += 1
                     time.sleep(1)
                 else:
-                    raise TimeoutError(f"'{c}' not in {cmd_type} output")
+                    raise TimeoutError(
+                        f"'{c}' not in {cmd_type} output after {retry} retries. Last error: {e}"
+                    )
 
     def _validate(self, json_data={}):
         """Validates JSON input."""

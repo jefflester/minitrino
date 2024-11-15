@@ -423,6 +423,16 @@ def write_trino_cfg(ctx, c_restart=[], modules=[]):
     jvm_cfg = []
     modules.append("trino")  # check if user placed configs in root compose yaml
 
+    # Check configs passed through env variables
+    env_usr_cfgs = ctx.env.get("CONFIG_PROPERTIES", "")
+    env_user_jvm_cfg = ctx.env.get("JVM_CONFIG", "")
+
+    if env_usr_cfgs:
+        cfgs.extend(split_cfg(env_usr_cfgs))
+    if env_user_jvm_cfg:
+        jvm_cfg.extend(split_cfg(env_user_jvm_cfg))
+
+    # Check configs passed through Docker Compose YAMLs
     for module in modules:
         if module == "trino":
             with open(os.path.join(ctx.minitrino_lib_dir, "docker-compose.yml")) as f:

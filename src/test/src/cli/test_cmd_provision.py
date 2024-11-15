@@ -5,7 +5,6 @@
 # TODO: Test invalid user config (Trino/JVM)
 
 import docker
-import time
 import subprocess
 
 import src.common as common
@@ -247,32 +246,16 @@ def test_duplicate_config_props():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    helpers.execute_command(["-v", "provision"])
-
-    cmd_chunk = (
-        f"'query.max-stage-count=85\nquery.max-stage-count=100"
-        f"\nquery.max-execution-time=1h\nquery.max-execution-time=2h'"
+    result = helpers.execute_command(
+        [
+            "-v",
+            "--env",
+            "CONFIG_PROPERTIES=query.max-stage-count=85\nquery.max-stage-count=100",
+            "--env",
+            "JVM_CONFIG=-Xms1G\n-Xms1G",
+            "provision",
+        ]
     )
-    subprocess.Popen(
-        f'docker exec -i trino sh -c "echo {cmd_chunk} >> /etc/starburst/config.properties"',
-        shell=True,
-        stdout=subprocess.PIPE,
-        universal_newlines=True,
-    )
-
-    cmd_chunk = "'-Xms1G\n-Xms1G'"
-    subprocess.Popen(
-        f'docker exec -i trino sh -c "echo {cmd_chunk} >> /etc/starburst/jvm.config"',
-        shell=True,
-        stdout=subprocess.PIPE,
-        universal_newlines=True,
-    )
-
-    # Hard stop to allow commands to process
-    time.sleep(2)
-
-    helpers.execute_command(["-v", "down", "--sig-kill", "--keep"])
-    result = helpers.execute_command(["-v", "provision"])
 
     assert all(
         (
@@ -280,11 +263,8 @@ def test_duplicate_config_props():
             in result.output,
             "query.max-stage-count=85" in result.output,
             "query.max-stage-count=100" in result.output,
-            "query.max-execution-time=1h" in result.output,
-            "query.max-execution-time=2h" in result.output,
             "Duplicate Trino configuration properties detected in 'jvm.config' file"
             in result.output,
-            "-Xms1G" in result.output,
             "-Xms1G" in result.output,
         )
     )

@@ -5,7 +5,7 @@ set -euxo pipefail
 echo "Checking component statuses..."
 check_health() {
   local url=$1
-  local retries=5
+  local retries=20
   local wait=5
 
   for ((i=0; i<retries; i++)); do
@@ -24,7 +24,7 @@ check_health() {
 }
 
 # Check each component
-check_health http://localhost:9000/health || exit 1  # Controller
+check_health http://pinot-controller:9000/health || exit 1  # Controller
 check_health http://pinot-broker:8099/health || exit 1  # Broker
 
 echo "All components are up and running."

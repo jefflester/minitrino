@@ -9,7 +9,7 @@
       "healthcheck": {
         "command": "trino-cli --debug --output-format CSV_HEADER --execute 'SHOW TABLES IN pinot.default' --user admin",
         "container": "trino",
-        "retries": 30,
+        "retries": 60,
         "exitCode": 0,
         "contains": [
           "baseballstats"

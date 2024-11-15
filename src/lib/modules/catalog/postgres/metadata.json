@@ -1,5 +1,5 @@
 {
-    "description": "Creates a Postgres catalog using the standard Postgres connector.",
+    "description": "Postgres catalog module",
     "incompatibleModules": [],
     "enterprise": false
 }

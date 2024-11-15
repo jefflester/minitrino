@@ -1,5 +1,5 @@
 {
-  "description": "Enables Built-in access control (BIAC) for use in configuring access to the SEP UI",
+  "description": "Built-in access control (BIAC) module",
   "incompatibleModules": [],
   "dependentModules": ["insights"],
   "enterprise": true

@@ -1,5 +1,5 @@
 {
-    "description": "Creates a Delta Lake catalog using the enterprise Delta connector.",
+    "description": "Delta Lake catalog module (includes object storage (MinIO) and Hive metastore)",
     "incompatibleModules": [],
-    "enterprise": true
+    "enterprise": false
 }

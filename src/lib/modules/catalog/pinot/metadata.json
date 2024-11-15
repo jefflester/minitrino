@@ -1,5 +1,5 @@
 {
-    "description": "Deploys a Pinot environment with a controller, broker, and server. Trino connects via gRPC.",
+    "description": "Pinot catalog module",
     "incompatibleModules": [],
     "enterprise": false
 }

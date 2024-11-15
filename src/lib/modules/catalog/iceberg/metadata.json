@@ -1,5 +1,5 @@
 {
-    "description": "Creates an Iceberg catalog with an Iceberg REST catalog backend.",
+    "description": "Iceberg catalog module (uses Iceberg REST catalog for metadata management)",
     "incompatibleModules": [],
     "enterprise": false
 }

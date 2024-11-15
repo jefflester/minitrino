@@ -1,5 +1,5 @@
 {
-  "description": "Implements SEP backend service and Insights configuration, logging all query information to backend Postgres database and supplying additional configuration for Insights web UI features.",
+  "description": "Insights (enterprise UI) module",
   "incompatibleModules": [],
   "dependentModules": [],
   "enterprise": true

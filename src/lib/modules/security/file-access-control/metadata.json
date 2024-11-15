@@ -1,5 +1,5 @@
 {
-    "description": "Secures Trino with file-based access control.",
+    "description": "File-based access control module",
     "incompatibleModules": [],
     "dependentModules": ["file-group-provider"],
     "enterprise": false

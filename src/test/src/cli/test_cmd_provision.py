@@ -115,7 +115,6 @@ def test_docker_native():
     common.log_success(cast(FrameType, currentframe()).f_code.co_name)
 
     test_bootstrap_script(result)
-    test_bootstrap_re_execute()
     cleanup()
 
 

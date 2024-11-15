@@ -1,5 +1,5 @@
 {
-    "description": "Secures Trino with file-based password authentication.",
+    "description": "File-based password authenticator module",
     "incompatibleModules": [],
     "dependentModules": ["tls"],
     "enterprise": false

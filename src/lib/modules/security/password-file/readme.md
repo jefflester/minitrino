@@ -1,4 +1,4 @@
-# Password File Authentication Module
+# Password File Authenticator Module
 
 This module configures Trino to authenticate users with a password file.
 

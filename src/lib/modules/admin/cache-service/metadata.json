@@ -1,5 +1,5 @@
 {
-  "description": "Cache service module",
+  "description": "Cache service module (enables materialized view management and table scan redirections)",
   "incompatibleModules": [],
   "dependentModules": ["hive", "postgres", "insights"],
   "enterprise": true

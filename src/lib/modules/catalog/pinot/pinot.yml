@@ -1,0 +1,64 @@
+services:
+
+  trino:
+    volumes:
+      - ./modules/catalog/pinot/resources/trino/pinot.properties:/etc/starburst/catalog/pinot.properties
+
+  pinot-zookeeper:
+    image: zookeeper:${ZOOKEEPER_VER}
+    container_name: pinot-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - :2181
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.pinot=catalog-pinot
+  
+  pinot-controller:
+    image: apachepinot/pinot:${PINOT_VER}
+    container_name: pinot-controller
+    command: "StartController -zkAddress pinot-zookeeper:2181"
+    restart: unless-stopped
+    environment:
+      MINITRINO_BOOTSTRAP: bootstrap-pinot.sh
+    env_file:
+      - ./modules/catalog/pinot/resources/pinot/controller.env
+    depends_on:
+      - pinot-zookeeper
+    ports:
+      - 9090:9000 # localhost:9090
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.pinot=catalog-pinot
+  
+  pinot-broker:
+    image: apachepinot/pinot:${PINOT_VER}
+    container_name: pinot-broker
+    command: "StartBroker -zkAddress pinot-zookeeper:2181"
+    restart: unless-stopped
+    env_file:
+      - ./modules/catalog/pinot/resources/pinot/broker.env
+    depends_on:
+      - pinot-controller
+    ports:
+      - :8099
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.pinot=catalog-pinot
+  
+  pinot-server:
+    image: apachepinot/pinot:${PINOT_VER}
+    container_name: pinot-server
+    command: "StartServer -zkAddress pinot-zookeeper:2181"
+    restart: unless-stopped
+    env_file:
+      - ./modules/catalog/pinot/resources/pinot/server.env
+    depends_on:
+      - pinot-broker
+    ports:
+      - :8098
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.pinot=catalog-pinot

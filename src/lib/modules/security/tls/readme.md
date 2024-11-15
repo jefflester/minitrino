@@ -1,6 +1,6 @@
-# Password File Authentication Module
+# TLS Module
 
-This module configures server TLS for the Trino container using a self-signed
+This module configures server TLS on the Trino container using a self-signed
 certificate.
 
 ## Client Keystore and Truststore

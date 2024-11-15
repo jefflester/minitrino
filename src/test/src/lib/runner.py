@@ -13,6 +13,7 @@ from src.lib.specs import SPECS
 from src.lib.helpers import cleanup
 from src.lib.helpers import get_container
 from src.lib.helpers import execute_command
+from src.lib.helpers import dump_container_logs
 
 
 class ModuleTest:
@@ -87,6 +88,7 @@ class ModuleTest:
                 time.sleep(1)
                 i += 1
             else:
+                dump_container_logs()
                 raise TimeoutError(
                     "Timed out waiting for coordinator to become available"
                 )
@@ -172,6 +174,7 @@ class ModuleTest:
                     time.sleep(1)
                     i += 1
                 else:
+                    dump_container_logs()
                     raise TimeoutError(f"'{c}' not found in container log output")
 
     def _execute_subcommand(self, json_data={}, healthcheck=False, prev_output=""):
@@ -210,12 +213,16 @@ class ModuleTest:
                         exit_code == cmd_exit_code
                     ), f"Unexpected return code: {cmd_exit_code} expected: {exit_code}"
                 return output
-            except:
-                if i <= retry:
+            except AssertionError as e:
+                if i < retry:
                     print(f"{cmd_type.title()} did not succeed. Retrying...")
+                    i += 1
                     time.sleep(1)
                 else:
-                    raise TimeoutError(f"'{c}' not in {cmd_type} output")
+                    dump_container_logs()
+                    raise TimeoutError(
+                        f"'{c}' not in {cmd_type} output after {retry} retries. Last error: {e}"
+                    )
 
     def _validate(self, json_data={}):
         """Validates JSON input."""

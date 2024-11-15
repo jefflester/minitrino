@@ -1,5 +1,5 @@
 {
-    "description": "Creates a SQL Server catalog using the standard SQL Server connector.",
+    "description": "SQL Server catalog module",
     "incompatibleModules": [],
     "enterprise": false
 }

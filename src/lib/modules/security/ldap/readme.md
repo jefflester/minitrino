@@ -1,4 +1,4 @@
-# LDAP Module
+# LDAP Password Authenticator Module
 
 This module provisions an LDAP server for authenticating users in Trino.
 
@@ -19,7 +19,7 @@ This module provisions an LDAP server for authenticating users in Trino.
 - alice / trinoRocks15
 - bob / trinoRocks15
 
-## Adding a New User to LDAP
+## Add a New User to LDAP
 
 1. Open a shell to the LDAP container
 
@@ -41,7 +41,7 @@ This module provisions an LDAP server for authenticating users in Trino.
         userPassword: trinoRocks15
         EOF
 
-3. Use the **ldapmodify** tool to add the new user
+3. Use the `ldapmodify` tool to add the new user
 
         ldapmodify -x -D "cn=admin,dc=example,dc=com" \
             -w trinoRocks15 -H ldaps://ldap:636 -f jeff.ldif

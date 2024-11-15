@@ -1,8 +1,21 @@
 services:
 
   trino:
+    depends_on:
+      - hive-catalog-cp
+
+  hive-catalog-cp:
+    image: busybox
+    container_name: hive-catalog-cp
     volumes:
-      - ./modules/catalog/hive/resources/trino/hive.properties:/etc/starburst/catalog/hive.properties
+      - ./modules/catalog/hive/resources/trino/hive.properties:/tmp/hive.properties
+      - catalogs:/etc/starburst/catalog
+    command: [
+      "sh", "-c", "cp /tmp/hive.properties /etc/starburst/catalog/hive.properties"
+    ]
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.hive=catalog-hive
 
   postgres-hive:
     image: postgres:${POSTGRES_HMS_VER}

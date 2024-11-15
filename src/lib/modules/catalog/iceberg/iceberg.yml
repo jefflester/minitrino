@@ -1,8 +1,21 @@
 services:
 
   trino:
+    depends_on:
+      - iceberg-catalog-cp
+
+  iceberg-catalog-cp:
+    image: busybox
+    container_name: iceberg-catalog-cp
     volumes:
-      - ./modules/catalog/iceberg/resources/trino/iceberg.properties:/etc/starburst/catalog/iceberg.properties
+      - ./modules/catalog/iceberg/resources/trino/iceberg.properties:/tmp/iceberg.properties
+      - catalogs:/etc/starburst/catalog
+    command: [
+      "sh", "-c", "cp /tmp/iceberg.properties /etc/starburst/catalog/iceberg.properties"
+    ]
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.iceberg=catalog-iceberg
 
   iceberg-rest:
     image: tabulario/iceberg-rest:${ICEBERG_REST_VER}

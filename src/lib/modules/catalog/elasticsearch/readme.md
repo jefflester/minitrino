@@ -1,11 +1,13 @@
-# Elasticsearch Connector Module
+# Elasticsearch Catalog Module
 
 This module contains an ES container with some preloaded data. It contains: a
-schema (ES mapping), a table (ES doc mapping), and data (ES docs).
+schema (ES mapping), a table (ES doc mapping), and 500 rows of fake data (ES
+docs).
 
-## Loading your own data
+## Loading Data
 
-Since port 9200 is exposed on localhost you can add your own data like this:
+Elasticsearch is exposed on `localhost:9200`, so additional data can be loaded
+as follows:
 
     # Create user index
     curl -XPUT http://localhost:9200/user?pretty=true;
@@ -40,6 +42,11 @@ Since port 9200 is exposed on localhost you can add your own data like this:
         "created_on" : "2015-05-02T14:45:10.000-04:00"
     }
     ';
+
+If scripting fake data is preferable, reference the bootstrap script leveraged
+by this module, located at:
+
+    lib/modules/catalog/elasticsearch/resources/bootstrap/bootstrap-elasticsearch.sh
 
 ## Usage
 

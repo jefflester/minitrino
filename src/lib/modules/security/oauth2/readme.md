@@ -1,8 +1,8 @@
-# OAuth2 Module
+# OAuth2 Authenticator Module
 
 This module secures Trino with OAuth2 authentication.
 
-## Usage
+## Prerequisites
 
 Prior to deploying this module, you must authenticate to the Github container
 registry
@@ -17,7 +17,7 @@ The `hosts` file modification allows for all Docker services to be exposed on
 your host at `host.docker.internal:${PORT}`. This is a requirement given the
 nature of the redirects and callbacks that occur during the OAuth2 flow.
 
-To provision this module, run:
+## Usage
 
     minitrino --env STARBURST_VER=<ver> provision --module oauth2
 

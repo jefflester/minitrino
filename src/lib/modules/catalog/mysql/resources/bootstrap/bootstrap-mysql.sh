@@ -9,3 +9,6 @@ do
    fi
    sleep 1
 done
+
+echo "Creating 'minitrino' database..."
+mysql -ptrinoRocks15 -e "CREATE DATABASE minitrino;"

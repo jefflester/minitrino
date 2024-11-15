@@ -1,5 +1,5 @@
 {
-    "description": "Secures Trino with LDAP authentication.",
+    "description": "LDAP password authenticator module",
     "incompatibleModules": [],
     "dependentModules": ["tls"],
     "enterprise": false

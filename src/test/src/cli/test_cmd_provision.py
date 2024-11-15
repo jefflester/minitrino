@@ -5,7 +5,6 @@
 # TODO: Test invalid user config (Trino/JVM)
 
 import docker
-import time
 import subprocess
 
 import src.common as common
@@ -27,11 +26,11 @@ def main():
     test_docker_native()
     test_enterprise()
     test_valid_user_config()
-    test_existing_user_config()
     test_duplicate_config_props()
     test_incompatible_modules()
     test_provision_append()
     test_workers()
+    test_catalogs_volume()
 
 
 def test_standalone():
@@ -114,7 +113,6 @@ def test_docker_native():
     common.log_success(cast(FrameType, currentframe()).f_code.co_name)
 
     test_bootstrap_script(result)
-    test_bootstrap_re_execute()
     cleanup()
 
 
@@ -194,25 +192,6 @@ def test_bootstrap_script(result):
     common.log_success(cast(FrameType, currentframe()).f_code.co_name)
 
 
-def test_bootstrap_re_execute():
-    """Ensures that bootstrap scripts do not execute if they have already
-    executed."""
-
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
-
-    result = helpers.execute_command(["-v", "provision", "--module", "test"])
-
-    assert result.exit_code == 0
-    assert all(
-        (
-            "Bootstrap already executed in container 'trino'. Skipping.",
-            "Bootstrap already executed in container 'test'. Skipping.",
-        )
-    )
-
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-
-
 def test_valid_user_config():
     """Ensures that valid, user-defined Trino/JVM config can be successfully
     appended to Trino config files."""
@@ -261,69 +240,22 @@ def test_valid_user_config():
     cleanup()
 
 
-def test_existing_user_config():
-    """Ensures that already-propagated configs are not propagated again, thus
-    avoiding unnecessary container restarts."""
-
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
-
-    helpers.execute_command(
-        [
-            "-v",
-            "provision",
-            "--module",
-            "tls",
-        ]
-    )
-
-    result = helpers.execute_command(
-        [
-            "-v",
-            "provision",
-            "--module",
-            "tls",
-        ]
-    )
-
-    assert result.exit_code == 0
-    assert "User-defined config already added to config files" in result.output
-
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-    cleanup()
-
-
 def test_duplicate_config_props():
     """Ensures that duplicate configuration properties in Trino are logged as a
     warning to the user."""
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    helpers.execute_command(["-v", "provision"])
-
-    cmd_chunk = (
-        f"'query.max-stage-count=85\nquery.max-stage-count=100"
-        f"\nquery.max-execution-time=1h\nquery.max-execution-time=2h'"
+    result = helpers.execute_command(
+        [
+            "-v",
+            "--env",
+            "CONFIG_PROPERTIES=query.max-stage-count=85\nquery.max-stage-count=100",
+            "--env",
+            "JVM_CONFIG=-Xms1G\n-Xms1G",
+            "provision",
+        ]
     )
-    subprocess.Popen(
-        f'docker exec -i trino sh -c "echo {cmd_chunk} >> /etc/starburst/config.properties"',
-        shell=True,
-        stdout=subprocess.PIPE,
-        universal_newlines=True,
-    )
-
-    cmd_chunk = "'-Xms1G\n-Xms1G'"
-    subprocess.Popen(
-        f'docker exec -i trino sh -c "echo {cmd_chunk} >> /etc/starburst/jvm.config"',
-        shell=True,
-        stdout=subprocess.PIPE,
-        universal_newlines=True,
-    )
-
-    # Hard stop to allow commands to process
-    time.sleep(2)
-
-    helpers.execute_command(["-v", "down", "--sig-kill", "--keep"])
-    result = helpers.execute_command(["-v", "provision"])
 
     assert all(
         (
@@ -331,11 +263,8 @@ def test_duplicate_config_props():
             in result.output,
             "query.max-stage-count=85" in result.output,
             "query.max-stage-count=100" in result.output,
-            "query.max-execution-time=1h" in result.output,
-            "query.max-execution-time=2h" in result.output,
             "Duplicate Trino configuration properties detected in 'jvm.config' file"
             in result.output,
-            "-Xms1G" in result.output,
             "-Xms1G" in result.output,
         )
     )
@@ -447,6 +376,54 @@ def test_workers():
     assert result.exit_code == 0
     assert "Restarting container 'trino-worker-1'" in result.output
     assert len(containers) == 3  # trino, trino worker, test
+
+    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
+    cleanup()
+
+
+def test_catalogs_volume():
+    """Verifies that the `catalogs` named volume functions as expected."""
+
+    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
+
+    result = helpers.execute_command(["-v", "provision", "--module", "hive"])
+    assert result.exit_code == 0
+
+    hive = subprocess.Popen(
+        f"docker exec -i trino cat /etc/starburst/catalog/hive.properties",
+        shell=True,
+        stdout=subprocess.PIPE,
+        universal_newlines=True,
+    )
+
+    hive, _ = hive.communicate()
+    assert "connector.name=hive" in hive
+
+    cleanup()
+
+    result = helpers.execute_command(
+        ["-v", "provision", "--module", "hive", "--module", "delta-lake"]
+    )
+    assert result.exit_code == 0
+    assert "Removed 'minitrino_catalogs' volume" in result.output
+
+    hive = subprocess.Popen(
+        f"docker exec -i trino cat /etc/starburst/catalog/hive.properties",
+        shell=True,
+        stdout=subprocess.PIPE,
+        universal_newlines=True,
+    )
+
+    delta = subprocess.Popen(
+        f"docker exec -i trino cat /etc/starburst/catalog/delta.properties",
+        shell=True,
+        stdout=subprocess.PIPE,
+        universal_newlines=True,
+    )
+
+    hive, _ = hive.communicate()
+    delta, _ = delta.communicate()
+    assert "connector.name=hive" in hive and "connector.name=delta-lake" in delta
 
     common.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()

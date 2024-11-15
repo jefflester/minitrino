@@ -1,7 +1,13 @@
-# MySQL Connector Module
+# MySQL Catalog Module
 
-This module provisions a standalone MySQL service. Other modules that uses MySQL
-as a backend will need a more unique name to avoid conflicts with this one.
+This module provisions a standalone MySQL service. By default, it is exposed
+both to the internal Docker network and the host via:
+
+    ports:
+      - 3306:3306
+
+This will allows users to connect to the service from any SQL client that
+supports MySQL drivers on `localhost:3306`.
 
 ## Usage
 

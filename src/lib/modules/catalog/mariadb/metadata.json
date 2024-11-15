@@ -1,0 +1,5 @@
+{
+    "description": "MariaDB catalog module",
+    "incompatibleModules": [],
+    "enterprise": false
+}

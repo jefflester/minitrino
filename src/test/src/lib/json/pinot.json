@@ -7,7 +7,7 @@
       "command": "echo 'pass'",
       "exitCode": 0,
       "healthcheck": {
-        "command": "trino-cli --output-format CSV_HEADER --execute 'SHOW TABLES IN pinot.default' --user admin",
+        "command": "trino-cli --debug --output-format CSV_HEADER --execute 'SHOW TABLES IN pinot.default' --user admin",
         "container": "trino",
         "retries": 30,
         "exitCode": 0,

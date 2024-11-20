@@ -475,7 +475,7 @@ class CommandExecutor:
         - A list of dicts with each dict containing the following keys:
             - `command`: the original command passed to the function
             - `output`: the combined output of stdout and stderr
-            - `return_code`: the return code of the command"""
+            - `exit_code`: the exit code of the command"""
 
         output = []
         if kwargs.get("container", None):
@@ -539,7 +539,7 @@ class CommandExecutor:
         return {
             "command": command,
             "output": self._strip_ansi(output),
-            "return_code": process.returncode,
+            "exit_code": process.returncode,
         }
 
     def _execute_in_container(self, command="", **kwargs):
@@ -602,24 +602,24 @@ class CommandExecutor:
             self._ctx.logger.verbose(full_line, stream=True)
 
         # Get the exit code
-        return_code = self._ctx.api_client.exec_inspect(exec_handler["Id"]).get(
+        exit_code = self._ctx.api_client.exec_inspect(exec_handler["Id"]).get(
             "ExitCode"
         )
         # https://www.gnu.org/software/bash/manual/html_node/Exit-Status.html
-        if return_code == 126:
+        if exit_code == 126:
             self._ctx.logger.warn(
                 f"The command exited with a 126 code which typically means an "
                 f"executable is not accessible or installed. Does this image have "
                 f"all required dependencies installed?\nCommand: {command}",
             )
 
-        if return_code != 0 and kwargs.get("trigger_error", True):
+        if exit_code != 0 and kwargs.get("trigger_error", True):
             raise err.MinitrinoError(
                 f"Failed to execute command in container '{container.name}':\n{command}\n"
-                f"Exit code: {return_code}"
+                f"Exit code: {exit_code}"
             )
 
-        return {"command": command, "output": output, "return_code": return_code}
+        return {"command": command, "output": output, "exit_code": exit_code}
 
     def _construct_environment(self, environment={}, container=None):
         """Merges provided environment dictionary with user's shell environment

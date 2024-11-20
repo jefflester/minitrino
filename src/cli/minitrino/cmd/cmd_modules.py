@@ -76,7 +76,13 @@ def log_info(ctx, module_name="", module_dict={}, json_format=False):
         ctx.logger.info(json.dumps(module_dict, indent=2))
     else:
         log_msg = [f"Module: {module_name}\n"]
-        keys = ["description", "incompatibleModules", "dependentModules", "enterprise"]
+        keys = [
+            "description",
+            "incompatibleModules",
+            "dependentModules",
+            "versions",
+            "enterprise",
+        ]
         for key in keys:
             val = module_dict.get(key, None)
             if val is not None:

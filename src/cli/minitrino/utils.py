@@ -217,6 +217,43 @@ def check_starburst_ver(ctx):
         raise err.UserError(error_msg)
 
 
+def check_version_requirements(ctx, modules=[]):
+    """Checks for SEP version validity per version requirements specified in any
+    module(s)."""
+
+    for module in modules:
+        versions = ctx.modules.data.get(module, {}).get("versions", [])
+
+        if not versions:
+            continue
+        if len(versions) > 2:
+            raise err.UserError(
+                f"Invalid versions specification for module '{module}' in metadata.json file: {versions}",
+                f'The valid structure is: {{"versions": [min-ver, max-ver]}}. If the versions key is '
+                f"present, the minimum version is required, and the maximum version is optional.",
+            )
+
+        starburst_ver = int(ctx.env.get("STARBURST_VER", "")[0:3])
+        min_ver = int(versions.pop(0))
+        max_ver = None
+        if versions:
+            max_ver = int(versions.pop())
+
+        begin_msg = (
+            f"The supplied Starburst version {starburst_ver} is incompatible with module '{module}'. "
+            f"Per the module's metadata.json file, the"
+        )
+
+        if starburst_ver < min_ver:
+            raise err.UserError(
+                f"{begin_msg} minimum required Starburst version for the module is: {min_ver}."
+            )
+        if max_ver and starburst_ver > max_ver:
+            raise err.UserError(
+                f"{begin_msg} maximum required Starburst version for the module is: {max_ver}."
+            )
+
+
 def check_dependent_modules(ctx, modules=[]):
     """Checks if any of the provided modules have module dependencies."""
 

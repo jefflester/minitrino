@@ -1,9 +1,10 @@
+---
 services:
 
   trino:
     environment:
       MINITRINO_BOOTSTRAP: bootstrap-trino.sh
-      CONFIG_PROPERTIES: |- 
+      CONFIG_PROPERTIES: |-
         query.max-stage-count=85
         query.max-execution-time=1h
       JVM_CONFIG: |-
@@ -11,19 +12,19 @@ services:
         -Xms1G
 
   test:
-    build: 
+    build:
       context: ./modules/catalog/test/
-      labels: 
+      labels:
         - com.starburst.tests=minitrino
         - com.starburst.tests.module.test=catalog-test
     environment:
       MINITRINO_BOOTSTRAP: bootstrap-test.sh
-    command: [ tail, -f, /dev/null ] # Keep alive 
+    command: [tail, -f, /dev/null]  # Keep alive
     image: minitrino/test:latest
     container_name: test
     volumes:
       - test-data:/etc/test/
-    labels: 
+    labels:
       - com.starburst.tests=minitrino
       - com.starburst.tests.module.test=catalog-test
 

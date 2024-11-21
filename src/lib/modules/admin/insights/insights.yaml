@@ -1,3 +1,4 @@
+---
 services:
 
   trino:
@@ -10,7 +11,7 @@ services:
         insights.metrics-persistence-enabled=true
     volumes:
       - ./modules/admin/insights/resources/trino/backend_svc.properties:/etc/starburst/catalog/backend_svc.properties
-    
+
   postgres-backend-svc:
     image: postgres:${POSTGRES_SEP_BACKEND_SVC_VER}
     container_name: postgres-backend-svc

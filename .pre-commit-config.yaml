@@ -1,0 +1,19 @@
+---
+repos:
+  - repo: https://github.com/psf/black
+    rev: 24.10.0
+    hooks:
+      - id: black
+
+  - repo: local
+    hooks:
+      - id: jq-format
+        name: Format JSON with jq
+        entry: bash -c 'tmpfile=$(mktemp) && jq . "$1" > "$tmpfile" && mv "$tmpfile" "$1"'
+        language: system
+        files: \.json$
+
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.35.1
+    hooks:
+      - id: yamllint

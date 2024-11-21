@@ -1,7 +1,8 @@
+---
 services:
 
   trino:
-    environment: 
+    environment:
       CONFIG_PROPERTIES: |-
         starburst.access-control.enabled=true
         starburst.access-control.audit.enabled=true

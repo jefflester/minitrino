@@ -1,3 +1,4 @@
+---
 services:
 
   trino:
@@ -10,9 +11,10 @@ services:
     volumes:
       - ./modules/catalog/hive/resources/trino/hive.properties:/tmp/hive.properties
       - catalogs:/etc/starburst/catalog
-    command: [
-      "sh", "-c", "cp /tmp/hive.properties /etc/starburst/catalog/hive.properties"
-    ]
+    command:
+      - sh
+      - -c
+      - cp /tmp/hive.properties /etc/starburst/catalog/hive.properties
     labels:
       - com.starburst.tests=minitrino
       - com.starburst.tests.module.hive=catalog-hive
@@ -21,7 +23,7 @@ services:
     image: postgres:${POSTGRES_HMS_VER}
     container_name: postgres-hive
     healthcheck:
-      test: [ 'CMD-SHELL', 'pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}']
+      test: ['CMD-SHELL', 'pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -68,11 +70,16 @@ services:
     container_name: create-minio-buckets
     entrypoint: |
       /bin/sh -c "
-      curl -fsSL https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh > /tmp/wait-for-it.sh && \
-      chmod +x /tmp/wait-for-it.sh && \
+      script=wait-for-it
+      curl -fsSL \
+        https://raw.githubusercontent.com/vishnubob/$script/master/$script.sh \
+        > /tmp/$script.sh && \
+      chmod +x /tmp/$script && \
       echo 'Waiting for MinIO to come up...' && \
-      /tmp/wait-for-it.sh minio:9000 --strict --timeout=60 -- echo 'MinIO service is up.' && \
-      /usr/bin/mc alias set minio http://minio:9000 access-key secret-key && \
+      /tmp/$script.sh minio:9000 --strict --timeout=60 -- \
+        echo 'MinIO service is up.' && \
+      /usr/bin/mc alias set minio \
+        http://minio:9000 access-key secret-key && \
       /usr/bin/mc mb minio/sample-bucket/wh/ && \
       tail -f /dev/null
       "

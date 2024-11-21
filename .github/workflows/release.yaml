@@ -1,3 +1,4 @@
+---
 name: Publish Release on Merge to Master
 
 on:
@@ -79,7 +80,8 @@ jobs:
           PYPI_URL="https://pypi.org/pypi/minitrino/${GITHUB_HEAD_REF}/json"
           RESPONSE=$(curl --silent "${PYPI_URL}")
           if echo "${RESPONSE}" | grep -q "\"${GITHUB_HEAD_REF}\""; then
-            echo "Package version ${GITHUB_HEAD_REF} already exists on PyPI. Skipping upload."
+            echo "Package version ${GITHUB_HEAD_REF} already exists on PyPI. \
+            Skipping upload."
           else
             echo "Uploading package version ${GITHUB_HEAD_REF} to PyPI..."
             twine upload src/cli/dist/*
@@ -91,7 +93,8 @@ jobs:
           pip uninstall -y minitrino
           until pip install minitrino==${GITHUB_HEAD_REF} --no-cache-dir; do
             if [ $ATTEMPT -ge $MAX_ATTEMPTS ]; then
-              echo "Failed to install the latest version after $ATTEMPT attempts."
+              echo "Failed to install the latest version after \
+              $ATTEMPT attempts."
               exit 1
             fi
             echo "Attempt $ATTEMPT failed. Retrying in 30 seconds..."

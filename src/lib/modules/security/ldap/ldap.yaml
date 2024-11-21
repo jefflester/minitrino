@@ -1,3 +1,4 @@
+---
 services:
 
   trino:
@@ -9,7 +10,7 @@ services:
       - ./modules/security/ldap/resources/ldap/ldap-users:/etc/starburst/ldap-users
     links:
       - ldap:ldap.minitrino.starburstdata.com
-  
+
   ldap:
     image: osixia/openldap:${OPEN_LDAP_VER}
     container_name: ldap
@@ -19,7 +20,7 @@ services:
       LDAP_DOMAIN: example.com
       LDAP_ADMIN_PASSWORD: trinoRocks15
       LDAP_TLS_VERIFY_CLIENT: try
-      LDAPTLS_REQCERT: never 
+      LDAPTLS_REQCERT: never
     ports:
       - 636:636
     labels:

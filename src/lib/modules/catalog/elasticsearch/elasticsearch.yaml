@@ -1,5 +1,6 @@
+---
 services:
-  
+
   trino:
     environment:
       MINITRINO_BOOTSTRAP: bootstrap-elasticsearch.sh
@@ -14,7 +15,7 @@ services:
       bootstrap.memory_lock: true
       network.host: 0.0.0.0
       network.bind_host: 0.0.0.0
-      xpack.security.enabled: "false"
+      xpack.security.enabled: false
       ES_JAVA_OPTS: -Xms256m -Xmx256m
     ports:
       - 9200:9200

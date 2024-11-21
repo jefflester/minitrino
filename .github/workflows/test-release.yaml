@@ -1,3 +1,4 @@
+---
 name: Create Test Release (0.0.0) from PR Branch
 
 on:
@@ -18,7 +19,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.MINITRINO_TOKEN }}
         run: |-
           TAG="0.0.0"
-          DESCRIPTION="Used as a placeholder to give test builds access to the PR branch's module library."
+          DESCRIPTION="Used as a placeholder to give test builds access \
+          to the PR branch's module library."
 
           echo "Checking if release exists..."
           if gh release list | grep -q -e "${TAG}"; then

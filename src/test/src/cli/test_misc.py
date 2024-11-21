@@ -1,13 +1,8 @@
 #!usr/bin/env/python3
 # -*- coding: utf-8 -*-
 
-# TODO: Test docker host
-
-import os
-import subprocess
-
 import src.common as common
-import src.cli.helpers as helpers
+import src.cli.utils as utils
 
 from inspect import currentframe
 from types import FrameType
@@ -53,9 +48,9 @@ def test_daemon_off_all(*args):
 
     for arg in args:
         if "snapshot" in arg:
-            result = helpers.execute_command(arg, command_input="y\n")
+            result = utils.execute_cli_cmd(arg, command_input="y\n")
         else:
-            result = helpers.execute_command(arg)
+            result = utils.execute_cli_cmd(arg)
         run_daemon_assertions(result)
 
     common.log_success(cast(FrameType, currentframe()).f_code.co_name)
@@ -67,7 +62,7 @@ def test_env():
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     # User environment variable
-    result = helpers.execute_command(
+    result = utils.execute_cli_cmd(
         ["-v", "--env", "COMPOSE_PROJECT_NAME=test", "version"]
     )
 
@@ -75,7 +70,7 @@ def test_env():
     assert "COMPOSE_PROJECT_NAME" and "test" in result.output
 
     # Shell environment variable
-    result = helpers.execute_command(
+    result = utils.execute_cli_cmd(
         ["-v", "version"],
         env={"COMPOSE_PROJECT_NAME": "test"},
     )
@@ -84,32 +79,24 @@ def test_env():
     assert "COMPOSE_PROJECT_NAME" and "test" in result.output
 
     # Config environment variable
-    helpers.make_sample_config()
-    subprocess.call(
+    utils.make_sample_config()
+    cmd = (
         f'bash -c "cat << EOF >> {common.CONFIG_FILE}\n'
         f"COMPOSE_PROJECT_NAME=test\n"
-        f'EOF"',
-        shell=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        f'EOF"'
     )
+    common.execute_command(cmd)
 
-    result = helpers.execute_command(
+    result = utils.execute_cli_cmd(
         ["-v", "version"],
     )
 
     assert result.exit_code == 0
     assert "COMPOSE_PROJECT_NAME" and "test" in result.output
 
-    subprocess.call(
-        f'bash -c "rm {common.CONFIG_FILE}\n"',
-        shell=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
+    common.execute_command(f'bash -c "rm {common.CONFIG_FILE}\n"')
 
-    # mintirino.env environment variable
-    result = helpers.execute_command(
+    result = utils.execute_cli_cmd(
         ["-v", "version"],
     )
 
@@ -125,7 +112,7 @@ def test_multiple_env():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    result = helpers.execute_command(
+    result = utils.execute_cli_cmd(
         [
             "-v",
             "--env",
@@ -156,14 +143,14 @@ def test_invalid_env():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    result = helpers.execute_command(
+    result = utils.execute_cli_cmd(
         ["-v", "--env", "COMPOSE_PROJECT_NAMEtest", "version"]
     )
 
     assert result.exit_code == 2
     assert "Invalid key-value pair" in result.output
 
-    result = helpers.execute_command(["-v", "--env", "=", "version"])
+    result = utils.execute_cli_cmd(["-v", "--env", "=", "version"])
 
     assert result.exit_code == 2
     assert "Invalid key-value pair" in result.output
@@ -178,13 +165,13 @@ def test_invalid_lib():
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     # Real directory, but ain't a real library
-    result = helpers.execute_command(["-v", "--env", "LIB_PATH=/tmp/", "modules"])
+    result = utils.execute_cli_cmd(["-v", "--env", "LIB_PATH=/tmp/", "modules"])
 
     assert result.exit_code == 2
     assert "This operation requires a library to be installed" in result.output
 
     # Fake directory
-    result = helpers.execute_command(
+    result = utils.execute_cli_cmd(
         ["-v", "--env", "LIB_PATH=/gucci-is-overrated/", "modules"]
     )
 

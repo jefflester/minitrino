@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import src.cli.test_misc
-
 import src.cli.test_cmd_config
 import src.cli.test_cmd_down
 import src.cli.test_cmd_provision

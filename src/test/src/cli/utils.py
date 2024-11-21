@@ -1,9 +1,11 @@
 #!usr/bin/env/python3
 # -*- coding: utf-8 -*-
 
+import os
 import re
-import subprocess
+import json
 
+import src.common as common
 from minitrino.cli import cli
 from src.common import CONFIG_FILE
 
@@ -26,7 +28,7 @@ class MinitrinoResult:
         self.exit_code = exit_code
 
 
-def execute_command(command=[], print_output=True, command_input="", env={}):
+def execute_cli_cmd(command=[], print_output=True, command_input="", env={}):
     """Executes a command through the Click CliRunner."""
 
     runner = CliRunner()
@@ -46,15 +48,59 @@ def execute_command(command=[], print_output=True, command_input="", env={}):
 def make_sample_config():
     """Creates a sample config file."""
 
-    subprocess.call(
+    cmd = (
         f'bash -c "cat << EOF > {CONFIG_FILE}\n'
         f"[config]\n"
         f"LIB_PATH=\n"
         f"STARBURST_VER=\n"
         f"TEXT_EDITOR=\n"
         f"LIC_PATH=\n"
-        f'SECRET_KEY=abc123\n"',
-        shell=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        f'SECRET_KEY=abc123\n"'
     )
+
+    common.execute_command(cmd)
+
+
+def update_metadata_json(updates=[]):
+    """Updates the test module's metadata.json file with the provided
+    list of dicts."""
+
+    path = get_metadata_json("test")
+
+    with open(path, "r") as f:
+        data = json.load(f)
+
+    for update in updates:
+        for k, v in update.items():
+            data[k] = v
+
+    with open(path, "w") as f:
+        json.dump(data, f, indent=4)
+
+
+def reset_metadata_json():
+    """Resets the test module's metadata.json file to default values."""
+
+    default = {
+        "description": "Test module.",
+        "incompatibleModules": ["ldap"],
+        "dependentModules": ["file-access-control"],
+        "versions": [],
+        "enterprise": False,
+    }
+    path = get_metadata_json("test")
+
+    with open(path, "w") as f:
+        json.dump(default, f, indent=4)
+
+
+def get_metadata_json(module=""):
+    """Fetches the metadata.json file path for a given module."""
+
+    result = execute_cli_cmd(["modules", "-m", module, "--json"])
+
+    # Remove everything up to the first `{`
+    output = "{" + result.output.split("{", 1)[1]
+    output = json.loads(output)
+
+    return os.path.join(output[module]["module_dir"], "metadata.json")

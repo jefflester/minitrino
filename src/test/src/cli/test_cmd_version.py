@@ -5,7 +5,7 @@
 import pkg_resources
 
 import src.common as common
-import src.cli.helpers as helpers
+import src.cli.utils as utils
 
 from inspect import currentframe
 from types import FrameType
@@ -22,7 +22,7 @@ def test_version():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    result = helpers.execute_command(["version"])
+    result = utils.execute_cli_cmd(["version"])
     assert pkg_resources.require("Minitrino")[0].version in result.output
 
     common.log_success(cast(FrameType, currentframe()).f_code.co_name)

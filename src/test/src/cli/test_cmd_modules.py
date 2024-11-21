@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import src.common as common
-import src.cli.helpers as helpers
+import src.cli.utils as utils
 
 from inspect import currentframe
 from types import FrameType
@@ -24,7 +24,7 @@ def test_invalid_module():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    result = helpers.execute_command(["-v", "modules", "--module", "not-a-real-module"])
+    result = utils.execute_cli_cmd(["-v", "modules", "--module", "not-a-real-module"])
 
     assert result.exit_code == 2
     assert "Invalid module" in result.output
@@ -37,7 +37,7 @@ def test_valid_module():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    result = helpers.execute_command(["-v", "modules", "--module", "test"])
+    result = utils.execute_cli_cmd(["-v", "modules", "--module", "test"])
 
     assert result.exit_code == 0
     assert all(("Module: test" in result.output, "Test module" in result.output))
@@ -51,7 +51,7 @@ def test_all_modules():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    result = helpers.execute_command(["-v", "modules"])
+    result = utils.execute_cli_cmd(["-v", "modules"])
 
     assert result.exit_code == 0
     assert all(
@@ -60,6 +60,8 @@ def test_all_modules():
             "Description:" in result.output,
             "IncompatibleModules:" in result.output,
             "DependentModules:" in result.output,
+            "Versions:" in result.output,
+            "Enterprise:" in result.output,
         )
     )
 
@@ -72,7 +74,7 @@ def test_json():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    result = helpers.execute_command(["-v", "modules", "--module", "test", "--json"])
+    result = utils.execute_cli_cmd(["-v", "modules", "--module", "test", "--json"])
 
     assert result.exit_code == 0
     assert all(('"type": "catalog"' in result.output, '"test":' in result.output))
@@ -85,8 +87,8 @@ def test_running():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    helpers.execute_command(["-v", "provision", "--module", "test"])
-    result = helpers.execute_command(["-v", "modules", "--json", "--running"])
+    utils.execute_cli_cmd(["-v", "provision", "--module", "test"])
+    result = utils.execute_cli_cmd(["-v", "modules", "--json", "--running"])
 
     assert result.exit_code == 0
     assert all(
@@ -97,7 +99,7 @@ def test_running():
         )
     )
 
-    helpers.execute_command(["-v", "down", "--sig-kill"])
+    utils.execute_cli_cmd(["-v", "down", "--sig-kill"])
     common.log_success(cast(FrameType, currentframe()).f_code.co_name)
 
 

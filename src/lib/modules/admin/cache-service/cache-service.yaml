@@ -17,7 +17,7 @@ services:
     image: busybox
     container_name: hive-mv-tsr-catalog-cp
     volumes:
-      - ./modules/admin/cache-service/resources/trino/hive_mv_tsr.properties:/tmp/hive_mv_tsr.properties'
+      - ./modules/admin/cache-service/resources/trino/hive_mv_tsr.properties:/tmp/hive_mv_tsr.properties
       - catalogs:/etc/starburst/catalog
     command:
       - sh

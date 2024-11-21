@@ -9,7 +9,6 @@
   {
     "group": "metadataQueriesSkipTheQueue",
     "sessionProperties": {
-      "resource_overcommit": true,
       "query_max_execution_time": "2h"
     }
   },

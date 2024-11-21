@@ -3,7 +3,7 @@ services:
 
   trino:
     volumes:
-      - ./modules/catalog/sqlserver/resources/trino/sqlserver.properties:/etc/starburst/catalog/sqlserver.properties
+      - ./modules/catalog/sqlserver/resources/trino/sqlserver.properties:${ETC}/catalog/sqlserver.properties
 
   sqlserver:
     image: mcr.microsoft.com/mssql/server:${SQLSERVER_VER}

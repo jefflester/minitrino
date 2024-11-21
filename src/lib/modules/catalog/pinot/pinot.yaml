@@ -3,7 +3,7 @@ services:
 
   trino:
     volumes:
-      - ./modules/catalog/pinot/resources/trino/pinot.properties:/etc/starburst/catalog/pinot.properties
+      - ./modules/catalog/pinot/resources/trino/pinot.properties:${ETC}/catalog/pinot.properties
 
   pinot-zookeeper:
     image: zookeeper:${ZOOKEEPER_VER}

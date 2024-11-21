@@ -8,9 +8,9 @@ services:
         starburst.access-control.audit.enabled=true
         starburst.access-control.authorized-users=admin
         starburst.access-control.authorized-groups=admins,sepadmins
-        access-control.config-files=/etc/starburst/biac.properties
+        access-control.config-files=etc/biac.properties
       MINITRINO_BOOTSTRAP: bootstrap-trino.sh
     volumes:
-      - ./modules/security/biac/resources/trino/biac.properties:/etc/starburst/biac.properties
+      - ./modules/security/biac/resources/trino/biac.properties:${ETC}/biac.properties
     labels:
       - com.starburst.tests.module.biac=security-biac

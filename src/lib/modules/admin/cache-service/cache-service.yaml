@@ -7,9 +7,9 @@ services:
     environment:
       MINITRINO_BOOTSTRAP: bootstrap-trino.sh
     volumes:
-      - ./modules/admin/cache-service/resources/trino/rules.json:/etc/starburst/rules.json
-      - ./modules/admin/cache-service/resources/trino/cache.properties:/etc/starburst/cache.properties
-      - ./modules/admin/cache-service/resources/trino/cache_svc.properties:/etc/starburst/catalog/cache_svc.properties
+      - ./modules/admin/cache-service/resources/trino/rules.json:${ETC}/rules.json
+      - ./modules/admin/cache-service/resources/trino/cache.properties:${ETC}/cache.properties
+      - ./modules/admin/cache-service/resources/trino/cache_svc.properties:${ETC}/catalog/cache_svc.properties
     ports:
       - 8180:8180
 

@@ -13,7 +13,7 @@ Standalone BIAC:
 
 - Open a web browser and go to [http://localhost:8080](http://localhost:8080)
   (or [https://localhost:8443](hhttps://localhost:8443) if TLS is configured)
-- Log in using an authorized sysadmin user (`admin` or `starburst_service`)
+- Log in using an authorized sysadmin user (`admin`)
 - Click on the username in the top right corner > switch role > `sysadmin`
 
 Once the `sysadmin` role has been assumed, you can begin to create roles and

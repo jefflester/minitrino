@@ -5,7 +5,7 @@ services:
       CONFIG_PROPERTIES: |-
         starburst.access-control.enabled=true
         starburst.access-control.audit.enabled=true
-        starburst.access-control.authorized-users=starburst_service,admin
+        starburst.access-control.authorized-users=admin
         starburst.access-control.authorized-groups=admins,sepadmins
         access-control.config-files=/etc/starburst/biac.properties
       MINITRINO_BOOTSTRAP: bootstrap-trino.sh

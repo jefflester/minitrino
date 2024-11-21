@@ -1,0 +1,8 @@
+services:
+
+  trino:
+    volumes:
+      - ./modules/admin/session-property-manager/resources/trino/session-property.json:/etc/starburst/session-property.json
+      - ./modules/admin/session-property-manager/resources/trino/session-property-config.properties:/etc/starburst/session-property-config.properties
+    labels:
+      - com.starburst.tests.module.session-property-manager=admin-session-property-manager

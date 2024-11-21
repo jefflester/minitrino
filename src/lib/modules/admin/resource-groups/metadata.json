@@ -1,0 +1,8 @@
+{
+  "description": "Resource groups module",
+  "incompatibleModules": [],
+  "dependentModules": [
+    "file-group-provider"
+  ],
+  "enterprise": false
+}

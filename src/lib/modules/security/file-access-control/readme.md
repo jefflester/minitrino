@@ -12,8 +12,8 @@ users that map to certain access control permissions. The users for the groups
 are defined in the `groups.txt` file.
 
 - Users in the `sepadmins` group have full access to all objects within Trino
-- Users in the `metadata-users` group only have access to the tables within the
-  `system.metadata` schema
+- Users in the `metadata-users` group have access to the tables within the
+  `system.metadata`, `system.jdbc`, and `system.information_schema` schemas
 - Users in the `platform-users` group only have access to the tables within the
   `system.runtime` schema
 
@@ -31,6 +31,6 @@ You will need to supply a username to the Trino CLI in order to map to a group
 (see `lib/modules/security/file-access-control/resources/trino/group.txt` for
 which users belong to which groups). Example:
 
-    trino-cli --user admin-2
-    trino-cli --user metadata-1
-    trino-cli --user platform
+    trino-cli --user admin
+    trino-cli --user metadata-user
+    trino-cli --user platform-user

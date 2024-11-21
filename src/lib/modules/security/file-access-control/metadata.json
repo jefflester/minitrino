@@ -1,6 +1,6 @@
 {
     "description": "File-based access control module",
-    "incompatibleModules": [],
+    "incompatibleModules": ["biac"],
     "dependentModules": ["file-group-provider"],
     "enterprise": false
 }

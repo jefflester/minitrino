@@ -1,0 +1,5 @@
+{
+    "description": "ClickHouse catalog module",
+    "incompatibleModules": [],
+    "enterprise": false
+}

@@ -177,14 +177,14 @@ def check_enterprise(ctx, modules=[]):
         "Checking for SEP license for enterprise modules...",
     )
 
-    yaml_path = os.path.join(ctx.minitrino_lib_dir, "docker-compose.yml")
+    yaml_path = os.path.join(ctx.minitrino_lib_dir, "docker-compose.yaml")
     with open(yaml_path) as f:
         yaml_file = yaml.load(f, Loader=yaml.FullLoader)
     volumes = yaml_file.get("services", {}).get("trino", {}).get("volumes", [])
 
     if LIC_VOLUME_MOUNT not in volumes:
         raise err.UserError(
-            f"The required license volume in the library's root docker-compose.yml "
+            f"The required license volume in the library's root docker-compose.yaml "
             f"is either commented out or deleted: {yaml_path}. For reference, "
             f"the proper volume mount is: '{LIC_VOLUME_MOUNT}'"
         )
@@ -262,7 +262,7 @@ def build_command(ctx, docker_native="", chunk=""):
             compose_env_string,
             "\\\n",
             "docker compose -f ",
-            os.path.join(ctx.minitrino_lib_dir, "docker-compose.yml"),
+            os.path.join(ctx.minitrino_lib_dir, "docker-compose.yaml"),
             " \\\n",
             chunk,  # Module YAML paths
             "up -d --force-recreate",
@@ -436,7 +436,7 @@ def write_trino_cfg(ctx, c_restart=[], modules=[]):
     # Check configs passed through Docker Compose YAMLs
     for module in modules:
         if module == "trino":
-            with open(os.path.join(ctx.minitrino_lib_dir, "docker-compose.yml")) as f:
+            with open(os.path.join(ctx.minitrino_lib_dir, "docker-compose.yaml")) as f:
                 yaml_file = yaml.load(f, Loader=yaml.FullLoader)
         else:
             yaml_file = ctx.modules.data.get(module, {}).get("yaml_dict")

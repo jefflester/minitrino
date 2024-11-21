@@ -19,7 +19,7 @@ def snapshot_test_yaml_file(snapshot_name="test"):
         "modules",
         "catalog",
         "test",
-        "test.yml",
+        "test.yaml",
     )
 
 

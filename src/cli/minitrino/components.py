@@ -344,7 +344,7 @@ class Modules:
             ):
                 raise err.UserError(
                     f"Missing Minitrino labels for container '{container.name}'.",
-                    f"Check this module's 'docker-compose.yml' file and ensure you are "
+                    f"Check this module's 'docker-compose.yaml' file and ensure you are "
                     f"following the documentation on labels.",
                 )
 
@@ -391,7 +391,7 @@ class Modules:
                 # List inner-module files
                 module_files = os.listdir(module_dir)
 
-                yaml_basename = f"{os.path.basename(module_dir)}.yml"
+                yaml_basename = f"{os.path.basename(module_dir)}.yaml"
                 if not yaml_basename in module_files:
                     raise err.UserError(
                         f"Missing Docker Compose file in module directory {_dir}. "

@@ -20,7 +20,7 @@
       "name": "Test platform user query (access denied)",
       "trinoCliArgs": [
         "--server 'http://trino:8080'",
-        "--user platform"
+        "--user platform-user"
       ],
       "contains": [
         "Access Denied"
@@ -32,7 +32,7 @@
       "sql": "SELECT * FROM tpch.tiny.customer LIMIT 1",
       "trinoCliArgs": [
         "--server 'http://trino:8080'",
-        "--user metadata"
+        "--user metadata-user"
       ],
       "contains": [
         "Access Denied"
@@ -44,7 +44,7 @@
       "sql": "SHOW TABLES IN system.metadata",
       "trinoCliArgs": [
         "--server 'http://trino:8080'",
-        "--user metadata"
+        "--user metadata-user"
       ],
       "contains": [
         "catalogs"
@@ -56,7 +56,7 @@
       "sql": "SHOW TABLES IN system.runtime",
       "trinoCliArgs": [
         "--server 'http://trino:8080'",
-        "--user platform"
+        "--user platform-user"
       ],
       "contains": [
         "nodes",

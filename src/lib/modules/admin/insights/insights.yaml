@@ -17,6 +17,14 @@ services:
     container_name: postgres-backend-svc
     env_file:
       - ./modules/admin/insights/resources/postgres/postgres.env
+    volumes:
+      - postgres-insights-data:/var/lib/postgresql/data
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.insights=admin-insights
+
+volumes:
+  postgres-insights-data:
     labels:
       - com.starburst.tests=minitrino
       - com.starburst.tests.module.insights=admin-insights

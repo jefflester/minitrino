@@ -3,9 +3,7 @@ services:
 
   trino:
     volumes:
-      - >
-        './modules/catalog/mariadb/resources/trino/mariadb.properties:
-        /etc/starburst/catalog/mariadb.properties'
+      - ./modules/catalog/mariadb/resources/trino/mariadb.properties:/etc/starburst/catalog/mariadb.properties
 
   mariadb:
     image: mariadb:${MARIADB_VER}

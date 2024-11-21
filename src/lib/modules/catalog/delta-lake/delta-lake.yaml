@@ -68,17 +68,16 @@ services:
   create-minio-delta-lake-buckets:
     image: minio/mc:${MINIO_MC_VER}
     container_name: create-minio-delta-lake-buckets
-    entrypoint: |
+    entrypoint: |-
       /bin/sh -c "
-      script=wait-for-it
-      curl -fsSL \
-        https://raw.githubusercontent.com/vishnubob/$script/master/$script.sh \
-        > /tmp/$script.sh && \
-      chmod +x /tmp/$script && \
+      wfi=wait-for-it && \
+      curl -fsSL \\
+        https://raw.githubusercontent.com/vishnubob/$$wfi/master/$$wfi.sh \\
+        > /tmp/$$wfi.sh && \
+      chmod +x /tmp/$$wfi.sh && \
       echo 'Waiting for MinIO to come up...' && \
-      /tmp/$script.sh minio-delta-lake:9000 \
-        --strict --timeout=60 -- echo 'MinIO service is up.' && \
-      /usr/bin/mc alias set minio \
+      /tmp/$$wfi.sh minio-delta-lake:9000 --strict --timeout=60 && \
+      /usr/bin/mc alias set minio \\
         http://minio-delta-lake:9000 access-key secret-key && \
       /usr/bin/mc mb minio/sample-bucket/wh/ && \
       tail -f /dev/null

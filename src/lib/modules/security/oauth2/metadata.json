@@ -1,6 +1,8 @@
 {
-    "description": "OAuth2 authenticator module",
-    "incompatibleModules": [],
-    "dependentModules": ["tls"],
-    "enterprise": false
+  "description": "OAuth2 authenticator module",
+  "incompatibleModules": [],
+  "dependentModules": [
+    "tls"
+  ],
+  "enterprise": false
 }

@@ -1,6 +1,8 @@
 {
-    "description": "File-based password authenticator module",
-    "incompatibleModules": [],
-    "dependentModules": ["tls"],
-    "enterprise": false
+  "description": "File-based password authenticator module",
+  "incompatibleModules": [],
+  "dependentModules": [
+    "tls"
+  ],
+  "enterprise": false
 }

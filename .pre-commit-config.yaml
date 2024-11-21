@@ -4,16 +4,31 @@ repos:
     rev: 24.10.0
     hooks:
       - id: black
+        always_run: true
 
   - repo: local
     hooks:
       - id: jq-format
         name: Format JSON with jq
-        entry: bash -c 'tmpfile=$(mktemp) && jq . "$1" > "$tmpfile" && mv "$tmpfile" "$1"'
+        entry: |-
+          bash -c '
+          for file in $(find . -name "*.json" ! -path "./.vscode/*"); do
+            echo "Processing $file"
+            tmpfile=$(mktemp)
+            if ! jq . "$file" > "$tmpfile"; then
+              echo "Failed to process $file"
+              exit 1
+            fi
+            mv "$tmpfile" "$file"
+          done
+          '
         language: system
         files: \.json$
+        always_run: true
+        pass_filenames: false
 
   - repo: https://github.com/adrienverge/yamllint
     rev: v1.35.1
     hooks:
       - id: yamllint
+        always_run: true

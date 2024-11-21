@@ -1,7 +1,6 @@
 {
-    "description": "File group provider module",
-    "incompatibleModules": [],
-    "dependentModules": [],
-    "enterprise": false
-  }
-  
+  "description": "File group provider module",
+  "incompatibleModules": [],
+  "dependentModules": [],
+  "enterprise": false
+}

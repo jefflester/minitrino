@@ -1,5 +1,5 @@
 {
-    "description": "MariaDB catalog module",
-    "incompatibleModules": [],
-    "enterprise": false
+  "description": "MariaDB catalog module",
+  "incompatibleModules": [],
+  "enterprise": false
 }

@@ -1,5 +1,5 @@
 {
-    "description": "Hive catalog module (includes object storage (MinIO) and Hive metastore)",
-    "incompatibleModules": [],
-    "enterprise": false
+  "description": "Hive catalog module (includes object storage (MinIO) and Hive metastore)",
+  "incompatibleModules": [],
+  "enterprise": false
 }

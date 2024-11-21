@@ -2,5 +2,5 @@
 extends: default
 
 rules:
-  line-length:
+  line-length:  # Compose volume mounts cannot be wrapped
     level: warning

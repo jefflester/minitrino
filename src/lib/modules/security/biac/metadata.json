@@ -1,6 +1,8 @@
 {
   "description": "Built-in access control (BIAC) module",
   "incompatibleModules": [],
-  "dependentModules": ["insights"],
+  "dependentModules": [
+    "insights"
+  ],
   "enterprise": true
 }

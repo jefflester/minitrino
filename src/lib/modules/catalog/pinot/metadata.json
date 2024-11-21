@@ -1,5 +1,5 @@
 {
-    "description": "Pinot catalog module",
-    "incompatibleModules": [],
-    "enterprise": false
+  "description": "Pinot catalog module",
+  "incompatibleModules": [],
+  "enterprise": false
 }

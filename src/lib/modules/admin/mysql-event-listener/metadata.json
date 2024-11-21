@@ -1,0 +1,6 @@
+{
+  "description": "MySQL event listener module",
+  "incompatibleModules": [],
+  "dependentModules": [],
+  "enterprise": false
+}

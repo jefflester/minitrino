@@ -29,8 +29,8 @@ from minitrino import utils
     is_flag=True,
     default=False,
     help=(
-        """Print the resulting metadata in JSON form (shows additional module
-        metadata)."""
+        """Print the resulting metadata in raw JSON format (shows 
+        additional module metadata)."""
     ),
 )
 @click.option(
@@ -47,7 +47,7 @@ def cli(ctx, modules, json_format, running):
 
     utils.check_lib(ctx)
 
-    ctx.logger.info("Printing module metadata...")
+    ctx.logger.verbose("Printing module metadata...")
 
     if not modules and not running:
         for module, module_dict in ctx.modules.data.items():
@@ -73,7 +73,7 @@ def log_info(ctx, module_name="", module_dict={}, json_format=False):
 
     if json_format:
         module_dict = {module_name: module_dict}
-        ctx.logger.info(json.dumps(module_dict, indent=2))
+        print(json.dumps(module_dict, indent=2))
     else:
         log_msg = [f"Module: {module_name}\n"]
         keys = [

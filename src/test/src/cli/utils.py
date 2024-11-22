@@ -98,9 +98,6 @@ def get_metadata_json(module=""):
     """Fetches the metadata.json file path for a given module."""
 
     result = execute_cli_cmd(["modules", "-m", module, "--json"])
-
-    # Remove everything up to the first `{`
-    output = "{" + result.output.split("{", 1)[1]
-    output = json.loads(output)
+    output = json.loads(result.output)
 
     return os.path.join(output[module]["module_dir"], "metadata.json")

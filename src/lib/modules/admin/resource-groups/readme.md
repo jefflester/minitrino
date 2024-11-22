@@ -27,7 +27,7 @@ execution can be viewed on the query details through the Trino web UI at
 `system.runtime.queries`, e.g.:
 
 ```sql
-SELECT resource_group_id FROM system.runtime.queries WHERE query = 'select 1' AND user = 'admin';
+SELECT resource_group_id FROM system.runtime.queries WHERE query = 'SELECT 1' AND user = 'admin';
 ```
 
 The resource group definitions are mounted to Trino as a volume and can be

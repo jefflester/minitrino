@@ -1,5 +1,5 @@
 {
-    "description": "Db2 catalog module",
-    "incompatibleModules": [],
-    "enterprise": true
+  "description": "Db2 catalog module",
+  "incompatibleModules": [],
+  "enterprise": true
 }

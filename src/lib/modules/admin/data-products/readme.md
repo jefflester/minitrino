@@ -1,18 +1,26 @@
 # Data Products Module  
 
-A module which configures the [data
+A module which configures Starburst's [data
 products](https://docs.starburst.io/latest/data-products.html) feature.
 
 The `hive` and `insights` modules are dependencies of this module.
 
 ## Usage
 
-    minitrino --env STARBURST_VER=<ver> provision --module data-products
-    docker exec -it trino bash 
-    trino-cli
-    trino> show schemas from backend_svc;
+```sh
+minitrino -v provision -m data-products
+# Or specify Starburst version
+minitrino -v -e STARBURST_VER=${version} provision -m data-products
 
-For configuring data product domains, use this `s3a` path, which is from a
+docker exec -it trino bash 
+trino-cli
+
+trino> SHOW SCHEMAS FROM backend_svc;
+```
+
+When configuring data product domains, use this `s3a` path, which is from a
 bucket auto-provisioned in the related MinIO container:
 
-    s3a://sample-bucket/<domain>
+```txt
+s3a://sample-bucket/<domain>
+```

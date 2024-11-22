@@ -1,0 +1,97 @@
+---
+services:
+
+  trino:
+    depends_on:
+      - hive-catalog-cp
+
+  hive-catalog-cp:
+    image: busybox
+    container_name: hive-catalog-cp
+    volumes:
+      - ./modules/catalog/hive/resources/trino/hive.properties:/tmp/hive.properties
+      - catalogs:/etc/starburst/catalog
+    command:
+      - sh
+      - -c
+      - cp /tmp/hive.properties /etc/starburst/catalog/hive.properties
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.hive=catalog-hive
+
+  postgres-hive:
+    image: postgres:${POSTGRES_HMS_VER}
+    container_name: postgres-hive
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    env_file:
+      - ./modules/catalog/hive/resources/postgres/postgres.env
+    volumes:
+      - postgres-hive-data:/var/lib/postgresql/data
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.hive=catalog-hive
+
+  metastore-hive:
+    image: jefflester/hive-metastore:${HMS_VER}
+    container_name: metastore-hive
+    depends_on:
+      postgres-hive:
+        condition: service_healthy
+    env_file:
+      - ./modules/catalog/hive/resources/hms/hms.env
+    ports:
+      - :9083
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.hive=catalog-hive
+
+  minio:
+    image: minio/minio:${MINIO_VER}
+    container_name: minio
+    environment:
+      MINIO_ROOT_USER: access-key
+      MINIO_ROOT_PASSWORD: secret-key
+    command: server --address :9000 --console-address :9001 /data
+    ports:
+      - :9000
+      - 9001:9001
+    volumes:
+      - minio-hive-data:/data
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.hive=catalog-hive
+
+  create-minio-buckets:
+    image: minio/mc:${MINIO_MC_VER}
+    container_name: create-minio-buckets
+    entrypoint: |-
+      /bin/sh -c "
+      wfi=wait-for-it && \
+      curl -fsSL \\
+        https://raw.githubusercontent.com/vishnubob/$$wfi/master/$$wfi.sh \\
+        > /tmp/$$wfi.sh && \
+      chmod +x /tmp/$$wfi.sh && \
+      echo 'Waiting for MinIO to come up...' && \
+      /tmp/$$wfi.sh minio:9000 --strict --timeout=60 && \
+      /usr/bin/mc alias set minio \\
+        http://minio:9000 access-key secret-key && \
+      /usr/bin/mc mb minio/sample-bucket/wh/ && \
+      tail -f /dev/null
+      "
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.hive=catalog-hive
+
+volumes:
+  postgres-hive-data:
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.hive=catalog-hive
+  minio-hive-data:
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.hive=catalog-hive

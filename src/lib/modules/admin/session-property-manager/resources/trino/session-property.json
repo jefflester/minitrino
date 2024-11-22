@@ -1,0 +1,33 @@
+[
+  {
+    "group": "admin",
+    "sessionProperties": {
+      "resource_overcommit": true,
+      "query_max_execution_time": "8h"
+    }
+  },
+  {
+    "group": "metadataQueriesSkipTheQueue",
+    "sessionProperties": {
+      "query_max_execution_time": "2h"
+    }
+  },
+  {
+    "group": "global.systemMetadata.*",
+    "sessionProperties": {
+      "query_max_execution_time": "30m"
+    }
+  },
+  {
+    "group": "global.systemRuntime.*",
+    "sessionProperties": {
+      "query_max_execution_time": "10m"
+    }
+  },
+  {
+    "group": "global.other.*",
+    "sessionProperties": {
+      "query_max_execution_time": "1h"
+    }
+  }
+]

@@ -18,7 +18,7 @@
       "sql": "SELECT current_groups()",
       "trinoCliArgs": [
         "--server 'http://trino:8080'",
-        "--user metadata"
+        "--user metadata-user"
       ],
       "contains": [
         "metadata-users"
@@ -30,7 +30,7 @@
       "sql": "SELECT current_groups()",
       "trinoCliArgs": [
         "--server 'http://trino:8080'",
-        "--user platform"
+        "--user platform-user"
       ],
       "contains": [
         "platform-users"

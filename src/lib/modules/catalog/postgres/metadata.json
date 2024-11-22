@@ -1,5 +1,5 @@
 {
-    "description": "Postgres catalog module",
-    "incompatibleModules": [],
-    "enterprise": false
+  "description": "Postgres catalog module",
+  "incompatibleModules": [],
+  "enterprise": false
 }

@@ -15,49 +15,62 @@ The MinIO UI can be viewed at `http://localhost:9001` using `access-key` and
 
 Tables backed by ORC data files can be easily created:
 
-    trino> create schema hive.tiny with (location='s3a://sample-bucket/wh/tiny/');
-    CREATE SCHEMA
-
-    trino> create table hive.tiny.customer as select * from tpch.tiny.customer;
-    CREATE TABLE: 1500 rows
+```sql
+CREATE SCHEMA hive.tiny WITH (location='s3a://sample-bucket/wh/tiny/');
+CREATE TABLE hive.tiny.customer AS SELECT * FROM tpch.tiny.customer;
+```
 
 The ORC data files can be viewed directly in the MinIO bucket via the MinIO UI.
 
 ## Usage
 
-    minitrino --env STARBURST_VER=<ver> provision --module hive
-    docker exec -it trino bash 
-    trino-cli
-    trino> show schemas from hive;
+```sh
+minitrino -v provision -m hive
+# Or specify Starburst version
+minitrino -v -e STARBURST_VER=${version} provision -m hive
+
+docker exec -it trino bash 
+trino-cli
+
+trino> SHOW SCHEMAS FROM hive;
+```
 
 ## Persistent Storage
 
 This module uses named volumes to persist MinIO and metastore data:
 
-    volumes:
-      postgres-hive-data:
-        labels:
-          - com.starburst.tests=minitrino
-          - com.starburst.tests.module.hive=catalog-hive
-      minio-hive-data:
-        labels:
-          - com.starburst.tests=minitrino
-          - com.starburst.tests.module.hive=catalog-hive
+```yaml
+volumes:
+  postgres-hive-data:
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.hive=catalog-hive
+  minio-hive-data:
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.hive=catalog-hive
+```
 
 The user-facing implication is that the data in the Hive metastore and the data
 files stored in MinIO are retained even after shutting down and/or removing the
 environment's containers. Minitrino issues a warning about this whenever a
 module with named volumes is deployed––be sure to look out for these warnings:
 
-    [w]  Module '<module>' has persistent volumes associated with it. To delete these volumes, remember to run `minitrino remove --volumes`.
+```log
+[w]  Module '<module>' has persistent volumes associated with it. To delete these volumes, remember to run `minitrino remove --volumes`.
+```
 
 To remove these volumes, run:
 
-    minitrino -v remove --volumes --label com.starburst.tests.module.hive=catalog-hive
+```sh
+minitrino -v remove --volumes --label com.starburst.tests.module.hive=catalog-hive
+```
 
 Or, remove them directly using the Docker CLI:
 
-    docker volume rm minitrino_postgres-hive-data minitrino_minio-hive-data
+```sh
+docker volume rm minitrino_postgres-hive-data minitrino_minio-hive-data
+```
 
 ## Editing the `hive.properties` File
 
@@ -67,13 +80,17 @@ source file being modified on the host. To edit the file, exec into the Trino
 container, make the desired changes, and then restart the container for the
 changes to take effect:
 
-    docker exec -it trino bash 
-    vi /etc/starburst/catalog/hive.properties
-    exit
+```sh
+docker exec -it trino bash 
+vi /etc/starburst/catalog/hive.properties
+exit
 
-    docker restart trino
+docker restart trino
+```
 
 The properties file can also be edited directly from the module directory prior
 to provisioning the module:
 
-    lib/modules/catalog/<module>/resources/trino/<module>.properties
+```txt
+lib/modules/catalog/<module>/resources/trino/<module>.properties
+```

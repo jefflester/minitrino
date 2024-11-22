@@ -24,7 +24,7 @@ TRINO_JVM_CONFIG = "jvm.config"
 
 # Snapshots
 SNAPSHOT_ROOT_FILES = [
-    "docker-compose.yml",
+    "docker-compose.yaml",
     "minitrino.env",
     "version",
     "image",

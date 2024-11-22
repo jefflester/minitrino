@@ -1,0 +1,6 @@
+---
+extends: default
+
+rules:
+  line-length:  # Compose volume mounts cannot be wrapped
+    level: warning

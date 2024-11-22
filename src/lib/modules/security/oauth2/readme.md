@@ -2,6 +2,22 @@
 
 This module secures Trino with OAuth2 authentication.
 
+## Usage
+
+```sh
+minitrino -v provision -m oauth2
+# Or specify Starburst version
+minitrino -v -e STARBURST_VER=${version} provision -m oauth2
+```
+
+Once deployed, visit Starburst on `https://localhost:8443` and work through the
+authentication process. You will be redirected to a service on
+`https://host.docker.internal:8100` to facilitate the OAuth2 flow.
+
+On each page, you will need to bypass your browser's security warnings since the
+TLS certificates are self-signed. On Google Chrome, you can bypass this warning
+by typing `thisisunsafe` with the browser window in focus.
+
 ## Prerequisites
 
 Prior to deploying this module, you must authenticate to the Github container
@@ -11,23 +27,13 @@ in order to pull the `ghcr.io/navikt/mock-oauth2-server` image. Additionally,
 you must set this in the `/etc/hosts` file on your machine
 [(docs)](https://docs.docker.com/desktop/networking/#i-want-to-connect-from-a-container-to-a-service-on-the-host):
 
-    127.0.0.1    host.docker.internal
+```txt
+127.0.0.1    host.docker.internal
+```
 
 The `hosts` file modification allows for all Docker services to be exposed on
 your host at `host.docker.internal:${PORT}`. This is a requirement given the
 nature of the redirects and callbacks that occur during the OAuth2 flow.
-
-## Usage
-
-    minitrino --env STARBURST_VER=<ver> provision --module oauth2
-
-Once deployed, visit Starburst on `https://localhost:8443` and work through the
-authentication process. You will be redirected to a service on
-`https://host.docker.internal:8100` to facilitate the OAuth2 flow.
-
-On each page, you will need to bypass your browser's security warnings since the
-TLS certificates are self-signed. On Google Chrome, you can bypass this warning
-by typing `thisisunsafe` with the browser window in focus.
 
 ## Development Notes
 
@@ -43,12 +49,14 @@ work.
 
 The `keytool` command used to generate the OAuth2 server certificate:
 
-    keytool -genkeypair \
-      -alias oauth2-server \
-      -keyalg RSA \
-      -keystore keystore.jks \
-      -keypass changeit \
-      -validity 9999 \
-      -storepass changeit \
-      -dname "CN=host.docker.internal" \
-      -ext san=dns:host.docker.internal,dns:oauth2-server,dns:localhost
+```sh
+keytool -genkeypair \
+  -alias oauth2-server \
+  -keyalg RSA \
+  -keystore keystore.jks \
+  -keypass changeit \
+  -validity 9999 \
+  -storepass changeit \
+  -dname "CN=host.docker.internal" \
+  -ext san=dns:host.docker.internal,dns:oauth2-server,dns:localhost
+```

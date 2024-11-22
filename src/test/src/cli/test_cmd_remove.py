@@ -2,10 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import docker
-import subprocess
 
 import src.common as common
-import src.cli.helpers as helpers
+import src.cli.utils as utils
 
 from inspect import currentframe
 from types import FrameType
@@ -36,9 +35,9 @@ def test_images(docker_client):
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    helpers.execute_command(["provision", "--module", "test"])
-    helpers.execute_command(["down", "--sig-kill"])
-    result = helpers.execute_command(["-v", "remove", "--images"])
+    utils.execute_cli_cmd(["provision", "--module", "test"])
+    utils.execute_cli_cmd(["down", "--sig-kill"])
+    result = utils.execute_cli_cmd(["-v", "remove", "--images"])
 
     assert result.exit_code == 0
     assert "Image removed:" in result.output
@@ -61,9 +60,9 @@ def test_volumes(docker_client):
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    helpers.execute_command(["provision", "--module", "test"])
-    helpers.execute_command(["down", "--sig-kill"])
-    result = helpers.execute_command(["-v", "remove", "--volumes"])
+    utils.execute_cli_cmd(["provision", "--module", "test"])
+    utils.execute_cli_cmd(["down", "--sig-kill"])
+    result = utils.execute_cli_cmd(["-v", "remove", "--volumes"])
 
     assert result.exit_code == 0
     assert "Volume removed:" in result.output
@@ -85,9 +84,9 @@ def test_label(docker_client):
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    helpers.execute_command(["provision", "--module", "test"])
-    helpers.execute_command(["down", "--sig-kill"])
-    result = helpers.execute_command(
+    utils.execute_cli_cmd(["provision", "--module", "test"])
+    utils.execute_cli_cmd(["down", "--sig-kill"])
+    result = utils.execute_cli_cmd(
         [
             "-v",
             "remove",
@@ -122,9 +121,9 @@ def test_multiple_labels(docker_client):
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    helpers.execute_command(["provision", "--module", "test"])
-    helpers.execute_command(["down", "--sig-kill"])
-    result = helpers.execute_command(
+    utils.execute_cli_cmd(["provision", "--module", "test"])
+    utils.execute_cli_cmd(["down", "--sig-kill"])
+    result = utils.execute_cli_cmd(
         [
             "-v",
             "remove",
@@ -162,9 +161,9 @@ def test_invalid_label(docker_client):
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    helpers.execute_command(["provision", "--module", "test"])
-    helpers.execute_command(["down", "--sig-kill"])
-    result = helpers.execute_command(
+    utils.execute_cli_cmd(["provision", "--module", "test"])
+    utils.execute_cli_cmd(["down", "--sig-kill"])
+    result = utils.execute_cli_cmd(
         ["-v", "remove", "--images", "--label", "not-real-label=not-real"]
     )
 
@@ -188,9 +187,9 @@ def test_all(docker_client):
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    helpers.execute_command(["provision", "--module", "test"])
-    helpers.execute_command(["down", "--sig-kill"])
-    result = helpers.execute_command(
+    utils.execute_cli_cmd(["provision", "--module", "test"])
+    utils.execute_cli_cmd(["down", "--sig-kill"])
+    result = utils.execute_cli_cmd(
         ["-v", "remove", "--images", "--volumes"], command_input="y\n"
     )
 
@@ -220,8 +219,8 @@ def test_remove_dependent_resources_running(docker_client):
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    helpers.execute_command(["provision", "--module", "test"])
-    result = helpers.execute_command(
+    utils.execute_cli_cmd(["provision", "--module", "test"])
+    result = utils.execute_cli_cmd(
         ["-v", "remove", "--images", "--volumes"], command_input="y\n"
     )
 
@@ -256,9 +255,9 @@ def test_remove_dependent_resources_stopped(docker_client):
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    helpers.execute_command(["provision", "--module", "test"])
-    subprocess.call("docker stop test", shell=True)
-    result = helpers.execute_command(
+    utils.execute_cli_cmd(["provision", "--module", "test"])
+    common.execute_command("docker stop test")
+    result = utils.execute_cli_cmd(
         [
             "-v",
             "remove",
@@ -305,9 +304,9 @@ def test_remove_dependent_resources_force(docker_client):
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    helpers.execute_command(["provision", "--module", "test"])
-    subprocess.call("docker stop test", shell=True)
-    result = helpers.execute_command(
+    utils.execute_cli_cmd(["provision", "--module", "test"])
+    common.execute_command("docker stop test")
+    result = utils.execute_cli_cmd(
         [
             "-v",
             "remove",
@@ -358,7 +357,7 @@ def assert_docker_resource_count(*args):
 def cleanup():
     """Brings down containers and removes resources."""
 
-    helpers.execute_command(
+    utils.execute_cli_cmd(
         [
             "remove",
             "--images",

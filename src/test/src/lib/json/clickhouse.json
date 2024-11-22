@@ -1,0 +1,70 @@
+{
+  "tests": [
+    {
+      "type": "query",
+      "name": "Test create schema",
+      "sql": "CREATE SCHEMA clickhouse.test_schema",
+      "trinoCliArgs": [
+        "--server 'http://trino:8080'",
+        "--user admin"
+      ],
+      "contains": [
+        "CREATE SCHEMA"
+      ]
+    },
+    {
+      "type": "query",
+      "name": "Test schema list",
+      "sql": "SHOW SCHEMAS IN clickhouse",
+      "trinoCliArgs": [
+        "--server 'http://trino:8080'",
+        "--user admin"
+      ],
+      "contains": [
+        "information_schema",
+        "test_schema",
+        "minitrino"
+      ]
+    },
+    {
+      "type": "query",
+      "name": "Test table list",
+      "sql": "SHOW TABLES IN clickhouse.minitrino",
+      "trinoCliArgs": [
+        "--server 'http://trino:8080'",
+        "--user admin"
+      ],
+      "contains": [
+        "table1",
+        "table2",
+        "table3"
+      ]
+    },
+    {
+      "type": "query",
+      "name": "Test CTAS",
+      "sql": "CREATE TABLE clickhouse.test_schema.test_table AS SELECT * FROM tpch.tiny.customer LIMIT 10",
+      "trinoCliArgs": [
+        "--server 'http://trino:8080'",
+        "--user admin"
+      ],
+      "contains": [
+        "CREATE TABLE: 10 rows"
+      ]
+    },
+    {
+      "type": "query",
+      "name": "Test table select",
+      "sql": "SELECT * FROM clickhouse.test_schema.test_table LIMIT 10",
+      "trinoCliArgs": [
+        "--server 'http://trino:8080'",
+        "--user admin"
+      ],
+      "contains": [
+        "custkey",
+        "name",
+        "address"
+      ]
+    }
+  ]
+}

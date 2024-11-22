@@ -2,10 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import os
-import subprocess
 
 import src.common as common
-import src.cli.helpers as helpers
+import src.cli.utils as utils
 
 from inspect import currentframe
 from types import FrameType
@@ -29,8 +28,8 @@ def test_no_directory():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    subprocess.call(f"rm -rf {common.MINITRINO_USER_DIR}", shell=True)
-    result = helpers.execute_command(CMD)
+    common.execute_command(f"rm -rf {common.MINITRINO_USER_DIR}")
+    result = utils.execute_cli_cmd(CMD)
 
     assert result.exit_code == 0
     assert os.path.isdir(common.MINITRINO_USER_DIR)
@@ -45,8 +44,8 @@ def test_no_config_file():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    subprocess.call(f"rm {common.CONFIG_FILE}", shell=True)
-    result = helpers.execute_command(CMD)
+    common.execute_command(f"rm {common.CONFIG_FILE}")
+    result = utils.execute_cli_cmd(CMD)
 
     assert result.exit_code == 0
     assert os.path.isfile(common.CONFIG_FILE)
@@ -60,23 +59,16 @@ def test_reset():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    subprocess.call(f"echo 'hello world' > {common.CONFIG_FILE}", shell=True)
+    common.execute_command(f"echo 'hello world' > {common.CONFIG_FILE}")
 
     # Run the command and feed 'y' as input
-    result = helpers.execute_command(CMD + ["--reset"], command_input="y\n")
+    result = utils.execute_cli_cmd(CMD + ["--reset"], command_input="y\n")
 
     assert result.exit_code == 0
     assert os.path.isfile(common.CONFIG_FILE)
 
-    config_contents = subprocess.Popen(
-        f"cat {common.CONFIG_FILE}",
-        shell=True,
-        stdout=subprocess.PIPE,
-        universal_newlines=True,
-    )
-
-    config_contents, _ = config_contents.communicate()
-    assert "hello world" not in config_contents
+    config_contents = common.execute_command(f"cat {common.CONFIG_FILE}")
+    assert "hello world" not in config_contents.get("output", "")
 
     common.log_success(cast(FrameType, currentframe()).f_code.co_name)
 
@@ -88,8 +80,8 @@ def test_edit_invalid_config():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    subprocess.call(f"echo 'hello world' > {common.CONFIG_FILE}", shell=True)
-    result = helpers.execute_command(CMD)
+    common.execute_command(f"echo 'hello world' > {common.CONFIG_FILE}")
+    result = utils.execute_cli_cmd(CMD)
 
     assert result.exit_code == 0
     assert "Failed to parse config file" in result.output
@@ -102,8 +94,8 @@ def test_edit_valid_config():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    helpers.make_sample_config()
-    result = helpers.execute_command(CMD)
+    utils.make_sample_config()
+    result = utils.execute_cli_cmd(CMD)
     assert result.exit_code == 0
 
     common.log_success(cast(FrameType, currentframe()).f_code.co_name)

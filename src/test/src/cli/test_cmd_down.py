@@ -4,7 +4,7 @@
 import docker
 
 import src.common as common
-import src.cli.helpers as helpers
+import src.cli.utils as utils
 from minitrino.settings import RESOURCE_LABEL
 
 from inspect import currentframe
@@ -27,7 +27,7 @@ def test_no_containers():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    result = helpers.execute_command(["-v", "down"])
+    result = utils.execute_cli_cmd(["-v", "down"])
 
     assert result.exit_code == 0
     assert "No containers to bring down" in result.output
@@ -46,8 +46,8 @@ def test_running_containers():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    helpers.execute_command(["-v", "provision", "--module", "test"])
-    result = helpers.execute_command(["-v", "down", "--sig-kill"])
+    utils.execute_cli_cmd(["-v", "provision", "--module", "test"])
+    result = utils.execute_cli_cmd(["-v", "down", "--sig-kill"])
 
     assert result.exit_code == 0
     assert all(
@@ -72,8 +72,8 @@ def test_keep():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    helpers.execute_command(["-v", "provision", "--module", "test"])
-    result = helpers.execute_command(["-v", "down", "--keep"])
+    utils.execute_cli_cmd(["-v", "provision", "--module", "test"])
+    result = utils.execute_cli_cmd(["-v", "down", "--keep"])
 
     assert "Stopped container" in result.output
     assert "Removed container" not in result.output
@@ -93,7 +93,7 @@ def test_keep():
 def cleanup():
     """Stops/removes containers."""
 
-    helpers.execute_command(["-v", "down", "--sig-kill"])
+    utils.execute_cli_cmd(["-v", "down", "--sig-kill"])
 
 
 if __name__ == "__main__":

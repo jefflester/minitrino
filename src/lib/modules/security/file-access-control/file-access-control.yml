@@ -1,8 +1,0 @@
-services:
-
-  trino:
-    volumes:
-      - ./modules/security/file-access-control/resources/trino/access-control.properties:/etc/starburst/access-control.properties
-      - ./modules/security/file-access-control/resources/trino/rules.json:/etc/starburst/rules.json
-    labels:
-      - com.starburst.tests.module.file-access-control=security-file-access-control

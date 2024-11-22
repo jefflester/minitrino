@@ -1,6 +1,9 @@
 {
   "description": "Data products module",
   "incompatibleModules": [],
-  "dependentModules": ["insights", "hive"],
+  "dependentModules": [
+    "insights",
+    "hive"
+  ],
   "enterprise": true
 }

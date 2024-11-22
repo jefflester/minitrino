@@ -1,5 +1,5 @@
 {
-    "description": "Delta Lake catalog module (includes object storage (MinIO) and Hive metastore)",
-    "incompatibleModules": [],
-    "enterprise": false
+  "description": "Delta Lake catalog module (includes object storage (MinIO) and Hive metastore)",
+  "incompatibleModules": [],
+  "enterprise": false
 }

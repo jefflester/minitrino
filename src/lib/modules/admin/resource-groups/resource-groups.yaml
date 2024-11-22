@@ -1,0 +1,9 @@
+---
+services:
+
+  trino:
+    volumes:
+      - ./modules/admin/resource-groups/resources/trino/resource-groups.json:${ETC}/resource-groups.json
+      - ./modules/admin/resource-groups/resources/trino/resource-groups.properties:${ETC}/resource-groups.properties
+    labels:
+      - com.starburst.tests.module.resource-groups=admin-resource-groups

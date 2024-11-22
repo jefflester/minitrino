@@ -1,0 +1,37 @@
+---
+name: Create Test Release (0.0.0) from PR Branch
+
+on:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - src/**
+
+jobs:
+  set-test-release-and-tag:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Delete and recreate release
+        env:
+          GITHUB_TOKEN: ${{ secrets.MINITRINO_TOKEN }}
+        run: |-
+          TAG="0.0.0"
+          DESCRIPTION="Used as a placeholder to give test builds access \
+          to the PR branch's module library."
+
+          echo "Checking if release exists..."
+          if gh release list | grep -q -e "${TAG}"; then
+            echo "Release ${TAG} found. Deleting release..."
+            gh release delete "${TAG}" -y --cleanup-tag
+          fi
+
+          echo "Creating test release from branch ${GITHUB_HEAD_REF}..."
+          gh release create "${TAG}" \
+            --prerelease \
+            --draft=false \
+            --title "${TAG}" \
+            --notes "${DESCRIPTION}" \
+            --target "${GITHUB_HEAD_REF}"

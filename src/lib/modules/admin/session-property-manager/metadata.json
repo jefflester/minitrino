@@ -1,0 +1,9 @@
+{
+  "description": "Session property manager module",
+  "incompatibleModules": [],
+  "dependentModules": [
+    "file-group-provider",
+    "resource-groups"
+  ],
+  "enterprise": false
+}

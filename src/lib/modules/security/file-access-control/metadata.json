@@ -1,6 +1,10 @@
 {
-    "description": "File-based access control module",
-    "incompatibleModules": [],
-    "dependentModules": ["file-group-provider"],
-    "enterprise": false
+  "description": "File-based access control module",
+  "incompatibleModules": [
+    "biac"
+  ],
+  "dependentModules": [
+    "file-group-provider"
+  ],
+  "enterprise": false
 }

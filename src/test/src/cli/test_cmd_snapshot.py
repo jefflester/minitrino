@@ -2,10 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import os
-import subprocess
 
 import src.common as common
-import src.cli.helpers as helpers
+import src.cli.utils as utils
 
 from inspect import currentframe
 from types import FrameType
@@ -20,7 +19,7 @@ def snapshot_test_yaml_file(snapshot_name="test"):
         "modules",
         "catalog",
         "test",
-        "test.yml",
+        "test.yaml",
     )
 
 
@@ -54,8 +53,8 @@ def test_snapshot_no_directory():
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     cleanup()
-    subprocess.call(f"rm -rf {common.MINITRINO_USER_SNAPSHOTS_DIR}", shell=True)
-    result = helpers.execute_command(
+    common.execute_command(f"rm -rf {common.MINITRINO_USER_SNAPSHOTS_DIR}")
+    result = utils.execute_cli_cmd(
         ["-v", "snapshot", "--name", "test", "--module", "test"],
         command_input="y\n",
     )
@@ -72,8 +71,8 @@ def test_snapshot_active_env():
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     cleanup()
-    helpers.execute_command(["-v", "provision", "--module", "test"])
-    result = helpers.execute_command(
+    utils.execute_cli_cmd(["-v", "provision", "--module", "test"])
+    result = utils.execute_cli_cmd(
         ["-v", "snapshot", "--name", "test"],
         command_input="y\n",
     )
@@ -95,12 +94,12 @@ def test_snapshot_active_env():
 
 
 def test_snapshot_standalone():
-    """Verifies that a the standlone Trino module can be snapshotted."""
+    """Verifies that a the standalone Trino module can be snapshotted."""
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     cleanup()
-    result = helpers.execute_command(
+    result = utils.execute_cli_cmd(
         ["-v", "snapshot", "--name", "test"],
         command_input="y\n",
     )
@@ -118,7 +117,7 @@ def test_snapshot_inactive_env():
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     cleanup()
-    result = helpers.execute_command(
+    result = utils.execute_cli_cmd(
         ["-v", "snapshot", "--name", "test", "--module", "test"],
         command_input="y\n",
     )
@@ -136,7 +135,7 @@ def test_valid_name():
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     cleanup()
-    result = helpers.execute_command(
+    result = utils.execute_cli_cmd(
         ["-v", "snapshot", "--name", "my-test_123", "--module", "test"],
         command_input="y\n",
     )
@@ -156,7 +155,7 @@ def test_invalid_name():
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     cleanup()
-    result = helpers.execute_command(
+    result = utils.execute_cli_cmd(
         ["-v", "snapshot", "--name", "##.my-test?", "--module", "test"],
         command_input="y\n",
     )
@@ -174,7 +173,7 @@ def test_specific_directory():
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     cleanup()
-    result = helpers.execute_command(
+    result = utils.execute_cli_cmd(
         [
             "-v",
             "snapshot",
@@ -191,7 +190,7 @@ def test_specific_directory():
     run_assertions(result, True, check_path=os.path.join(os.sep, "tmp"))
     assert "Creating snapshot of specified modules" in result.output
 
-    subprocess.call("rm -rf /tmp/test.tar.gz", shell=True)
+    common.execute_command("rm -rf /tmp/test.tar.gz")
 
     common.log_success(cast(FrameType, currentframe()).f_code.co_name)
 
@@ -202,7 +201,7 @@ def test_specific_directory_invalid():
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     cleanup()
-    result = helpers.execute_command(
+    result = utils.execute_cli_cmd(
         [
             "-v",
             "snapshot",
@@ -228,27 +227,20 @@ def test_command_snapshot_file():
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     cleanup()
-    helpers.execute_command(["-v", "provision", "--module", "test"])
-    helpers.execute_command(
+    utils.execute_cli_cmd(["-v", "provision", "--module", "test"])
+    utils.execute_cli_cmd(
         ["-v", "snapshot", "--name", "test"],
         command_input="y\n",
     )
-    helpers.execute_command(["down", "--sig-kill"])
+    utils.execute_cli_cmd(["down", "--sig-kill"])
 
     command_snapshot_file = os.path.join(
         common.MINITRINO_USER_SNAPSHOTS_DIR, "test", "provision-snapshot.sh"
     )
-    process = subprocess.Popen(
-        command_snapshot_file,
-        shell=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        universal_newlines=True,
-    )
-    stdout, _ = process.communicate()
+    output = common.execute_command(command_snapshot_file)
 
-    assert process.returncode == 0
-    assert "Environment provisioning complete" in stdout
+    assert output.get("exit_code", None) == 0
+    assert "Environment provisioning complete" in output.get("output", "")
 
     cleanup()
     common.log_success(cast(FrameType, currentframe()).f_code.co_name)
@@ -260,7 +252,7 @@ def test_force():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    result = helpers.execute_command(
+    result = utils.execute_cli_cmd(
         ["-v", "snapshot", "--name", "test", "--module", "test", "--force"],
         command_input="y\n",
     )
@@ -278,8 +270,8 @@ def test_no_scrub():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    helpers.make_sample_config()
-    result = helpers.execute_command(
+    utils.make_sample_config()
+    result = utils.execute_cli_cmd(
         ["-v", "snapshot", "--name", "test", "--module", "test", "--no-scrub"],
         True,
         command_input="y\n",
@@ -299,8 +291,8 @@ def test_scrub():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    helpers.make_sample_config()
-    result = helpers.execute_command(
+    utils.make_sample_config()
+    result = utils.execute_cli_cmd(
         ["-v", "snapshot", "--name", "test", "--module", "test"], command_input="y\n"
     )
 
@@ -343,14 +335,13 @@ def cleanup(snapshot_name="test"):
     """Removes test snapshot tarball and turns off running resources."""
 
     if not snapshot_name == "test":
-        subprocess.call(
-            f"rm -rf {os.path.join(common.MINITRINO_USER_SNAPSHOTS_DIR, snapshot_name)}.tar.gz",
-            shell=True,
+        common.execute_command(
+            f"rm -rf {os.path.join(common.MINITRINO_USER_SNAPSHOTS_DIR, snapshot_name)}.tar.gz"
         )
     else:
-        subprocess.call(f"rm -rf {common.SNAPSHOT_FILE}", shell=True)
+        common.execute_command(f"rm -rf {common.SNAPSHOT_FILE}")
 
-    helpers.execute_command(["down", "--sig-kill"])
+    utils.execute_cli_cmd(["down", "--sig-kill"])
 
 
 if __name__ == "__main__":

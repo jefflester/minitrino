@@ -10,10 +10,8 @@ import jsonschema
 
 import src.common as common
 from src.lib.specs import SPECS
-from src.lib.helpers import cleanup
-from src.lib.helpers import get_container
-from src.lib.helpers import execute_command
-from src.lib.helpers import dump_container_logs
+from src.lib.utils import cleanup
+from src.lib.utils import dump_container_logs
 
 
 class ModuleTest:
@@ -44,10 +42,10 @@ class ModuleTest:
         """Runs module tests."""
 
         if not workers:
-            execute_command(f"minitrino -v provision -m {self.module} --no-rollback")
+            common.execute_command(f"minitrino -v provision -m {self.module}")
         else:
-            execute_command(
-                f"minitrino -v provision -m {self.module} --workers 1 --no-rollback"
+            common.execute_command(
+                f"minitrino -v provision -m {self.module} --workers 1"
             )
 
         for t in tests:
@@ -80,7 +78,7 @@ class ModuleTest:
         i = 0
         cmd = "curl -X GET -H 'Accept: application/json' -H 'X-Trino-User: admin' 'localhost:8080/v1/info/'"
         while i <= 60:
-            output = execute_command(cmd, "trino")
+            output = common.execute_command(cmd, "trino")
             if '"starting":false' in output.get("output", ""):
                 time.sleep(5)  # hard stop to ensure coordinator is ready
                 break
@@ -103,7 +101,7 @@ class ModuleTest:
                 cmd += f" {i}"
 
         # Execute query
-        output = execute_command(cmd, "trino", json_data.get("env", {}))
+        output = common.execute_command(cmd, "trino", json_data.get("env", {}))
 
         # Run assertions
         for c in contains:
@@ -135,14 +133,14 @@ class ModuleTest:
         # Run command
         cmd = json_data.get("command", "")
         container = json_data.get("container", None)
-        output = execute_command(cmd, container, json_data.get("env", {}))
+        output = common.execute_command(cmd, container, json_data.get("env", {}))
 
         # Run assertions
         if exit_code is not None:
-            cmd_exit_code = output.get("return_code")
+            cmd_exit_code = output.get("exit_code")
             assert (
                 exit_code == cmd_exit_code
-            ), f"Unexpected return code: {cmd_exit_code} expected: {exit_code}"
+            ), f"Unexpected exit code: {cmd_exit_code} expected: {exit_code}"
 
         for c in contains:
             assert c in output.get("output"), f"'{c}' not in command output"
@@ -159,7 +157,7 @@ class ModuleTest:
         """Checks for matching strings in container logs."""
 
         timeout = json_data.get("timeout", 30)
-        container = get_container(json_data.get("container"))
+        container = common.get_container(json_data.get("container"))
 
         i = 0
         while True:
@@ -201,17 +199,17 @@ class ModuleTest:
 
         i = 0
         while True:
-            output = execute_command(cmd, container, json_data.get("env", {}))
+            output = common.execute_command(cmd, container, json_data.get("env", {}))
             try:
                 for c in contains:
                     assert c in output.get(
                         "output", ""
                     ), f"'{c}' not in {cmd_type} output"
-                cmd_exit_code = output.get("return_code")
+                cmd_exit_code = output.get("exit_code")
                 if isinstance(exit_code, int):
                     assert (
                         exit_code == cmd_exit_code
-                    ), f"Unexpected return code: {cmd_exit_code} expected: {exit_code}"
+                    ), f"Unexpected exit code: {cmd_exit_code} expected: {exit_code}"
                 return output
             except AssertionError as e:
                 if i < retry:

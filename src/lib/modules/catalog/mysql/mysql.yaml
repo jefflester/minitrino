@@ -1,0 +1,19 @@
+---
+services:
+
+  trino:
+    volumes:
+      - ./modules/catalog/mysql/resources/trino/mysql.properties:${ETC}/catalog/mysql.properties
+
+  mysql:
+    image: mysql:${MYSQL_VER}
+    container_name: mysql
+    environment:
+      MINITRINO_BOOTSTRAP: bootstrap-mysql.sh
+    env_file:
+      - ./modules/catalog/mysql/resources/mysql/mysql.env
+    ports:
+      - 3306:3306
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.mysql=catalog-mysql

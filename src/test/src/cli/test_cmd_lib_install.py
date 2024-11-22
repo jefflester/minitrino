@@ -2,10 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import os
-import subprocess
 
 import src.common as common
-import src.cli.helpers as helpers
+import src.cli.utils as utils
 
 from inspect import currentframe
 from types import FrameType
@@ -26,7 +25,7 @@ def test_install():
     cleanup()
 
     # Install 0.0.0 since it's always around as a test release
-    result = helpers.execute_command(["-v", "lib-install", "--version", "0.0.0"])
+    result = utils.execute_cli_cmd(["-v", "lib-install", "--version", "0.0.0"])
 
     assert result.exit_code == 0
     assert os.path.isdir(os.path.join(common.MINITRINO_USER_DIR, "lib"))
@@ -40,7 +39,7 @@ def test_install_overwrite():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    result = helpers.execute_command(
+    result = utils.execute_cli_cmd(
         ["-v", "lib-install", "--version", "0.0.0"], command_input="y\n"
     )
 
@@ -59,7 +58,7 @@ def test_invalid_ver():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    result = helpers.execute_command(["-v", "lib-install", "--version", "YEE-TRINO"])
+    result = utils.execute_cli_cmd(["-v", "lib-install", "--version", "YEE-TRINO"])
 
     assert result.exit_code == 1
     assert not os.path.isdir(os.path.join(common.MINITRINO_USER_DIR, "lib"))
@@ -70,7 +69,7 @@ def test_invalid_ver():
 
 
 def cleanup():
-    subprocess.call("rm -rf ~/.minitrino/", shell=True)
+    common.execute_command("rm -rf ~/.minitrino/")
 
 
 if __name__ == "__main__":

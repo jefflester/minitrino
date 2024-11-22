@@ -1,4 +1,4 @@
 {
-    "description": "TLS module (configures TLS on the Trino coordinator)",
-    "enterprise": false
+  "description": "TLS module (configures TLS on the Trino coordinator)",
+  "enterprise": false
 }

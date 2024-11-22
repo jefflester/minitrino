@@ -20,7 +20,11 @@ schema.
 
 ## Usage
 
-    minitrino --env STARBURST_VER=<ver> provision --module cache-service
+```sh
+minitrino -v provision -m cache-service
+# Or specify Starburst version
+minitrino -v -e STARBURST_VER=${version} provision -m cache-service
+```
 
 ## Table Scan Redirections (TSRs)
 
@@ -38,17 +42,22 @@ added to this catalog, and MVs can pull data from any data source.
 
 This module uses a roundabout way to mount the `hive_mv_tsr.properties` file
 that allows for edits to be made to the file inside the Trino container without
-the source file being modified on the host. To edit the file, exec into the
-Trino container, make the desired changes, and then restart the container for
-the changes to take effect:
+the source file being modified on the host.
 
-    docker exec -it trino bash 
-    vi /etc/starburst/catalog/hive_mv_tsr.properties
-    exit
+To edit the file, exec into the Trino container, make the desired changes, and
+then restart the container for the changes to take effect:
 
-    docker restart trino
+```sh
+docker exec -it trino bash 
+vi /etc/starburst/catalog/hive_mv_tsr.properties
+exit
+
+docker restart trino
+```
 
 The properties file can also be edited directly from the module directory prior
 to provisioning the module:
 
-    lib/modules/catalog/<module>/resources/trino/<module>.properties
+```txt
+lib/modules/catalog/<module>/resources/trino/<module>.properties
+```

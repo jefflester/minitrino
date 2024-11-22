@@ -5,11 +5,11 @@
 # TODO: Test invalid user config (Trino/JVM)
 
 import docker
-import subprocess
 
 import src.common as common
-import src.cli.helpers as helpers
+import src.cli.utils as utils
 from minitrino.settings import RESOURCE_LABEL
+from minitrino.settings import MIN_SEP_VER
 
 from inspect import currentframe
 from types import FrameType
@@ -25,6 +25,7 @@ def main():
     test_invalid_module()
     test_docker_native()
     test_enterprise()
+    test_version_requirements()
     test_valid_user_config()
     test_duplicate_config_props()
     test_incompatible_modules()
@@ -39,7 +40,7 @@ def test_standalone():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    result = helpers.execute_command(["-v", "provision"])
+    result = utils.execute_cli_cmd(["-v", "provision"])
 
     assert result.exit_code == 0
     assert "Provisioning standalone" in result.output
@@ -60,9 +61,7 @@ def test_bad_sep_version():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    result = helpers.execute_command(
-        ["-v", "--env", "STARBURST_VER=332-e", "provision"]
-    )
+    result = utils.execute_cli_cmd(["-v", "--env", "STARBURST_VER=332-e", "provision"])
 
     assert result.exit_code == 2
     assert "Provided Starburst version" in result.output
@@ -80,7 +79,7 @@ def test_invalid_module():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    result = helpers.execute_command(
+    result = utils.execute_cli_cmd(
         ["-v", "provision", "--module", "hive", "--module", "not-a-real-module"]
     )
 
@@ -102,7 +101,7 @@ def test_docker_native():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    result = helpers.execute_command(
+    result = utils.execute_cli_cmd(
         ["-v", "provision", "--module", "test", "--docker-native", "--build"]
     )
 
@@ -121,20 +120,17 @@ def test_enterprise():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    result = helpers.execute_command(["-v", "provision", "--module", "test-enterprise"])
+    utils.update_metadata_json([{"enterprise": True}])
+    result = utils.execute_cli_cmd(["-v", "provision", "--module", "test"])
 
     assert result.exit_code == 2
     assert "You must provide a path to a Starburst license" in result.output
     cleanup()
 
     # Create dummy license
-    process = subprocess.Popen(
-        "touch /tmp/dummy.license",
-        shell=True,
-    )
-    process.communicate()
+    common.execute_command("touch /tmp/dummy.license")
 
-    result = helpers.execute_command(
+    result = utils.execute_cli_cmd(
         [
             "-v",
             "--env",
@@ -142,19 +138,58 @@ def test_enterprise():
             "provision",
             "--module",
             "test",
+            "--no-rollback",
         ]
     )
 
     assert "LIC_PATH" and "/tmp/dummy.license" in result.output
+    utils.reset_metadata_json()
     cleanup()
 
-    result = helpers.execute_command(["-v", "provision", "--module", "test"])
+    # Ensure default dummy license satisfies Compose env vars
+    result = utils.execute_cli_cmd(["-v", "provision", "--module", "test"])
 
     assert result.exit_code == 0
     assert "LIC_PATH" and "./modules/resources/dummy.license" in result.output
     assert "LIC_MOUNT_PATH" and "/etc/starburst/dummy.license:ro" in result.output
 
     common.log_success(cast(FrameType, currentframe()).f_code.co_name)
+    cleanup()
+
+
+def test_version_requirements():
+    """Ensures that module version requirements are properly enforced."""
+
+    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
+
+    utils.update_metadata_json([{"versions": [MIN_SEP_VER + 1, 998]}])
+
+    # Should fail - lower bound
+    result = utils.execute_cli_cmd(
+        [
+            "-v",
+            "--env",
+            f"STARBURST_VER={MIN_SEP_VER}-e",
+            "provision",
+            "--module",
+            "test",
+        ]
+    )
+
+    assert result.exit_code == 2
+    assert "minimum required" in result.output
+    cleanup()
+
+    # Should fail - upper bound
+    result = utils.execute_cli_cmd(
+        ["-v", "--env", "STARBURST_VER=999-e", "provision", "--module", "test"]
+    )
+
+    assert result.exit_code == 2
+    assert "maximum required" in result.output
+
+    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
+    utils.reset_metadata_json()
     cleanup()
 
 
@@ -170,24 +205,15 @@ def test_bootstrap_script(result):
         )
     )
 
-    trino_bootstrap_check = subprocess.Popen(
-        f"docker exec -i trino ls /etc/starburst/",
-        shell=True,
-        stdout=subprocess.PIPE,
-        universal_newlines=True,
+    trino_bootstrap_check = common.execute_command(
+        f"docker exec -i trino ls /etc/starburst/"
     )
-    test_bootstrap_check = subprocess.Popen(
-        f"docker exec -i test cat /root/test_bootstrap.txt",
-        shell=True,
-        stdout=subprocess.PIPE,
-        universal_newlines=True,
+    test_bootstrap_check = common.execute_command(
+        f"docker exec -i test cat /root/test_bootstrap.txt"
     )
 
-    trino_bootstrap_check, _ = trino_bootstrap_check.communicate()
-    test_bootstrap_check, _ = test_bootstrap_check.communicate()
-
-    assert "test_bootstrap.txt" in trino_bootstrap_check
-    assert "hello world" in test_bootstrap_check
+    assert "test_bootstrap.txt" in trino_bootstrap_check.get("output", "")
+    assert "hello world" in test_bootstrap_check.get("output", "")
 
     common.log_success(cast(FrameType, currentframe()).f_code.co_name)
 
@@ -198,7 +224,7 @@ def test_valid_user_config():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    result = helpers.execute_command(
+    result = utils.execute_cli_cmd(
         [
             "-v",
             "provision",
@@ -212,27 +238,18 @@ def test_valid_user_config():
         "Appending user-defined Trino config to Trino container config" in result.output
     )
 
-    jvm_config = subprocess.Popen(
-        f"docker exec -i trino cat /etc/starburst/jvm.config",
-        shell=True,
-        stdout=subprocess.PIPE,
-        universal_newlines=True,
+    jvm_config = common.execute_command(
+        f"docker exec -i trino cat /etc/starburst/jvm.config"
     )
-    trino_config = subprocess.Popen(
-        f"docker exec -i trino cat /etc/starburst/config.properties",
-        shell=True,
-        stdout=subprocess.PIPE,
-        universal_newlines=True,
+    trino_config = common.execute_command(
+        f"docker exec -i trino cat /etc/starburst/config.properties"
     )
 
-    jvm_config, _ = jvm_config.communicate()
-    trino_config, _ = trino_config.communicate()
-
-    assert all(("-Xmx2G" in jvm_config, "-Xms1G" in jvm_config))
+    assert all(("-Xmx2G" in jvm_config["output"], "-Xms1G" in jvm_config["output"]))
     assert all(
         (
-            "query.max-stage-count=85" in trino_config,
-            "query.max-execution-time=1h" in trino_config,
+            "query.max-stage-count=85" in trino_config["output"],
+            "query.max-execution-time=1h" in trino_config["output"],
         )
     )
 
@@ -246,7 +263,7 @@ def test_duplicate_config_props():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    result = helpers.execute_command(
+    result = utils.execute_cli_cmd(
         [
             "-v",
             "--env",
@@ -278,7 +295,7 @@ def test_incompatible_modules():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    result = helpers.execute_command(
+    result = utils.execute_cli_cmd(
         ["-v", "provision", "--module", "ldap", "--module", "test"]
     )
 
@@ -300,8 +317,8 @@ def test_provision_append():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    helpers.execute_command(["-v", "provision", "--module", "test"])
-    result = helpers.execute_command(["-v", "provision", "--module", "postgres"])
+    utils.execute_cli_cmd(["-v", "provision", "--module", "test"])
+    result = utils.execute_cli_cmd(["-v", "provision", "--module", "postgres"])
     containers = get_containers()
 
     assert result.exit_code == 0
@@ -310,25 +327,13 @@ def test_provision_append():
 
     # Ensure new volume mount was activated; indicates Trino container was
     # properly recreated
-    etc_ls = subprocess.Popen(
-        f"docker exec -i trino ls /etc/starburst/catalog/",
-        shell=True,
-        stdout=subprocess.PIPE,
-        universal_newlines=True,
-    )
-    etc_ls, _ = etc_ls.communicate()
-    assert "postgres.properties" in etc_ls
+    etc_ls = common.execute_command(f"docker exec -i trino ls /etc/starburst/catalog/")
+    assert "postgres.properties" in etc_ls["output"]
 
     # Add one more module
-    result = helpers.execute_command(["-v", "provision", "--module", "mysql"])
-    etc_ls = subprocess.Popen(
-        f"docker exec -i trino ls /etc/starburst/catalog/",
-        shell=True,
-        stdout=subprocess.PIPE,
-        universal_newlines=True,
-    )
-    etc_ls, _ = etc_ls.communicate()
-    assert "mysql.properties" and "postgres.properties" in etc_ls
+    result = utils.execute_cli_cmd(["-v", "provision", "--module", "mysql"])
+    etc_ls = common.execute_command(f"docker exec -i trino ls /etc/starburst/catalog/")
+    assert "mysql.properties" and "postgres.properties" in etc_ls["output"]
 
     containers = get_containers()
 
@@ -345,7 +350,7 @@ def test_workers():
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
     # Provision 1 worker
-    result = helpers.execute_command(["-v", "provision", "--workers", "1"])
+    result = utils.execute_cli_cmd(["-v", "provision", "--workers", "1"])
     containers = get_containers()
 
     assert result.exit_code == 0
@@ -353,7 +358,7 @@ def test_workers():
     assert len(containers) == 2  # trino, trino worker
 
     # Provision a second worker
-    result = helpers.execute_command(["-v", "provision", "--workers", "2"])
+    result = utils.execute_cli_cmd(["-v", "provision", "--workers", "2"])
     containers = get_containers()
 
     assert result.exit_code == 0
@@ -361,7 +366,7 @@ def test_workers():
     assert len(containers) == 3  # trino, (2) trino worker
 
     # Downsize workers (remove worker 2)
-    result = helpers.execute_command(["-v", "provision", "--workers", "1"])
+    result = utils.execute_cli_cmd(["-v", "provision", "--workers", "1"])
     containers = get_containers()
 
     assert result.exit_code == 0
@@ -370,7 +375,7 @@ def test_workers():
 
     # Provision a module in a running environment with a worker already present,
     # but don't specify any workers
-    result = helpers.execute_command(["-v", "provision", "--module", "test"])
+    result = utils.execute_cli_cmd(["-v", "provision", "--module", "test"])
     containers = get_containers()
 
     assert result.exit_code == 0
@@ -386,44 +391,34 @@ def test_catalogs_volume():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    result = helpers.execute_command(["-v", "provision", "--module", "hive"])
+    result = utils.execute_cli_cmd(["-v", "provision", "--module", "hive"])
     assert result.exit_code == 0
 
-    hive = subprocess.Popen(
-        f"docker exec -i trino cat /etc/starburst/catalog/hive.properties",
-        shell=True,
-        stdout=subprocess.PIPE,
-        universal_newlines=True,
+    hive = common.execute_command(
+        "docker exec -i trino cat /etc/starburst/catalog/hive.properties"
     )
 
-    hive, _ = hive.communicate()
-    assert "connector.name=hive" in hive
+    assert "connector.name=hive" in hive["output"]
 
     cleanup()
 
-    result = helpers.execute_command(
+    result = utils.execute_cli_cmd(
         ["-v", "provision", "--module", "hive", "--module", "delta-lake"]
     )
     assert result.exit_code == 0
     assert "Removed 'minitrino_catalogs' volume" in result.output
 
-    hive = subprocess.Popen(
-        f"docker exec -i trino cat /etc/starburst/catalog/hive.properties",
-        shell=True,
-        stdout=subprocess.PIPE,
-        universal_newlines=True,
+    hive = common.execute_command(
+        "docker exec -i trino cat /etc/starburst/catalog/hive.properties"
+    )
+    delta = common.execute_command(
+        "docker exec -i trino cat /etc/starburst/catalog/delta.properties"
     )
 
-    delta = subprocess.Popen(
-        f"docker exec -i trino cat /etc/starburst/catalog/delta.properties",
-        shell=True,
-        stdout=subprocess.PIPE,
-        universal_newlines=True,
+    assert (
+        "connector.name=hive" in hive["output"]
+        and "connector.name=delta-lake" in delta["output"]
     )
-
-    hive, _ = hive.communicate()
-    delta, _ = delta.communicate()
-    assert "connector.name=hive" in hive and "connector.name=delta-lake" in delta
 
     common.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()
@@ -439,7 +434,7 @@ def get_containers():
 def cleanup():
     """Brings down containers and removes resources."""
 
-    helpers.execute_command(["down", "--sig-kill"])
+    utils.execute_cli_cmd(["down", "--sig-kill"])
 
 
 if __name__ == "__main__":

@@ -10,7 +10,7 @@ README = (HERE / "readme.md").read_text()
 
 setup(
     name="minitrino",
-    version="2.2.0",
+    version="2.2.1",
     description="A command line tool that makes it easy to run modular Trino environments locally.",
     long_description=README,
     long_description_content_type="text/markdown",

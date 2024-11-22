@@ -30,4 +30,3 @@ repos:
     rev: v1.35.1
     hooks:
       - id: yamllint
-        always_run: true

@@ -15,9 +15,15 @@ image.
 
 To deploy the module:
 
-    minitrino --env STARBURST_VER=<ver> provision --module pinot
-    docker exec -it trino bash 
-    trino-cli
-    trino> show schemas from pinot;
+```sh
+minitrino -v provision -m pinot
+# Or specify Starburst version
+minitrino -v -e STARBURST_VER=${version} provision -m pinot
+
+docker exec -it trino bash 
+trino-cli
+
+trino> SHOW SCHEMAS FROM pinot;
+```
 
 The Pinot web UI can be viewed at `localhost:9090`.

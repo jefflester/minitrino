@@ -11,10 +11,16 @@ through Trino.
 
 ## Usage
 
-    minitrino --env STARBURST_VER=<ver> provision --module mysql-event-listener
-    docker exec -it trino bash 
-    trino-cli
-    trino> show schemas from tpch; # Query is logged to event listener DB
+```sh
+minitrino -v provision -m mysql-event-listener
+# Or specify Starburst version
+minitrino -v -e STARBURST_VER=${version} provision -m mysql-event-listener
 
-    # Query the event listener DB
-    trino> select * from mysql_event_listener.event_listener.trino_queries;
+docker exec -it trino bash 
+trino-cli
+
+# Query is logged to event listener DB
+trino> SHOW SCHEMAS FROM tpch; 
+# Query the event listener DB
+trino> SELECT * FROM mysql_event_listener.event_listener.trino_queries;
+```

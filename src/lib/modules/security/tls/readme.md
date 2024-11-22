@@ -3,6 +3,14 @@
 This module configures server TLS on the Trino container using a self-signed
 certificate.
 
+## Usage
+
+```sh
+minitrino -v provision -m tls
+# Or specify Starburst version
+minitrino -v -e STARBURST_VER=${version} provision -m tls
+```
+
 ## Client Keystore and Truststore
 
 The Java keystore and truststore needed for clients and drivers to securely
@@ -14,21 +22,25 @@ provisioned with a security module that enables SSL.
 
 Via Docker:
 
-    docker exec -it trino trino-cli \
-        --server https://trino:8443 \
-        --truststore-path /etc/starburst/tls-mnt/truststore.jks \
-        --truststore-password changeit
+```sh
+docker exec -it trino trino-cli \
+  --server https://trino:8443 \
+  --truststore-path /etc/starburst/tls-mnt/truststore.jks \
+  --truststore-password changeit
+```
 
-Via Host Machine:
+Via host machine:
 
-    trino-cli-xxx-executable.jar \
-        --server https://localhost:8443 \
-        --truststore-path ~/.minitrino/tls-mnt/truststore.jks 
-        --truststore-password changeit
+```sh
+trino-cli-xxx-executable.jar \
+  --server https://localhost:8443 \
+  --truststore-path ~/.minitrino/tls-mnt/truststore.jks 
+  --truststore-password changeit
+```
 
 ## Accessing the Trino Web UI
 
-Open a web browser and go to <https://localhost:8443>. To have the browser
+Open a web browser and go to `https://localhost:8443`. To have the browser
 accept the self-signed certificate, do the following:
 
 **Chrome**: Click anywhere on the page and type `thisisunsafe`.

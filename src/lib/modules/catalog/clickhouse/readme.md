@@ -14,11 +14,19 @@ bootstrapping ClickHouse containers.
 The init script can be edited in the library to load different tables and/or
 additional data:
 
-    lib/modules/catalog/clickhouse/resources/clickhouse/init.sh
+```sh
+lib/modules/catalog/clickhouse/resources/clickhouse/init.sh
+```
 
 ## Usage
 
-    minitrino --env STARBURST_VER=<ver> provision --module clickhouse
-    docker exec -it trino bash 
-    trino-cli
-    trino> show tables in clickhouse.minitrino;
+```sh
+minitrino -v provision -m clickhouse
+# Or specify Starburst version
+minitrino -v -e STARBURST_VER=${version} provision -m clickhouse
+
+docker exec -it trino bash 
+trino-cli
+
+trino> SHOW TABLES IN clickhouse.minitrino;
+```

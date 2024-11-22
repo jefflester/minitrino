@@ -141,7 +141,7 @@ class Environment:
 
         self.env._log_env_vars()
         self.cmd_executor = CommandExecutor(self)
-        self._get_docker_clients()
+        self._get_docker_clients(env=self.env)
 
     def _handle_minitrino_user_dir(self):
         """Checks if a Minitrino directory exists in the user home directory.
@@ -167,7 +167,7 @@ class Environment:
             )
         return config_file
 
-    def _get_docker_clients(self):
+    def _get_docker_clients(self, env={}):
         """Gets DockerClient and APIClient objects. Returns a tuple of DockerClient
         and APIClient objects, respectively. Returns None types for each client
         if they fail to fetch."""
@@ -178,7 +178,7 @@ class Environment:
 
         try:
             output = self.cmd_executor.execute_commands(
-                "docker context inspect", suppress_output=True
+                "docker context inspect", environment=env, suppress_output=True
             )
             context = json.loads(output[0].get("output", ""))[0]
             socket = context["Endpoints"]["docker"].get("Host", "")
@@ -224,7 +224,7 @@ class EnvironmentVariables(dict):
 
     def _parse_user_env(self):
         """Parses user-provided environment variables for the current
-        command."""
+        command. First order of precedence."""
 
         if not self._ctx._user_env:
             return
@@ -234,9 +234,19 @@ class EnvironmentVariables(dict):
             self[env_var[0]] = env_var[1]
 
     def _parse_os_env(self):
-        """Parses environment variables from the user's shell."""
+        """Parses environment variables from the user's shell. Second order of
+        precedence."""
 
-        append = ["LIB_PATH", "STARBURST_VER", "TEXT_EDITOR", "LIC_PATH"]
+        append = [
+            "DOCKER_HOST",
+            "CONFIG_PROPERTIES",
+            "JVM_CONFIG",
+            "LIB_PATH",
+            "STARBURST_VER",
+            "TEXT_EDITOR",
+            "LIC_PATH",
+        ]
+
         for k, v in os.environ.items():
             k = k.upper()
             if k in append and not self.get(k, None):
@@ -244,7 +254,7 @@ class EnvironmentVariables(dict):
 
     def _parse_minitrino_config(self):
         """Parses the Minitrino config file and adds it to the env
-        dictionary."""
+        dictionary. Third order of precedence."""
 
         if not os.path.isfile(self._ctx.config_file):
             return
@@ -644,8 +654,8 @@ class CommandExecutor:
 
         if environment:
             delete_keys = []
-            for host_key, host_value in host_environment.items():
-                for key, value in environment.items():
+            for host_key, _ in host_environment.items():
+                for key, _ in environment.items():
                     if key == host_key:
                         delete_keys.append(host_key)
             for delete_key in delete_keys:

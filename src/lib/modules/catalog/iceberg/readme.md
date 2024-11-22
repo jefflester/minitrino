@@ -23,7 +23,7 @@ Create a schema and a table:
 
 ```sql
 CREATE SCHEMA iceberg.test WITH (location = 's3a://sample-bucket/wh/test');
-create TABLE iceberg.test.test_tbl AS SELECT * FROM tpch.tiny.customer;
+CREATE TABLE iceberg.test.test_tbl AS SELECT * FROM tpch.tiny.customer;
 ```
 
 ## Persistent Storage

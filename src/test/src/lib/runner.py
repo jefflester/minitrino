@@ -42,12 +42,10 @@ class ModuleTest:
         """Runs module tests."""
 
         if not workers:
-            common.execute_command(
-                f"minitrino -v provision -m {self.module} --no-rollback"
-            )
+            common.execute_command(f"minitrino -v provision -m {self.module}")
         else:
             common.execute_command(
-                f"minitrino -v provision -m {self.module} --workers 1 --no-rollback"
+                f"minitrino -v provision -m {self.module} --workers 1"
             )
 
         for t in tests:

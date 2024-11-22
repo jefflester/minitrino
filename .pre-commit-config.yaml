@@ -4,7 +4,6 @@ repos:
     rev: 24.10.0
     hooks:
       - id: black
-        always_run: true
 
   - repo: local
     hooks:

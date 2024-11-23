@@ -27,12 +27,16 @@ jobs:
             exit 1
           fi
 
-          echo "Checking if release exists..."
+          echo "Checking existing releases..."
+          gh release list
+          
           if gh release list | grep -q -e "${GITHUB_HEAD_REF}"; then
             echo "Release ${GITHUB_HEAD_REF} found. Deleting release..."
-            gh release delete "${GITHUB_HEAD_REF}" -y --cleanup-tag
+            gh release delete "${GITHUB_HEAD_REF}" -y --cleanup-tag || echo "Release not found during deletion."
+          else
+            echo "Release ${GITHUB_HEAD_REF} not found. Proceeding to creation..."
           fi
-
+          
           echo "Creating release from branch ${GITHUB_HEAD_REF}..."
           gh release create "${GITHUB_HEAD_REF}" \
             --prerelease \

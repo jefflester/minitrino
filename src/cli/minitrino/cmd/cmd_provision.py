@@ -112,7 +112,7 @@ def cli(ctx, modules, workers, no_rollback, docker_native):
         cmd_chunk = chunk(modules)
         compose_cmd = build_command(docker_native, cmd_chunk)
 
-        ctx.cmd_executor.execute_commands(compose_cmd, environment=ctx.env)
+        ctx.cmd_executor.execute_commands(compose_cmd, environment=ctx.env.copy())
 
         c_restart = execute_bootstraps(modules)
         c_restart = write_trino_cfg(c_restart, modules)

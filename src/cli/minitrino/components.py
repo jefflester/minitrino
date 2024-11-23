@@ -141,7 +141,7 @@ class Environment:
 
         self.env._log_env_vars()
         self.cmd_executor = CommandExecutor(self)
-        self._get_docker_clients(env=self.env)
+        self._get_docker_clients(env=self.env.copy())
 
     def _handle_minitrino_user_dir(self):
         """Checks if a Minitrino directory exists in the user home directory.

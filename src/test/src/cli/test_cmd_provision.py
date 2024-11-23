@@ -145,8 +145,8 @@ def test_enterprise():
     result = utils.execute_cli_cmd(["-v", "provision", "--module", "test"])
 
     assert result.exit_code == 0
-    assert "LIC_PATH" and "./modules/resources/dummy.license" in result.output
-    assert "LIC_MOUNT_PATH" and "/etc/starburst/dummy.license:ro" in result.output
+    etc_ls = common.execute_command(f"docker exec -i trino ls /etc/starburst/")
+    assert "dummy.license" in etc_ls["output"]
 
     common.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()

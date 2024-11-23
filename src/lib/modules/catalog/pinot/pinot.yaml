@@ -13,6 +13,9 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - :2181
+    volumes:
+      - pinot-zookeeper-data:/data
+      - pinot-zookeeper-datalog:/datalog
     labels:
       - com.starburst.tests=minitrino
       - com.starburst.tests.module.pinot=catalog-pinot
@@ -30,6 +33,8 @@ services:
       - pinot-zookeeper
     ports:
       - 9090:9000  # localhost:9090
+    volumes:
+      - pinot-controller-data:/tmp/data/PinotController
     labels:
       - com.starburst.tests=minitrino
       - com.starburst.tests.module.pinot=catalog-pinot
@@ -60,6 +65,26 @@ services:
       - pinot-broker
     ports:
       - :8098
+    volumes:
+      - pinot-server-data:/tmp/data/pinotServerData
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.pinot=catalog-pinot
+
+volumes:
+  pinot-zookeeper-data:
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.pinot=catalog-pinot
+  pinot-zookeeper-datalog:
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.pinot=catalog-pinot
+  pinot-controller-data:
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.pinot=catalog-pinot
+  pinot-server-data:
     labels:
       - com.starburst.tests=minitrino
       - com.starburst.tests.module.pinot=catalog-pinot

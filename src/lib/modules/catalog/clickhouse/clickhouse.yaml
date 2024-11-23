@@ -13,7 +13,14 @@ services:
     ports:
       - :8123
     volumes:
+      - clickhouse-data:/var/lib/clickhouse
       - ./modules/catalog/clickhouse/resources/clickhouse/init.sh:/docker-entrypoint-initdb.d/init.sh
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.clickhouse=catalog-clickhouse
+
+volumes:
+  clickhouse-data:
     labels:
       - com.starburst.tests=minitrino
       - com.starburst.tests.module.clickhouse=catalog-clickhouse

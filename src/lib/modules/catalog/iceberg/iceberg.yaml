@@ -26,11 +26,14 @@ services:
       AWS_ACCESS_KEY_ID: access-key
       AWS_SECRET_ACCESS_KEY: secret-key
       AWS_REGION: us-east-1
+      CATALOG_URI: jdbc:sqlite:/home/iceberg/iceberg.db
       CATALOG_WAREHOUSE: s3://sample-bucket/wh/
       CATALOG_IO__IMPL: org.apache.iceberg.aws.s3.S3FileIO
       CATALOG_S3_ENDPOINT: http://s3.us-east-1.minio.com:9000
     ports:
       - 8181:8181
+    volumes:
+      - iceberg-metadata:/home/iceberg
     labels:
       - com.starburst.tests=minitrino
       - com.starburst.tests.module.iceberg=catalog-iceberg
@@ -89,6 +92,10 @@ services:
       - com.starburst.tests.module.iceberg=catalog-iceberg
 
 volumes:
+  iceberg-metadata:
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.iceberg=catalog-iceberg
   minio-iceberg-data:
     labels:
       - com.starburst.tests=minitrino

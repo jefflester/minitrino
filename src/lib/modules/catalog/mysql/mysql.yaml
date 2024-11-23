@@ -14,6 +14,14 @@ services:
       - ./modules/catalog/mysql/resources/mysql/mysql.env
     ports:
       - 3306:3306
+    volumes:
+      - mysql-data:/var/lib/mysql
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.mysql=catalog-mysql
+
+volumes:
+  mysql-data:
     labels:
       - com.starburst.tests=minitrino
       - com.starburst.tests.module.mysql=catalog-mysql

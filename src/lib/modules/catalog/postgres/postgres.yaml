@@ -12,6 +12,14 @@ services:
       - ./modules/catalog/postgres/resources/postgres/postgres.env
     ports:
       - 5432:5432
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.postgres=catalog-postgres
+
+volumes:
+  postgres-data:
     labels:
       - com.starburst.tests=minitrino
       - com.starburst.tests.module.postgres=catalog-postgres

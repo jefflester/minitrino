@@ -107,7 +107,7 @@ def remove_items(ctx, item_type, force, labels=[]):
                 )
             else:
                 ctx.docker_client.images.remove(image.short_id)
-            ctx.logger.verbose(
+            ctx.logger.info(
                 f"{item_type.title()} removed: {identifier}",
             )
         except APIError as e:
@@ -124,7 +124,7 @@ def remove_items(ctx, item_type, force, labels=[]):
                 volume.remove(force=True)
             else:
                 volume.remove()
-            ctx.logger.verbose(
+            ctx.logger.info(
                 f"{item_type.title()} removed: {identifier}",
             )
         except APIError as e:

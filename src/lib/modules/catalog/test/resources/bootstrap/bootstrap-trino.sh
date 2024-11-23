@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
 
 set -euxo pipefail
-
-touch /etc/starburst/test_bootstrap.txt
+echo "hello world" > /tmp/bootstrap.txt

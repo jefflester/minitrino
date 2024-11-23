@@ -20,6 +20,14 @@ services:
     ports:
       - 9200:9200
       - 9300:9300
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.elasticsearch=catalog-elasticsearch
+
+volumes:
+  elasticsearch-data:
     labels:
       - com.starburst.tests=minitrino
       - com.starburst.tests.module.elasticsearch=catalog-elasticsearch

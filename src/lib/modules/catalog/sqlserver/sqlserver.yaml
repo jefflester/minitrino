@@ -12,6 +12,14 @@ services:
       - ./modules/catalog/sqlserver/resources/sqlserver/sqlserver.env
     ports:
       - 1433:1433
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    labels:
+      - com.starburst.tests=minitrino
+      - com.starburst.tests.module.sqlserver=catalog-sqlserver
+
+volumes:
+  sqlserver-data:
     labels:
       - com.starburst.tests=minitrino
       - com.starburst.tests.module.sqlserver=catalog-sqlserver

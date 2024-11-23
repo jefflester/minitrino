@@ -112,7 +112,7 @@ def cli(ctx, modules, workers, no_rollback, docker_native):
         cmd_chunk = chunk(modules)
         compose_cmd = build_command(docker_native, cmd_chunk)
 
-        ctx.cmd_executor.execute_commands(compose_cmd, environment=ctx.env)
+        ctx.cmd_executor.execute_commands(compose_cmd, environment=ctx.env.copy())
 
         c_restart = execute_bootstraps(modules)
         c_restart = write_trino_cfg(c_restart, modules)
@@ -253,14 +253,8 @@ def build_command(ctx, docker_native="", chunk=""):
     docker compose command string."""
 
     cmd = []
-    compose_env_string = ""
-    for k, v in ctx.env.items():
-        compose_env_string += f'{k.upper()}="{v}" '
-
     cmd.extend(
         [
-            compose_env_string,
-            "\\\n",
             "docker compose -f ",
             os.path.join(ctx.minitrino_lib_dir, "docker-compose.yaml"),
             " \\\n",

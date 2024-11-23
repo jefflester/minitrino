@@ -141,7 +141,7 @@ class Environment:
 
         self.env._log_env_vars()
         self.cmd_executor = CommandExecutor(self)
-        self._get_docker_clients(env=self.env)
+        self._get_docker_clients(env=self.env.copy())
 
     def _handle_minitrino_user_dir(self):
         """Checks if a Minitrino directory exists in the user home directory.
@@ -543,7 +543,8 @@ class CommandExecutor:
         if process.returncode != 0 and kwargs.get("trigger_error", True):
             raise err.MinitrinoError(
                 f"Failed to execute shell command:\n{command}\n"
-                f"Exit code: {process.returncode}"
+                f"Exit code: {process.returncode}\n"
+                f"Command output: {self._strip_ansi(output)}"
             )
 
         return {
@@ -620,13 +621,16 @@ class CommandExecutor:
             self._ctx.logger.warn(
                 f"The command exited with a 126 code which typically means an "
                 f"executable is not accessible or installed. Does this image have "
-                f"all required dependencies installed?\nCommand: {command}",
+                f"all required dependencies installed?\n"
+                f"Command: {command}\n"
+                f"Command output: {output}"
             )
 
         if exit_code != 0 and kwargs.get("trigger_error", True):
             raise err.MinitrinoError(
                 f"Failed to execute command in container '{container.name}':\n{command}\n"
-                f"Exit code: {exit_code}"
+                f"Exit code: {exit_code}\n"
+                f"Command output: {output}"
             )
 
         return {"command": command, "output": output, "exit_code": exit_code}

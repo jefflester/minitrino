@@ -61,11 +61,11 @@ def make_sample_config():
     common.execute_command(cmd)
 
 
-def update_metadata_json(updates=[]):
-    """Updates the test module's metadata.json file with the provided
+def update_metadata_json(module="", updates=[]):
+    """Updates a given module's metadata.json file with the provided
     list of dicts."""
 
-    path = get_metadata_json("test")
+    path = get_metadata_json_path(module)
 
     with open(path, "r") as f:
         data = json.load(f)
@@ -78,7 +78,7 @@ def update_metadata_json(updates=[]):
         json.dump(data, f, indent=4)
 
 
-def reset_metadata_json():
+def reset_test_metadata_json():
     """Resets the test module's metadata.json file to default values."""
 
     default = {
@@ -88,16 +88,31 @@ def reset_metadata_json():
         "versions": [],
         "enterprise": False,
     }
-    path = get_metadata_json("test")
+    path = get_metadata_json_path("test")
 
     with open(path, "w") as f:
-        json.dump(default, f, indent=4)
+        json.dump(default, f, indent=2)
+        f.write("\n")
 
 
-def get_metadata_json(module=""):
+def get_metadata_json_path(module=""):
     """Fetches the metadata.json file path for a given module."""
 
-    result = execute_cli_cmd(["modules", "-m", module, "--json"])
-    output = json.loads(result.output)
+    metadata = get_module_metadata(module)
+    return os.path.abspath(
+        os.path.join(metadata[module]["module_dir"], "metadata.json")
+    )
 
-    return os.path.join(output[module]["module_dir"], "metadata.json")
+
+def get_module_metadata(module=""):
+    """Fetches (all) module metadata for a given module."""
+
+    metadata = execute_cli_cmd(["modules", "-m", module, "--json"])
+    return json.loads(metadata.output)
+
+
+def get_module_yaml_path(module=""):
+    """Fetches the module.yaml file path for a given module."""
+
+    metadata = get_module_metadata(module)
+    return os.path.abspath(metadata[module]["yaml_file"])

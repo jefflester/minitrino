@@ -1,10 +1,8 @@
 #!usr/bin/env/python3
 # -*- coding: utf-8 -*-
 
-# TODO: Test no rollback
-# TODO: Test invalid user config (Trino/JVM)
-
 import docker
+import yaml
 
 import src.common as common
 import src.cli.utils as utils
@@ -24,6 +22,7 @@ def main():
     test_bad_sep_version()
     test_invalid_module()
     test_docker_native()
+    test_bootstrap()
     test_enterprise()
     test_version_requirements()
     test_valid_user_config()
@@ -95,9 +94,7 @@ def test_invalid_module():
 
 def test_docker_native():
     """Ensures that native Docker Compose command options can be appended to the
-    provisioning command.
-
-    This function also calls the bootstrap script test functions."""
+    provisioning command."""
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
@@ -110,8 +107,6 @@ def test_docker_native():
     assert len(containers) == 2
 
     common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-
-    test_bootstrap_script(result)
     cleanup()
 
 
@@ -120,7 +115,7 @@ def test_enterprise():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    utils.update_metadata_json([{"enterprise": True}])
+    utils.update_metadata_json("test", [{"enterprise": True}])
     result = utils.execute_cli_cmd(["-v", "provision", "--module", "test"])
 
     assert result.exit_code == 2
@@ -143,7 +138,7 @@ def test_enterprise():
     )
 
     assert "LIC_PATH" and "/tmp/dummy.license" in result.output
-    utils.reset_metadata_json()
+    utils.reset_test_metadata_json()
     cleanup()
 
     # Ensure default dummy license satisfies Compose env vars
@@ -162,7 +157,7 @@ def test_version_requirements():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    utils.update_metadata_json([{"versions": [MIN_SEP_VER + 1, 998]}])
+    utils.update_metadata_json("test", [{"versions": [MIN_SEP_VER + 1, 998]}])
 
     # Should fail - lower bound
     result = utils.execute_cli_cmd(
@@ -189,33 +184,79 @@ def test_version_requirements():
     assert "maximum required" in result.output
 
     common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-    utils.reset_metadata_json()
+    utils.reset_test_metadata_json()
     cleanup()
 
 
-def test_bootstrap_script(result):
+def test_bootstrap():
     """Ensures that bootstrap scripts properly execute in containers."""
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
+    def add_yaml_bootstrap(yaml_path=""):
+        # In case left over from previous run
+        del_yaml_bootstrap(yaml_path)
+
+        with open(yaml_path, "r") as file:
+            data = yaml.safe_load(file)
+
+        for svc_name, svc_content in data.get("services", {}).items():
+            if "environment" not in svc_content:
+                svc_content["environment"] = {
+                    "MINITRINO_BOOTSTRAP": f"bootstrap-{svc_name}.sh"
+                }
+
+        with open(yaml_path, "w") as file:
+            yaml.dump(data, file, default_flow_style=False)
+
+    def del_yaml_bootstrap(yaml_path=""):
+        with open(yaml_path, "r") as file:
+            data = yaml.safe_load(file)
+
+        try:
+            for _, svc_content in data.get("services", {}).items():
+                if "environment" in svc_content:
+                    del svc_content["environment"]
+            with open(yaml_path, "w") as file:
+                yaml.dump(data, file, default_flow_style=False)
+        except:
+            pass
+
+    yaml_path = utils.get_module_yaml_path("test")
+    add_yaml_bootstrap(yaml_path)
+
+    result = utils.execute_cli_cmd(
+        [
+            "-v",
+            "provision",
+            "--module",
+            "test",
+        ]
+    )
+
     assert all(
         (
-            "Successfully executed bootstrap script in container: 'trino'",
-            "Successfully executed bootstrap script in container: 'test'",
+            "Successfully executed bootstrap script in container 'trino'"
+            in result.output,
+            "Successfully executed bootstrap script in container 'test'"
+            in result.output,
         )
     )
 
-    trino_bootstrap_check = common.execute_command(
-        f"docker exec -i trino ls /etc/starburst/"
+    trino_bootstrap = common.execute_command(
+        f"docker exec -i trino cat /tmp/bootstrap.txt"
     )
-    test_bootstrap_check = common.execute_command(
-        f"docker exec -i test cat /root/test_bootstrap.txt"
+    test_bootstrap = common.execute_command(
+        f"docker exec -i test cat /tmp/bootstrap.txt"
     )
 
-    assert "test_bootstrap.txt" in trino_bootstrap_check.get("output", "")
-    assert "hello world" in test_bootstrap_check.get("output", "")
+    assert "hello world" in trino_bootstrap.get("output", "") and test_bootstrap.get(
+        "output", ""
+    )
 
     common.log_success(cast(FrameType, currentframe()).f_code.co_name)
+    del_yaml_bootstrap(yaml_path)
+    cleanup()
 
 
 def test_valid_user_config():
@@ -227,6 +268,10 @@ def test_valid_user_config():
     result = utils.execute_cli_cmd(
         [
             "-v",
+            "--env",
+            "CONFIG_PROPERTIES=query.max-stage-count=85\nquery.max-execution-time=1h",
+            "--env",
+            "JVM_CONFIG=-Xms1G\n-Xmx2G",
             "provision",
             "--module",
             "test",

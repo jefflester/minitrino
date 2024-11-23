@@ -253,14 +253,8 @@ def build_command(ctx, docker_native="", chunk=""):
     docker compose command string."""
 
     cmd = []
-    compose_env_string = ""
-    for k, v in ctx.env.items():
-        compose_env_string += f'{k.upper()}="{v}" '
-
     cmd.extend(
         [
-            compose_env_string,
-            "\\\n",
             "docker compose -f ",
             os.path.join(ctx.minitrino_lib_dir, "docker-compose.yaml"),
             " \\\n",

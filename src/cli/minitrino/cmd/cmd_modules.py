@@ -7,11 +7,14 @@ import json
 from minitrino.cli import pass_environment
 from minitrino import errors as err
 from minitrino import utils
+from minitrino.settings import MODULE_ADMIN
+from minitrino.settings import MODULE_CATALOG
+from minitrino.settings import MODULE_SECURITY
 
 
 @click.command(
     "modules",
-    help=("""Display module metadata."""),
+    help="Display module metadata.",
 )
 @click.option(
     "-m",
@@ -20,7 +23,15 @@ from minitrino import utils
     default=[],
     type=str,
     multiple=True,
-    help=("""A specific module to display metadata for."""),
+    help="A specific module to display metadata for.",
+)
+@click.option(
+    "-t",
+    "--type",
+    "module_type",
+    default="",
+    type=str,
+    help="A module type to display metadata for (admin, catalog, or security).",
 )
 @click.option(
     "-j",
@@ -29,8 +40,8 @@ from minitrino import utils
     is_flag=True,
     default=False,
     help=(
-        """Print the resulting metadata in raw JSON format (shows 
-        additional module metadata)."""
+        f"Print the resulting metadata in raw JSON format "
+        f"(shows additional module metadata)."
     ),
 )
 @click.option(
@@ -38,42 +49,60 @@ from minitrino import utils
     "--running",
     is_flag=True,
     default=False,
-    help=("""Print metadata for all running modules."""),
+    help="Print metadata for all running modules.",
 )
 @utils.exception_handler
 @pass_environment
-def cli(ctx, modules, json_format, running):
+def cli(ctx, modules, module_type, json_format, running):
     """Module metadata command for Minitrino."""
 
     utils.check_lib(ctx)
-
     ctx.logger.verbose("Printing module metadata...")
 
-    if not modules and not running:
-        for module, module_dict in ctx.modules.data.items():
-            log_info(module, module_dict, json_format)
-        return
+    valid_types = {MODULE_ADMIN, MODULE_CATALOG, MODULE_SECURITY}
+    if module_type and module_type not in valid_types:
+        raise err.UserError(
+            f"Invalid module type: '{module_type}'",
+            f"Valid types are: {', '.join(valid_types)}.",
+        )
 
     if running:
-        modules = ctx.modules.get_running_modules()
+        modules_to_process = ctx.modules.get_running_modules()
+    elif modules:
+        modules_to_process = modules
+    else:
+        modules_to_process = ctx.modules.data.keys()
 
+    # Filter and display modules
+    filtered_modules = filter_modules(ctx, modules_to_process, module_type)
+    if not filtered_modules:
+        ctx.logger.info("No modules match the specified criteria.")
+        return
+
+    for module, module_dict in filtered_modules.items():
+        log_info(ctx, module, module_dict, json_format)
+
+
+def filter_modules(ctx, modules, module_type):
+    """
+    Filters modules based on their type and returns a dictionary of valid
+    modules.
+    """
+    result = {}
     for module in modules:
-        module_dict = ctx.modules.data.get(module, {})
+        module_dict = ctx.modules.data.get(module)
         if not module_dict:
-            raise err.UserError(
-                f"Invalid module: '{module}'",
-                "Ensure the module you're referencing is in the Minitrino library.",
-            )
-        log_info(module, module_dict, json_format)
+            continue  # Skip invalid modules silently
+        if module_type and module_dict.get("type") != module_type:
+            continue  # Skip modules that don't match the specified type
+        result[module] = module_dict
+    return result
 
 
-@pass_environment
-def log_info(ctx, module_name="", module_dict={}, json_format=False):
+def log_info(ctx, module_name, module_dict, json_format):
     """Logs module metadata to the user's terminal."""
-
     if json_format:
-        module_dict = {module_name: module_dict}
-        print(json.dumps(module_dict, indent=2))
+        print(json.dumps({module_name: module_dict}, indent=2))
     else:
         log_msg = [f"Module: {module_name}\n"]
         keys = [

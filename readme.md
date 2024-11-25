@@ -8,7 +8,7 @@ A command line tool that makes it easy to run modular Trino environments
 locally. Compatible with Starburst versions 429-e and later.
 
 [![PyPI
-version](https://badge.fury.io/py/minitrino.svg)](https://badge.fury.io/py/minitrino)
+version](https://img.shields.io/pypi/v/minitrino)](https://pypi.org/project/minitrino/)
 ![CLI
 Tests](https://github.com/jefflester/minitrino/actions/workflows/cli-tests.yaml/badge.svg)
 ![Library

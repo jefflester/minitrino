@@ -1,0 +1,8 @@
+{
+  "description": "Results cache module",
+  "incompatibleModules": [],
+  "dependentModules": [
+    "insights"
+  ],
+  "enterprise": true
+}

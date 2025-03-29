@@ -2,9 +2,9 @@
 
 function install() {
     # Find a compatible version of pip
-    if command -v pip &>/dev/null && pip --version 2>&1 | grep -q -E "python.*3\.[8-9]|python.*3\.(1[0-1])"; then
+    if command -v pip &>/dev/null && pip --version 2>&1 | grep -q -E "python.*3\.[8-9]|python.*3\.(1[0-9])"; then
         PIP=pip
-    elif command -v pip3 &>/dev/null && pip3 --version 2>&1 | grep -q -E "python.*3\.[8-9]|python.*3\.(1[0-1])"; then
+    elif command -v pip3 &>/dev/null && pip3 --version 2>&1 | grep -q -E "python.*3\.[8-9]|python.*3\.(1[0-9])"; then
         PIP=pip3
     else
         echo "Minitrino requires Python 3.8+. Please install a compatible Python version and ensure Pip points to it."

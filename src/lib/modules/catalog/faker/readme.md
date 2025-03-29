@@ -1,4 +1,4 @@
-# Postgres Catalog Module
+# Faker Catalog Module
 
 This module provisions the system with a [Faker
 catalog](https://docs.starburst.io/latest/connector/faker.html).

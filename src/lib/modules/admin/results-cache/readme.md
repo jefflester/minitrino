@@ -1,4 +1,4 @@
-# Hive Catalog Module
+# Results Cache Module
 
 This module deploys the necessary components for Starburst Enterprise result
 caching.

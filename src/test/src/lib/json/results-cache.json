@@ -3,43 +3,42 @@
     {
       "type": "query",
       "name": "Prime result cache",
-      "sql": "SELECT * FROM tpch.tiny.customer LIMIT 10",
+      "sql": "SELECT * FROM tpch.tiny.customer LIMIT 1",
       "trinoCliArgs": [
         "--server 'http://trino:8080'",
         "--user admin"
       ],
       "contains": [
-        "query_id",
-        "catalog",
-        "schema"
+        "custkey",
+        "name",
+        "address"
       ]
     },
     {
       "type": "query",
       "name": "Fetch from result cache",
-      "sql": "SELECT * FROM tpch.tiny.customer LIMIT 10",
+      "sql": "SELECT * FROM tpch.tiny.customer LIMIT 1",
       "trinoCliArgs": [
         "--server 'http://trino:8080'",
         "--user admin"
       ],
       "contains": [
-        "query_id",
-        "catalog",
-        "schema"
+        "custkey",
+        "name",
+        "address"
       ]
     },
     {
       "type": "query",
       "name": "Verify result cache usage",
-      "sql": "SELECT \"stats.cachehits.totalcount\" FROM \"jmx\".\"current\".\"com.starburstdata.cache.resultscache:name=dispatcher\"",
+      "sql": "SELECT \\\"stats.cachehits.totalcount\\\" FROM \\\"jmx\\\".\\\"current\\\".\\\"com.starburstdata.cache.resultscache:name=dispatcher\\\"",
       "trinoCliArgs": [
         "--server 'http://trino:8080'",
         "--user admin"
       ],
       "contains": [
-        "query_id",
-        "catalog",
-        "schema"
+        "stats.cachehits.totalcount",
+        "1"
       ]
     }
   ]

@@ -28,7 +28,7 @@ setup(
     packages=["minitrino", "minitrino.cmd"],
     include_package_data=True,
     install_requires=[
-        "click==8.1.7",
+        "click==8.1.8",
         "colorama",
         "docker==7.1.0",
         "PyYAML",

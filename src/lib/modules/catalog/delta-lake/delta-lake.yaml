@@ -2,6 +2,8 @@
 services:
 
   trino:
+    environment:
+      MINITRINO_BOOTSTRAP: 458-native-fs-workaround.sh
     depends_on:
       - delta-catalog-cp
 

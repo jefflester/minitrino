@@ -12,7 +12,7 @@ TRINO_DIST="${STARBURST_VER:0:3}"
 BUCKET="s3.us-east-2.amazonaws.com/software.starburstdata.net"
 
 check_arch() {
-    if [ "$TRINO_DIST" -ge 462 ]; then
+    if [ "${TRINO_DIST}" -ge 462 ]; then
         case "$(uname -m)" in
             x86_64|amd64)
                 ARCH="x86_64"

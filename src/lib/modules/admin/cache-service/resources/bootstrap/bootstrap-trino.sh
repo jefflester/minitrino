@@ -47,7 +47,7 @@ fi
 # END TODO: Remove
 
 COUNTER=0
-while [ "${COUNTER}" -lt 30 ]
+while [ "${COUNTER}" -lt 90 ]
 do
   set +e
   RESPONSE=$(curl -s -X GET -H 'Accept: application/json' -H 'X-Trino-User: admin' 'trino:8080/v1/info/')

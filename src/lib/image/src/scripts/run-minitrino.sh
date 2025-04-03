@@ -11,12 +11,12 @@ for ((attempt=1; attempt<=max_attempts; attempt++)); do
     /usr/lib/starburst/bin/run-starburst && break
 
     # If the service failed to start, wait for a second before trying again
-    echo "Startup attempt $attempt failed, retrying in 1 second..."
+    echo "Startup attempt ${attempt} failed, retrying in 1 second..."
     sleep 1
 done
 
 # If the service failed to start after max_attempts, exit with a non-zero status code
 if ((attempt > max_attempts)); then
-    echo "Service failed to start after $max_attempts attempts, exiting..."
+    echo "Service failed to start after ${max_attempts} attempts, exiting..."
     exit 1
 fi

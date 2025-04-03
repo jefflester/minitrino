@@ -5,7 +5,7 @@
 # Minitrino
 
 A command line tool that makes it easy to run modular Trino environments
-locally. Compatible with Starburst versions 429-e and later.
+locally. Compatible with Starburst versions 443-e and later.
 
 [![PyPI
 version](https://img.shields.io/pypi/v/minitrino)](https://pypi.org/project/minitrino/)
@@ -18,7 +18,7 @@ Slack](https://img.shields.io/static/v1?logo=slack&logoColor=959DA5&label=Slack&
 
 -----
 
-**Latest Stable Release**: 2.2.3
+**Latest Stable Release**: 2.2.4
 
 -----
 

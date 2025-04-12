@@ -1,22 +1,17 @@
 ARG UBUNTU_VER
-
-FROM ubuntu:${UBUNTU_VER}
-
 ARG CLUSTER_VER
-ARG CLUSTER_DIST # 'starburst' or 'trino'
+ARG CLUSTER_DIST
 ARG BUILD_USER
-ARG UID=1000
-ARG GROUP=root
-ARG GID=0
 
-ENV CLUSTER_VER=${CLUSTER_VER}
-ENV CLUSTER_DIST=${CLUSTER_DIST}
+FROM ubuntu:${UBUNTU_VER} AS base
+
+ARG BUILD_USER
+
 ENV SDKMAN_DIR="/home/${BUILD_USER}/.sdkman"
 ENV JAVA_HOME="${SDKMAN_DIR}/candidates/java/current"
 ENV PATH="${JAVA_HOME}/bin:${PATH}"
 
 COPY ./src/scripts /tmp/
-COPY ./src/etc/app-config /etc/${CLUSTER_DIST}
 
 RUN \
     apt-get -y update && \
@@ -39,8 +34,23 @@ RUN \
     chmod +x \
         /tmp/install.sh \
         /tmp/install-java.sh \
-        /tmp/run-minitrino.sh && \
-    /tmp/install.sh ${BUILD_USER} ${GROUP} ${UID} ${GID}
+        /tmp/run-minitrino.sh
+
+FROM base 
+
+ARG CLUSTER_VER
+ARG CLUSTER_DIST
+ARG BUILD_USER
+ARG UID=1000
+ARG GROUP=root
+ARG GID=0
+
+ENV CLUSTER_VER=${CLUSTER_VER}
+ENV CLUSTER_DIST=${CLUSTER_DIST}
+
+COPY ./src/etc/app-config /etc/${CLUSTER_DIST}
+
+RUN /tmp/install.sh ${BUILD_USER} ${GROUP} ${UID} ${GID}
 
 EXPOSE 8080
 WORKDIR /etc/${CLUSTER_DIST}

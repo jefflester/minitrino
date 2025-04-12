@@ -6,18 +6,20 @@ services:
       context: ./image/
       args:
         UBUNTU_VER: ${UBUNTU_VER}
-        STARBURST_VER: ${STARBURST_VER}
+        CLUSTER_VER: ${CLUSTER_VER}
+        CLUSTER_DIST: ${CLUSTER_DIST}
+        BUILD_USER: ${BUILD_USER}
       labels:
         - com.starburst.tests=minitrino
         - com.starburst.tests.module=trino
-    image: minitrino/trino:${STARBURST_VER}
+    image: minitrino/trino:${CLUSTER_VER}-${CLUSTER_DIST}
     container_name: trino
     restart: 'no'
     ports:
       - 8080:8080
     volumes:
       - ${LIC_PATH}:${LIC_MOUNT_PATH}
-      - catalogs:/etc/starburst/catalog
+      - catalogs:/etc/${CLUSTER_DIST}/catalog
     labels:
       - com.starburst.tests=minitrino
       - com.starburst.tests.module=trino

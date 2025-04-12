@@ -7,8 +7,9 @@
 
 set -euxo pipefail
 
-USER_HOME=$(eval echo "~$1")
-TRINO_DIST="${STARBURST_VER:0:3}"
+USER="${1}"
+USER_HOME=$(eval echo "~${USER}")
+TRINO_DIST="${CLUSTER_VER:0:3}"
 
 if [ "${TRINO_DIST}" -ge 436 ] && [ "${TRINO_DIST}" -le 446 ]; then
     JAVA_VER=21.0.5
@@ -17,22 +18,25 @@ elif [ "${TRINO_DIST}" -ge 447 ] && [ "${TRINO_DIST}" -le 463 ]; then
 elif [ "${TRINO_DIST}" -ge 464 ]; then
     JAVA_VER=23.0.2
 else
-    echo "Invalid Trino version. Exiting..."
+    echo "Unsupported Trino version. Exiting..."
     exit 1
 fi
 
-echo "Installing Java version ${JAVA_VER} for user $1"
-
-curl -s https://get.sdkman.io | bash
-
-bash -c "
-source ${USER_HOME}/.sdkman/bin/sdkman-init.sh && \
-sdk install java ${JAVA_VER}-tem --disableUsage && \
-sdk flush temp
-"
+echo "Installing Java version ${JAVA_VER} for user ${USER}..."
+su - "${USER}" -c "bash -lc 'curl -s https://get.sdkman.io | bash'"
+su - "${USER}" -c \
+    "bash -lc 'source ~/.sdkman/bin/sdkman-init.sh && \
+    sdk install java ${JAVA_VER}-tem --disableUsage && \
+    sdk flush temp'"
 
 echo "Copying cacerts..."
-mkdir /etc/starburst/tls-jvm/
-cp "$(find "${USER_HOME}" -type f -name 'cacerts' 2> /dev/null)" /etc/starburst/tls-jvm/
-chown "${USER}":"${GROUP}" /etc/starburst/tls-jvm/cacerts
-chmod 644 /etc/starburst/tls-jvm/cacerts
+CACERTS_PATH=$(find "${USER_HOME}/.sdkman/candidates/java/" -type f -name 'cacerts' 2> /dev/null | head -n 1)
+if [[ -z "${CACERTS_PATH}" ]]; then
+    echo "Could not find cacerts file. Exiting..."
+    exit 1
+fi
+
+mkdir -p /etc/"${CLUSTER_DIST}"/tls-jvm/
+cp "${CACERTS_PATH}" /etc/"${CLUSTER_DIST}"/tls-jvm/
+chown "${USER}":"${GROUP}" /etc/"${CLUSTER_DIST}"/tls-jvm/cacerts
+chmod 644 /etc/"${CLUSTER_DIST}"/tls-jvm/cacerts

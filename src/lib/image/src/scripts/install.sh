@@ -66,6 +66,54 @@ create_directories() {
         /home/"${CLUSTER_DIST}"/
 }
 
+prune_plugins() {
+    echo "Pruning unused plugins..."
+    local plugin_dir="/usr/lib/${CLUSTER_DIST}/plugin"
+    local keep=(
+        audit-log
+        clickhouse
+        delta-lake
+        elasticsearch
+        exchange-filesystem
+        exchange-hdfs
+        faker
+        functions-python
+        generic-jdbc
+        hive
+        iceberg
+        jmx
+        mariadb
+        memory
+        mysql
+        mysql-event-listener
+        okta-authenticator
+        opensearch
+        password-authenticators
+        pinot
+        postgresql
+        resource-group-managers
+        sep-stargate
+        session-property-managers
+        sqlserver
+        spooling-filesystem
+        starburst-functions
+        starburst-hive-based-ranger
+        starburst-ranger
+        stargate-parallel
+        thrift
+        tpcds
+        tpch
+        warp-speed
+    )
+    for dir in "${plugin_dir}"/*; do
+        name=$(basename "$dir")
+        if [[ ! " ${keep[*]} " =~ " ${name} " ]]; then
+            echo "Removing plugin: $name"
+            rm -rf "$dir"
+        fi
+    done
+}
+
 prune() {
     echo "Pruning unnecessary application files..."
     cd /tmp/
@@ -80,6 +128,7 @@ prune() {
             "starburst-enterprise-${STARBURST_VER_ARCH_UNPACK}/bin/linux-${ARCH_BIN}" \
             /usr/lib/"${CLUSTER_DIST}"/bin/
     fi
+    prune_plugins
 }
 
 download_and_extract() {

@@ -9,17 +9,17 @@ provider](https://docs.starburst.io/latest/security/group-file.html).
 
 ```sh
 minitrino -v provision -m file-access-control
-# Or specify Starburst version
-minitrino -v -e STARBURST_VER=${version} provision -m file-access-control
+# Or specify cluster version
+minitrino -v -e CLUSTER_VER=${version} provision -m file-access-control
 
-docker exec -it trino bash 
+docker exec -it minitrino bash 
 trino-cli --user admin
 
 trino> SHOW SCHEMAS FROM tpch;
 ```
 
 You will need to supply a username to the Trino CLI in order to map to a group
-(see `lib/modules/security/file-access-control/resources/trino/group.txt` for
+(see `lib/modules/security/file-access-control/resources/cluster/group.txt` for
 which users belong to which groups). Example:
 
 ```sh
@@ -34,7 +34,8 @@ The access policy is located in the `rules.json` file which defines groups of
 users that map to certain access control permissions. The users for the groups
 are defined in the `groups.txt` file.
 
-- Users in the `sepadmins` group have full access to all objects within Trino
+- Users in the `clusteradmins` group have full access to all objects in the
+  cluster
 - Users in the `metadata-users` group have access to the tables within the
   `system.metadata`, `system.jdbc`, and `system.information_schema` schemas
 - Users in the `platform-users` group only have access to the tables within the

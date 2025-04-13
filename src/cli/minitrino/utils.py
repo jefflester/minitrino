@@ -8,7 +8,7 @@ import pkg_resources
 
 from minitrino import errors as err
 from minitrino.settings import DEFAULT_INDENT
-from minitrino.settings import MIN_SEP_VER
+from minitrino.settings import MIN_CLUSTER_VER
 
 from click import echo, style, prompt
 from textwrap import fill
@@ -200,26 +200,44 @@ def check_lib(ctx):
     ctx.minitrino_lib_dir
 
 
-def check_starburst_ver(ctx):
-    """Checks if a proper Starburst version is provided."""
+def check_cluster_ver(ctx):
+    """Checks if a proper cluster version is provided."""
 
-    starburst_ver = ctx.env.get("STARBURST_VER", "")
-    error_msg = (
-        f"Provided Starburst version '{starburst_ver}' is invalid. "
-        f"The provided version must be {MIN_SEP_VER}-e or higher."
-    )
+    cluster_dist = ctx.env.get("CLUSTER_DIST", "")
+    cluster_ver = ctx.env.get("CLUSTER_VER", "")
 
-    try:
-        starburst_ver_int = int(starburst_ver[0:3])
-        if starburst_ver_int < MIN_SEP_VER or "-e" not in starburst_ver:
+    if cluster_dist == "starburst":
+        error_msg = (
+            f"Provided Starburst version '{cluster_ver}' is invalid. "
+            f"The version must be {MIN_CLUSTER_VER}-e or higher."
+        )
+        try:
+            cluster_ver_int = int(cluster_ver[0:3])
+            if cluster_ver_int < MIN_CLUSTER_VER or "-e" not in cluster_ver:
+                raise err.UserError(error_msg)
+        except:
             raise err.UserError(error_msg)
-    except:
-        raise err.UserError(error_msg)
+    elif cluster_dist == "trino":
+        error_msg = (
+            f"Provided Trino version '{cluster_ver}' is invalid. "
+            f"The version must be {MIN_CLUSTER_VER} or higher."
+        )
+        if "-e" in cluster_ver:
+            raise err.UserError(
+                f"The provided Trino version '{cluster_ver}' cannot contain '-e'. "
+                "Did you mean to use Starburst via the --image option?"
+            )
+        try:
+            cluster_ver_int = int(cluster_ver[0:3])
+            if cluster_ver_int < MIN_CLUSTER_VER:
+                raise err.UserError(error_msg)
+        except:
+            raise err.UserError(error_msg)
 
 
 def check_version_requirements(ctx, modules=[]):
-    """Checks for SEP version validity per version requirements specified in any
-    module(s)."""
+    """Checks for cluster version validity per version requirements defined in
+    module metadata."""
 
     for module in modules:
         versions = ctx.modules.data.get(module, {}).get("versions", [])
@@ -233,24 +251,24 @@ def check_version_requirements(ctx, modules=[]):
                 f"present, the minimum version is required, and the maximum version is optional.",
             )
 
-        starburst_ver = int(ctx.env.get("STARBURST_VER", "")[0:3])
+        cluster_ver = int(ctx.env.get("CLUSTER_VER", "")[0:3])
         min_ver = int(versions.pop(0))
         max_ver = None
         if versions:
             max_ver = int(versions.pop())
 
         begin_msg = (
-            f"The supplied Starburst version {starburst_ver} is incompatible with module '{module}'. "
+            f"The supplied cluster version {cluster_ver} is incompatible with module '{module}'. "
             f"Per the module's metadata.json file, the"
         )
 
-        if starburst_ver < min_ver:
+        if cluster_ver < min_ver:
             raise err.UserError(
-                f"{begin_msg} minimum required Starburst version for the module is: {min_ver}."
+                f"{begin_msg} minimum required cluster version for the module is: {min_ver}."
             )
-        if max_ver and starburst_ver > max_ver:
+        if max_ver and cluster_ver > max_ver:
             raise err.UserError(
-                f"{begin_msg} maximum required Starburst version for the module is: {max_ver}."
+                f"{begin_msg} maximum required cluster version for the module is: {max_ver}."
             )
 
 
@@ -272,7 +290,7 @@ def check_dependent_modules(ctx, modules=[]):
 
 def generate_identifier(identifiers=None):
     """Returns an 'object identifier' string used for creating log messages,
-    e.g. '[ID: 12345] [Name: trino]'.
+    e.g. '[ID: 12345] [Name: minitrino]'.
 
     ### Parameters
     - `identifiers`: Dictionary of "identifier_value": "identifier_key" pairs.
@@ -281,7 +299,7 @@ def generate_identifier(identifiers=None):
     ```python
     identifier = generate_identifier(
         {"ID": container.short_id, "Name": container.name}
-    ) # Will Spit out -> "[ID: 12345] [Name: trino]"
+    ) # Will Spit out -> "[ID: 12345] [Name: minitrino]"
     ```"""
 
     identifier = []
@@ -299,7 +317,7 @@ def parse_key_value_pair(
 
     ### Parameters
     - `key_value_pair`: A string formatted as a key-value pair, i.e.
-      `"STARBURST_VER=388-e"`.
+      `"CLUSTER_VER=388-e"`.
     - `err_type`: The exception to raise if an "=" delimiter is not in the
       key-value pair. Defaults to `MinitrinoError`.
     - `key_to_upper`: If `True`, the key will be forced to uppercase.

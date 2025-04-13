@@ -1,11 +1,11 @@
 ---
 services:
 
-  trino:
+  minitrino:
     environment:
       MINITRINO_BOOTSTRAP: bootstrap-elasticsearch.sh
     volumes:
-      - ./modules/catalog/elasticsearch/resources/trino/elasticsearch.properties:${ETC}/catalog/elasticsearch.properties
+      - ./modules/catalog/elasticsearch/resources/cluster/elasticsearch.properties:${ETC}/catalog/elasticsearch.properties
 
   elasticsearch:
     image: elasticsearch:${ELASTICSEARCH_VER}
@@ -23,11 +23,11 @@ services:
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.elasticsearch=catalog-elasticsearch
+      - org.minitrino=root
+      - org.minitrino.module.elasticsearch=catalog-elasticsearch
 
 volumes:
   elasticsearch-data:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.elasticsearch=catalog-elasticsearch
+      - org.minitrino=root
+      - org.minitrino.module.elasticsearch=catalog-elasticsearch

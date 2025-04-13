@@ -1,9 +1,9 @@
 ---
 services:
 
-  trino:
+  minitrino:
     volumes:
-      - ./modules/catalog/pinot/resources/trino/pinot.properties:${ETC}/catalog/pinot.properties
+      - ./modules/catalog/pinot/resources/cluster/pinot.properties:${ETC}/catalog/pinot.properties
 
   pinot-zookeeper:
     image: zookeeper:${ZOOKEEPER_VER}
@@ -17,8 +17,8 @@ services:
       - pinot-zookeeper-data:/data
       - pinot-zookeeper-datalog:/datalog
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.pinot=catalog-pinot
+      - org.minitrino=root
+      - org.minitrino.module.pinot=catalog-pinot
 
   pinot-controller:
     image: apachepinot/pinot:${PINOT_VER}
@@ -36,8 +36,8 @@ services:
     volumes:
       - pinot-controller-data:/tmp/data/PinotController
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.pinot=catalog-pinot
+      - org.minitrino=root
+      - org.minitrino.module.pinot=catalog-pinot
 
   pinot-broker:
     image: apachepinot/pinot:${PINOT_VER}
@@ -51,8 +51,8 @@ services:
     ports:
       - :8099
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.pinot=catalog-pinot
+      - org.minitrino=root
+      - org.minitrino.module.pinot=catalog-pinot
 
   pinot-server:
     image: apachepinot/pinot:${PINOT_VER}
@@ -68,23 +68,23 @@ services:
     volumes:
       - pinot-server-data:/tmp/data/pinotServerData
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.pinot=catalog-pinot
+      - org.minitrino=root
+      - org.minitrino.module.pinot=catalog-pinot
 
 volumes:
   pinot-zookeeper-data:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.pinot=catalog-pinot
+      - org.minitrino=root
+      - org.minitrino.module.pinot=catalog-pinot
   pinot-zookeeper-datalog:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.pinot=catalog-pinot
+      - org.minitrino=root
+      - org.minitrino.module.pinot=catalog-pinot
   pinot-controller-data:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.pinot=catalog-pinot
+      - org.minitrino=root
+      - org.minitrino.module.pinot=catalog-pinot
   pinot-server-data:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.pinot=catalog-pinot
+      - org.minitrino=root
+      - org.minitrino.module.pinot=catalog-pinot

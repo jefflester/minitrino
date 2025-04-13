@@ -92,7 +92,7 @@ def test_label(docker_client):
             "remove",
             "--images",
             "--label",
-            "com.starburst.tests.module.test=catalog-test",
+            "org.minitrino.module.test=catalog-test",
         ],
     )
 
@@ -102,12 +102,12 @@ def test_label(docker_client):
     assert_docker_resource_count(
         {
             "resource_type": docker_client.images,
-            "label": "com.starburst.tests.module.test=catalog-test",
+            "label": "org.minitrino.module.test=catalog-test",
             "expected_count": 0,
         },
         {
             "resource_type": docker_client.images,
-            "label": "com.starburst.tests.module=trino",
+            "label": "org.minitrino.module=minitrino",
             "expected_count": 1,
         },
     )
@@ -129,7 +129,7 @@ def test_multiple_labels(docker_client):
             "remove",
             "--volumes",
             "--label",
-            "com.starburst.tests.module.test=catalog-test",
+            "org.minitrino.module.test=catalog-test",
             "--label",
             RESOURCE_LABEL,
         ],
@@ -146,7 +146,7 @@ def test_multiple_labels(docker_client):
         },
         {
             "resource_type": docker_client.volumes,
-            "label": "com.starburst.tests.module.test=catalog-test",
+            "label": "org.minitrino.module.test=catalog-test",
             "expected_count": 0,
         },
     )
@@ -173,7 +173,7 @@ def test_invalid_label(docker_client):
     assert_docker_resource_count(
         {
             "resource_type": docker_client.images,
-            "label": "com.starburst.tests.module.test=catalog-test",
+            "label": "org.minitrino.module.test=catalog-test",
             "expected_count": 1,
         }
     )
@@ -235,12 +235,12 @@ def test_remove_dependent_resources_running(docker_client):
     assert_docker_resource_count(
         {
             "resource_type": docker_client.images,
-            "label": "com.starburst.tests.module.test=catalog-test",
+            "label": "org.minitrino.module.test=catalog-test",
             "expected_count": 1,
         },
         {
             "resource_type": docker_client.volumes,
-            "label": "com.starburst.tests.module.test=catalog-test",
+            "label": "org.minitrino.module.test=catalog-test",
             "expected_count": 1,
         },
     )
@@ -264,7 +264,7 @@ def test_remove_dependent_resources_stopped(docker_client):
             "--images",
             "--volumes",
             "--label",
-            "com.starburst.tests.module.test=catalog-test",
+            "org.minitrino.module.test=catalog-test",
         ],
     )
 
@@ -279,12 +279,12 @@ def test_remove_dependent_resources_stopped(docker_client):
     assert_docker_resource_count(
         {
             "resource_type": docker_client.images,
-            "label": "com.starburst.tests.module.test=catalog-test",
+            "label": "org.minitrino.module.test=catalog-test",
             "expected_count": 1,
         },
         {
             "resource_type": docker_client.volumes,
-            "label": "com.starburst.tests.module.test=catalog-test",
+            "label": "org.minitrino.module.test=catalog-test",
             "expected_count": 1,
         },
     )
@@ -312,7 +312,7 @@ def test_remove_dependent_resources_force(docker_client):
             "remove",
             "--images",
             "--label",
-            "com.starburst.tests.module.test=catalog-test",
+            "org.minitrino.module.test=catalog-test",
             "--force",
         ],
     )
@@ -323,12 +323,12 @@ def test_remove_dependent_resources_force(docker_client):
     assert_docker_resource_count(
         {
             "resource_type": docker_client.images,
-            "label": "com.starburst.tests.module.test=catalog-test",
+            "label": "org.minitrino.module.test=catalog-test",
             "expected_count": 0,
         },
         {
             "resource_type": docker_client.volumes,
-            "label": "com.starburst.tests.module.test=catalog-test",
+            "label": "org.minitrino.module.test=catalog-test",
             "expected_count": 1,
         },
     )
@@ -363,7 +363,7 @@ def cleanup():
             "--images",
             "--volumes",
             "--label",
-            "com.starburst.tests.module.test=catalog-test",
+            "org.minitrino.module.test=catalog-test",
         ]
     )
 

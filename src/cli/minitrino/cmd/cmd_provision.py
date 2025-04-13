@@ -17,12 +17,12 @@ from minitrino.cli import pass_environment
 from minitrino import utils
 from minitrino import errors as err
 from minitrino.settings import RESOURCE_LABEL
-from minitrino.settings import ETC_TRINO
+from minitrino.settings import ETC_DIR
 from minitrino.settings import LIC_VOLUME_MOUNT
 from minitrino.settings import LIC_MOUNT_PATH
 from minitrino.settings import DUMMY_LIC_MOUNT_PATH
-from minitrino.settings import TRINO_CONFIG
-from minitrino.settings import TRINO_JVM_CONFIG
+from minitrino.settings import CLUSTER_CONFIG
+from minitrino.settings import CLUSTER_JVM_CONFIG
 from minitrino.settings import WORKER_CONFIG_PROPS
 
 from docker.errors import NotFound
@@ -44,6 +44,13 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
     type=str,
     multiple=True,
     help=("""A specific module to provision."""),
+)
+@click.option(
+    "-i",
+    "--image",
+    default="trino",
+    type=str,
+    help=("""The cluster image type (trino or starburst). Defaults to trino."""),
 )
 @click.option(
     "-w",
@@ -81,13 +88,16 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 )
 @utils.exception_handler
 @pass_environment
-def cli(ctx, modules, workers, no_rollback, docker_native):
+def cli(ctx, modules, image, workers, no_rollback, docker_native):
     """Provision command for Minitrino. If the resulting docker compose command
     is unsuccessful, the function exits with a non-zero status code."""
 
+    ctx.logger.info(f"Starting {image.title()} cluster provisioning...")
+
+    update_env(image)
     utils.check_daemon(ctx.docker_client)
     utils.check_lib(ctx)
-    utils.check_starburst_ver(ctx)
+    utils.check_cluster_ver(ctx)
     utils.check_version_requirements(ctx, modules)
     modules = list(modules)
     modules = append_running_modules(modules)
@@ -97,9 +107,7 @@ def cli(ctx, modules, workers, no_rollback, docker_native):
     check_volumes(modules)
 
     if not modules:
-        ctx.logger.info(
-            f"No modules specified. Provisioning standalone Trino cluster..."
-        )
+        ctx.logger.info(f"No modules specified. Provisioning standalone cluster...")
     else:
         for module in modules:
             if not ctx.modules.data.get(module, False):
@@ -115,7 +123,7 @@ def cli(ctx, modules, workers, no_rollback, docker_native):
         ctx.cmd_executor.execute_commands(compose_cmd, environment=ctx.env.copy())
 
         c_restart = execute_bootstraps(modules)
-        c_restart = write_trino_cfg(c_restart, modules)
+        c_restart = write_cluster_cfg(c_restart, modules)
         check_dup_cfgs()
         c_restart = provision_workers(c_restart, workers)
         restart_containers(c_restart)
@@ -124,6 +132,14 @@ def cli(ctx, modules, workers, no_rollback, docker_native):
     except Exception as e:
         rollback(no_rollback)
         utils.handle_exception(e)
+
+
+@pass_environment
+def update_env(ctx, image=""):
+    """Updates environment variables with build-time info."""
+
+    ctx.env.update({"CLUSTER_DIST": image})
+    ctx.env.update({"BUILD_USER": image})
 
 
 @pass_environment
@@ -171,16 +187,16 @@ def check_compatibility(ctx, modules=[]):
 @pass_environment
 def check_enterprise(ctx, modules=[]):
     """Checks if any of the provided modules are Starburst Enterprise features.
-    If they are, we check that a pointer to a SEP license is provided."""
+    If they are, we confirm that a SEP license is provided."""
 
     ctx.logger.verbose(
-        "Checking for SEP license for enterprise modules...",
+        "Checking for Starburst Enterprise modules...",
     )
 
     yaml_path = os.path.join(ctx.minitrino_lib_dir, "docker-compose.yaml")
     with open(yaml_path) as f:
         yaml_file = yaml.load(f, Loader=yaml.FullLoader)
-    volumes = yaml_file.get("services", {}).get("trino", {}).get("volumes", [])
+    volumes = yaml_file.get("services", {}).get("minitrino", {}).get("volumes", [])
 
     if LIC_VOLUME_MOUNT not in volumes:
         raise err.UserError(
@@ -195,11 +211,17 @@ def check_enterprise(ctx, modules=[]):
             enterprise_modules.append(module)
 
     if enterprise_modules:
+        if not ctx.env.get("CLUSTER_DIST") == "starburst":
+            raise err.UserError(
+                f"Module(s) {enterprise_modules} are only compatible with "
+                f"Starburst Enterprise. Please specify the image type with the '-i' option. "
+                f"Example: `minitrino provision -i starburst`",
+            )
         if not ctx.env.get("LIC_PATH", False):
             raise err.UserError(
                 f"Module(s) {enterprise_modules} requires a Starburst license. "
                 f"You must provide a path to a Starburst license via the "
-                f"LIC_PATH environment variable"
+                f"LIC_PATH environment variable."
             )
         ctx.env.update({"LIC_MOUNT_PATH": LIC_MOUNT_PATH})
     elif ctx.env.get("LIC_PATH", False):
@@ -360,31 +382,31 @@ def split_cfg(cfgs=""):
 
 
 @pass_environment
-def get_current_trino_cfgs(ctx):
-    """Get Trino config.properties and jvm.config files. Return the two sets of
+def get_current_cfgs(ctx):
+    """Get config.properties and jvm.config files. Return the two sets of
     configs as lists, e.g.:
 
     [['a', 'b'], ['c', 'd'], ['e', 'f']]
     """
 
     current_cfgs = ctx.cmd_executor.execute_commands(
-        f"cat {ETC_TRINO}/{TRINO_CONFIG}",
-        f"cat {ETC_TRINO}/{TRINO_JVM_CONFIG}",
-        container=ctx.docker_client.containers.get("trino"),
+        f"bash -c 'cat {ETC_DIR}/{CLUSTER_CONFIG}'",
+        f"bash -c 'cat {ETC_DIR}/{CLUSTER_JVM_CONFIG}'",
+        container=ctx.docker_client.containers.get("minitrino"),
         suppress_output=True,
     )
 
-    current_trino_cfgs = split_cfg(current_cfgs[0].get("output", ""))
+    current_cluster_cfgs = split_cfg(current_cfgs[0].get("output", ""))
     current_jvm_cfg = split_cfg(current_cfgs[1].get("output", ""))
 
-    return current_trino_cfgs, current_jvm_cfg
+    return current_cluster_cfgs, current_jvm_cfg
 
 
 @pass_environment
-def write_trino_cfg(ctx, c_restart=[], modules=[]):
-    """Appends Trino config from various modules if specified in the module YAML
-    file. The Trino container is added to the restart list if any configs are
-    written to files in the container."""
+def write_cluster_cfg(ctx, c_restart=[], modules=[]):
+    """Appends cluster config from various modules if specified in the module YAML
+    file. The Minitrino coordinator container is added to the restart list if any
+    configs are written to files in the container."""
 
     def handle_password_authenticators(cfgs):
         merge = []
@@ -406,17 +428,17 @@ def write_trino_cfg(ctx, c_restart=[], modules=[]):
         cfgs.append(auth_property.split("="))
         return cfgs
 
-    trino_container = ctx.docker_client.containers.get("trino")
+    minitrino_coordinator = ctx.docker_client.containers.get("minitrino")
 
-    if not trino_container:
+    if not minitrino_coordinator:
         raise err.MinitrinoError(
-            f"Attempting to append Trino configuration in Trino container, "
-            f"but no running Trino container was found."
+            f"Attempting to append cluster config in Minitrino container, "
+            f"but no running container was found."
         )
 
     cfgs = []
     jvm_cfg = []
-    modules.append("trino")  # check if user placed configs in root compose yaml
+    modules.append("minitrino")  # check if user placed configs in root compose yaml
 
     # Check configs passed through env variables
     env_usr_cfgs = ctx.env.get("CONFIG_PROPERTIES", "")
@@ -429,20 +451,20 @@ def write_trino_cfg(ctx, c_restart=[], modules=[]):
 
     # Check configs passed through Docker Compose YAMLs
     for module in modules:
-        if module == "trino":
+        if module == "minitrino":
             with open(os.path.join(ctx.minitrino_lib_dir, "docker-compose.yaml")) as f:
                 yaml_file = yaml.load(f, Loader=yaml.FullLoader)
         else:
             yaml_file = ctx.modules.data.get(module, {}).get("yaml_dict")
         usr_cfgs = (
             yaml_file.get("services", {})
-            .get("trino", {})
+            .get("minitrino", {})
             .get("environment", {})
             .get("CONFIG_PROPERTIES", [])
         )
         user_jvm_cfg = (
             yaml_file.get("services", {})
-            .get("trino", {})
+            .get("minitrino", {})
             .get("environment", {})
             .get("JVM_CONFIG", [])
         )
@@ -458,31 +480,31 @@ def write_trino_cfg(ctx, c_restart=[], modules=[]):
     cfgs = handle_password_authenticators(cfgs)
 
     ctx.logger.verbose(
-        "Checking Trino server status before updating configs...",
+        "Checking coordinator server status before updating configs...",
     )
 
     retry = 0
     while retry <= 30:
-        logs = trino_container.logs().decode()
+        logs = minitrino_coordinator.logs().decode()
         if "======== SERVER STARTED ========" in logs:
             ctx.logger.verbose(
-                "Trino server started.",
+                "Coordinator started.",
             )
             break
-        elif trino_container.status != "running":
+        elif minitrino_coordinator.status != "running":
             raise err.MinitrinoError(
-                f"Trino container stopped running. Inspect the container logs if the "
+                f"The coordinator stopped running. Inspect the container logs if the "
                 f"container is still available. If the container was rolled back, rerun "
                 f"the command with the '--no-rollback' option, then inspect the logs."
             )
         else:
             ctx.logger.verbose(
-                "Waiting for Trino server to start...",
+                "Waiting for coordinator to start...",
             )
             time.sleep(1)
             retry += 1
 
-    def append_cfgs(trino_container, usr_cfgs, current_cfgs, filename):
+    def append_cfgs(minitrino_coordinator, usr_cfgs, current_cfgs, filename):
         """If there is an overlapping config key, replace it with the user
         config."""
 
@@ -502,7 +524,7 @@ def write_trino_cfg(ctx, c_restart=[], modules=[]):
             f"Removing existing {filename} file...",
         )
         ctx.cmd_executor.execute_commands(
-            f"rm {ETC_TRINO}/{filename}", container=trino_container
+            f"bash -c 'rm {ETC_DIR}/{filename}'", container=minitrino_coordinator
         )
 
         ctx.logger.verbose(
@@ -510,35 +532,35 @@ def write_trino_cfg(ctx, c_restart=[], modules=[]):
         )
         for current_cfg in current_cfgs:
             append_cfg = (
-                f'bash -c "cat <<EOT >> {ETC_TRINO}/{filename}\n{current_cfg}\nEOT"'
+                f'bash -c "cat <<EOT >> {ETC_DIR}/{filename}\n{current_cfg}\nEOT"'
             )
             ctx.cmd_executor.execute_commands(
-                append_cfg, container=trino_container, suppress_output=True
+                append_cfg, container=minitrino_coordinator, suppress_output=True
             )
 
     ctx.logger.verbose(
-        "Appending user-defined Trino config to Trino container config...",
+        "Appending user-defined config to cluster container config...",
     )
 
-    current_trino_cfgs, current_jvm_cfg = get_current_trino_cfgs()
-    append_cfgs(trino_container, cfgs, current_trino_cfgs, TRINO_CONFIG)
-    append_cfgs(trino_container, jvm_cfg, current_jvm_cfg, TRINO_JVM_CONFIG)
+    current_cluster_cfgs, current_jvm_cfg = get_current_cfgs()
+    append_cfgs(minitrino_coordinator, cfgs, current_cluster_cfgs, CLUSTER_CONFIG)
+    append_cfgs(minitrino_coordinator, jvm_cfg, current_jvm_cfg, CLUSTER_JVM_CONFIG)
 
-    if not "trino" in c_restart:
-        c_restart.append("trino")
+    if not "minitrino" in c_restart:
+        c_restart.append("minitrino")
 
     return c_restart
 
 
 @pass_environment
 def check_dup_cfgs(ctx):
-    """Checks for duplicate configs in Trino config files (jvm.config and
+    """Checks for duplicate configs in cluster config files (jvm.config and
     config.properties). This is a safety check for modules that may improperly
     modify these files."""
 
     def log_duplicates(cfgs, filename):
         ctx.logger.verbose(
-            f"Checking Trino '{filename}' file for duplicate configs...",
+            f"Checking '{filename}' file for duplicate configs...",
         )
 
         unique = {}
@@ -553,14 +575,14 @@ def check_dup_cfgs(ctx):
 
         if duplicates:
             ctx.logger.warn(
-                f"Duplicate Trino configuration properties detected in "
+                f"Duplicate configuration properties detected in "
                 f"'{filename}' file:\n{str(duplicates)}",
             )
 
-    current_trino_cfgs, current_jvm_cfg = get_current_trino_cfgs()
+    current_cluster_cfgs, current_jvm_cfg = get_current_cfgs()
 
-    log_duplicates(current_trino_cfgs, TRINO_CONFIG)
-    log_duplicates(current_jvm_cfg, TRINO_JVM_CONFIG)
+    log_duplicates(current_cluster_cfgs, CLUSTER_CONFIG)
+    log_duplicates(current_jvm_cfg, CLUSTER_JVM_CONFIG)
 
 
 @pass_environment
@@ -626,8 +648,8 @@ def provision_workers(ctx, c_restart=[], workers=0):
     worker_containers = [
         c.name
         for c in containers
-        if c.name.startswith("trino-worker-")
-        and c.labels.get("com.starburst.tests") == "minitrino"
+        if c.name.startswith("minitrino-worker-")
+        and c.labels.get("org.minitrino") == "root"
     ]
 
     # Scenario 1
@@ -654,13 +676,15 @@ def provision_workers(ctx, c_restart=[], workers=0):
             identifier = utils.generate_identifier({"ID": c.short_id, "Name": c.name})
             ctx.logger.warn(f"Removed excess worker: {identifier}")
 
-    worker_img = f"minitrino/trino:{ctx.env.get('STARBURST_VER')}"
+    worker_img = (
+        f"minitrino/cluster:{ctx.env.get('CLUSTER_VER')}-{ctx.env.get('CLUSTER_DIST')}"
+    )
     network_name = "minitrino_default"
 
-    coordinator = ctx.docker_client.containers.get("trino")
+    coordinator = ctx.docker_client.containers.get("minitrino")
 
     for i in range(1, workers + 1):
-        worker_name = f"trino-worker-{i}"
+        worker_name = f"minitrino-worker-{i}"
         try:
             worker = ctx.docker_client.containers.get(worker_name)
         except NotFound:
@@ -670,8 +694,8 @@ def provision_workers(ctx, c_restart=[], workers=0):
                 detach=True,
                 network=network_name,
                 labels={
-                    "com.starburst.tests": "minitrino",
-                    "com.starburst.tests.module": "trino",
+                    "org.minitrino": "root",
+                    "org.minitrino.module": "minitrino",
                     "com.docker.compose.service": worker_name,  # OrbStack dashboard doesn't display the container name correctly w/out this
                 },
             )
@@ -679,35 +703,38 @@ def provision_workers(ctx, c_restart=[], workers=0):
                 f"Created and started worker container: '{worker_name}' in network '{network_name}'"
             )
 
+        user = ctx.env.get("BUILD_USER")
+        tar_path = "/tmp/${CLUSTER_DIST}.tar.gz"
+
         # Copy the source directory from the coordinator to the worker container
-        tar_path = "/tmp/starburst.tar.gz"
         ctx.cmd_executor.execute_commands(
-            f"tar czf {tar_path} -C /etc starburst",
+            f"bash -c 'tar czf {tar_path} -C /etc ${{CLUSTER_DIST}}'",
             container=coordinator,
-            docker_user="starburst",
+            docker_user=user,
         )
 
         # Copy the tar file from the coordinator container
-        bits, _ = coordinator.get_archive(tar_path)
+        bits, _ = coordinator.get_archive(f"/tmp/{ctx.env.get('CLUSTER_DIST')}.tar.gz")
         tar_stream = b"".join(bits)
 
-        # Put the tar file into the new worker container & extract
         worker.put_archive("/tmp", tar_stream)
+
+        # Put the tar file into the new worker container & extract
         ctx.cmd_executor.execute_commands(
-            f"tar xzf /tmp/starburst.tar.gz -C /etc",
+            f"bash -c 'tar xzf {tar_path} -C /etc'",
             container=worker,
-            docker_user="starburst",
+            docker_user=user,
         )
 
         # Overwrite worker config.properties
         ctx.cmd_executor.execute_commands(
-            f"bash -c \"echo '{WORKER_CONFIG_PROPS}' > {ETC_TRINO}/{TRINO_CONFIG}\"",
+            f"bash -c \"echo '{WORKER_CONFIG_PROPS}' > {ETC_DIR}/{CLUSTER_CONFIG}\"",
             container=worker,
-            docker_user="starburst",
+            docker_user=user,
         )
 
         c_restart.append(worker_name)
-        ctx.logger.verbose(f"Copied {ETC_TRINO} to '{worker_name}'")
+        ctx.logger.verbose(f"Copied {ETC_DIR} to '{worker_name}'")
 
     return c_restart
 

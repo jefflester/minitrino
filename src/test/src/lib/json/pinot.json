@@ -2,13 +2,13 @@
   "tests": [
     {
       "type": "shell",
-      "name": "Ensure Pinot is accessible from Trino",
-      "container": "trino",
+      "name": "Ensure Pinot is accessible",
+      "container": "minitrino",
       "command": "echo 'pass'",
       "exitCode": 0,
       "healthcheck": {
         "command": "trino-cli --debug --output-format CSV_HEADER --execute 'SHOW TABLES IN pinot.default' --user admin",
-        "container": "trino",
+        "container": "minitrino",
         "retries": 60,
         "exitCode": 0,
         "contains": [
@@ -21,7 +21,7 @@
       "name": "Test show tables",
       "sql": "SHOW TABLES IN pinot.default",
       "trinoCliArgs": [
-        "--server 'http://trino:8080'",
+        "--server 'http://minitrino:8080'",
         "--user admin"
       ],
       "contains": [
@@ -36,7 +36,7 @@
       "name": "Test table select - baseballstats",
       "sql": "SELECT * FROM pinot.default.baseballstats LIMIT 10",
       "trinoCliArgs": [
-        "--server 'http://trino:8080'",
+        "--server 'http://minitrino:8080'",
         "--user admin"
       ],
       "rowCount": 10
@@ -46,7 +46,7 @@
       "name": "Test table select - dimbaseballteams",
       "sql": "SELECT * FROM pinot.default.dimbaseballteams LIMIT 10",
       "trinoCliArgs": [
-        "--server 'http://trino:8080'",
+        "--server 'http://minitrino:8080'",
         "--user admin"
       ],
       "rowCount": 10
@@ -56,7 +56,7 @@
       "name": "Test table select - githubcomplextypeevents",
       "sql": "SELECT * FROM pinot.default.githubcomplextypeevents LIMIT 10",
       "trinoCliArgs": [
-        "--server 'http://trino:8080'",
+        "--server 'http://minitrino:8080'",
         "--user admin"
       ],
       "rowCount": 10
@@ -66,7 +66,7 @@
       "name": "Test table select - githubevents",
       "sql": "SELECT * FROM pinot.default.githubevents LIMIT 10",
       "trinoCliArgs": [
-        "--server 'http://trino:8080'",
+        "--server 'http://minitrino:8080'",
         "--user admin"
       ],
       "rowCount": 10

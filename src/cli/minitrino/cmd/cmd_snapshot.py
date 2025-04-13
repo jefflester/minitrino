@@ -116,7 +116,7 @@ def cli(ctx, modules, name, directory, force, no_scrub):
         if not modules:
             ctx.logger.verbose(
                 f"No running Minitrino modules to snapshot. Snapshotting "
-                f"Trino resources only.",
+                f"root resources only.",
             )
         else:
             ctx.logger.info(f"Creating snapshot of active environment...")

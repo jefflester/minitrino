@@ -5,7 +5,7 @@
       "name": "Confirm session properties for admin resource group",
       "sql": "SELECT 'admin-user'",
       "trinoCliArgs": [
-        "--server 'http://trino:8080'",
+        "--server 'http://minitrino:8080'",
         "--user admin"
       ],
       "contains": [
@@ -15,14 +15,14 @@
     {
       "type": "shell",
       "name": "Fetch query ID to confirm correct session properties",
-      "container": "trino",
+      "container": "minitrino",
       "command": "trino-cli --user admin --output-format CSV_UNQUOTED --execute \"SELECT query_id FROM system.runtime.queries WHERE query = 'SELECT ''admin-user'''\"",
       "exitCode": 0,
       "subCommands": [
         {
           "name": "Parse query JSON",
           "command": "sh -c \"curl -s -u admin: localhost:8080/v1/query/${PREV_OUTPUT} | jq -r '.session.systemProperties'\"",
-          "container": "trino",
+          "container": "minitrino",
           "exitCode": 0,
           "contains": [
             "resource_overcommit",
@@ -37,7 +37,7 @@
       "name": "Confirm session properties for metadataQueriesSkipTheQueue resource group",
       "sql": "SHOW CREATE TABLE tpch.tiny.customer",
       "trinoCliArgs": [
-        "--server 'http://trino:8080'",
+        "--server 'http://minitrino:8080'",
         "--user foo"
       ],
       "contains": [
@@ -47,14 +47,14 @@
     {
       "type": "shell",
       "name": "Fetch query ID to confirm correct session properties",
-      "container": "trino",
+      "container": "minitrino",
       "command": "trino-cli --user admin --output-format CSV_UNQUOTED --execute \"SELECT query_id FROM system.runtime.queries WHERE query = 'SHOW CREATE TABLE tpch.tiny.customer' AND user = 'foo'\"",
       "exitCode": 0,
       "subCommands": [
         {
           "name": "Parse query JSON",
           "command": "sh -c \"curl -s -u admin: localhost:8080/v1/query/${PREV_OUTPUT} | jq -r '.session.systemProperties'\"",
-          "container": "trino",
+          "container": "minitrino",
           "exitCode": 0,
           "contains": [
             "query_max_execution_time",
@@ -68,7 +68,7 @@
       "name": "Confirm session properties for global.systemMetadata resource group",
       "sql": "SELECT 'metadata-user'",
       "trinoCliArgs": [
-        "--server 'http://trino:8080'",
+        "--server 'http://minitrino:8080'",
         "--user metadata-user"
       ],
       "contains": [
@@ -78,14 +78,14 @@
     {
       "type": "shell",
       "name": "Fetch query ID to confirm correct session properties",
-      "container": "trino",
+      "container": "minitrino",
       "command": "trino-cli --user admin --output-format CSV_UNQUOTED --execute \"SELECT query_id FROM system.runtime.queries WHERE query = 'SELECT ''metadata-user'''\"",
       "exitCode": 0,
       "subCommands": [
         {
           "name": "Parse query JSON",
           "command": "sh -c \"curl -s -u admin: localhost:8080/v1/query/${PREV_OUTPUT} | jq -r '.session.systemProperties'\"",
-          "container": "trino",
+          "container": "minitrino",
           "exitCode": 0,
           "contains": [
             "query_max_execution_time",
@@ -99,7 +99,7 @@
       "name": "Confirm session properties for global.systemRuntime resource group",
       "sql": "SELECT 'platform-user'",
       "trinoCliArgs": [
-        "--server 'http://trino:8080'",
+        "--server 'http://minitrino:8080'",
         "--user platform-user"
       ],
       "contains": [
@@ -109,14 +109,14 @@
     {
       "type": "shell",
       "name": "Fetch query ID to confirm correct session properties",
-      "container": "trino",
+      "container": "minitrino",
       "command": "trino-cli --user admin --output-format CSV_UNQUOTED --execute \"SELECT query_id FROM system.runtime.queries WHERE query = 'SELECT ''platform-user'''\"",
       "exitCode": 0,
       "subCommands": [
         {
           "name": "Parse query JSON",
           "command": "sh -c \"curl -s -u admin: localhost:8080/v1/query/${PREV_OUTPUT} | jq -r '.session.systemProperties'\"",
-          "container": "trino",
+          "container": "minitrino",
           "exitCode": 0,
           "contains": [
             "query_max_execution_time",
@@ -130,7 +130,7 @@
       "name": "Confirm session properties for global.other resource group",
       "sql": "SELECT 'foo'",
       "trinoCliArgs": [
-        "--server 'http://trino:8080'",
+        "--server 'http://minitrino:8080'",
         "--user foo"
       ],
       "contains": [
@@ -140,14 +140,14 @@
     {
       "type": "shell",
       "name": "Fetch query ID to confirm correct session properties",
-      "container": "trino",
+      "container": "minitrino",
       "command": "trino-cli --user admin --output-format CSV_UNQUOTED --execute \"SELECT query_id FROM system.runtime.queries WHERE query = 'SELECT ''foo'''\"",
       "exitCode": 0,
       "subCommands": [
         {
           "name": "Parse query JSON",
           "command": "sh -c \"curl -s -u admin: localhost:8080/v1/query/${PREV_OUTPUT} | jq -r '.session.systemProperties'\"",
-          "container": "trino",
+          "container": "minitrino",
           "exitCode": 0,
           "contains": [
             "query_max_execution_time",

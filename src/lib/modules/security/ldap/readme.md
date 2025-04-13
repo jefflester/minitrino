@@ -1,18 +1,18 @@
 # LDAP Password Authenticator Module
 
-This module provisions an LDAP server for authenticating users in Trino.
+This module enables LDAP password authentication.
 
 ## Usage
 
 ```sh
 minitrino -v provision -m ldap
-# Or specify Starburst version
-minitrino -v -e STARBURST_VER=${version} provision -m ldap
+# Or specify cluster version
+minitrino -v -e CLUSTER_VER=${version} provision -m ldap
 
-docker exec -it trino bash 
+docker exec -it minitrino bash 
 
-trino-cli --server https://trino:8443 \
-  --truststore-path /etc/starburst/tls-mnt/truststore.jks \
+trino-cli --server https://minitrino:8443 \
+  --truststore-path /etc/"${CLUSTER_DIST}"/tls-mnt/truststore.jks \
   --truststore-password changeit \
   --user bob --password
 

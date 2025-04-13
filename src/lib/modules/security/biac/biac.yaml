@@ -1,16 +1,16 @@
 ---
 services:
 
-  trino:
+  minitrino:
     environment:
       CONFIG_PROPERTIES: |-
         starburst.access-control.enabled=true
         starburst.access-control.audit.enabled=true
         starburst.access-control.authorized-users=admin
-        starburst.access-control.authorized-groups=admins,sepadmins
+        starburst.access-control.authorized-groups=admins,clusteradmins
         access-control.config-files=etc/biac.properties
-      MINITRINO_BOOTSTRAP: bootstrap-trino.sh
+      MINITRINO_BOOTSTRAP: bootstrap-cluster.sh
     volumes:
-      - ./modules/security/biac/resources/trino/biac.properties:${ETC}/biac.properties
+      - ./modules/security/biac/resources/cluster/biac.properties:${ETC}/biac.properties
     labels:
-      - com.starburst.tests.module.biac=security-biac
+      - org.minitrino.module.biac=security-biac

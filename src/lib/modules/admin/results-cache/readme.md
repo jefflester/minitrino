@@ -14,10 +14,10 @@ The MinIO UI can be viewed at `http://localhost:9004` using `access-key` and
 
 ```sh
 minitrino -v provision -m results-cache
-# Or specify Starburst version
-minitrino -v -e STARBURST_VER=${version} provision -m results-cache
+# Or specify cluster version
+minitrino -v -e CLUSTER_VER=${version} provision -m results-cache
 
-docker exec -it trino bash 
+docker exec -it minitrino bash 
 trino-cli
 
 # Run query multiple times in a row - subsequent executions should be cached
@@ -32,8 +32,8 @@ This module uses named volumes to persist MinIO data:
 volumes:
   minio-results-cache-data:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.hive=admin-results-cache
+      - org.minitrino=root
+      - org.minitrino.module.hive=admin-results-cache
 ```
 
 The user-facing implication is that the data files stored in MinIO are retained
@@ -48,7 +48,7 @@ sure to look out for these warnings:
 To remove these volumes, run:
 
 ```sh
-minitrino -v remove --volumes --label com.starburst.tests.module.hive=admin-results-cache
+minitrino -v remove --volumes --label org.minitrino.module.hive=admin-results-cache
 ```
 
 Or, remove them directly using the Docker CLI:

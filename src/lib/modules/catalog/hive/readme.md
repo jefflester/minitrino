@@ -26,10 +26,10 @@ The ORC data files can be viewed directly in the MinIO bucket via the MinIO UI.
 
 ```sh
 minitrino -v provision -m hive
-# Or specify Starburst version
-minitrino -v -e STARBURST_VER=${version} provision -m hive
+# Or specify cluster version
+minitrino -v -e CLUSTER_VER=${version} provision -m hive
 
-docker exec -it trino bash 
+docker exec -it minitrino bash 
 trino-cli
 
 trino> SHOW SCHEMAS FROM hive;
@@ -43,12 +43,12 @@ This module uses named volumes to persist MinIO and metastore data:
 volumes:
   postgres-hive-data:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.hive=catalog-hive
+      - org.minitrino=root
+      - org.minitrino.module.hive=catalog-hive
   minio-hive-data:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.hive=catalog-hive
+      - org.minitrino=root
+      - org.minitrino.module.hive=catalog-hive
 ```
 
 The user-facing implication is that the data in the Hive metastore and the data
@@ -63,7 +63,7 @@ module with named volumes is deployed––be sure to look out for these warning
 To remove these volumes, run:
 
 ```sh
-minitrino -v remove --volumes --label com.starburst.tests.module.hive=catalog-hive
+minitrino -v remove --volumes --label org.minitrino.module.hive=catalog-hive
 ```
 
 Or, remove them directly using the Docker CLI:
@@ -75,22 +75,22 @@ docker volume rm minitrino_postgres-hive-data minitrino_minio-hive-data
 ## Editing the `hive.properties` File
 
 This module uses a roundabout way to mount the `hive.properties` file that
-allows for edits to be made to the file inside the Trino container without the
-source file being modified on the host. To edit the file, exec into the Trino
+allows for edits to be made to the file inside cluster containers without the
+source file being modified on the host. To edit the file, exec into the `minitrino`
 container, make the desired changes, and then restart the container for the
 changes to take effect:
 
 ```sh
-docker exec -it trino bash 
-vi /etc/starburst/catalog/hive.properties
+docker exec -it minitrino bash 
+vi /etc/"${CLUSTER_DIST}"/catalog/hive.properties
 exit
 
-docker restart trino
+docker restart minitrino
 ```
 
 The properties file can also be edited directly from the module directory prior
 to provisioning the module:
 
 ```txt
-lib/modules/catalog/<module>/resources/trino/<module>.properties
+lib/modules/catalog/<module>/resources/cluster/<module>.properties
 ```

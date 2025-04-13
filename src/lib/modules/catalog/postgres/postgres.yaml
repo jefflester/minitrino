@@ -1,9 +1,9 @@
 ---
 services:
 
-  trino:
+  minitrino:
     volumes:
-      - ./modules/catalog/postgres/resources/trino/postgres.properties:${ETC}/catalog/postgres.properties
+      - ./modules/catalog/postgres/resources/cluster/postgres.properties:${ETC}/catalog/postgres.properties
 
   postgres:
     image: postgres:${POSTGRES_VER}
@@ -15,11 +15,11 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.postgres=catalog-postgres
+      - org.minitrino=root
+      - org.minitrino.module.postgres=catalog-postgres
 
 volumes:
   postgres-data:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.postgres=catalog-postgres
+      - org.minitrino=root
+      - org.minitrino.module.postgres=catalog-postgres

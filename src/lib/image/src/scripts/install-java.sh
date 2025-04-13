@@ -8,14 +8,15 @@
 set -euxo pipefail
 
 USER="${1}"
+GROUP="${2}"
 USER_HOME=$(eval echo "~${USER}")
-TRINO_DIST="${CLUSTER_VER:0:3}"
+TRINO_VER="${CLUSTER_VER:0:3}"
 
-if [ "${TRINO_DIST}" -ge 436 ] && [ "${TRINO_DIST}" -le 446 ]; then
+if [ "${TRINO_VER}" -ge 436 ] && [ "${TRINO_VER}" -le 446 ]; then
     JAVA_VER=21.0.5
-elif [ "${TRINO_DIST}" -ge 447 ] && [ "${TRINO_DIST}" -le 463 ]; then
+elif [ "${TRINO_VER}" -ge 447 ] && [ "${TRINO_VER}" -le 463 ]; then
     JAVA_VER=22.0.1
-elif [ "${TRINO_DIST}" -ge 464 ]; then
+elif [ "${TRINO_VER}" -ge 464 ]; then
     JAVA_VER=23.0.2
 else
     echo "Unsupported Trino version. Exiting..."
@@ -38,5 +39,5 @@ fi
 
 mkdir -p /etc/"${CLUSTER_DIST}"/tls-jvm/
 cp "${CACERTS_PATH}" /etc/"${CLUSTER_DIST}"/tls-jvm/
-chown "${USER}":"${GROUP}" /etc/"${CLUSTER_DIST}"/tls-jvm/cacerts
+chown -R "${USER}":"${GROUP}" /etc/"${CLUSTER_DIST}"/tls-jvm
 chmod 644 /etc/"${CLUSTER_DIST}"/tls-jvm/cacerts

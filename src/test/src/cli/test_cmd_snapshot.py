@@ -94,7 +94,7 @@ def test_snapshot_active_env():
 
 
 def test_snapshot_standalone():
-    """Verifies that a the standalone Trino module can be snapshotted."""
+    """Verifies that a the standalone cluster module can be snapshotted."""
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
@@ -105,7 +105,7 @@ def test_snapshot_standalone():
     )
 
     run_assertions(result, False)
-    assert "Snapshotting Trino resources only" in result.output
+    assert "Snapshotting cluster resources only" in result.output
 
     common.log_success(cast(FrameType, currentframe()).f_code.co_name)
 

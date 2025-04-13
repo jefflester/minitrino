@@ -10,11 +10,11 @@ the system.
 
 ```sh
 minitrino -v provision -m resource-groups
-# Or specify Starburst version
-minitrino -v -e STARBURST_VER=${version} provision -m resource-groups
+# Or specify cluster version
+minitrino -v -e CLUSTER_VER=${version} provision -m resource-groups
 
 # Get into the container and connect as a user tied to a group
-docker exec -it trino bash 
+docker exec -it minitrino bash 
 trino-cli --user admin
 
 trino> SELECT 1;
@@ -30,16 +30,16 @@ execution can be viewed on the query details through the Trino web UI at
 SELECT resource_group_id FROM system.runtime.queries WHERE query = 'SELECT 1' AND user = 'admin';
 ```
 
-The resource group definitions are mounted to Trino as a volume and can be
+The resource group definitions are mounted to the cluster as a volume and can be
 viewed/edited within the container:
 
 ```sh
-docker exec -it trino bash 
-vi /etc/starburst/resource-groups.json
+docker exec -it minitrino bash 
+vi /etc/"${CLUSTER_DIST}"/resource-groups.json
 ```
 
 Alternatively, it can be edited directly in the library:
 
 ```sh
-lib/modules/admin/resource-groups/resources/trino/resource-groups.json
+lib/modules/admin/resource-groups/resources/cluster/resource-groups.json
 ```

@@ -210,7 +210,7 @@ class EnvironmentVariables(dict):
     ### Usage
 
     ```python # ctx object has an instantiated EnvironmentVariables object
-    env_variable = ctx.env.get("STARBURST_VER", "388-e")
+    env_variable = ctx.env.get("CLUSTER_VER", "###-e")
     ```"""
 
     @utils.exception_handler
@@ -242,7 +242,7 @@ class EnvironmentVariables(dict):
             "CONFIG_PROPERTIES",
             "JVM_CONFIG",
             "LIB_PATH",
-            "STARBURST_VER",
+            "CLUSTER_VER",
             "TEXT_EDITOR",
             "LIC_PATH",
         ]
@@ -343,14 +343,14 @@ class Modules:
             ids = ["admin-", "catalog-", "security-"]
             for k, v in container.labels.items():
                 for _id in ids:
-                    if "com.starburst.tests" in k and _id in v:
+                    if "org.minitrino" in k and _id in v:
                         modules.append(v.lower().strip().replace(_id, ""))
                         label_set[k] = v
-            # All containers except the trino containers must have
-            # module-specific labels. The trino container only has module labels
+            # All containers except the cluster containers must have
+            # module-specific labels. The cluster container only has module labels
             # if a module applies labels to it
             if not label_set and not (
-                "trino-worker" in container.name or container.name == "trino"
+                "minitrino-worker" in container.name or container.name == "minitrino"
             ):
                 raise err.UserError(
                     f"Missing Minitrino labels for container '{container.name}'.",
@@ -573,7 +573,7 @@ class CommandExecutor:
         exec_handler = self._ctx.api_client.exec_create(
             container.name,
             cmd=command,
-            environment=kwargs.get("environment", {}),
+            environment=kwargs.get("environment", None),
             privileged=True,
             user=kwargs.get("docker_user", "root"),
         )
@@ -643,7 +643,7 @@ class CommandExecutor:
         variables."""
 
         # Remove conflicting keys from host environment; Minitrino environment
-        # variables take precendance
+        # variables take precedence
 
         if not container:
             host_environment = os.environ.copy()

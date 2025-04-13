@@ -1,9 +1,9 @@
 ---
 services:
 
-  trino:
+  minitrino:
     volumes:
-      - ./modules/catalog/db2/resources/trino/db2.properties:${ETC}/catalog/db2.properties
+      - ./modules/catalog/db2/resources/cluster/db2.properties:${ETC}/catalog/db2.properties
 
   db2:
     image: ibmcom/db2:${DB2_VER}
@@ -16,5 +16,5 @@ services:
     ports:
       - 50000:50000
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.db2=catalog-db2
+      - org.minitrino=root
+      - org.minitrino.module.db2=catalog-db2

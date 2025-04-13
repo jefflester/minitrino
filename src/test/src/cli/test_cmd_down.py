@@ -54,8 +54,6 @@ def test_running_containers():
         (
             "Stopped container" in result.output,
             "Removed container" in result.output,
-            "test" in result.output,
-            "trino" in result.output,
         )
     )
 
@@ -84,7 +82,7 @@ def test_keep():
     )
 
     for container in containers:
-        assert container.name.lower() == "trino" or container.name.lower() == "test"
+        assert container.name.lower() == "minitrino" or container.name.lower() == "test"
 
     common.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()

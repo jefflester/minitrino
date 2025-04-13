@@ -1,3 +1,3 @@
-sepadmins:admin,cachesvc
+clusteradmins:admin,cachesvc
 metadata-users:metadata-user,bob
 platform-users:platform-user,alice

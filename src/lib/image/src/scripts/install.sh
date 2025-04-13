@@ -34,14 +34,14 @@ set_dist_version() {
         TRINO_VER="${CLUSTER_VER}"
     elif [ "${CLUSTER_DIST}" == "starburst" ]; then
         TRINO_VER="${CLUSTER_VER:0:3}"
-        STARBURST_VER="${CLUSTER_VER}" # For clarity
+        CLUSTER_VER="${CLUSTER_VER}" # For clarity
         # Handle Starburst archive naming changes at 462+
         if [ "${TRINO_VER}" -ge 462 ]; then
-            STARBURST_VER_ARCH="${STARBURST_VER}${ARCH_SEP_S3:+.$ARCH_SEP_S3}"
-            STARBURST_VER_ARCH_UNPACK="${STARBURST_VER}${ARCH_SEP_S3:+-$ARCH_SEP_S3}"
+            CLUSTER_VER_ARCH="${CLUSTER_VER}${ARCH_SEP_S3:+.$ARCH_SEP_S3}"
+            CLUSTER_VER_ARCH_UNPACK="${CLUSTER_VER}${ARCH_SEP_S3:+-$ARCH_SEP_S3}"
         else
-            STARBURST_VER_ARCH="${STARBURST_VER}"
-            STARBURST_VER_ARCH_UNPACK="${STARBURST_VER}"
+            CLUSTER_VER_ARCH="${CLUSTER_VER}"
+            CLUSTER_VER_ARCH_UNPACK="${CLUSTER_VER}"
         fi
     else
         echo "Invalid cluster distribution. Exiting..."
@@ -122,10 +122,10 @@ prune() {
         rm -rf /usr/lib/"${CLUSTER_DIST}"/bin/darwin-* /usr/lib/"${CLUSTER_DIST}"/bin/linux-*
         cp -R "trino-server-${TRINO_VER}/bin/linux-${ARCH_BIN}" /usr/lib/"${CLUSTER_DIST}"/bin/
     else
-        cp -R "starburst-enterprise-${STARBURST_VER_ARCH_UNPACK}"/* /usr/lib/"${CLUSTER_DIST}"/
+        cp -R "starburst-enterprise-${CLUSTER_VER_ARCH_UNPACK}"/* /usr/lib/"${CLUSTER_DIST}"/
         rm -rf /usr/lib/"${CLUSTER_DIST}"/bin/darwin-* /usr/lib/"${CLUSTER_DIST}"/bin/linux-*
         cp -R \
-            "starburst-enterprise-${STARBURST_VER_ARCH_UNPACK}/bin/linux-${ARCH_BIN}" \
+            "starburst-enterprise-${CLUSTER_VER_ARCH_UNPACK}/bin/linux-${ARCH_BIN}" \
             /usr/lib/"${CLUSTER_DIST}"/bin/
     fi
     prune_plugins
@@ -139,9 +139,9 @@ download_and_extract() {
         curl -#LfS -o "${TAR_FILE}" \
             "https://repo1.maven.org/maven2/io/trino/trino-server/${TRINO_VER}/trino-server-${TRINO_VER}.tar.gz"
     else
-        TAR_FILE="starburst-enterprise-${STARBURST_VER_ARCH}.tar.gz"
+        TAR_FILE="starburst-enterprise-${CLUSTER_VER_ARCH}.tar.gz"
         curl -#LfS -o "${TAR_FILE}" \
-            "https://s3.us-east-2.amazonaws.com/software.starburstdata.net/${STARBURST_VER:0:3}e/${STARBURST_VER}/${TAR_FILE}"
+            "https://s3.us-east-2.amazonaws.com/software.starburstdata.net/${CLUSTER_VER:0:3}e/${CLUSTER_VER}/${TAR_FILE}"
     fi
     tar xvfz "${TAR_FILE}"
     prune
@@ -188,7 +188,7 @@ configure_node_props() {
 
 install_java() {
     echo "Installing Java..."
-    bash /tmp/install-java.sh "${USER}"
+    bash /tmp/install-java.sh "${USER}" "${GROUP}"
 }
 
 install_trino_cli() {

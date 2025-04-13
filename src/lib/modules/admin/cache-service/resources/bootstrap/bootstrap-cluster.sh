@@ -37,10 +37,10 @@ update_catalogs() {
     done
 }
 
-TRINO_DIST="${STARBURST_VER:0:3}"
-CATALOG_DIR="/etc/starburst/catalog"
+TRINO_VER="${CLUSTER_VER:0:3}"
+CATALOG_DIR="/etc/${CLUSTER_DIST}/catalog"
 
-if [ "${TRINO_DIST}" -ge 458 ]; then
+if [ "${TRINO_VER}" -ge 458 ]; then
     update_catalogs
 fi
 
@@ -50,10 +50,10 @@ COUNTER=0
 while [ "${COUNTER}" -lt 90 ]
 do
   set +e
-  RESPONSE=$(curl -s -X GET -H 'Accept: application/json' -H 'X-Trino-User: admin' 'trino:8080/v1/info/')
+  RESPONSE=$(curl -s -X GET -H 'Accept: application/json' -H 'X-Trino-User: admin' 'minitrino:8080/v1/info/')
   echo "${RESPONSE}" | grep -q '"starting":false'
   if [ $? -eq 0 ]; then
-    echo "Trino health check passed."
+    echo "Health check passed."
     sleep 5
     break
   fi
@@ -63,12 +63,12 @@ done
 
 if [ "${COUNTER}" -eq 30 ]
 then
-  echo "Trino health check failed."
+  echo "Health check failed."
   exit 1
 fi
 
 set -e
-echo "com.starburstdata.cache=DEBUG" >> /etc/starburst/log.properties
+echo "com.starburstdata.cache=DEBUG" >> /etc/${CLUSTER_DIST}/log.properties
 
 echo -e "jmx.dump-tables=com.starburstdata.cache.resource:name=cacheresource,\\
 com.starburstdata.cache.resource:name=materializedviewsresource,\\
@@ -76,7 +76,7 @@ com.starburstdata.cache.resource:name=redirectionsresource,\\
 com.starburstdata.cache:name=cleanupservice,\\
 com.starburstdata.cache:name=tableimportservice
 jmx.dump-period=10s
-jmx.max-entries=86400" >> /etc/starburst/catalog/jmx.properties
+jmx.max-entries=86400" >> /etc/"${CLUSTER_DIST}"/catalog/jmx.properties
 
 echo "Creating Postgres tables..."
 trino-cli --user admin --output-format TSV_HEADER \

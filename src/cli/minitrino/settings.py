@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 
 # Docker labels
-RESOURCE_LABEL = "com.starburst.tests=minitrino"
-MODULE_LABEL_KEY_ROOT = "com.starburst.tests.module"
+RESOURCE_LABEL = "org.minitrino=root"
+MODULE_LABEL_KEY_ROOT = "org.minitrino.module"
 
 # Generic Constants
 IMAGE = "image"
@@ -14,13 +14,13 @@ MODULE_ADMIN = "admin"
 MODULE_CATALOG = "catalog"
 MODULE_SECURITY = "security"
 MODULE_RESOURCES = "resources"
-MIN_SEP_VER = 443
-ETC_TRINO = "/etc/starburst"
+MIN_CLUSTER_VER = 443
+ETC_DIR = "/etc/${CLUSTER_DIST}"
 LIC_VOLUME_MOUNT = "${LIC_PATH}:${LIC_MOUNT_PATH}"
-LIC_MOUNT_PATH = f"{ETC_TRINO}/starburstdata.license:ro"
-DUMMY_LIC_MOUNT_PATH = f"{ETC_TRINO}/dummy.license:ro"
-TRINO_CONFIG = "config.properties"
-TRINO_JVM_CONFIG = "jvm.config"
+LIC_MOUNT_PATH = f"{ETC_DIR}/starburstdata.license:ro"
+DUMMY_LIC_MOUNT_PATH = f"{ETC_DIR}/dummy.license:ro"
+CLUSTER_CONFIG = "config.properties"
+CLUSTER_JVM_CONFIG = "jvm.config"
 
 # Snapshots
 SNAPSHOT_ROOT_FILES = [
@@ -49,14 +49,17 @@ CONFIG_TEMPLATE = """
 # defaults to ~/.minitrino/lib
 LIB_PATH=
 
-STARBURST_VER=
+# trino or starburst
+IMAGE=
+
+CLUSTER_VER=
 TEXT_EDITOR=
 LIC_PATH=
 """
 
 WORKER_CONFIG_PROPS = """coordinator=false
 http-server.http.port=8080
-discovery.uri=http://trino:8080
+discovery.uri=http://minitrino:8080
 internal-communication.shared-secret=bWluaXRyaW5vUm9ja3MxNQo="""
 
 PROVISION_SNAPSHOT_TEMPLATE = """

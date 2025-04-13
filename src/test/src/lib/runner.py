@@ -63,7 +63,7 @@ class ModuleTest:
             )
 
     def test_query(self, json_data={}):
-        "Runs a query inside the Trino container using the trino-cli."
+        "Runs a query inside the cluster container using the trino-cli."
 
         # Check inputs
         contains = json_data.get("contains", [])
@@ -78,7 +78,7 @@ class ModuleTest:
         i = 0
         cmd = "curl -X GET -H 'Accept: application/json' -H 'X-Trino-User: admin' 'localhost:8080/v1/info/'"
         while i <= 60:
-            output = common.execute_command(cmd, "trino")
+            output = common.execute_command(cmd, "minitrino")
             if '"starting":false' in output.get("output", ""):
                 time.sleep(5)  # hard stop to ensure coordinator is ready
                 break
@@ -101,7 +101,7 @@ class ModuleTest:
                 cmd += f" {i}"
 
         # Execute query
-        output = common.execute_command(cmd, "trino", json_data.get("env", {}))
+        output = common.execute_command(cmd, "minitrino", json_data.get("env", {}))
 
         # Run assertions
         for c in contains:
@@ -237,7 +237,7 @@ def main():
     arg, i.e. `python runner.py ldap`.
 
     If `--remove-images` is supplied as an argument, then all images (except the
-    `minitrino/trino` image) will be removed after each test. This is used to
+    `minitrino/cluster` image) will be removed after each test. This is used to
     ensure the tests don't consume all the disk space on the GitHub Actions
     runner."""
 

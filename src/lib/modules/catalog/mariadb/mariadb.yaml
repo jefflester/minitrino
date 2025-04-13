@@ -1,9 +1,9 @@
 ---
 services:
 
-  trino:
+  minitrino:
     volumes:
-      - ./modules/catalog/mariadb/resources/trino/mariadb.properties:${ETC}/catalog/mariadb.properties
+      - ./modules/catalog/mariadb/resources/cluster/mariadb.properties:${ETC}/catalog/mariadb.properties
 
   mariadb:
     image: mariadb:${MARIADB_VER}
@@ -17,11 +17,11 @@ services:
     volumes:
       - mariadb-data:/var/lib/mysql
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.mariadb=catalog-mariadb
+      - org.minitrino=root
+      - org.minitrino.module.mariadb=catalog-mariadb
 
 volumes:
   mariadb-data:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.mariadb=catalog-mariadb
+      - org.minitrino=root
+      - org.minitrino.module.mariadb=catalog-mariadb

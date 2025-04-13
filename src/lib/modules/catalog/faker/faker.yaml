@@ -1,9 +1,9 @@
 ---
 services:
 
-  trino:
+  minitrino:
     volumes:
-      - ./modules/catalog/faker/resources/trino/faker.properties:${ETC}/catalog/faker.properties
+      - ./modules/catalog/faker/resources/cluster/faker.properties:${ETC}/catalog/faker.properties
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.postgres=catalog-faker
+      - org.minitrino=root
+      - org.minitrino.module.postgres=catalog-faker

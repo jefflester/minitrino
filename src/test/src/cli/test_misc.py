@@ -118,7 +118,7 @@ def test_multiple_env():
             "--env",
             "COMPOSE_PROJECT_NAME=test",
             "--env",
-            "STARBURST_VER=388-e",
+            "CLUSTER_VER=388-e",
             "--env",
             "TRINO=is=awesome",
             "version",
@@ -129,7 +129,7 @@ def test_multiple_env():
     assert all(
         (
             '"COMPOSE_PROJECT_NAME": "test"' in result.output,
-            '"STARBURST_VER": "388-e"' in result.output,
+            '"CLUSTER_VER": "388-e"' in result.output,
             '"TRINO": "is=awesome"' in result.output,
         )
     )

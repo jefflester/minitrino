@@ -12,4 +12,4 @@ keytool -import -noprompt -trustcacerts \
     -storepass changeit \
     -alias oauth2-server \
     -file /tmp/oauth2-server.pem \
-    -keystore /etc/starburst/tls-jvm/cacerts
+    -keystore /etc/"${CLUSTER_DIST}"/tls-jvm/cacerts

@@ -1,13 +1,13 @@
 ---
 services:
 
-  trino:
+  minitrino:
     environment:
       CONFIG_PROPERTIES: |-
         event-listener.config-files=etc/mysql-event-listener.properties
     volumes:
-      - ./modules/admin/mysql-event-listener/resources/trino/mysql-event-listener.properties:${ETC}/mysql-event-listener.properties
-      - ./modules/admin/mysql-event-listener/resources/trino/mysql_event_listener.properties:${ETC}/catalog/mysql_event_listener.properties
+      - ./modules/admin/mysql-event-listener/resources/cluster/mysql-event-listener.properties:${ETC}/mysql-event-listener.properties
+      - ./modules/admin/mysql-event-listener/resources/cluster/mysql_event_listener.properties:${ETC}/catalog/mysql_event_listener.properties
 
   mysql-event-listener-db:
     image: mysql:${MYSQL_EVENT_LISTENER_VER}
@@ -19,5 +19,5 @@ services:
     ports:
       - 3308:3306  # localhost:3308
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.mysql-event-listener=admin-mysql-event-listener
+      - org.minitrino=root
+      - org.minitrino.module.mysql-event-listener=admin-mysql-event-listener

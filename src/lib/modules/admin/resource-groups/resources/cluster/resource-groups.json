@@ -80,7 +80,7 @@
       "group": "admin"
     },
     {
-      "userGroup": "sepadmins",
+      "userGroup": "clusteradmins",
       "group": "admin"
     },
     {

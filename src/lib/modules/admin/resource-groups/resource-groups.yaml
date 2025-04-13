@@ -1,9 +1,9 @@
 ---
 services:
 
-  trino:
+  minitrino:
     volumes:
-      - ./modules/admin/resource-groups/resources/trino/resource-groups.json:${ETC}/resource-groups.json
-      - ./modules/admin/resource-groups/resources/trino/resource-groups.properties:${ETC}/resource-groups.properties
+      - ./modules/admin/resource-groups/resources/cluster/resource-groups.json:${ETC}/resource-groups.json
+      - ./modules/admin/resource-groups/resources/cluster/resource-groups.properties:${ETC}/resource-groups.properties
     labels:
-      - com.starburst.tests.module.resource-groups=admin-resource-groups
+      - org.minitrino.module.resource-groups=admin-resource-groups

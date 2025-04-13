@@ -1,14 +1,13 @@
 # Built-in Access Control (BIAC) Module
 
-This module configures Trino to enable the built-in access control (BIAC) system
-integrated with the SEP web UI.
+This module enables Starburst's built-in access control (BIAC).
 
 ## Usage
 
 ```sh
 minitrino -v provision -m biac
-# Or specify Starburst version
-minitrino -v -e STARBURST_VER=${version} provision -m biac
+# Or specify cluster version
+minitrino -v -e CLUSTER_VER=${version} provision -m biac
 ```
 
 ## Accessing Roles and Privileges in the SEP UI  

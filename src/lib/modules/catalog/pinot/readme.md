@@ -1,7 +1,7 @@
 # Pinot Catalog Module
 
-This module adds a Pinot catalog to Trino and provisions a Pinot cluster with
-all the main Pinot components:
+This module adds a Pinot catalog and provisions a Pinot cluster with all the
+main Pinot components:
 
 - Zookeeper for metadata management
 - Pinot controller
@@ -17,10 +17,10 @@ To deploy the module:
 
 ```sh
 minitrino -v provision -m pinot
-# Or specify Starburst version
-minitrino -v -e STARBURST_VER=${version} provision -m pinot
+# Or specify cluster version
+minitrino -v -e CLUSTER_VER=${version} provision -m pinot
 
-docker exec -it trino bash 
+docker exec -it minitrino bash 
 trino-cli
 
 trino> SHOW SCHEMAS FROM pinot;
@@ -37,20 +37,20 @@ server data:
 volumes:
   pinot-zookeeper-data:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.pinot=catalog-pinot
+      - org.minitrino=root
+      - org.minitrino.module.pinot=catalog-pinot
   pinot-zookeeper-datalog:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.pinot=catalog-pinot
+      - org.minitrino=root
+      - org.minitrino.module.pinot=catalog-pinot
   pinot-controller-data:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.pinot=catalog-pinot
+      - org.minitrino=root
+      - org.minitrino.module.pinot=catalog-pinot
   pinot-server-data:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.pinot=catalog-pinot
+      - org.minitrino=root
+      - org.minitrino.module.pinot=catalog-pinot
 ```
 
 The user-facing implication is that the data stored in Zookeeper as well as the
@@ -65,7 +65,7 @@ module with named volumes is deployed––be sure to look out for these warning
 To remove these volumes, run:
 
 ```sh
-minitrino -v remove --volumes --label com.starburst.tests.module.pinot=catalog-pinot
+minitrino -v remove --volumes --label org.minitrino.module.pinot=catalog-pinot
 ```
   
 Or, remove them directly using the Docker CLI:

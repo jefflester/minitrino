@@ -1,7 +1,7 @@
 {
   "catalogs": [
     {
-      "group": "sepadmins",
+      "group": "clusteradmins",
       "catalog": ".*",
       "allow": "all"
     },
@@ -21,7 +21,7 @@
   ],
   "schemas": [
     {
-      "group": "sepadmins",
+      "group": "clusteradmins",
       "schema": ".*",
       "owner": true
     },
@@ -43,7 +43,7 @@
   ],
   "tables": [
     {
-      "group": "sepadmins",
+      "group": "clusteradmins",
       "catalog": ".*",
       "schema": ".*",
       "privileges": [

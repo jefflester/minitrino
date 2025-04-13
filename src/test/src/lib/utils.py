@@ -18,7 +18,7 @@ def cleanup(remove_images=False):
     if remove_images:
         print("Removing images...")
         common.execute_command(
-            'docker images -q | grep -v "$(docker images minitrino/trino -q)" | xargs -r docker rmi'
+            'docker images -q | grep -v "$(docker images minitrino/cluster -q)" | xargs -r docker rmi'
         )
 
     print("Disk space usage:")

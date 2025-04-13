@@ -1,15 +1,15 @@
 ---
 services:
 
-  trino:
+  minitrino:
     depends_on:
       - hive-mv-tsr-catalog-cp
     environment:
-      MINITRINO_BOOTSTRAP: bootstrap-trino.sh
+      MINITRINO_BOOTSTRAP: bootstrap-cluster.sh
     volumes:
-      - ./modules/admin/cache-service/resources/trino/rules.json:${ETC}/rules.json
-      - ./modules/admin/cache-service/resources/trino/cache.properties:${ETC}/cache.properties
-      - ./modules/admin/cache-service/resources/trino/cache_svc.properties:${ETC}/catalog/cache_svc.properties
+      - ./modules/admin/cache-service/resources/cluster/rules.json:${ETC}/rules.json
+      - ./modules/admin/cache-service/resources/cluster/cache.properties:${ETC}/cache.properties
+      - ./modules/admin/cache-service/resources/cluster/cache_svc.properties:${ETC}/catalog/cache_svc.properties
     ports:
       - 8180:8180
 
@@ -17,15 +17,15 @@ services:
     image: busybox
     container_name: hive-mv-tsr-catalog-cp
     volumes:
-      - ./modules/admin/cache-service/resources/trino/hive_mv_tsr.properties:/tmp/hive_mv_tsr.properties
-      - catalogs:/etc/starburst/catalog
+      - ./modules/admin/cache-service/resources/cluster/hive_mv_tsr.properties:/tmp/hive_mv_tsr.properties
+      - catalogs:/etc/${CLUSTER_DIST}/catalog
     command:
       - sh
       - -c
-      - cp /tmp/hive_mv_tsr.properties /etc/starburst/catalog/hive_mv_tsr.properties
+      - cp /tmp/hive_mv_tsr.properties /etc/${CLUSTER_DIST}/catalog/hive_mv_tsr.properties
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.cache-service=admin-cache-service
+      - org.minitrino=root
+      - org.minitrino.module.cache-service=admin-cache-service
 
   cache-svc-backend:
     image: postgres:${POSTGRES_SEP_CACHE_SVC_VER}
@@ -33,5 +33,5 @@ services:
     env_file:
       - ./modules/admin/cache-service/resources/postgres/cache-svc.env
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.cache-service=admin-cache-service
+      - org.minitrino=root
+      - org.minitrino.module.cache-service=admin-cache-service

@@ -13,10 +13,10 @@ catalog. For example:
 
 ```sh
 minitrino -v provision -m insights
-# Or specify Starburst version
-minitrino -v -e STARBURST_VER=${version} provision -m insights
+# Or specify cluster version
+minitrino -v -e CLUSTER_VER=${version} provision -m insights
 
-docker exec -it trino bash 
+docker exec -it minitrino bash 
 trino-cli
 
 trino> SHOW SCHEMAS FROM backend_svc;
@@ -36,8 +36,8 @@ This module uses a named volume to persist Postgres data:
 volumes:
   postgres-insights-data:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.insights=admin-insights
+      - org.minitrino=root
+      - org.minitrino.module.insights=admin-insights
 ```
 
 The user-facing implication is that the data in Postgres is retained even after
@@ -52,7 +52,7 @@ look out for these warnings:
 To remove these volumes, run:
 
 ```sh
-minitrino -v remove --volumes --label com.starburst.tests.module.insights=admin-insights
+minitrino -v remove --volumes --label org.minitrino.module.insights=admin-insights
 ```
 
 Or, remove them directly using the Docker CLI:

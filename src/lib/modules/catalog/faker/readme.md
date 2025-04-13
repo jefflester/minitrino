@@ -7,10 +7,10 @@ catalog](https://docs.starburst.io/latest/connector/faker.html).
 
 ```sh
 minitrino -v provision -m faker
-# Or specify Starburst version
-minitrino -v -e STARBURST_VER=${version} provision -m faker
+# Or specify cluster version
+minitrino -v -e CLUSTER_VER=${version} provision -m faker
 
-docker exec -it trino bash 
+docker exec -it minitrino bash 
 trino-cli
 
 trino> CREATE TABLE faker.default.test (a VARCHAR);

@@ -15,10 +15,10 @@ supports MySQL drivers on `localhost:3306`.
 
 ```sh
 minitrino -v provision -m mysql
-# Or specify Starburst version
-minitrino -v -e STARBURST_VER=${version} provision -m mysql
+# Or specify cluster version
+minitrino -v -e CLUSTER_VER=${version} provision -m mysql
 
-docker exec -it trino bash 
+docker exec -it minitrino bash 
 trino-cli
 trino> SHOW SCHEMAS FROM mysql;
 ```
@@ -31,8 +31,8 @@ This module uses named volumes to persist MySQL data:
 volumes:
   mysql-data:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.mysql=catalog-mysql
+      - org.minitrino=root
+      - org.minitrino.module.mysql=catalog-mysql
 ```
 
 The user-facing implication is that MySQL data is retained even after shutting
@@ -47,7 +47,7 @@ for these warnings:
 To remove these volumes, run:
 
 ```sh
-minitrino -v remove --volumes --label com.starburst.tests.module.mysql=catalog-mysql
+minitrino -v remove --volumes --label org.minitrino.module.mysql=catalog-mysql
 ```
 
 Or, remove them directly using the Docker CLI:

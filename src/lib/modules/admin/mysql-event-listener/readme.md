@@ -13,10 +13,10 @@ through Trino.
 
 ```sh
 minitrino -v provision -m mysql-event-listener
-# Or specify Starburst version
-minitrino -v -e STARBURST_VER=${version} provision -m mysql-event-listener
+# Or specify cluster version
+minitrino -v -e CLUSTER_VER=${version} provision -m mysql-event-listener
 
-docker exec -it trino bash 
+docker exec -it minitrino bash 
 trino-cli
 
 # Query is logged to event listener DB

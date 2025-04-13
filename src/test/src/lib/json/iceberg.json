@@ -14,7 +14,7 @@
       "name": "Test create schema",
       "sql": "CREATE SCHEMA iceberg.test_schema WITH (location = 's3a://sample-bucket/wh/test_schema')",
       "trinoCliArgs": [
-        "--server 'http://trino:8080'",
+        "--server 'http://minitrino:8080'",
         "--user admin"
       ],
       "contains": [
@@ -26,7 +26,7 @@
       "name": "Test schema list",
       "sql": "SHOW SCHEMAS IN iceberg",
       "trinoCliArgs": [
-        "--server 'http://trino:8080'",
+        "--server 'http://minitrino:8080'",
         "--user admin"
       ],
       "contains": [
@@ -39,7 +39,7 @@
       "name": "Test CTAS",
       "sql": "CREATE TABLE iceberg.test_schema.test_table AS SELECT * FROM tpch.tiny.customer LIMIT 10",
       "trinoCliArgs": [
-        "--server 'http://trino:8080'",
+        "--server 'http://minitrino:8080'",
         "--user admin"
       ],
       "contains": [
@@ -51,7 +51,7 @@
       "name": "Test table select",
       "sql": "SELECT * FROM iceberg.test_schema.test_table LIMIT 10",
       "trinoCliArgs": [
-        "--server 'http://trino:8080'",
+        "--server 'http://minitrino:8080'",
         "--user admin"
       ],
       "contains": [
@@ -65,7 +65,7 @@
       "name": "Test table list",
       "sql": "SHOW TABLES IN iceberg.test_schema",
       "trinoCliArgs": [
-        "--server 'http://trino:8080'",
+        "--server 'http://minitrino:8080'",
         "--user admin"
       ],
       "contains": [

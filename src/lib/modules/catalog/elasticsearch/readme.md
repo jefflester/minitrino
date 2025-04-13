@@ -8,10 +8,10 @@ docs).
 
 ```sh
 minitrino -v provision -m elasticsearch
-# Or specify Starburst version
-minitrino -v -e STARBURST_VER=${version} provision -m elasticsearch
+# Or specify cluster version
+minitrino -v -e CLUSTER_VER=${version} provision -m elasticsearch
 
-docker exec -it trino bash 
+docker exec -it minitrino bash 
 trino-cli
 
 trino> SHOW SCHEMAS FROM elasticsearch;
@@ -83,8 +83,8 @@ This module uses named volumes to persist ES data:
 volumes:
   elasticsearch-data:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.elasticsearch=catalog-elasticsearch
+      - org.minitrino=root
+      - org.minitrino.module.elasticsearch=catalog-elasticsearch
 ```
 
 The user-facing implication is that ES data is retained even after shutting down
@@ -99,7 +99,7 @@ these warnings:
 To remove these volumes, run:
 
 ```sh
-minitrino -v remove --volumes --label com.starburst.tests.module.elasticsearch=catalog-elasticsearch
+minitrino -v remove --volumes --label org.minitrino.module.elasticsearch=catalog-elasticsearch
 ```
   
 Or, remove them directly using the Docker CLI:

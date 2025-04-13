@@ -2,7 +2,8 @@
 
 This module provisions a ClickHouse server with some preloaded data. The
 preloaded tables are stored in the `minitrino` ClickHouse database, which is
-exposed as the `clickhouse.minitrino` schema in Trino.
+exposed as the `clickhouse.minitrino` schema in the cluster's `clickhouse`
+catalog.
 
 ## Loading Data
 
@@ -22,10 +23,10 @@ lib/modules/catalog/clickhouse/resources/clickhouse/init.sh
 
 ```sh
 minitrino -v provision -m clickhouse
-# Or specify Starburst version
-minitrino -v -e STARBURST_VER=${version} provision -m clickhouse
+# Or specify cluster version
+minitrino -v -e CLUSTER_VER=${version} provision -m clickhouse
 
-docker exec -it trino bash 
+docker exec -it minitrino bash 
 trino-cli
 
 trino> SHOW TABLES IN clickhouse.minitrino;
@@ -39,8 +40,8 @@ This module uses named volumes to persist ClickHouse data:
 volumes:
   clickhouse-data:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.clickhouse=catalog-clickhouse
+      - org.minitrino=root
+      - org.minitrino.module.clickhouse=catalog-clickhouse
 ```
 
 The user-facing implication is that ClickHouse data is retained even after
@@ -55,7 +56,7 @@ look out for these warnings:
 To remove these volumes, run:
 
 ```sh
-minitrino -v remove --volumes --label com.starburst.tests.module.clickhouse=catalog-clickhouse
+minitrino -v remove --volumes --label org.minitrino.module.clickhouse=catalog-clickhouse
 ```
   
 Or, remove them directly using the Docker CLI:

@@ -2,14 +2,14 @@
   "tests": [
     {
       "type": "query",
-      "name": "Test sepadmins group",
+      "name": "Test clusteradmins group",
       "sql": "SELECT current_groups()",
       "trinoCliArgs": [
-        "--server 'http://trino:8080'",
+        "--server 'http://minitrino:8080'",
         "--user admin"
       ],
       "contains": [
-        "sepadmins"
+        "clusteradmins"
       ]
     },
     {
@@ -17,7 +17,7 @@
       "name": "Test metadata-users groups",
       "sql": "SELECT current_groups()",
       "trinoCliArgs": [
-        "--server 'http://trino:8080'",
+        "--server 'http://minitrino:8080'",
         "--user metadata-user"
       ],
       "contains": [
@@ -29,7 +29,7 @@
       "name": "Test platform-users group",
       "sql": "SELECT current_groups()",
       "trinoCliArgs": [
-        "--server 'http://trino:8080'",
+        "--server 'http://minitrino:8080'",
         "--user platform-user"
       ],
       "contains": [
@@ -41,7 +41,7 @@
       "name": "Test empty group",
       "sql": "SELECT current_groups()",
       "trinoCliArgs": [
-        "--server 'http://trino:8080'"
+        "--server 'http://minitrino:8080'"
       ],
       "contains": [
         "[]"

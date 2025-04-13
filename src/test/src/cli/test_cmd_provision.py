@@ -7,7 +7,7 @@ import yaml
 import src.common as common
 import src.cli.utils as utils
 from minitrino.settings import RESOURCE_LABEL
-from minitrino.settings import MIN_SEP_VER
+from minitrino.settings import MIN_CLUSTER_VER
 
 from inspect import currentframe
 from types import FrameType
@@ -34,8 +34,8 @@ def main():
 
 
 def test_standalone():
-    """Verifies that a standalone Trino container is provisioned when no
-    options are passed in."""
+    """Verifies that a standalone cluster is provisioned when no options
+    are passed in."""
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
@@ -48,7 +48,7 @@ def test_standalone():
     assert len(containers) == 1
 
     for container in containers:
-        assert container.name == "trino"
+        assert container.name == "minitrino"
 
     common.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()
@@ -60,7 +60,9 @@ def test_bad_sep_version():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    result = utils.execute_cli_cmd(["-v", "--env", "STARBURST_VER=332-e", "provision"])
+    result = utils.execute_cli_cmd(
+        ["-v", "--env", "CLUSTER_VER=332-e", "provision", "--image", "starburst"]
+    )
 
     assert result.exit_code == 2
     assert "Provided Starburst version" in result.output
@@ -145,7 +147,7 @@ def test_enterprise():
     result = utils.execute_cli_cmd(["-v", "provision", "--module", "test"])
 
     assert result.exit_code == 0
-    etc_ls = common.execute_command(f"docker exec -i trino ls /etc/starburst/")
+    etc_ls = common.execute_command("docker exec -i minitrino ls /etc/${CLUSTER_DIST}/")
     assert "dummy.license" in etc_ls["output"]
 
     common.log_success(cast(FrameType, currentframe()).f_code.co_name)
@@ -157,14 +159,14 @@ def test_version_requirements():
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    utils.update_metadata_json("test", [{"versions": [MIN_SEP_VER + 1, 998]}])
+    utils.update_metadata_json("test", [{"versions": [MIN_CLUSTER_VER + 1, 998]}])
 
     # Should fail - lower bound
     result = utils.execute_cli_cmd(
         [
             "-v",
             "--env",
-            f"STARBURST_VER={MIN_SEP_VER}-e",
+            f"CLUSTER_VER={MIN_CLUSTER_VER}-e",
             "provision",
             "--module",
             "test",
@@ -177,7 +179,7 @@ def test_version_requirements():
 
     # Should fail - upper bound
     result = utils.execute_cli_cmd(
-        ["-v", "--env", "STARBURST_VER=999-e", "provision", "--module", "test"]
+        ["-v", "--env", "CLUSTER_VER=999-e", "provision", "--module", "test"]
     )
 
     assert result.exit_code == 2
@@ -236,23 +238,23 @@ def test_bootstrap():
 
     assert all(
         (
-            "Successfully executed bootstrap script in container 'trino'"
+            "Successfully executed bootstrap script in container 'minitrino'"
             in result.output,
             "Successfully executed bootstrap script in container 'test'"
             in result.output,
         )
     )
 
-    trino_bootstrap = common.execute_command(
-        f"docker exec -i trino cat /tmp/bootstrap.txt"
+    minitrino_bootstrap = common.execute_command(
+        f"docker exec -i minitrino cat /tmp/bootstrap.txt"
     )
     test_bootstrap = common.execute_command(
         f"docker exec -i test cat /tmp/bootstrap.txt"
     )
 
-    assert "hello world" in trino_bootstrap.get("output", "") and test_bootstrap.get(
+    assert "hello world" in minitrino_bootstrap.get(
         "output", ""
-    )
+    ) and test_bootstrap.get("output", "")
 
     common.log_success(cast(FrameType, currentframe()).f_code.co_name)
     del_yaml_bootstrap(yaml_path)
@@ -260,8 +262,8 @@ def test_bootstrap():
 
 
 def test_valid_user_config():
-    """Ensures that valid, user-defined Trino/JVM config can be successfully
-    appended to Trino config files."""
+    """Ensures that valid, user-defined cluster and JVM config can be successfully
+    appended to cluster's config files."""
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
@@ -280,21 +282,21 @@ def test_valid_user_config():
 
     assert result.exit_code == 0
     assert (
-        "Appending user-defined Trino config to Trino container config" in result.output
+        "Appending user-defined config to cluster container config..." in result.output
     )
 
     jvm_config = common.execute_command(
-        f"docker exec -i trino cat /etc/starburst/jvm.config"
+        "docker exec -i minitrino cat /etc/${CLUSTER_DIST}/jvm.config"
     )
-    trino_config = common.execute_command(
-        f"docker exec -i trino cat /etc/starburst/config.properties"
+    cluster_config = common.execute_command(
+        "docker exec -i minitrino cat /etc/${CLUSTER_DIST}/config.properties"
     )
 
     assert all(("-Xmx2G" in jvm_config["output"], "-Xms1G" in jvm_config["output"]))
     assert all(
         (
-            "query.max-stage-count=85" in trino_config["output"],
-            "query.max-execution-time=1h" in trino_config["output"],
+            "query.max-stage-count=85" in cluster_config["output"],
+            "query.max-execution-time=1h" in cluster_config["output"],
         )
     )
 
@@ -303,7 +305,7 @@ def test_valid_user_config():
 
 
 def test_duplicate_config_props():
-    """Ensures that duplicate configuration properties in Trino are logged as a
+    """Ensures that duplicate configuration properties are logged as a
     warning to the user."""
 
     common.log_status(cast(FrameType, currentframe()).f_code.co_name)
@@ -321,11 +323,11 @@ def test_duplicate_config_props():
 
     assert all(
         (
-            "Duplicate Trino configuration properties detected in 'config.properties' file"
+            "Duplicate configuration properties detected in 'config.properties' file"
             in result.output,
             "query.max-stage-count=85" in result.output,
             "query.max-stage-count=100" in result.output,
-            "Duplicate Trino configuration properties detected in 'jvm.config' file"
+            "Duplicate configuration properties detected in 'jvm.config' file"
             in result.output,
             "-Xms1G" in result.output,
         )
@@ -368,22 +370,26 @@ def test_provision_append():
 
     assert result.exit_code == 0
     assert "Identified the following running modules" in result.output
-    assert len(containers) == 3  # trino, test, and postgres
+    assert len(containers) == 3  # minitrino, test, and postgres
 
-    # Ensure new volume mount was activated; indicates Trino container was
+    # Ensure new volume mount was activated; indicates container was
     # properly recreated
-    etc_ls = common.execute_command(f"docker exec -i trino ls /etc/starburst/catalog/")
+    etc_ls = common.execute_command(
+        "docker exec -i minitrino ls /etc/${CLUSTER_DIST}/catalog/"
+    )
     assert "postgres.properties" in etc_ls["output"]
 
     # Add one more module
     result = utils.execute_cli_cmd(["-v", "provision", "--module", "mysql"])
-    etc_ls = common.execute_command(f"docker exec -i trino ls /etc/starburst/catalog/")
+    etc_ls = common.execute_command(
+        "docker exec -i minitrino ls /etc/${CLUSTER_DIST}/catalog/"
+    )
     assert "mysql.properties" and "postgres.properties" in etc_ls["output"]
 
     containers = get_containers()
 
     assert result.exit_code == 0
-    assert len(containers) == 4  # trino, test, postgres, and mysql
+    assert len(containers) == 4  # minitrino, test, postgres, and mysql
 
     common.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()
@@ -399,24 +405,24 @@ def test_workers():
     containers = get_containers()
 
     assert result.exit_code == 0
-    assert "started worker container: 'trino-worker-1'" in result.output
-    assert len(containers) == 2  # trino, trino worker
+    assert "started worker container: 'minitrino-worker-1'" in result.output
+    assert len(containers) == 2  # coordinator, worker
 
     # Provision a second worker
     result = utils.execute_cli_cmd(["-v", "provision", "--workers", "2"])
     containers = get_containers()
 
     assert result.exit_code == 0
-    assert "started worker container: 'trino-worker-2'" in result.output
-    assert len(containers) == 3  # trino, (2) trino worker
+    assert "started worker container: 'minitrino-worker-2'" in result.output
+    assert len(containers) == 3  # coordinator, (2) worker
 
     # Downsize workers (remove worker 2)
     result = utils.execute_cli_cmd(["-v", "provision", "--workers", "1"])
     containers = get_containers()
 
     assert result.exit_code == 0
-    assert "Removed excess worker" and "trino-worker-2" in result.output
-    assert len(containers) == 2  # trino, trino worker
+    assert "Removed excess worker" and "minitrino-worker-2" in result.output
+    assert len(containers) == 2  # coordinator, worker
 
     # Provision a module in a running environment with a worker already present,
     # but don't specify any workers
@@ -424,8 +430,8 @@ def test_workers():
     containers = get_containers()
 
     assert result.exit_code == 0
-    assert "Restarting container 'trino-worker-1'" in result.output
-    assert len(containers) == 3  # trino, trino worker, test
+    assert "Restarting container 'minitrino-worker-1'" in result.output
+    assert len(containers) == 3  # coordinator, worker, test
 
     common.log_success(cast(FrameType, currentframe()).f_code.co_name)
     cleanup()
@@ -440,7 +446,7 @@ def test_catalogs_volume():
     assert result.exit_code == 0
 
     hive = common.execute_command(
-        "docker exec -i trino cat /etc/starburst/catalog/hive.properties"
+        "docker exec -i minitrino cat /etc/${CLUSTER_DIST}/catalog/hive.properties"
     )
 
     assert "connector.name=hive" in hive["output"]
@@ -454,10 +460,10 @@ def test_catalogs_volume():
     assert "Removed 'minitrino_catalogs' volume" in result.output
 
     hive = common.execute_command(
-        "docker exec -i trino cat /etc/starburst/catalog/hive.properties"
+        "docker exec -i minitrino cat /etc/${CLUSTER_DIST}/catalog/hive.properties"
     )
     delta = common.execute_command(
-        "docker exec -i trino cat /etc/starburst/catalog/delta.properties"
+        "docker exec -i minitrino cat /etc/${CLUSTER_DIST}/catalog/delta.properties"
     )
 
     assert (

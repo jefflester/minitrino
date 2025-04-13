@@ -23,10 +23,10 @@ here as the MySQL module already claims the host port `3306`.
 
 ```sh
 minitrino -v provision -m mariadb
-# Or specify Starburst version
-minitrino -v -e STARBURST_VER=${version} provision -m mariadb
+# Or specify cluster version
+minitrino -v -e CLUSTER_VER=${version} provision -m mariadb
 
-docker exec -it trino bash 
+docker exec -it minitrino bash 
 trino-cli
 
 trino> SHOW SCHEMAS FROM mariadb;
@@ -40,8 +40,8 @@ This module uses named volumes to persist MariaDB data:
 volumes:
   mariadb-data:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.mariadb=catalog-mariadb
+      - org.minitrino=root
+      - org.minitrino.module.mariadb=catalog-mariadb
 ```
 
 The user-facing implication is that MariaDB data is retained even after shutting
@@ -56,7 +56,7 @@ for these warnings:
 To remove these volumes, run:
 
 ```sh
-minitrino -v remove --volumes --label com.starburst.tests.module.mariadb=catalog-mariadb
+minitrino -v remove --volumes --label org.minitrino.module.mariadb=catalog-mariadb
 ```
   
 Or, remove them directly using the Docker CLI:

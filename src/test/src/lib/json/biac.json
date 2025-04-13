@@ -5,7 +5,7 @@
       "name": "Test sysadmin role query",
       "sql": "SET ROLE sysadmin; SELECT * FROM tpch.tiny.customer LIMIT 1",
       "trinoCliArgs": [
-        "--server 'http://trino:8080'",
+        "--server 'http://minitrino:8080'",
         "--user admin"
       ],
       "contains": [
@@ -19,7 +19,7 @@
       "name": "Test set role - public (success)",
       "sql": "SET ROLE public",
       "trinoCliArgs": [
-        "--server 'http://trino:8080'",
+        "--server 'http://minitrino:8080'",
         "--user foo"
       ],
       "contains": [
@@ -31,7 +31,7 @@
       "name": "Test set role - sysadmin (access denied)",
       "sql": "SET ROLE sysadmin",
       "trinoCliArgs": [
-        "--server 'http://trino:8080'",
+        "--server 'http://minitrino:8080'",
         "--user foo"
       ],
       "contains": [
@@ -41,8 +41,8 @@
     {
       "type": "shell",
       "name": "Test biac api - list roles",
-      "container": "trino",
-      "command": "curl -v -X GET -H 'X-Trino-User: admin' -H 'Accept: application/json' 'trino:8080/api/v1/biac/roles?pageToken=&pageSize=&pageSort='",
+      "container": "minitrino",
+      "command": "curl -v -X GET -H 'X-Trino-User: admin' -H 'Accept: application/json' 'minitrino:8080/api/v1/biac/roles?pageToken=&pageSize=&pageSort='",
       "exitCode": 0,
       "contains": [
         "sysadmin",

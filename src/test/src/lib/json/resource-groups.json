@@ -5,7 +5,7 @@
       "name": "Confirm admin resource group",
       "sql": "SELECT 'admin'",
       "trinoCliArgs": [
-        "--server 'http://trino:8080'",
+        "--server 'http://minitrino:8080'",
         "--user admin"
       ],
       "contains": [
@@ -17,7 +17,7 @@
       "name": "Confirm admin resource group from completed query",
       "sql": "SELECT resource_group_id FROM system.runtime.queries WHERE query = 'SELECT ''admin''' AND user = 'admin'",
       "trinoCliArgs": [
-        "--server 'http://trino:8080'",
+        "--server 'http://minitrino:8080'",
         "--user admin"
       ],
       "contains": [
@@ -29,7 +29,7 @@
       "name": "Confirm metadataQueriesSkipTheQueue resource group",
       "sql": "SHOW CREATE TABLE tpch.tiny.customer",
       "trinoCliArgs": [
-        "--server 'http://trino:8080'",
+        "--server 'http://minitrino:8080'",
         "--user foo"
       ],
       "contains": [
@@ -41,7 +41,7 @@
       "name": "Confirm metadataQueriesSkipTheQueue resource group from completed query",
       "sql": "SELECT resource_group_id FROM system.runtime.queries WHERE query = 'SHOW CREATE TABLE tpch.tiny.customer' AND user = 'foo'",
       "trinoCliArgs": [
-        "--server 'http://trino:8080'",
+        "--server 'http://minitrino:8080'",
         "--user admin"
       ],
       "contains": [
@@ -53,7 +53,7 @@
       "name": "Confirm global.systemMetadata resource group",
       "sql": "SELECT * FROM system.jdbc.tables LIMIT 1",
       "trinoCliArgs": [
-        "--server 'http://trino:8080'",
+        "--server 'http://minitrino:8080'",
         "--user metadata-user"
       ],
       "contains": [
@@ -65,7 +65,7 @@
       "name": "Confirm global.systemMetadata resource group from completed query",
       "sql": "SELECT resource_group_id FROM system.runtime.queries WHERE query = 'SELECT * FROM system.jdbc.tables LIMIT 1' AND user = 'metadata-user'",
       "trinoCliArgs": [
-        "--server 'http://trino:8080'",
+        "--server 'http://minitrino:8080'",
         "--user admin"
       ],
       "contains": [
@@ -77,7 +77,7 @@
       "name": "Confirm global.systemRuntime resource group",
       "sql": "SELECT * FROM system.runtime.queries LIMIT 1",
       "trinoCliArgs": [
-        "--server 'http://trino:8080'",
+        "--server 'http://minitrino:8080'",
         "--user platform-user"
       ],
       "contains": [
@@ -89,7 +89,7 @@
       "name": "Confirm global.systemRuntime resource group from completed query",
       "sql": "SELECT resource_group_id FROM system.runtime.queries WHERE query = 'SELECT * FROM system.runtime.queries LIMIT 1' AND user = 'platform-user'",
       "trinoCliArgs": [
-        "--server 'http://trino:8080'",
+        "--server 'http://minitrino:8080'",
         "--user admin"
       ],
       "contains": [
@@ -101,7 +101,7 @@
       "name": "Confirm global.other resource group",
       "sql": "SELECT 'foo'",
       "trinoCliArgs": [
-        "--server 'http://trino:8080'",
+        "--server 'http://minitrino:8080'",
         "--user foo"
       ],
       "contains": [
@@ -113,7 +113,7 @@
       "name": "Confirm global.other resource group from completed query",
       "sql": "SELECT resource_group_id FROM system.runtime.queries WHERE query = 'SELECT ''foo''' AND user = 'foo'",
       "trinoCliArgs": [
-        "--server 'http://trino:8080'",
+        "--server 'http://minitrino:8080'",
         "--user admin"
       ],
       "contains": [

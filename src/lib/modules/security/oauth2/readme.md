@@ -1,13 +1,13 @@
 # OAuth2 Authenticator Module
 
-This module secures Trino with OAuth2 authentication.
+This module secures the Minitrino cluster with OAuth2 authentication.
 
 ## Usage
 
 ```sh
 minitrino -v provision -m oauth2
-# Or specify Starburst version
-minitrino -v -e STARBURST_VER=${version} provision -m oauth2
+# Or specify cluster version
+minitrino -v -e CLUSTER_VER=${version} provision -m oauth2
 ```
 
 Once deployed, visit Starburst on `https://localhost:8443` and work through the
@@ -37,15 +37,16 @@ nature of the redirects and callbacks that occur during the OAuth2 flow.
 
 ## Development Notes
 
-`host.docker.internal` allows the callbacks/redirects between SEP and OAuth2
-services to take place over your host instead of within the container network.
-The end result is that the redirect screen actually appears on your web browser.
+`host.docker.internal` allows the callbacks/redirects between the coordinator
+and OAuth2 server to take place over your host instead of within the container
+network. The end result is that the redirect screen actually appears on your web
+browser.
 
 As a result of the above, the DNS references within the Compose YAML refer to
 two different hostnames for the OAuth2 server: `oauth2-server:8100` and
-`host.docker.internal:8100`. SEP specifically needs its configuration to point
-to `host.docker.internal` in order for the user-facing browser redirects to
-work.
+`host.docker.internal:8100`. The coordinator specifically needs its
+configuration to point to `host.docker.internal` in order for the user-facing
+browser redirects to work.
 
 The `keytool` command used to generate the OAuth2 server certificate:
 

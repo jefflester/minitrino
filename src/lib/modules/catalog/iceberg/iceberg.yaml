@@ -1,7 +1,7 @@
 ---
 services:
 
-  trino:
+  minitrino:
     environment:
       MINITRINO_BOOTSTRAP: 458-native-fs-workaround.sh
     depends_on:
@@ -11,15 +11,15 @@ services:
     image: busybox
     container_name: iceberg-catalog-cp
     volumes:
-      - ./modules/catalog/iceberg/resources/trino/iceberg.properties:/tmp/iceberg.properties
-      - catalogs:/etc/starburst/catalog
+      - ./modules/catalog/iceberg/resources/cluster/iceberg.properties:/tmp/iceberg.properties
+      - catalogs:/etc/${CLUSTER_DIST}/catalog
     command:
       - sh
       - -c
-      - cp /tmp/iceberg.properties /etc/starburst/catalog/iceberg.properties
+      - cp /tmp/iceberg.properties /etc/${CLUSTER_DIST}/catalog/iceberg.properties
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.iceberg=catalog-iceberg
+      - org.minitrino=root
+      - org.minitrino.module.iceberg=catalog-iceberg
 
   iceberg-rest:
     image: tabulario/iceberg-rest:${ICEBERG_REST_VER}
@@ -37,8 +37,8 @@ services:
     volumes:
       - iceberg-metadata:/home/iceberg
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.iceberg=catalog-iceberg
+      - org.minitrino=root
+      - org.minitrino.module.iceberg=catalog-iceberg
 
   # ---------------------------------------------------------------------------
   # I couldn't get path-style access to work with
@@ -69,8 +69,8 @@ services:
     volumes:
       - minio-iceberg-data:/data
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.iceberg=catalog-iceberg
+      - org.minitrino=root
+      - org.minitrino.module.iceberg=catalog-iceberg
 
   create-minio-iceberg-buckets:
     image: minio/mc:${MINIO_MC_VER}
@@ -90,15 +90,15 @@ services:
       tail -f /dev/null
       "
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.iceberg=catalog-iceberg
+      - org.minitrino=root
+      - org.minitrino.module.iceberg=catalog-iceberg
 
 volumes:
   iceberg-metadata:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.iceberg=catalog-iceberg
+      - org.minitrino=root
+      - org.minitrino.module.iceberg=catalog-iceberg
   minio-iceberg-data:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.iceberg=catalog-iceberg
+      - org.minitrino=root
+      - org.minitrino.module.iceberg=catalog-iceberg

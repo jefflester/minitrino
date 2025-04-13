@@ -1,9 +1,9 @@
 ---
 services:
 
-  trino:
+  minitrino:
     environment:
-      MINITRINO_BOOTSTRAP: bootstrap-trino.sh
+      MINITRINO_BOOTSTRAP: bootstrap-cluster.sh
       CONFIG_PROPERTIES: |-
         web-ui.authentication.type=oauth2
         http-server.authentication.type=OAUTH2
@@ -29,8 +29,8 @@ services:
       - ./modules/security/oauth2/resources/oauth2/config.json:/app/config.json
       - ./modules/security/oauth2/resources/oauth2/keystore.jks:/app/keystore.jks
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.oauth2=security-oauth2
+      - org.minitrino=root
+      - org.minitrino.module.oauth2=security-oauth2
 
   oauth2-healthcheck:
     image: curlimages/curl:${CURL_VER}
@@ -45,5 +45,5 @@ services:
       timeout: 10s
     command: [tail, -f, /dev/null]
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.oauth2=security-oauth2
+      - org.minitrino=root
+      - org.minitrino.module.oauth2=security-oauth2

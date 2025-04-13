@@ -1,17 +1,17 @@
 ---
 services:
 
-  trino:
+  minitrino:
     environment:
       CONFIG_PROPERTIES: |-
         http-server.https.enabled=true
         http-server.https.port=8443
         http-server.https.keystore.path=etc/tls-mnt/keystore.jks
         http-server.https.keystore.key=changeit
-      MINITRINO_BOOTSTRAP: bootstrap-trino.sh
+      MINITRINO_BOOTSTRAP: bootstrap-cluster.sh
     ports:
       - 8443:8443
     volumes:
       - ~/.minitrino/tls-mnt:${ETC}/tls-mnt
     labels:
-      - com.starburst.tests.module.tls=security-tls
+      - org.minitrino.module.tls=security-tls

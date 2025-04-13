@@ -1,18 +1,19 @@
 # Password File Authenticator Module
 
-This module configures Trino to authenticate users with a password file.
+This module configures [password file
+authentication](https://trino.io/docs/current/security/password-file.html).
 
 ## Usage
 
 ```sh
 minitrino -v provision -m password-file
-# Or specify Starburst version
-minitrino -v -e STARBURST_VER=${version} provision -m password-file
+# Or specify cluster version
+minitrino -v -e CLUSTER_VER=${version} provision -m password-file
 
-docker exec -it trino bash 
+docker exec -it minitrino bash 
 
-trino-cli --server https://trino:8443 \
-  --truststore-path /etc/starburst/tls-mnt/truststore.jks --truststore-password changeit \
+trino-cli --server https://minitrino:8443 \
+  --truststore-path /etc/"${CLUSTER_DIST}"/tls-mnt/truststore.jks --truststore-password changeit \
   --user bob --password
     
 trino> SHOW SCHEMAS FROM tpch;
@@ -29,5 +30,5 @@ trino> SHOW SCHEMAS FROM tpch;
 Example with username `admin` and password `trinoRocks15`
 
 ```sh
-docker exec trino htpasswd -bB -C 10 /etc/starburst/password.db admin trinoRocks15
+docker exec minitrino htpasswd -bB -C 10 /etc/${CLUSTER_DIST}/password.db admin trinoRocks15
 ```

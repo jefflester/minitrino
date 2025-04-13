@@ -1,29 +1,31 @@
 ---
 services:
 
-  trino:
+  minitrino:
     build:
       context: ./image/
       args:
         UBUNTU_VER: ${UBUNTU_VER}
-        STARBURST_VER: ${STARBURST_VER}
+        CLUSTER_VER: ${CLUSTER_VER}
+        CLUSTER_DIST: ${CLUSTER_DIST}
+        BUILD_USER: ${BUILD_USER}
       labels:
-        - com.starburst.tests=minitrino
-        - com.starburst.tests.module=trino
-    image: minitrino/trino:${STARBURST_VER}
-    container_name: trino
+        - org.minitrino=root
+        - org.minitrino.module=minitrino
+    image: minitrino/cluster:${CLUSTER_VER}-${CLUSTER_DIST}
+    container_name: minitrino
     restart: 'no'
     ports:
       - 8080:8080
     volumes:
       - ${LIC_PATH}:${LIC_MOUNT_PATH}
-      - catalogs:/etc/starburst/catalog
+      - catalogs:/etc/${CLUSTER_DIST}/catalog
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module=trino
+      - org.minitrino=root
+      - org.minitrino.module=minitrino
 
 volumes:
   catalogs:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module=trino
+      - org.minitrino=root
+      - org.minitrino.module=minitrino

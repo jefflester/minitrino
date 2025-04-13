@@ -1,28 +1,28 @@
 ---
 services:
 
-  trino:
+  minitrino:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.test=catalog-test
+      - org.minitrino=root
+      - org.minitrino.module.test=catalog-test
 
   test:
     build:
       context: ./modules/catalog/test/
       labels:
-        - com.starburst.tests=minitrino
-        - com.starburst.tests.module.test=catalog-test
+        - org.minitrino=root
+        - org.minitrino.module.test=catalog-test
     command: [tail, -f, /dev/null]  # Keep alive
     image: minitrino/test:latest
     container_name: test
     volumes:
       - test-data:/etc/test/
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.test=catalog-test
+      - org.minitrino=root
+      - org.minitrino.module.test=catalog-test
 
 volumes:
   test-data:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.test=catalog-test
+      - org.minitrino=root
+      - org.minitrino.module.test=catalog-test

@@ -1,7 +1,7 @@
 ---
 services:
 
-  trino:
+  minitrino:
     environment:
       MINITRINO_BOOTSTRAP: 458-native-fs-workaround.sh
     depends_on:
@@ -11,15 +11,15 @@ services:
     image: busybox
     container_name: delta-catalog-cp
     volumes:
-      - ./modules/catalog/delta-lake/resources/trino/delta.properties:/tmp/delta.properties
-      - catalogs:/etc/starburst/catalog
+      - ./modules/catalog/delta-lake/resources/cluster/delta.properties:/tmp/delta.properties
+      - catalogs:/etc/${CLUSTER_DIST}/catalog
     command:
       - sh
       - -c
-      - cp /tmp/delta.properties /etc/starburst/catalog/delta.properties
+      - cp /tmp/delta.properties /etc/${CLUSTER_DIST}/catalog/delta.properties
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.delta-lake=catalog-delta-lake
+      - org.minitrino=root
+      - org.minitrino.module.delta-lake=catalog-delta-lake
 
   postgres-delta-lake:
     image: postgres:${POSTGRES_HMS_VER}
@@ -34,8 +34,8 @@ services:
     volumes:
       - postgres-delta-lake-data:/var/lib/postgresql/data
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.delta-lake=catalog-delta-lake
+      - org.minitrino=root
+      - org.minitrino.module.delta-lake=catalog-delta-lake
 
   metastore-delta-lake:
     image: jefflester/hive-metastore:${HMS_VER}
@@ -48,8 +48,8 @@ services:
     ports:
       - :9083
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.delta-lake=catalog-delta-lake
+      - org.minitrino=root
+      - org.minitrino.module.delta-lake=catalog-delta-lake
 
   minio-delta-lake:
     image: minio/minio:${MINIO_VER}
@@ -64,8 +64,8 @@ services:
     volumes:
       - minio-delta-lake-data:/data
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.delta-lake=catalog-delta-lake
+      - org.minitrino=root
+      - org.minitrino.module.delta-lake=catalog-delta-lake
 
   create-minio-delta-lake-buckets:
     image: minio/mc:${MINIO_MC_VER}
@@ -85,15 +85,15 @@ services:
       tail -f /dev/null
       "
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.delta-lake=catalog-delta-lake
+      - org.minitrino=root
+      - org.minitrino.module.delta-lake=catalog-delta-lake
 
 volumes:
   postgres-delta-lake-data:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.delta-lake=catalog-delta-lake
+      - org.minitrino=root
+      - org.minitrino.module.delta-lake=catalog-delta-lake
   minio-delta-lake-data:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.delta-lake=catalog-delta-lake
+      - org.minitrino=root
+      - org.minitrino.module.delta-lake=catalog-delta-lake

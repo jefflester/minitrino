@@ -1,9 +1,9 @@
 ---
 services:
 
-  trino:
+  minitrino:
     volumes:
-      - ./modules/catalog/sqlserver/resources/trino/sqlserver.properties:${ETC}/catalog/sqlserver.properties
+      - ./modules/catalog/sqlserver/resources/cluster/sqlserver.properties:${ETC}/catalog/sqlserver.properties
 
   sqlserver:
     image: mcr.microsoft.com/mssql/server:${SQLSERVER_VER}
@@ -15,11 +15,11 @@ services:
     volumes:
       - sqlserver-data:/var/opt/mssql
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.sqlserver=catalog-sqlserver
+      - org.minitrino=root
+      - org.minitrino.module.sqlserver=catalog-sqlserver
 
 volumes:
   sqlserver-data:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.sqlserver=catalog-sqlserver
+      - org.minitrino=root
+      - org.minitrino.module.sqlserver=catalog-sqlserver

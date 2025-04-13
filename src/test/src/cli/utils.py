@@ -52,7 +52,7 @@ def make_sample_config():
         f'bash -c "cat << EOF > {CONFIG_FILE}\n'
         f"[config]\n"
         f"LIB_PATH=\n"
-        f"STARBURST_VER=\n"
+        f"CLUSTER_VER=\n"
         f"TEXT_EDITOR=\n"
         f"LIC_PATH=\n"
         f'SECRET_KEY=abc123\n"'

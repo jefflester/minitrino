@@ -1,9 +1,9 @@
 ---
 services:
 
-  trino:
+  minitrino:
     volumes:
-      - ./modules/catalog/mysql/resources/trino/mysql.properties:${ETC}/catalog/mysql.properties
+      - ./modules/catalog/mysql/resources/cluster/mysql.properties:${ETC}/catalog/mysql.properties
 
   mysql:
     image: mysql:${MYSQL_VER}
@@ -17,11 +17,11 @@ services:
     volumes:
       - mysql-data:/var/lib/mysql
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.mysql=catalog-mysql
+      - org.minitrino=root
+      - org.minitrino.module.mysql=catalog-mysql
 
 volumes:
   mysql-data:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.mysql=catalog-mysql
+      - org.minitrino=root
+      - org.minitrino.module.mysql=catalog-mysql

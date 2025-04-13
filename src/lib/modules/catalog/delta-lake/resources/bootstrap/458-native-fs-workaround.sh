@@ -27,9 +27,9 @@ update_catalogs() {
     done
 }
 
-TRINO_DIST="${STARBURST_VER:0:3}"
-CATALOG_DIR="/etc/starburst/catalog"
+TRINO_VER="${CLUSTER_VER:0:3}"
+CATALOG_DIR="/etc/${CLUSTER_DIST}/catalog"
 
-if [ "${TRINO_DIST}" -ge 458 ]; then
+if [ "${TRINO_VER}" -ge 458 ]; then
     update_catalogs
 fi

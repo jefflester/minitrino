@@ -15,10 +15,10 @@ supports SQL Server drivers on `localhost:1433`.
 
 ```sh
 minitrino -v provision -m sqlserver
-# Or specify Starburst version
-minitrino -v -e STARBURST_VER=${version} provision -m sqlserver
+# Or specify cluster version
+minitrino -v -e CLUSTER_VER=${version} provision -m sqlserver
 
-docker exec -it trino bash 
+docker exec -it minitrino bash 
 trino-cli
 
 trino> SHOW SCHEMAS FROM sqlserver;
@@ -32,8 +32,8 @@ This module uses named volumes to persist SQL Server data:
 volumes:
   sqlserver-data:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.sqlserver=catalog-sqlserver
+      - org.minitrino=root
+      - org.minitrino.module.sqlserver=catalog-sqlserver
 ```
 
 The user-facing implication is that SQL Server data is retained even after
@@ -48,7 +48,7 @@ look out for these warnings:
 To remove these volumes, run:
 
 ```sh
-minitrino -v remove --volumes --label com.starburst.tests.module.sqlserver=catalog-sqlserver
+minitrino -v remove --volumes --label org.minitrino.module.sqlserver=catalog-sqlserver
 ```
   
 Or, remove them directly using the Docker CLI:

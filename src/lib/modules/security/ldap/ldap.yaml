@@ -1,12 +1,12 @@
 ---
 services:
 
-  trino:
+  minitrino:
     environment:
       CONFIG_PROPERTIES: http-server.authentication.type=PASSWORD
-      MINITRINO_BOOTSTRAP: bootstrap-trino.sh
+      MINITRINO_BOOTSTRAP: bootstrap-cluster.sh
     volumes:
-      - ./modules/security/ldap/resources/trino/password-authenticator.properties:${ETC}/password-authenticator.properties
+      - ./modules/security/ldap/resources/cluster/password-authenticator.properties:${ETC}/password-authenticator.properties
       - ./modules/security/ldap/resources/ldap/ldap-users:${ETC}/ldap-users
     links:
       - ldap:ldap.minitrino.starburstdata.com
@@ -24,5 +24,5 @@ services:
     ports:
       - 636:636
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.ldap=security-ldap
+      - org.minitrino=root
+      - org.minitrino.module.ldap=security-ldap

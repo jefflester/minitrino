@@ -2,7 +2,7 @@
 
 set -euxo pipefail
 
-CATALOG_DIR="/etc/starburst/catalog"
+CATALOG_DIR="/etc/${CLUSTER_DIST}/catalog"
 
 for file in "$CATALOG_DIR"/*.properties; do
     if grep -q "^connector.name=hive" "$file"; then

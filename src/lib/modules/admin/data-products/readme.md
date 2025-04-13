@@ -9,10 +9,10 @@ The `hive` and `insights` modules are dependencies of this module.
 
 ```sh
 minitrino -v provision -m data-products
-# Or specify Starburst version
-minitrino -v -e STARBURST_VER=${version} provision -m data-products
+# Or specify cluster version
+minitrino -v -e CLUSTER_VER=${version} provision -m data-products
 
-docker exec -it trino bash 
+docker exec -it minitrino bash 
 trino-cli
 
 trino> SHOW SCHEMAS FROM backend_svc;

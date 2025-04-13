@@ -3,34 +3,34 @@
 set -euxo pipefail
 
 echo "Setting variables..."
-SSL_DIR=/etc/starburst/tls-mnt
+SSL_DIR=/etc/"${CLUSTER_DIST}"/tls-mnt
 
 echo "Removing pre-existing SSL resources..."
 rm -rf "${SSL_DIR}"/* 
 
 echo "Generating keystore file..."
 keytool -genkeypair \
-	-alias trino \
+	-alias minitrino \
 	-keyalg RSA \
 	-keystore "${SSL_DIR}"/keystore.jks \
 	-keypass changeit \
 	-storepass changeit \
 	-dname "CN=*.starburstdata.com" \
-	-ext san=dns:trino,dns:localhost
+	-ext san=dns:minitrino,dns:localhost
 
 echo "Adding keystore and truststore in ${SSL_DIR}..."
 keytool -export \
-	-alias trino \
+	-alias minitrino \
 	-keystore "${SSL_DIR}"/keystore.jks \
 	-rfc \
-	-file "${SSL_DIR}"/trino_certificate.cer \
+	-file "${SSL_DIR}"/minitrino_cert.cer \
 	-storepass changeit \
 	-noprompt
 
 keytool -import -v \
 	-trustcacerts \
-	-alias trino_trust \
-	-file "${SSL_DIR}"/trino_certificate.cer \
+	-alias minitrino_trust \
+	-file "${SSL_DIR}"/minitrino_cert.cer \
 	-keystore "${SSL_DIR}"/truststore.jks \
 	-storepass changeit \
 	-noprompt
@@ -38,8 +38,8 @@ keytool -import -v \
 # Import server cert into JVM truststore
 keytool -import -v \
 	-trustcacerts \
-	-alias trino_trust \
-	-file "${SSL_DIR}"/trino_certificate.cer \
-	-keystore /etc/starburst/tls-jvm/cacerts \
+	-alias minitrino_trust \
+	-file "${SSL_DIR}"/minitrino_cert.cer \
+	-keystore /etc/"${CLUSTER_DIST}"/tls-jvm/cacerts \
 	-storepass changeit \
 	-noprompt

@@ -11,8 +11,8 @@ for arg in "$@"; do
 done
 
 find_python() {
-    for py in python python3 /opt/homebrew/bin/python3 /usr/local/bin/python3; do
-        if type "${py}" >/dev/null 2>&1; then
+    for py in python3 python /opt/homebrew/bin/python3 /usr/local/bin/python3 /usr/bin/python3; do
+        if command -v "${py}" >/dev/null 2>&1; then
             version=$("${py}" -c 'import sys; print(f"{sys.version_info[0]}.{sys.version_info[1]}")')
             echo "Detected Python version: ${version} (${py})"
             case "${version}" in

@@ -88,6 +88,7 @@ prune_plugins() {
         mysql-event-listener
         okta-authenticator
         opensearch
+        oracle
         password-authenticators
         pinot
         postgresql

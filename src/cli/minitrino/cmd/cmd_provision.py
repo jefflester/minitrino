@@ -48,7 +48,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 @click.option(
     "-i",
     "--image",
-    default="trino",
+    default="",
     type=str,
     help=("""The cluster image type (trino or starburst). Defaults to trino."""),
 )
@@ -94,7 +94,7 @@ def cli(ctx, modules, image, workers, no_rollback, docker_native):
 
     ctx.logger.info(f"Starting {image.title()} cluster provisioning...")
 
-    update_env(image)
+    set_distribution(image)
     utils.check_daemon(ctx.docker_client)
     utils.check_lib(ctx)
     utils.check_cluster_ver(ctx)
@@ -135,8 +135,18 @@ def cli(ctx, modules, image, workers, no_rollback, docker_native):
 
 
 @pass_environment
-def update_env(ctx, image=""):
-    """Updates environment variables with build-time info."""
+def set_distribution(ctx, image=""):
+    """Determines the distribution type (Trino or Starburst) based on the provided
+    image type. If the image is not specified, it defaults to Trino."""
+
+    if not image:
+        image = ctx.env.get("IMAGE", "trino")
+    if image != "trino" and image != "starburst":
+        raise err.UserError(
+            f"Invalid image type '{image}'. Please specify either 'trino' or 'starburst'.",
+            f"Example: `minitrino provision -i trino`. This can also be set permanently via "
+            f"`minitrino config`.",
+        )
 
     ctx.env.update({"CLUSTER_DIST": image})
     ctx.env.update({"BUILD_USER": image})

@@ -15,7 +15,7 @@ TRINO_VER="${CLUSTER_VER:0:3}"
 if [ "${TRINO_VER}" -ge 436 ] && [ "${TRINO_VER}" -le 446 ]; then
     JAVA_VER=21.0.5
 elif [ "${TRINO_VER}" -ge 447 ] && [ "${TRINO_VER}" -le 463 ]; then
-    JAVA_VER=22.0.1
+    JAVA_VER=22.0.2
 elif [ "${TRINO_VER}" -ge 464 ]; then
     JAVA_VER=23.0.2
 else

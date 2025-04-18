@@ -144,7 +144,7 @@ check_install() {
     fi
 }
 
-install() {
+perform_install() {
     [ "${1:-}" = "-v" ] && set -eux
 
     if command -v realpath >/dev/null 2>&1; then
@@ -164,7 +164,7 @@ install() {
     check_install
 }
 
-time install "$@"
+perform_install "$@"
 
 echo "
 Installation complete! Start with the CLI by configuring it with 'minitrino config'.

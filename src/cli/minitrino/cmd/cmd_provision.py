@@ -137,7 +137,8 @@ def cli(ctx, modules, image, workers, no_rollback, docker_native):
 @pass_environment
 def set_distribution(ctx, image=""):
     """Determines the distribution type (Trino or Starburst) based on the provided
-    image type. If the image is not specified, it defaults to Trino."""
+    image type and sets distro-specific env variables. If the image is not specified,
+    it defaults to Trino."""
 
     if not image:
         image = ctx.env.get("IMAGE", "trino")
@@ -150,6 +151,7 @@ def set_distribution(ctx, image=""):
 
     ctx.env.update({"CLUSTER_DIST": image})
     ctx.env.update({"BUILD_USER": image})
+    ctx.env.update({"ETC": f"/etc/{image}"})
 
 
 @pass_environment

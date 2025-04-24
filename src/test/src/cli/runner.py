@@ -5,6 +5,7 @@ import src.cli.test_misc
 import src.cli.test_cmd_config
 import src.cli.test_cmd_down
 import src.cli.test_cmd_provision
+import src.cli.test_cmd_restart
 import src.cli.test_cmd_remove
 import src.cli.test_cmd_snapshot
 import src.cli.test_cmd_version
@@ -19,6 +20,7 @@ def main():
     src.cli.test_cmd_config.main()
     src.cli.test_cmd_down.main()
     src.cli.test_cmd_provision.main()
+    src.cli.test_cmd_restart.main()
     src.cli.test_cmd_remove.main()
     src.cli.test_cmd_snapshot.main()
     src.cli.test_cmd_version.main()

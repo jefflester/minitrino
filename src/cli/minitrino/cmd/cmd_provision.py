@@ -26,7 +26,6 @@ from minitrino.settings import CLUSTER_JVM_CONFIG
 from minitrino.settings import WORKER_CONFIG_PROPS
 
 from docker.errors import NotFound
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 @click.command(
@@ -122,11 +121,10 @@ def cli(ctx, modules, image, workers, no_rollback, docker_native):
 
         ctx.cmd_executor.execute_commands(compose_cmd, environment=ctx.env.copy())
 
-        c_restart = execute_bootstraps(modules)
-        c_restart = write_cluster_cfg(c_restart, modules)
+        execute_bootstraps(modules)
+        write_cluster_cfg(modules)
         check_dup_cfgs()
-        c_restart = provision_workers(c_restart, workers)
-        restart_containers(c_restart)
+        provision_workers(workers)
         ctx.logger.info(f"Environment provisioning complete.")
 
     except Exception as e:
@@ -137,7 +135,8 @@ def cli(ctx, modules, image, workers, no_rollback, docker_native):
 @pass_environment
 def set_distribution(ctx, image=""):
     """Determines the distribution type (Trino or Starburst) based on the provided
-    image type. If the image is not specified, it defaults to Trino."""
+    image type and sets distro-specific env variables. If the image is not specified,
+    it defaults to Trino."""
 
     if not image:
         image = ctx.env.get("IMAGE", "trino")
@@ -150,6 +149,7 @@ def set_distribution(ctx, image=""):
 
     ctx.env.update({"CLUSTER_DIST": image})
     ctx.env.update({"BUILD_USER": image})
+    ctx.env.update({"ETC": f"/etc/{image}"})
 
 
 @pass_environment
@@ -305,14 +305,8 @@ def build_command(ctx, docker_native="", chunk=""):
 
 @pass_environment
 def execute_bootstraps(ctx, modules=[]):
-    """Executes bootstrap script for each container that has one––bootstrap
-    scripts will only execute once the container is fully running to prevent
-    conflicts with procedures executing as part of the container's entrypoint.
-    After each script executes, the relevant container is added to a restart
-    list.
-
-    Returns a list of containers names which had bootstrap scripts executed
-    inside of them."""
+    """Executes bootstrap scripts in module containers. After a bootstrap
+    script is executed, the container it was executed in is restarted."""
 
     services = []
     for module in modules:
@@ -328,7 +322,6 @@ def execute_bootstraps(ctx, modules=[]):
         for service_key, service_dict in module_services.items():
             services.append([service_key, service_dict, yaml_file])
 
-    containers = []
     # Get all container names for each service
     for service in services:
         bootstrap = service[1].get("environment", {}).get("MINITRINO_BOOTSTRAP")
@@ -340,8 +333,7 @@ def execute_bootstraps(ctx, modules=[]):
             # of the container
             container_name = service[0]
         execute_container_bootstrap(bootstrap, container_name, service[2])
-        containers.append(container_name)
-    return containers
+        utils.restart_containers(ctx, [container_name])
 
 
 @pass_environment
@@ -413,10 +405,10 @@ def get_current_cfgs(ctx):
 
 
 @pass_environment
-def write_cluster_cfg(ctx, c_restart=[], modules=[]):
+def write_cluster_cfg(ctx, modules=[]):
     """Appends cluster config from various modules if specified in the module YAML
-    file. The Minitrino coordinator container is added to the restart list if any
-    configs are written to files in the container."""
+    file. The Minitrino coordinator container is restarted if any configs are
+    written."""
 
     def handle_password_authenticators(cfgs):
         merge = []
@@ -485,7 +477,7 @@ def write_cluster_cfg(ctx, c_restart=[], modules=[]):
             jvm_cfg.extend(split_cfg(user_jvm_cfg))
 
     if not cfgs and not jvm_cfg:
-        return c_restart
+        return
 
     cfgs = handle_password_authenticators(cfgs)
 
@@ -556,10 +548,7 @@ def write_cluster_cfg(ctx, c_restart=[], modules=[]):
     append_cfgs(minitrino_coordinator, cfgs, current_cluster_cfgs, CLUSTER_CONFIG)
     append_cfgs(minitrino_coordinator, jvm_cfg, current_jvm_cfg, CLUSTER_JVM_CONFIG)
 
-    if not "minitrino" in c_restart:
-        c_restart.append("minitrino")
-
-    return c_restart
+    utils.restart_containers(ctx, ["minitrino"])
 
 
 @pass_environment
@@ -596,46 +585,7 @@ def check_dup_cfgs(ctx):
 
 
 @pass_environment
-def restart_containers(ctx, c_restart=[]):
-    """Restarts all the containers in the list."""
-
-    if c_restart == []:
-        return
-
-    c_restart = list(set(c_restart))
-
-    def restart_container(container_name):
-        """Helper function to restart a single container."""
-        try:
-            container = ctx.docker_client.containers.get(container_name)
-            ctx.logger.verbose(f"Restarting container '{container.name}'...")
-            container.restart()
-            ctx.logger.verbose(f"Container '{container.name}' restarted successfully.")
-        except NotFound:
-            raise err.MinitrinoError(
-                f"Attempting to restart container '{container_name}', but the container was not found."
-            )
-
-    with ThreadPoolExecutor() as executor:
-        futures = {
-            executor.submit(restart_container, container): container
-            for container in c_restart
-        }
-
-        for future in as_completed(futures):
-            container_name = futures[future]
-            try:
-                future.result()
-            except err.MinitrinoError as e:
-                ctx.logger.error(
-                    f"Error while restarting container '{container_name}': {str(e)}"
-                )
-
-    ctx.logger.info("All specified containers have been restarted.")
-
-
-@pass_environment
-def provision_workers(ctx, c_restart=[], workers=0):
+def provision_workers(ctx, workers=0):
     """Provisions (or updates) workers.
 
     Scenarios:
@@ -664,7 +614,7 @@ def provision_workers(ctx, c_restart=[], workers=0):
 
     # Scenario 1
     if workers == 0 and len(worker_containers) == 0:
-        return c_restart
+        return
     # Scenario 2
     if workers > len(worker_containers):
         pass
@@ -693,6 +643,7 @@ def provision_workers(ctx, c_restart=[], workers=0):
 
     coordinator = ctx.docker_client.containers.get("minitrino")
 
+    restart = []
     for i in range(1, workers + 1):
         worker_name = f"minitrino-worker-{i}"
         try:
@@ -743,10 +694,10 @@ def provision_workers(ctx, c_restart=[], workers=0):
             docker_user=user,
         )
 
-        c_restart.append(worker_name)
+        restart.append(worker_name)
         ctx.logger.verbose(f"Copied {ETC_DIR} to '{worker_name}'")
 
-    return c_restart
+    utils.restart_containers(ctx, restart)
 
 
 @pass_environment

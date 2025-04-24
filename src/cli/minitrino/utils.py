@@ -14,6 +14,8 @@ from click import echo, style, prompt
 from textwrap import fill
 from shutil import get_terminal_size
 from functools import wraps
+from docker.errors import NotFound
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 class Logger:
@@ -32,12 +34,12 @@ class Logger:
     - `info()`, `warn()`, `error()`, `verbose()`: Convenience methods for logging.
     - `prompt_msg()`: Logs a prompt message and returns user input."""
 
-    def __init__(self, log_verbose=False):
-        self.INFO = {"prefix": "[i]  ", "prefix_color": "cyan"}
-        self.WARN = {"prefix": "[w]  ", "prefix_color": "yellow"}
-        self.ERROR = {"prefix": "[e]  ", "prefix_color": "red"}
-        self.VERBOSE = {"prefix": "[v]  ", "prefix_color": "magenta", "verbose": True}
+    INFO = {"prefix": "[i]  ", "prefix_color": "cyan"}
+    WARN = {"prefix": "[w]  ", "prefix_color": "yellow"}
+    ERROR = {"prefix": "[e]  ", "prefix_color": "red"}
+    VERBOSE = {"prefix": "[v]  ", "prefix_color": "magenta", "verbose": True}
 
+    def __init__(self, log_verbose=False):
         self._log_verbose = log_verbose
 
     def log(self, *args, level=None, stream=False):
@@ -386,3 +388,43 @@ def validate_yes(response=""):
     if response.lower() == "y" or response.lower() == "yes":
         return True
     return False
+
+
+def restart_containers(ctx, c_restart=[], log_level=Logger.VERBOSE):
+    """Restarts all the containers in the list."""
+
+    if c_restart == []:
+        return
+
+    c_restart = list(set(c_restart))
+
+    def restart_container(container_name):
+        """Helper function to restart a single container."""
+        try:
+            container = ctx.docker_client.containers.get(container_name)
+            ctx.logger.log(
+                f"Restarting container '{container.name}'...", level=log_level
+            )
+            container.restart()
+            ctx.logger.log(
+                f"Container '{container.name}' restarted successfully.", level=log_level
+            )
+        except NotFound:
+            raise err.MinitrinoError(
+                f"Attempting to restart container '{container_name}', but the container was not found."
+            )
+
+    with ThreadPoolExecutor() as executor:
+        futures = {
+            executor.submit(restart_container, container): container
+            for container in c_restart
+        }
+
+        for future in as_completed(futures):
+            container_name = futures[future]
+            try:
+                future.result()
+            except err.MinitrinoError as e:
+                ctx.logger.error(
+                    f"Error while restarting container '{container_name}': {str(e)}"
+                )

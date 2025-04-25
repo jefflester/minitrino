@@ -1,5 +1,5 @@
 ---
-name: Library Tests
+name: Library Tests (Starburst)
 
 on:
   pull_request:
@@ -31,7 +31,9 @@ jobs:
           cat <<EOF > ~/.minitrino/minitrino.cfg
           [config]
           LIC_PATH=~/starburstdata.license
+          IMAGE=starburst
           EOF
       - name: Run library tests
         run: |-
-          python ./src/test/src/lib/runner.py --remove-images
+          python ./src/test/src/lib/runner.py \
+            --remove-images --image starburst

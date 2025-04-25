@@ -3,9 +3,9 @@
 
 import os
 import re
-import sys
 import json
 import time
+import argparse
 import jsonschema
 
 import src.common as common
@@ -13,22 +13,28 @@ from src.lib.specs import SPECS
 from src.lib.utils import cleanup
 from src.lib.utils import dump_container_logs
 
+from minitrino.settings import MIN_CLUSTER_VER
+
 
 class ModuleTest:
-    def __init__(self, json_data={}, module=""):
+    def __init__(self, json_data={}, module="", image=""):
         """Module Tests.
 
         Attributes
         ----------
         - `json_data`: JSON containing module test data.
         - `module`: Module name.
+        - `image`: Image to use for cluster containers.
         - `specs`: JSON schema specifications for different test types."""
 
         self.json_data = json_data
         self.module = module
+        self.image = image
         self.specs = SPECS
 
         common.log_status(f"Module tests for module: '{module}'")
+        if self.skip_enterprise():
+            return
 
         tests = json_data.get("tests", [])
         for t in tests:
@@ -38,14 +44,41 @@ class ModuleTest:
         cleanup()
         self.run_tests(tests, True)
 
+    def skip_enterprise(self):
+        """Skips the test if the module is enterprise and the image is
+        'trino'."""
+
+        output = common.execute_command(
+            f"minitrino modules -m {self.module} -j | jq --arg module {self.module} '.[$module].enterprise'"
+        )
+        if self.image == "trino" and output.get("output") == "true":
+            common.log_status(
+                f"Module '{self.module}' is an enterprise module, skipping test"
+            )
+            return True
+
     def run_tests(self, tests=[], workers=False):
         """Runs module tests."""
 
-        if not workers:
-            common.execute_command(f"minitrino -v provision -m {self.module}")
+        if self.image == "starburst":
+            cluster_ver = str(MIN_CLUSTER_VER) + "-e"
         else:
-            common.execute_command(
-                f"minitrino -v provision -m {self.module} --workers 1"
+            cluster_ver = MIN_CLUSTER_VER
+
+        if not workers:
+            output = common.execute_command(
+                f"minitrino -v -e CLUSTER_VER={cluster_ver} "
+                f"provision -i {self.image} -m {self.module}"
+            )
+        else:
+            output = common.execute_command(
+                f"minitrino -v -e CLUSTER_VER={cluster_ver} "
+                f"provision -i {self.image} -m {self.module} --workers 1"
+            )
+
+        if output.get("exit_code") != 0:
+            raise RuntimeError(
+                f"Provisioning of module '{self.module}' failed. Exiting test."
             )
 
         for t in tests:
@@ -71,7 +104,7 @@ class ModuleTest:
 
         if not contains and row_count is None:
             raise KeyError(
-                "'contains' and/or 'rowCount' must be defined in query tests"
+                "JSON schema error: 'contains' and/or 'rowCount' must be defined in query tests"
             )
 
         # Wait for server to become available
@@ -86,7 +119,6 @@ class ModuleTest:
                 time.sleep(1)
                 i += 1
             else:
-                dump_container_logs()
                 raise TimeoutError(
                     "Timed out waiting for coordinator to become available"
                 )
@@ -172,7 +204,6 @@ class ModuleTest:
                     time.sleep(1)
                     i += 1
                 else:
-                    dump_container_logs()
                     raise TimeoutError(f"'{c}' not found in container log output")
 
     def _execute_subcommand(self, json_data={}, healthcheck=False, prev_output=""):
@@ -217,7 +248,6 @@ class ModuleTest:
                     i += 1
                     time.sleep(1)
                 else:
-                    dump_container_logs()
                     raise TimeoutError(
                         f"'{c}' not in {cmd_type} output after {retry} retries. Last error: {e}"
                     )
@@ -241,18 +271,25 @@ def main():
     ensure the tests don't consume all the disk space on the GitHub Actions
     runner."""
 
-    remove_images = False
-    for i, arg in enumerate(sys.argv):
-        if "--remove-images" in arg:
-            sys.argv.pop(i)
-            remove_images = True
-            break
-
-    # Grab the module if supplied
-    if len(sys.argv) == 2:
-        run_only = sys.argv[1]
-    else:
-        run_only = None
+    parser = argparse.ArgumentParser(
+        description="Run module tests with optional flags."
+    )
+    parser.add_argument(
+        "modules", nargs="*", help="Modules to test (e.g., ldap, iceberg)"
+    )
+    parser.add_argument(
+        "--image",
+        choices=["trino", "starburst"],
+        default="trino",
+        help="Image to use for cluster container",
+    )
+    parser.add_argument(
+        "--remove-images",
+        action="store_true",
+        default=False,
+        help="Remove images after run",
+    )
+    args = parser.parse_args()
 
     common.start_docker_daemon()
     cleanup()
@@ -260,12 +297,18 @@ def main():
     tests = os.path.join(os.path.dirname(__file__), "json")
     for t in os.listdir(tests):
         module = os.path.basename(t).split(".")[0]
-        if run_only and module != run_only:
+        if args.modules and module not in args.modules:
             continue
         with open(os.path.join(tests, t)) as f:
             json_data = json.load(f)
-        ModuleTest(json_data, module)
-        cleanup(remove_images)
+        try:
+            ModuleTest(json_data, module, args.image)
+            cleanup(args.remove_images)
+        except Exception as e:
+            common.log_status(f"Module {module} test failed: {e}")
+            dump_container_logs()
+            cleanup(args.remove_images)
+            raise e
 
 
 if __name__ == "__main__":

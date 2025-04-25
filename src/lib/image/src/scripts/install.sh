@@ -32,13 +32,13 @@ normalize_arch() {
 set_dist_version() {
     if [ "${CLUSTER_DIST}" == "trino" ]; then
         TRINO_VER="${CLUSTER_VER}"
+        CLUSTER_VER_ARCH="${CLUSTER_VER}"
+        CLUSTER_VER_ARCH_UNPACK="${CLUSTER_VER}"
     elif [ "${CLUSTER_DIST}" == "starburst" ]; then
         TRINO_VER="${CLUSTER_VER:0:3}"
-        CLUSTER_VER="${CLUSTER_VER}" # For clarity
-        # Handle Starburst archive naming changes at 462+
         if [ "${TRINO_VER}" -ge 462 ]; then
-            CLUSTER_VER_ARCH="${CLUSTER_VER}${ARCH_SEP_S3:+.$ARCH_SEP_S3}"
-            CLUSTER_VER_ARCH_UNPACK="${CLUSTER_VER}${ARCH_SEP_S3:+-$ARCH_SEP_S3}"
+            CLUSTER_VER_ARCH="${CLUSTER_VER}.${ARCH_SEP_S3}"
+            CLUSTER_VER_ARCH_UNPACK="${CLUSTER_VER}-${ARCH_SEP_S3}"
         else
             CLUSTER_VER_ARCH="${CLUSTER_VER}"
             CLUSTER_VER_ARCH_UNPACK="${CLUSTER_VER}"
@@ -79,6 +79,7 @@ prune_plugins() {
         faker
         functions-python
         generic-jdbc
+        group-providers
         hive
         iceberg
         jmx
@@ -118,17 +119,25 @@ prune_plugins() {
 prune() {
     echo "Pruning unnecessary application files..."
     cd /tmp/
+
     if [ "${CLUSTER_DIST}" == "trino" ]; then
         cp -R "trino-server-${TRINO_VER}/"* /usr/lib/"${CLUSTER_DIST}"/
         rm -rf /usr/lib/"${CLUSTER_DIST}"/bin/darwin-* /usr/lib/"${CLUSTER_DIST}"/bin/linux-*
-        cp -R "trino-server-${TRINO_VER}/bin/linux-${ARCH_BIN}" /usr/lib/"${CLUSTER_DIST}"/bin/
+
+        # Copy linux-${ARCH_BIN} if present
+        if [ -d "trino-server-${TRINO_VER}/bin/linux-${ARCH_BIN}" ]; then
+            cp -R "trino-server-${TRINO_VER}/bin/linux-${ARCH_BIN}" /usr/lib/"${CLUSTER_DIST}"/bin/
+        fi
     else
-        cp -R "starburst-enterprise-${CLUSTER_VER_ARCH_UNPACK}"/* /usr/lib/"${CLUSTER_DIST}"/
+        cp -R "starburst-enterprise-${CLUSTER_VER_ARCH_UNPACK}/"* /usr/lib/"${CLUSTER_DIST}"/
         rm -rf /usr/lib/"${CLUSTER_DIST}"/bin/darwin-* /usr/lib/"${CLUSTER_DIST}"/bin/linux-*
-        cp -R \
-            "starburst-enterprise-${CLUSTER_VER_ARCH_UNPACK}/bin/linux-${ARCH_BIN}" \
-            /usr/lib/"${CLUSTER_DIST}"/bin/
+
+        # Copy linux-${ARCH_BIN} if present
+        if [ -d "starburst-enterprise-${CLUSTER_VER_ARCH_UNPACK}/bin/linux-${ARCH_BIN}" ]; then
+            cp -R "starburst-enterprise-${CLUSTER_VER_ARCH_UNPACK}/bin/linux-${ARCH_BIN}" /usr/lib/"${CLUSTER_DIST}"/bin/
+        fi
     fi
+
     prune_plugins
 }
 

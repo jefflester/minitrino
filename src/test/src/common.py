@@ -5,6 +5,7 @@ import os
 import docker
 import sys
 import subprocess
+import shlex
 import click
 
 from time import sleep, gmtime, strftime
@@ -161,7 +162,11 @@ def _execute_in_container(cmd="", container_name="", env={}):
     print(f"Executing command in container '{container.name}': {cmd}")
 
     exec_handler = api_client.exec_create(
-        container.name, cmd=cmd, privileged=True, tty=True, environment=env
+        container.name,
+        cmd=f"bash -c {shlex.quote(cmd)}",
+        privileged=True,
+        tty=True,
+        environment=env,
     )
 
     output_generator = api_client.exec_start(exec_handler, stream=True)

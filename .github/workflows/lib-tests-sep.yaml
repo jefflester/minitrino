@@ -1,5 +1,5 @@
 ---
-name: Library Tests
+name: Library Tests (Starburst)
 
 on:
   pull_request:

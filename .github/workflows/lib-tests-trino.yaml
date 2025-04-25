@@ -1,5 +1,5 @@
 ---
-name: Library Tests
+name: Library Tests (Trino)
 
 on:
   pull_request:

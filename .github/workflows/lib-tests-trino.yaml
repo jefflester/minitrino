@@ -23,15 +23,13 @@ jobs:
           pip install --editable ./src/cli/
           pip install --editable ./src/test/
       - name: Write config file and point to license
-        env:
-          LIC_DATA: ${{ secrets.LIC_DATA }}
         run: |-
-          echo "${LIC_DATA}" > ~/starburstdata.license
           mkdir ~/.minitrino/
           cat <<EOF > ~/.minitrino/minitrino.cfg
           [config]
-          LIC_PATH=~/starburstdata.license
+          IMAGE=trino
           EOF
       - name: Run library tests
         run: |-
-          python ./src/test/src/lib/runner.py --remove-images
+          python ./src/test/src/lib/runner.py \
+            --remove-images --image trino

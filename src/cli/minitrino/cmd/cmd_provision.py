@@ -1,5 +1,4 @@
-#!usr/bin/env/python3
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 # Instead of using the Docker SDK, this script will form a Docker Compose
 # command string to execute straight through the docker compose CLI. This is

@@ -1,5 +1,4 @@
-#!usr/bin/env/python3
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 import src.cli.test_misc
 import src.cli.test_cmd_config

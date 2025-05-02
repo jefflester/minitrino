@@ -15,7 +15,6 @@ services:
   postgres-backend-svc:
     image: postgres:${POSTGRES_SEP_BACKEND_SVC_VER}
     container_name: postgres-backend-svc-${CLUSTER_NAME}
-
     env_file:
       - ./modules/admin/insights/resources/postgres/postgres.env
     volumes:

@@ -14,7 +14,6 @@ services:
   ldap:
     image: osixia/openldap:${OPEN_LDAP_VER}
     container_name: ldap-${CLUSTER_NAME}
-
     hostname: ldap.minitrino.starburstdata.com
     environment:
       LDAP_ORGANISATION: Example Inc.

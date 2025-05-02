@@ -8,7 +8,6 @@ services:
   postgres:
     image: postgres:${POSTGRES_VER}
     container_name: postgres-${CLUSTER_NAME}
-
     env_file:
       - ./modules/catalog/postgres/resources/postgres/postgres.env
     ports:

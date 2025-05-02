@@ -12,7 +12,6 @@ services:
   mysql-event-listener-db:
     image: mysql:${MYSQL_EVENT_LISTENER_VER}
     container_name: mysql-event-listener-db-${CLUSTER_NAME}
-
     environment:
       MINITRINO_BOOTSTRAP: bootstrap-mysql.sh
     env_file:

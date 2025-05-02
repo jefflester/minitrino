@@ -8,7 +8,6 @@ services:
   clickhouse:
     image: clickhouse/clickhouse-server:${CLICKHOUSE_VER}
     container_name: clickhouse-${CLUSTER_NAME}
-
     env_file:
       - ./modules/catalog/clickhouse/resources/clickhouse/clickhouse.env
     ports:

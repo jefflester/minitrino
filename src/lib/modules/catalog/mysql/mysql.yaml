@@ -8,7 +8,6 @@ services:
   mysql:
     image: mysql:${MYSQL_VER}
     container_name: mysql-${CLUSTER_NAME}
-
     environment:
       MINITRINO_BOOTSTRAP: bootstrap-mysql.sh
     env_file:

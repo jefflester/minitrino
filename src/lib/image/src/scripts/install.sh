@@ -79,6 +79,7 @@ prune_plugins() {
         faker
         functions-python
         generic-jdbc
+        geospatial
         group-providers
         hive
         iceberg

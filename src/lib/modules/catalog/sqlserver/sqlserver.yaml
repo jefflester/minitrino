@@ -7,11 +7,12 @@ services:
 
   sqlserver:
     image: mcr.microsoft.com/mssql/server:${SQLSERVER_VER}
-    container_name: sqlserver
+    container_name: sqlserver-${CLUSTER_NAME}
+
     env_file:
       - ./modules/catalog/sqlserver/resources/sqlserver/sqlserver.env
     ports:
-      - 1433:1433
+      - ${__PORT_SQL_SERVER}:1433
     volumes:
       - sqlserver-data:/var/opt/mssql
     labels:

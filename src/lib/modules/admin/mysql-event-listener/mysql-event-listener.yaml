@@ -11,13 +11,14 @@ services:
 
   mysql-event-listener-db:
     image: mysql:${MYSQL_EVENT_LISTENER_VER}
-    container_name: mysql-event-listener-db
+    container_name: mysql-event-listener-db-${CLUSTER_NAME}
+
     environment:
       MINITRINO_BOOTSTRAP: bootstrap-mysql.sh
     env_file:
       - ./modules/admin/mysql-event-listener/resources/mysql/mysql.env
     ports:
-      - 3308:3306  # localhost:3308
+      - ${__PORT_MYSQL_EVENT_LISTENER_DB}:3306
     labels:
       - org.minitrino=root
       - org.minitrino.module.mysql-event-listener=admin-mysql-event-listener

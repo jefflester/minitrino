@@ -11,11 +11,12 @@ services:
       - ./modules/admin/cache-service/resources/cluster/cache.properties:${ETC}/cache.properties
       - ./modules/admin/cache-service/resources/cluster/cache_svc.properties:${ETC}/catalog/cache_svc.properties
     ports:
-      - 8180:8180
+      - ${__PORT_CACHE_SERVICE}:8180
 
   hive-mv-tsr-catalog-cp:
     image: busybox
-    container_name: hive-mv-tsr-catalog-cp
+    container_name: hive-mv-tsr-catalog-cp-${CLUSTER_NAME}
+
     volumes:
       - ./modules/admin/cache-service/resources/cluster/hive_mv_tsr.properties:/tmp/hive_mv_tsr.properties
       - catalogs:/etc/${CLUSTER_DIST}/catalog
@@ -29,7 +30,8 @@ services:
 
   cache-svc-backend:
     image: postgres:${POSTGRES_SEP_CACHE_SVC_VER}
-    container_name: cache-svc-backend
+    container_name: cache-svc-backend-${CLUSTER_NAME}
+
     env_file:
       - ./modules/admin/cache-service/resources/postgres/cache-svc.env
     labels:

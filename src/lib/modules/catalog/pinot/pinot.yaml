@@ -7,7 +7,8 @@ services:
 
   pinot-zookeeper:
     image: zookeeper:${ZOOKEEPER_VER}
-    container_name: pinot-zookeeper
+    container_name: pinot-zookeeper-${CLUSTER_NAME}
+
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
@@ -22,7 +23,8 @@ services:
 
   pinot-controller:
     image: apachepinot/pinot:${PINOT_VER}
-    container_name: pinot-controller
+    container_name: pinot-controller-${CLUSTER_NAME}
+
     command: StartController -zkAddress pinot-zookeeper:2181
     restart: unless-stopped
     environment:
@@ -32,7 +34,7 @@ services:
     depends_on:
       - pinot-zookeeper
     ports:
-      - 9090:9000  # localhost:9090
+      - ${__PORT_PINOT_CONTROLLER}:9000
     volumes:
       - pinot-controller-data:/tmp/data/PinotController
     labels:
@@ -41,7 +43,8 @@ services:
 
   pinot-broker:
     image: apachepinot/pinot:${PINOT_VER}
-    container_name: pinot-broker
+    container_name: pinot-broker-${CLUSTER_NAME}
+
     command: StartBroker -zkAddress pinot-zookeeper:2181
     restart: unless-stopped
     env_file:
@@ -56,7 +59,8 @@ services:
 
   pinot-server:
     image: apachepinot/pinot:${PINOT_VER}
-    container_name: pinot-server
+    container_name: pinot-server-${CLUSTER_NAME}
+
     command: StartServer -zkAddress pinot-zookeeper:2181
     restart: unless-stopped
     env_file:

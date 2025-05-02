@@ -14,7 +14,8 @@ services:
         - org.minitrino.module.test=catalog-test
     command: [tail, -f, /dev/null]  # Keep alive
     image: minitrino/test:latest
-    container_name: test
+    container_name: test-${CLUSTER_NAME}
+
     volumes:
       - test-data:/etc/test/
     labels:

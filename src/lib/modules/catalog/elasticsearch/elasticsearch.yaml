@@ -9,7 +9,8 @@ services:
 
   elasticsearch:
     image: elasticsearch:${ELASTICSEARCH_VER}
-    container_name: elasticsearch
+    container_name: elasticsearch-${CLUSTER_NAME}
+
     environment:
       discovery.type: single-node
       bootstrap.memory_lock: true
@@ -18,8 +19,8 @@ services:
       xpack.security.enabled: false
       ES_JAVA_OPTS: -Xms256m -Xmx256m
     ports:
-      - 9200:9200
-      - 9300:9300
+      - :9200
+      - :9300
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
     labels:

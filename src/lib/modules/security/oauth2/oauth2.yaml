@@ -18,13 +18,14 @@ services:
 
   oauth2-server:
     image: ghcr.io/navikt/mock-oauth2-server:${OAUTH2_SERVER_VER}
-    container_name: oauth2-server
+    container_name: oauth2-server-${CLUSTER_NAME}
+
     environment:
       LOG_LEVEL: debug
       SERVER_PORT: 8100
       JSON_CONFIG_PATH: /app/config.json
     ports:
-      - 8100:8100
+      - ${__PORT_OAUTH2_SERVER}:8100
     volumes:
       - ./modules/security/oauth2/resources/oauth2/config.json:/app/config.json
       - ./modules/security/oauth2/resources/oauth2/keystore.jks:/app/keystore.jks
@@ -34,7 +35,8 @@ services:
 
   oauth2-healthcheck:
     image: curlimages/curl:${CURL_VER}
-    container_name: oauth2-healthcheck
+    container_name: oauth2-healthcheck-${CLUSTER_NAME}
+
     environment:
       OPENID_CONF: https://oauth2-server:8100/default/.well-known/openid-configuration
     healthcheck:

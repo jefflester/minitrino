@@ -15,14 +15,15 @@ services:
 
   minio-results-cache:
     image: minio/minio:${MINIO_VER}
-    container_name: minio-results-cache
+    container_name: minio-results-cache-${CLUSTER_NAME}
+
     environment:
       MINIO_ROOT_USER: access-key
       MINIO_ROOT_PASSWORD: secret-key
-    command: server --address :9000 --console-address :9004 /data
+    command: server --address :9000 --console-address :9001 /data
     ports:
       - :9000
-      - 9004:9004
+      - ${__PORT_MINIO_RESULTS_CACHE}:9001
     volumes:
       - minio-results-cache-data:/data
     labels:
@@ -31,7 +32,8 @@ services:
 
   create-minio-results-cache-buckets:
     image: minio/mc:${MINIO_MC_VER}
-    container_name: create-minio-results-cache-buckets
+    container_name: create-minio-results-cache-buckets-${CLUSTER_NAME}
+
     entrypoint: |-
       /bin/sh -c "
       wfi=wait-for-it && \

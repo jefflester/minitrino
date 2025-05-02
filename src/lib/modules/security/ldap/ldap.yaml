@@ -13,7 +13,8 @@ services:
 
   ldap:
     image: osixia/openldap:${OPEN_LDAP_VER}
-    container_name: ldap
+    container_name: ldap-${CLUSTER_NAME}
+
     hostname: ldap.minitrino.starburstdata.com
     environment:
       LDAP_ORGANISATION: Example Inc.
@@ -22,7 +23,7 @@ services:
       LDAP_TLS_VERIFY_CLIENT: try
       LDAPTLS_REQCERT: never
     ports:
-      - 636:636
+      - ${__PORT_LDAP}:636
     labels:
       - org.minitrino=root
       - org.minitrino.module.ldap=security-ldap

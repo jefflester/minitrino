@@ -3,6 +3,7 @@
 import sys
 import click
 
+from minitrino.components import Environment
 from minitrino.cli import pass_environment
 from minitrino import utils
 from minitrino.settings import RESOURCE_LABEL
@@ -14,7 +15,7 @@ from minitrino.settings import RESOURCE_LABEL
 )
 @utils.exception_handler
 @pass_environment
-def cli(ctx):
+def cli(ctx: Environment):
     """Restart command for Minitrino."""
 
     utils.check_daemon(ctx.docker_client)

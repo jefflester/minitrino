@@ -3,6 +3,7 @@
 import sys
 import click
 
+from minitrino.components import Environment
 from minitrino.cli import pass_environment
 from minitrino import utils
 from minitrino.settings import IMAGE
@@ -53,7 +54,7 @@ from docker.errors import APIError
 )
 @utils.exception_handler
 @pass_environment
-def cli(ctx, images, volumes, labels, force):
+def cli(ctx: Environment, images, volumes, labels, force):
     """Remove command for Minitrino."""
 
     utils.check_daemon(ctx.docker_client)
@@ -78,7 +79,7 @@ def cli(ctx, images, volumes, labels, force):
 
 
 @pass_environment
-def remove_items(ctx, item_type, force, labels=[]):
+def remove_items(ctx: Environment, item_type, force, labels=[]):
     """Removes Docker items. If no labels are passed in, all Minitrino
     resources are removed. If label(s) are passed in, the removal is limited to
     the passed in labels."""

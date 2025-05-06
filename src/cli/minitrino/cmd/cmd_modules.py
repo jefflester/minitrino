@@ -3,6 +3,7 @@
 import click
 import json
 
+from minitrino.components import Environment
 from minitrino.cli import pass_environment
 from minitrino import errors as err
 from minitrino import utils
@@ -52,7 +53,7 @@ from minitrino.settings import MODULE_SECURITY
 )
 @utils.exception_handler
 @pass_environment
-def cli(ctx, modules, module_type, json_format, running):
+def cli(ctx: Environment, modules, module_type, json_format, running):
     """Module metadata command for Minitrino."""
 
     utils.check_lib(ctx)
@@ -82,7 +83,8 @@ def cli(ctx, modules, module_type, json_format, running):
         log_info(ctx, module, module_dict, json_format)
 
 
-def filter_modules(ctx, modules, module_type):
+@pass_environment
+def filter_modules(ctx: Environment, modules, module_type):
     """
     Filters modules based on their type and returns a dictionary of valid
     modules.
@@ -98,7 +100,8 @@ def filter_modules(ctx, modules, module_type):
     return result
 
 
-def log_info(ctx, module_name, module_dict, json_format):
+@pass_environment
+def log_info(ctx: Environment, module_name, module_dict, json_format):
     """Logs module metadata to the user's terminal."""
     if json_format:
         print(json.dumps({module_name: module_dict}, indent=2))

@@ -3,6 +3,7 @@
 import os
 import click
 
+from minitrino.components import Environment
 from minitrino.cli import pass_environment
 from minitrino import utils
 from minitrino.settings import CONFIG_TEMPLATE
@@ -29,7 +30,7 @@ from shutil import rmtree
 )
 @utils.exception_handler
 @pass_environment
-def cli(ctx, reset):
+def cli(ctx: Environment, reset):
     """Config command for Minitrino."""
 
     if not os.path.isdir(ctx.minitrino_user_dir):
@@ -58,7 +59,7 @@ def cli(ctx, reset):
 
 
 @pass_environment
-def write_template(ctx):
+def write_template(ctx: Environment):
     """Writes configuration template."""
 
     with open(ctx.config_file, "w") as config_file:
@@ -70,7 +71,7 @@ def write_template(ctx):
 
 
 @pass_environment
-def edit_file(ctx):
+def edit_file(ctx: Environment):
     """Gets the editor from user configuration and passes to the Click edit
     function if the value is present."""
 

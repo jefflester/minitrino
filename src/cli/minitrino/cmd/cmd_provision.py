@@ -12,6 +12,7 @@ import time
 import click
 import yaml
 
+from minitrino.components import Environment
 from minitrino.cli import pass_environment
 from minitrino import utils
 from minitrino import errors as err
@@ -86,7 +87,7 @@ from docker.errors import NotFound
 )
 @utils.exception_handler
 @pass_environment
-def cli(ctx, modules, image, workers, no_rollback, docker_native):
+def cli(ctx: Environment, modules, image, workers, no_rollback, docker_native):
     """Provision command for Minitrino. If the resulting docker compose command
     is unsuccessful, the function exits with a non-zero status code."""
 
@@ -152,7 +153,7 @@ def set_distribution(ctx, image=""):
 
 
 @pass_environment
-def append_running_modules(ctx, modules=[]):
+def append_running_modules(ctx: Environment, modules=[]):
     """Checks if any modules are already running. If they are, they are appended
     to the provided modules list and the updated list is returned."""
 
@@ -171,7 +172,7 @@ def append_running_modules(ctx, modules=[]):
 
 
 @pass_environment
-def check_compatibility(ctx, modules=[]):
+def check_compatibility(ctx: Environment, modules=[]):
     """Checks if any of the provided modules are mutually exclusive of each
     other. If they are, a user error is raised."""
 
@@ -194,7 +195,7 @@ def check_compatibility(ctx, modules=[]):
 
 
 @pass_environment
-def check_enterprise(ctx, modules=[]):
+def check_enterprise(ctx: Environment, modules=[]):
     """Checks if any of the provided modules are Starburst Enterprise features.
     If they are, we confirm that a SEP license is provided."""
 
@@ -241,8 +242,8 @@ def check_enterprise(ctx, modules=[]):
 
 
 @pass_environment
-def check_volumes(ctx, modules=[]):
-    """Removes `minitrino_catalogs` volume if it exists, and also checks if any of
+def check_volumes(ctx: Environment, modules=[]):
+    """Removes `catalogs` volume if it exists, and also checks if any of
     the modules have persistent volumes and issues a warning to the user if so."""
 
     try:
@@ -279,7 +280,7 @@ def chunk(ctx, modules=[]):
 
 
 @pass_environment
-def build_command(ctx, docker_native="", chunk=""):
+def build_command(ctx: Environment, docker_native="", chunk=""):
     """Builds a formatted docker compose command for shell execution. Returns a
     docker compose command string."""
 
@@ -303,7 +304,7 @@ def build_command(ctx, docker_native="", chunk=""):
 
 
 @pass_environment
-def execute_bootstraps(ctx, modules=[]):
+def execute_bootstraps(ctx: Environment, modules=[]):
     """Executes bootstrap scripts in module containers. After a bootstrap
     script is executed, the container it was executed in is restarted."""
 
@@ -336,7 +337,9 @@ def execute_bootstraps(ctx, modules=[]):
 
 
 @pass_environment
-def execute_container_bootstrap(ctx, bootstrap="", container_name="", yaml_file=""):
+def execute_container_bootstrap(
+    ctx: Environment, bootstrap="", fq_container_name="", yaml_file=""
+):
     """Executes a single bootstrap inside a container."""
 
     bootstrap_file = os.path.join(
@@ -383,7 +386,7 @@ def split_cfg(cfgs=""):
 
 
 @pass_environment
-def get_current_cfgs(ctx):
+def get_current_cfgs(ctx: Environment):
     """Get config.properties and jvm.config files. Return the two sets of
     configs as lists, e.g.:
 
@@ -404,7 +407,7 @@ def get_current_cfgs(ctx):
 
 
 @pass_environment
-def write_cluster_cfg(ctx, modules=[]):
+def write_cluster_cfg(ctx: Environment, modules=[]):
     """Appends cluster config from various modules if specified in the module YAML
     file. The Minitrino coordinator container is restarted if any configs are
     written."""
@@ -551,7 +554,7 @@ def write_cluster_cfg(ctx, modules=[]):
 
 
 @pass_environment
-def check_dup_cfgs(ctx):
+def check_dup_cfgs(ctx: Environment):
     """Checks for duplicate configs in cluster config files (jvm.config and
     config.properties). This is a safety check for modules that may improperly
     modify these files."""
@@ -584,7 +587,7 @@ def check_dup_cfgs(ctx):
 
 
 @pass_environment
-def provision_workers(ctx, workers=0):
+def provision_workers(ctx: Environment, workers=0):
     """Provisions (or updates) workers.
 
     Scenarios:

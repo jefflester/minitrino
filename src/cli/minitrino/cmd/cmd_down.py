@@ -2,8 +2,9 @@
 
 import sys
 import click
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from minitrino.components import Environment
 from minitrino.cli import pass_environment
 from minitrino import utils
 from minitrino.settings import RESOURCE_LABEL
@@ -35,7 +36,7 @@ from minitrino.settings import RESOURCE_LABEL
 )
 @utils.exception_handler
 @pass_environment
-def cli(ctx, sig_kill, keep):
+def cli(ctx: Environment, sig_kill, keep):
     """Down command for Minitrino. Exits with a 0 status code if there are no
     running minitrino containers."""
 

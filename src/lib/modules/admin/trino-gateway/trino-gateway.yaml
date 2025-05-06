@@ -1,0 +1,8 @@
+---
+services:
+
+  minitrino:
+    volumes:
+      - ./modules/admin/trino-gateway/resources/cluster/foo.txt:${ETC}/catalog/foo.txt
+    labels:
+      - org.minitrino.module.trino-gateway=admin-trino-gateway

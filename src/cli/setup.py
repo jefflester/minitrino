@@ -32,6 +32,8 @@ setup(
         "docker==7.1.0",
         "PyYAML",
         "requests>=2.32.2",
+        "tabulate",
+        "humanize",
     ],
     entry_points={"console_scripts": ["minitrino=minitrino.cli:cli"]},
 )

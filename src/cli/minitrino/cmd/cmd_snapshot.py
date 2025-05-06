@@ -26,14 +26,24 @@ from minitrino.settings import SCRUB_KEYS
 @click.command(
     "snapshot",
     help=(
-        """Create a snapshot of a Minitrino environment. A tarball is placed in
-        the Minitrino `lib/snapshots/` directory.
+        """Create a snapshot of a Minitrino environment. By default, applies to
+        'default' cluster.
+        
+        Once a snapshot is created, a tarball is placed in the Minitrino
+        `lib/snapshots/` directory.
 
-        To take a snapshot of an active environment, leave the `--module` and
-        option out of the command. 
+        To take a snapshot of an active environment, leave the `--module` option
+        out of the command.
 
         To take a snapshot of modules whether they are active or not, specify
-        the modules via the `--module` option."""
+        the modules via the `--module` option.
+        
+        To take a snapshot of a specific, running cluster, use the
+        `CLUSTER_NAME` environment variable or the `--cluster-name` / `-c`
+        option, e.g.: 
+        
+        `minitrino -c my-cluster snapshot`, or specify all clusters via:\n
+        `minitrino -c '*' snapshot`"""
     ),
 )
 @click.option(
@@ -120,7 +130,7 @@ def cli(ctx: Environment, modules, name, directory, force, no_scrub):
             )
         else:
             ctx.logger.info(f"Creating snapshot of active environment...")
-            modules = utils.check_dependent_modules(ctx, modules)
+            modules = utils.check_dependent_modules(ctx, list(modules.keys()))
         snapshot_runner(name, no_scrub, True, modules, directory)
 
     check_complete(name, directory)

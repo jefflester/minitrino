@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
 
-# Instead of using the Docker SDK, this script will form a Docker Compose
-# command string to execute straight through the docker compose CLI. This is
-# required because the Docker SDK does not support communication with Compose
-# files, and Minitrino benefits hugely from Docker Compose.
-
 import os
 import re
 import stat
 import time
+import socket
 import click
 import yaml
 
@@ -24,7 +20,7 @@ from minitrino.settings import DUMMY_LIC_MOUNT_PATH
 from minitrino.settings import CLUSTER_CONFIG
 from minitrino.settings import CLUSTER_JVM_CONFIG
 from minitrino.settings import WORKER_CONFIG_PROPS
-
+from minitrino.settings import MIN_CLUSTER_VER
 from docker.errors import NotFound
 
 
@@ -91,34 +87,81 @@ def cli(ctx: Environment, modules, image, workers, no_rollback, docker_native):
     """Provision command for Minitrino. If the resulting docker compose command
     is unsuccessful, the function exits with a non-zero status code."""
 
-    ctx.logger.info(f"Starting {image.title()} cluster provisioning...")
+    # An asterisk is invalid in this context
+    if ctx.cluster_name == "*":
+        raise err.UserError(
+            f"Invalid cluster name: '{ctx.cluster_name}'. Please specify a valid "
+            f"cluster name containing only alphanumeric, hyphen, and underscore "
+            f"characters."
+        )
+
+    # Ensure provided modules are valid
+    modules = list(modules)
+    for module in modules:
+        if not ctx.modules.data.get(module, False):
+            raise err.UserError(
+                f"Invalid module: '{module}'. It was not found "
+                f"in the Minitrino library at {ctx.minitrino_lib_dir}"
+            )
 
     set_distribution(image)
+    if not modules:
+        ctx.logger.info(
+            f"No modules specified. Provisioning standalone (coordinator-only) "
+            f"{ctx.env.get('CLUSTER_DIST').title()} cluster..."
+        )
+
     utils.check_daemon(ctx.docker_client)
     utils.check_lib(ctx)
-    utils.check_cluster_ver(ctx)
-    utils.check_version_requirements(ctx, modules)
-    modules = list(modules)
+    check_cluster_ver()
+    check_version_requirements(modules)
     modules = append_running_modules(modules)
     modules = utils.check_dependent_modules(ctx, modules)
+    runner(modules, workers, no_rollback, docker_native)
+
+    dependent_clusters = check_dependent_clusters(modules)
+    for cluster in dependent_clusters:
+        runner(no_rollback=no_rollback, cluster=cluster)
+
+
+@pass_environment
+def runner(
+    ctx: Environment,
+    modules=[],
+    workers=0,
+    no_rollback=False,
+    docker_native="",
+    cluster={},
+):
+    """Runs the provision command."""
+
+    ctx.logger.info(
+        f"Starting {ctx.env.get('CLUSTER_DIST').title()} cluster provisioning..."
+    )
+
+    # If a dependent cluster is being provisioned, we need to grab the cluster's
+    # modules and workers, then update the environment variables so that the
+    # Compose YAMLs use the correct values.
+    if cluster:
+        ctx.logger.info(f"Provisioning dependent cluster: {cluster['name']}...")
+        modules = cluster.get("modules", [])
+        workers = cluster.get("workers", 0)
+        ctx.cluster_name = cluster.get("name", "")
+        ctx.env.update({"CLUSTER_NAME": ctx.cluster_name})
+        ctx.env.update(
+            {"COMPOSE_PROJECT_NAME": utils.get_compose_project_name(ctx.cluster_name)}
+        )
+
+    ctx.provisioned_clusters.append(ctx.cluster_name)
+
     check_compatibility(modules)
     check_enterprise(modules)
     check_volumes(modules)
-
-    if not modules:
-        ctx.logger.info(f"No modules specified. Provisioning standalone cluster...")
-    else:
-        for module in modules:
-            if not ctx.modules.data.get(module, False):
-                raise err.UserError(
-                    f"Invalid module: '{module}'. It was not found "
-                    f"in the Minitrino library at {ctx.minitrino_lib_dir}"
-                )
+    set_external_ports(modules)
 
     try:
         cmd_chunk = chunk(modules)
         compose_cmd = build_command(docker_native, cmd_chunk)
-
         ctx.cmd_executor.execute_commands(compose_cmd, environment=ctx.env.copy())
 
         execute_bootstraps(modules)
@@ -133,7 +176,99 @@ def cli(ctx: Environment, modules, image, workers, no_rollback, docker_native):
 
 
 @pass_environment
-def set_distribution(ctx, image=""):
+def check_cluster_ver(ctx: Environment):
+    """Checks if a proper cluster version is provided."""
+
+    cluster_dist = ctx.env.get("CLUSTER_DIST", "")
+    cluster_ver = ctx.env.get("CLUSTER_VER", "")
+
+    if cluster_dist == "starburst":
+        error_msg = (
+            f"Provided Starburst version '{cluster_ver}' is invalid. "
+            f"The version must be {MIN_CLUSTER_VER}-e or higher."
+        )
+        try:
+            cluster_ver_int = int(cluster_ver[0:3])
+            if cluster_ver_int < MIN_CLUSTER_VER or "-e" not in cluster_ver:
+                raise err.UserError(error_msg)
+        except:
+            raise err.UserError(error_msg)
+    elif cluster_dist == "trino":
+        error_msg = (
+            f"Provided Trino version '{cluster_ver}' is invalid. "
+            f"The version must be {MIN_CLUSTER_VER} or higher."
+        )
+        if "-e" in cluster_ver:
+            raise err.UserError(
+                f"The provided Trino version '{cluster_ver}' cannot contain '-e'. "
+                "Did you mean to use Starburst via the --image option?"
+            )
+        try:
+            cluster_ver_int = int(cluster_ver[0:3])
+            if cluster_ver_int < MIN_CLUSTER_VER:
+                raise err.UserError(error_msg)
+        except:
+            raise err.UserError(error_msg)
+
+
+@pass_environment
+def check_version_requirements(ctx: Environment, modules=[]):
+    """Checks for cluster version validity per version requirements defined in
+    module metadata."""
+
+    for module in modules:
+        versions = ctx.modules.data.get(module, {}).get("versions", [])
+
+        if not versions:
+            continue
+        if len(versions) > 2:
+            raise err.UserError(
+                f"Invalid versions specification for module '{module}' in metadata.json file: {versions}",
+                f'The valid structure is: {{"versions": [min-ver, max-ver]}}. If the versions key is '
+                f"present, the minimum version is required, and the maximum version is optional.",
+            )
+
+        cluster_ver = int(ctx.env.get("CLUSTER_VER", "")[0:3])
+        min_ver = int(versions.pop(0))
+        max_ver = None
+        if versions:
+            max_ver = int(versions.pop())
+
+        begin_msg = (
+            f"The supplied cluster version {cluster_ver} is incompatible with module '{module}'. "
+            f"Per the module's metadata.json file, the"
+        )
+
+        if cluster_ver < min_ver:
+            raise err.UserError(
+                f"{begin_msg} minimum required cluster version for the module is: {min_ver}."
+            )
+        if max_ver and cluster_ver > max_ver:
+            raise err.UserError(
+                f"{begin_msg} maximum required cluster version for the module is: {max_ver}."
+            )
+
+
+@pass_environment
+def check_dependent_clusters(ctx: Environment, modules=[]):
+    """Checks if any of the provided modules have dependent clusters and returns
+    a list of those clusters."""
+
+    ctx.logger.verbose("Checking for dependent clusters...")
+    dependent_clusters = []
+    for module in modules:
+        module_dependent_clusters = ctx.modules.data.get(module, {}).get(
+            "dependentClusters", []
+        )
+        if module_dependent_clusters:
+            for cluster in module_dependent_clusters:
+                cluster["name"] = f"module-dep-{cluster['name']}"
+                dependent_clusters.append(cluster)
+    return list(dependent_clusters)
+
+
+@pass_environment
+def set_distribution(ctx: Environment, image=""):
     """Determines the distribution type (Trino or Starburst) based on the provided
     image type and sets distro-specific env variables. If the image is not specified,
     it defaults to Trino."""
@@ -167,7 +302,7 @@ def append_running_modules(ctx: Environment, modules=[]):
         )
 
     modules = list(modules)
-    modules.extend(running_modules)
+    modules.extend(running_modules.keys())
     return list(set(modules))
 
 
@@ -247,7 +382,7 @@ def check_volumes(ctx: Environment, modules=[]):
     the modules have persistent volumes and issues a warning to the user if so."""
 
     try:
-        volume_name = "minitrino_catalogs"
+        volume_name = f"{utils.get_compose_project_name(ctx.cluster_name)}_catalogs"
         ctx.logger.verbose(f"Removing '{volume_name}' volume if exists...")
         volume = ctx.docker_client.volumes.get(volume_name)
         volume.remove()
@@ -268,7 +403,104 @@ def check_volumes(ctx: Environment, modules=[]):
 
 
 @pass_environment
-def chunk(ctx, modules=[]):
+def get_module_services(ctx: Environment, modules=[]):
+    """Get all services defined in the provided modules. Returns a list of
+    services, each represented as a list containing the service key, service
+    dictionary, and the YAML file path."""
+
+    services = []
+    for module in modules:
+        yaml_file = ctx.modules.data.get(module, {}).get("yaml_file", "")
+        module_services = (
+            ctx.modules.data.get(module, {}).get("yaml_dict", {}).get("services", {})
+        )
+        if not module_services:
+            raise err.MinitrinoError(
+                f"Invalid Docker Compose YAML file (no 'services' section found): {yaml_file}"
+            )
+        # Get all services defined in YAML file
+        for service_key, service_dict in module_services.items():
+            services.append([service_key, service_dict, yaml_file])
+
+    return services
+
+
+@pass_environment
+def set_external_ports(ctx: Environment, modules=[]):
+    """Find the next free host port not used by Docker or the host for each
+    container with a dynamic host port."""
+
+    def is_port_in_use(port):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            return s.connect_ex(("0.0.0.0", port)) == 0
+
+    def is_docker_port_in_use(port):
+        containers = ctx.docker_client.containers.list()
+        for container in containers:
+            ports = container.attrs.get("NetworkSettings", {}).get("Ports", {})
+            for binding in ports.values():
+                if binding:
+                    for b in binding:
+                        if str(port) == b.get("HostPort"):
+                            return True
+        return False
+
+    def find_next_available_port(default_port):
+        candidate_port = default_port
+        while is_port_in_use(candidate_port) or is_docker_port_in_use(candidate_port):
+            ctx.logger.verbose(
+                f"Port {candidate_port} is already in use. Finding the next available port..."
+            )
+            candidate_port += 1
+        return candidate_port
+
+    def assign_port(container_name, host_port_var, default_port):
+        candidate_port = find_next_available_port(default_port)
+        fq_container_name = get_fully_qualified_container_name(
+            container_name,
+        )
+        ctx.logger.info(
+            f"Found available port {candidate_port} for container '{fq_container_name}'. "
+            f"The service can be reached at localhost:{candidate_port}."
+        )
+        ctx.logger.verbose(
+            f"Setting environment variable {host_port_var} to {candidate_port}"
+        )
+        ctx.env.update({host_port_var: str(candidate_port)})
+
+    # Handle the core Minitrino container
+    assign_port("minitrino", "__PORT_MINITRINO", 8080)
+
+    # Handle module-defined services
+    services = get_module_services(modules)
+    for service in services:
+        port_mappings = service[1].get("ports", [])
+        container_name = service[1].get("container_name", "undefined")
+
+        for port_mapping in port_mappings:
+            if not "__PORT" in port_mapping:
+                continue
+
+            host_port_var, default_port = port_mapping.split(":")
+            # Remove ${} syntax from the environment variable name
+            host_port_var_name = re.sub(r"\$\{([^}]+)\}", r"\1", host_port_var)
+
+            try:
+                isinstance(int(default_port), int)
+            except ValueError as e:
+                raise err.UserError(
+                    f"Default port '{default_port}' is not a valid integer. "
+                    f"Please check the module's Docker Compose YAML file for the "
+                    f"correct variable name and ensure a default value is "
+                    f"set as an environment variable. See the wiki for more "
+                    f"information: TODO: link\n{e}",
+                )
+
+            assign_port(container_name, host_port_var_name, int(default_port))
+
+
+@pass_environment
+def chunk(ctx: Environment, modules=[]):
     """Builds docker compose command chunk for the chosen modules. Returns a
     command chunk string."""
 
@@ -308,32 +540,23 @@ def execute_bootstraps(ctx: Environment, modules=[]):
     """Executes bootstrap scripts in module containers. After a bootstrap
     script is executed, the container it was executed in is restarted."""
 
-    services = []
-    for module in modules:
-        yaml_file = ctx.modules.data.get(module, {}).get("yaml_file", "")
-        module_services = (
-            ctx.modules.data.get(module, {}).get("yaml_dict", {}).get("services", {})
-        )
-        if not module_services:
-            raise err.MinitrinoError(
-                f"Invalid Docker Compose YAML file (no 'services' section found): {yaml_file}"
-            )
-        # Get all services defined in YAML file
-        for service_key, service_dict in module_services.items():
-            services.append([service_key, service_dict, yaml_file])
+    services = get_module_services(modules)
 
     # Get all container names for each service
     for service in services:
         bootstrap = service[1].get("environment", {}).get("MINITRINO_BOOTSTRAP")
         if bootstrap is None:
             continue
-        container_name = service[1].get("container_name")
-        if container_name is None:
+        container_name = service[1].get("container_name", "")
+        if not container_name:
             # If there is not container name, the service name becomes the name
             # of the container
             container_name = service[0]
-        execute_container_bootstrap(bootstrap, container_name, service[2])
-        utils.restart_containers(ctx, [container_name])
+        fq_container_name = get_fully_qualified_container_name(
+            container_name,
+        )
+        execute_container_bootstrap(bootstrap, fq_container_name, service[2])
+        utils.restart_containers(ctx, [fq_container_name])
 
 
 @pass_environment
@@ -359,21 +582,20 @@ def execute_container_bootstrap(
     )
 
     ctx.logger.verbose(
-        f"Executing bootstrap script in container '{container_name}'...",
+        f"Executing bootstrap script in container '{fq_container_name}'...",
     )
 
     ctx.cmd_executor.execute_commands(
-        f"docker cp {bootstrap_file} {container_name}:/tmp/"
+        f"docker cp {bootstrap_file} {fq_container_name}:/tmp/"
     )
 
-    container = ctx.docker_client.containers.get(container_name)
     ctx.cmd_executor.execute_commands(
         f"/tmp/{os.path.basename(bootstrap_file)}",
-        container=container,
+        container=get_container(fq_container_name),
     )
 
     ctx.logger.verbose(
-        f"Successfully executed bootstrap script in container '{container_name}'.",
+        f"Successfully executed bootstrap script in container '{fq_container_name}'.",
     )
 
 
@@ -393,10 +615,11 @@ def get_current_cfgs(ctx: Environment):
     [['a', 'b'], ['c', 'd'], ['e', 'f']]
     """
 
+    fq_container_name = get_fully_qualified_container_name("minitrino")
     current_cfgs = ctx.cmd_executor.execute_commands(
         f"bash -c 'cat {ETC_DIR}/{CLUSTER_CONFIG}'",
         f"bash -c 'cat {ETC_DIR}/{CLUSTER_JVM_CONFIG}'",
-        container=ctx.docker_client.containers.get("minitrino"),
+        container=get_container(fq_container_name),
         suppress_output=True,
     )
 
@@ -432,9 +655,10 @@ def write_cluster_cfg(ctx: Environment, modules=[]):
         cfgs.append(auth_property.split("="))
         return cfgs
 
-    minitrino_coordinator = ctx.docker_client.containers.get("minitrino")
+    fq_container_name = get_fully_qualified_container_name("minitrino")
+    coordinator = get_container(fq_container_name)
 
-    if not minitrino_coordinator:
+    if not coordinator:
         raise err.MinitrinoError(
             f"Attempting to append cluster config in Minitrino container, "
             f"but no running container was found."
@@ -489,13 +713,13 @@ def write_cluster_cfg(ctx: Environment, modules=[]):
 
     retry = 0
     while retry <= 30:
-        logs = minitrino_coordinator.logs().decode()
+        logs = coordinator.logs().decode()
         if "======== SERVER STARTED ========" in logs:
             ctx.logger.verbose(
                 "Coordinator started.",
             )
             break
-        elif minitrino_coordinator.status != "running":
+        elif coordinator.status != "running":
             raise err.MinitrinoError(
                 f"The coordinator stopped running. Inspect the container logs if the "
                 f"container is still available. If the container was rolled back, rerun "
@@ -508,7 +732,7 @@ def write_cluster_cfg(ctx: Environment, modules=[]):
             time.sleep(1)
             retry += 1
 
-    def append_cfgs(minitrino_coordinator, usr_cfgs, current_cfgs, filename):
+    def append_cfgs(coordinator, usr_cfgs, current_cfgs, filename):
         """If there is an overlapping config key, replace it with the user
         config."""
 
@@ -528,7 +752,7 @@ def write_cluster_cfg(ctx: Environment, modules=[]):
             f"Removing existing {filename} file...",
         )
         ctx.cmd_executor.execute_commands(
-            f"bash -c 'rm {ETC_DIR}/{filename}'", container=minitrino_coordinator
+            f"bash -c 'rm {ETC_DIR}/{filename}'", container=coordinator
         )
 
         ctx.logger.verbose(
@@ -539,7 +763,7 @@ def write_cluster_cfg(ctx: Environment, modules=[]):
                 f'bash -c "cat <<EOT >> {ETC_DIR}/{filename}\n{current_cfg}\nEOT"'
             )
             ctx.cmd_executor.execute_commands(
-                append_cfg, container=minitrino_coordinator, suppress_output=True
+                append_cfg, container=coordinator, suppress_output=True
             )
 
     ctx.logger.verbose(
@@ -547,8 +771,8 @@ def write_cluster_cfg(ctx: Environment, modules=[]):
     )
 
     current_cluster_cfgs, current_jvm_cfg = get_current_cfgs()
-    append_cfgs(minitrino_coordinator, cfgs, current_cluster_cfgs, CLUSTER_CONFIG)
-    append_cfgs(minitrino_coordinator, jvm_cfg, current_jvm_cfg, CLUSTER_JVM_CONFIG)
+    append_cfgs(coordinator, cfgs, current_cluster_cfgs, CLUSTER_CONFIG)
+    append_cfgs(coordinator, jvm_cfg, current_jvm_cfg, CLUSTER_JVM_CONFIG)
 
     utils.restart_containers(ctx, ["minitrino"])
 
@@ -607,9 +831,11 @@ def provision_workers(ctx: Environment, workers=0):
 
     # Check for running worker containers
     containers = ctx.docker_client.containers.list()
+    pattern = rf"minitrino-worker-\d+-{ctx.cluster_name}"
     worker_containers = [
         c.name
         for c in containers
+        if re.match(pattern, c.name)
         if c.name.startswith("minitrino-worker-")
         and c.labels.get("org.minitrino") == "root"
     ]
@@ -632,7 +858,7 @@ def provision_workers(ctx: Environment, workers=0):
         excess = len(worker_containers) - workers
         remove = worker_containers[:excess]
         for c in remove:
-            c = ctx.docker_client.containers.get(c)
+            c = get_container(c)
             c.kill()
             c.remove()
             identifier = utils.generate_identifier({"ID": c.short_id, "Name": c.name})
@@ -641,29 +867,34 @@ def provision_workers(ctx: Environment, workers=0):
     worker_img = (
         f"minitrino/cluster:{ctx.env.get('CLUSTER_VER')}-{ctx.env.get('CLUSTER_DIST')}"
     )
-    network_name = "minitrino_default"
 
-    coordinator = ctx.docker_client.containers.get("minitrino")
+    compose_project_name = utils.get_compose_project_name(ctx.cluster_name)
+    network_name = f"minitrino_{ctx.cluster_name}"
+    fq_container_name = get_fully_qualified_container_name("minitrino")
+    coordinator = get_container(fq_container_name)
 
     restart = []
     for i in range(1, workers + 1):
-        worker_name = f"minitrino-worker-{i}"
+        fq_worker_name = get_fully_qualified_container_name(
+            f"minitrino-worker-{i}",
+        )
         try:
-            worker = ctx.docker_client.containers.get(worker_name)
+            worker = get_container(fq_worker_name)
         except NotFound:
             worker = ctx.docker_client.containers.run(
                 worker_img,
-                name=worker_name,
+                name=fq_worker_name,
                 detach=True,
                 network=network_name,
                 labels={
                     "org.minitrino": "root",
                     "org.minitrino.module": "minitrino",
-                    "com.docker.compose.service": worker_name,  # OrbStack dashboard doesn't display the container name correctly w/out this
+                    "com.docker.compose.project": compose_project_name,
+                    "com.docker.compose.service": "minitrino-worker",
                 },
             )
             ctx.logger.verbose(
-                f"Created and started worker container: '{worker_name}' in network '{network_name}'"
+                f"Created and started worker container: '{fq_worker_name}' in network '{network_name}'"
             )
 
         user = ctx.env.get("BUILD_USER")
@@ -696,14 +927,35 @@ def provision_workers(ctx: Environment, workers=0):
             docker_user=user,
         )
 
-        restart.append(worker_name)
-        ctx.logger.verbose(f"Copied {ETC_DIR} to '{worker_name}'")
+        restart.append(fq_worker_name)
+        ctx.logger.verbose(f"Copied {ETC_DIR} to '{fq_worker_name}'")
 
     utils.restart_containers(ctx, restart)
 
 
 @pass_environment
-def rollback(ctx, no_rollback):
+def get_fully_qualified_container_name(ctx: Environment, name=""):
+    """Returns the fully qualified container name based on the provided
+    container and cluster name."""
+
+    # If we receive a container name with a literal suffix `-${CLUSTER_NAME}`,
+    # remove it. In this case, the container name was sourced from the Docker
+    # Compose file directly, which preserves the literal suffix. We need to
+    # dynamically append the suffix based on the cluster name.
+    if "-${CLUSTER_NAME}" in name:
+        name = name.replace("-${CLUSTER_NAME}", "")
+    return f"{name}-{ctx.cluster_name}"
+
+
+@pass_environment
+def get_container(ctx: Environment, fully_qualified_name=""):
+    """Returns a Docker container object based on the provided fully qualified
+    container name."""
+    return ctx.docker_client.containers.get(fully_qualified_name)
+
+
+@pass_environment
+def rollback(ctx: Environment, no_rollback=False):
     """Rolls back the provisioning command in the event of an error."""
 
     if no_rollback:
@@ -718,10 +970,13 @@ def rollback(ctx, no_rollback):
         f"errors encountered while provisioning the environment.",
     )
 
-    containers = ctx.docker_client.containers.list(
-        filters={"label": RESOURCE_LABEL}, all=True
-    )
-
-    for container in containers:
-        container.kill()
-        container.remove()
+    for cluster in ctx.provisioned_clusters:
+        ctx.logger.warn(f"Rolling back cluster: {cluster}...")
+        resources = ctx.get_cluster_resources(cluster_name=cluster)
+        containers = resources["containers"]
+        for container in containers:
+            for action in (container.kill, container.remove):
+                try:
+                    action()
+                except:
+                    pass

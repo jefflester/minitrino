@@ -49,7 +49,19 @@ from minitrino.settings import MODULE_SECURITY
     "--running",
     is_flag=True,
     default=False,
-    help="Print metadata for all running modules.",
+    help=(
+        """
+        Print metadata for all running modules. By default, applies to 'default'
+        cluster.
+
+        Return a list of running modules in specific cluster by using the
+        `CLUSTER_NAME` environment variable or the `--cluster-name` / `-c`
+        option, e.g.: 
+
+        `minitrino -c my-cluster modules --running`, or get all running
+        modules:\n
+        `minitrino -c '*' modules --running`"""
+    ),
 )
 @utils.exception_handler
 @pass_environment
@@ -66,21 +78,23 @@ def cli(ctx: Environment, modules, module_type, json_format, running):
             f"Valid types are: {', '.join(valid_types)}.",
         )
 
+    modules_to_process = []
     if running:
-        modules_to_process = ctx.modules.get_running_modules()
+        running_modules = ctx.modules.get_running_modules()
+        modules_to_process = list(running_modules.keys())
     elif modules:
         modules_to_process = modules
     else:
         modules_to_process = ctx.modules.data.keys()
 
     # Filter and display modules
-    filtered_modules = filter_modules(ctx, modules_to_process, module_type)
+    filtered_modules = filter_modules(modules_to_process, module_type)
     if not filtered_modules:
         ctx.logger.info("No modules match the specified criteria.")
         return
 
     for module, module_dict in filtered_modules.items():
-        log_info(ctx, module, module_dict, json_format)
+        log_info(module, module_dict, json_format)
 
 
 @pass_environment

@@ -2,6 +2,7 @@
 
 # Docker labels
 RESOURCE_LABEL = "org.minitrino=root"
+COMPOSE_LABEL = "com.docker.compose.project"
 MODULE_LABEL_KEY_ROOT = "org.minitrino.module"
 
 # Generic Constants
@@ -48,12 +49,17 @@ CONFIG_TEMPLATE = """
 # defaults to ~/.minitrino/lib
 LIB_PATH=
 
-# trino or starburst
+# 'trino' or 'starburst'
 IMAGE=
+
+# defaults to 'default'
+CLUSTER_NAME=
+
+# Starburst license file path
+LIC_PATH=
 
 CLUSTER_VER=
 TEXT_EDITOR=
-LIC_PATH=
 """
 
 WORKER_CONFIG_PROPS = """coordinator=false

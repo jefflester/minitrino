@@ -29,3 +29,11 @@ volumes:
     labels:
       - org.minitrino=root
       - org.minitrino.module=minitrino
+
+networks:
+  default:
+    name: minitrino_${CLUSTER_NAME}
+    driver: bridge
+    labels:
+      - org.minitrino=root
+      - org.minitrino.module=minitrino

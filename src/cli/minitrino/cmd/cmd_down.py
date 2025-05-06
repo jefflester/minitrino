@@ -13,9 +13,15 @@ from minitrino.settings import RESOURCE_LABEL
 @click.command(
     "down",
     help=(
-        """Bring down running Minitrino containers. This command follows the
-        behavior of `docker compose down` where containers are both stopped and
-        removed."""
+        """Stop and remove all running cluster containers. By default, applies
+        to 'default' cluster.
+        
+        Stop and remove containers in specific cluster by using the
+        `CLUSTER_NAME` environment variable or the `--cluster-name` / `-c`
+        option, e.g.: 
+        
+        `minitrino -c my-cluster down`, or restart all clusters via:\n
+        `minitrino -c '*' down`"""
     ),
 )
 @click.option(
@@ -43,9 +49,8 @@ def cli(ctx: Environment, sig_kill, keep):
     utils.check_daemon(ctx.docker_client)
     utils.check_lib(ctx)
 
-    containers = ctx.docker_client.containers.list(
-        filters={"label": RESOURCE_LABEL}, all=True
-    )
+    resources = ctx.get_cluster_resources()
+    containers = resources["containers"]
 
     if len(containers) == 0:
         ctx.logger.info("No containers to bring down.")

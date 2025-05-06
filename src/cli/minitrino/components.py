@@ -1,5 +1,4 @@
-#!usr/bin/env/python3
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 import os
 import json
@@ -10,9 +9,9 @@ import subprocess
 
 from pathlib import Path
 from configparser import ConfigParser
-
 from minitrino import utils
 from minitrino import errors as err
+from minitrino.settings import COMPOSE_LABEL
 from minitrino.settings import RESOURCE_LABEL
 from minitrino.settings import MODULE_ROOT
 from minitrino.settings import MODULE_ADMIN
@@ -54,13 +53,15 @@ class Environment:
         # Attributes that depend on user input prior to being set
         self.verbose = False
         self._user_env = []
+        self.cluster_name = ""
+        self.provisioned_clusters = []
 
         self.logger = utils.Logger()
-        self.env = EnvironmentVariables
-        self.modules = Modules
-        self.cmd_executor = CommandExecutor
-        self.docker_client = docker.DockerClient
-        self.api_client = docker.APIClient
+        self.env = EnvironmentVariables(None)
+        self.modules = Modules(None)
+        self.cmd_executor = CommandExecutor(None)
+        self.docker_client = docker.DockerClient()
+        self.api_client = docker.APIClient()
 
         # Paths
         self.user_home_dir = os.path.expanduser("~")
@@ -69,11 +70,106 @@ class Environment:
         self.snapshot_dir = os.path.join(self.minitrino_user_dir, "snapshots")
         self._minitrino_lib_dir = None
 
+    @utils.exception_handler
+    def initialize(self, verbose=False, user_env=[], cluster_name=""):
+        """Initialize attributes that depend on user-provided input."""
+
+        # Set attributes
+        self.verbose = verbose
+        self._user_env = user_env
+        self.logger = utils.Logger(self.verbose)
+        self.env = EnvironmentVariables(self)
+
+        try:
+            # Attempt to parse lib env file & fetch modules
+            self.env._parse_library_env()
+            self.modules = Modules(self)
+
+            cli_ver = utils.get_cli_ver()
+            lib_ver = utils.get_lib_ver(self.minitrino_lib_dir)
+            if cli_ver != lib_ver:
+                self.logger.warn(
+                    f"CLI version {cli_ver} and library version {lib_ver} "
+                    f"do not match. You can update the Minitrino library "
+                    f"version to match the CLI version by running 'minitrino "
+                    f"lib-install'.",
+                )
+        except:  # Skip lib-related procedures if the lib is not found
+            pass
+
+        if cluster_name:  # User specified
+            self.cluster_name = cluster_name
+        elif self.env.get("CLUSTER_NAME", ""):  # User specified via env
+            self.cluster_name = self.env.get("CLUSTER_NAME")
+        else:  # Default to 'default' cluster
+            self.cluster_name = "default"
+
+        if not re.fullmatch(r"[A-Za-z0-9_\-\*]+", self.cluster_name):
+            raise err.UserError(
+                f"Invalid cluster name '{self.cluster_name}'. Cluster names can only "
+                f"contain alphanumeric characters, underscores, dashes, or asterisks "
+                f"(asterisks are for filtering operations only and will not work with "
+                f"the `provision` command)."
+            )
+
+        self.env.update({"CLUSTER_NAME": self.cluster_name})
+        self.logger.verbose(f"Cluster name set to: {self.cluster_name}")
+
+        self.env.update(
+            {"COMPOSE_PROJECT_NAME": utils.get_compose_project_name(self.cluster_name)}
+        )
+
+        self.env._log_env_vars()
+        self.cmd_executor = CommandExecutor(self)
+        self._get_docker_clients(env=self.env.copy())
+
     @property
     def minitrino_lib_dir(self):
         if not self._minitrino_lib_dir:
             self._minitrino_lib_dir = self._get_minitrino_lib_dir()
         return self._minitrino_lib_dir
+
+    def get_cluster_resources(self, cluster_name_override="", labels=[]) -> dict:
+        """Returns a dictionary containing lists of containers, volumes, images,
+        and networks.
+
+        The optional `labels` parameter is used to filter the resources. If the
+        cluster name in the active context is an asterisk, resources for all
+        clusters will be returned.
+
+        ### Parameters
+        - `cluster_name_override`: The name of the cluster to get resources for.
+          If not provided, the name is derived from the active context.
+        - `labels`: A list of labels to filter resources by."""
+
+        cluster_name = cluster_name_override or self.cluster_name
+        clusters = self._list_clusters() if cluster_name == "*" else [cluster_name]
+        self.logger.verbose(f"Found the following clusters: {clusters}")
+
+        base_labels = (labels or []).copy()
+        base_labels.append(RESOURCE_LABEL)
+
+        resources = {"containers": [], "volumes": [], "images": [], "networks": []}
+        for cluster in clusters:
+            docker_labels = base_labels.copy()
+            if cluster_name != "*":
+                docker_labels.append(
+                    f"{COMPOSE_LABEL}={utils.get_compose_project_name(cluster)}"
+                )
+            docker_filter = {"label": list(set(docker_labels))}
+
+            containers, volumes, images, networks = self._fetch_docker_objects(
+                docker_filter
+            )
+            resources["containers"].extend(containers)
+            resources["volumes"].extend(volumes)
+            resources["images"].extend(images)
+            resources["networks"].extend(networks)
+
+        # Deduplicate resources if needed
+        for key in resources:
+            resources[key] = list(set(resources[key]))
+        return resources
 
     def _get_minitrino_lib_dir(self):
         """Gets the library directory. The directory can be determined in the
@@ -112,37 +208,6 @@ class Environment:
         )
         return lib_dir
 
-    @utils.exception_handler
-    def _user_init(self, verbose=False, user_env=[]):
-        """Initialize attributes that depend on user-provided input."""
-
-        # Set attributes
-        self.verbose = verbose
-        self._user_env = user_env
-        self.logger = utils.Logger(self.verbose)
-        self.env = EnvironmentVariables(self)
-
-        try:
-            # Attempt to parse lib env file & fetch modules
-            self.env._parse_library_env()
-            self.modules = Modules(self)
-
-            cli_ver = utils.get_cli_ver()
-            lib_ver = utils.get_lib_ver(self.minitrino_lib_dir)
-            if cli_ver != lib_ver:
-                self.logger.warn(
-                    f"CLI version {cli_ver} and library version {lib_ver} "
-                    f"do not match. You can update the Minitrino library "
-                    f"version to match the CLI version by running 'minitrino "
-                    f"lib-install'.",
-                )
-        except:  # Skip lib-related procedures if the lib is not found
-            pass
-
-        self.env._log_env_vars()
-        self.cmd_executor = CommandExecutor(self)
-        self._get_docker_clients(env=self.env.copy())
-
     def _handle_minitrino_user_dir(self):
         """Checks if a Minitrino directory exists in the user home directory.
         If not, it is created. The path to the Minitrino user home directory is
@@ -157,7 +222,7 @@ class Environment:
 
     def _get_config_file(self):
         """Returns the file path of the minitrino.cfg file. Warns if the file
-        path regardless for future creation."""
+        does not exist so it can be created later."""
 
         config_file = os.path.join(self.minitrino_user_dir, "minitrino.cfg")
         if not os.path.isfile(config_file):
@@ -168,9 +233,9 @@ class Environment:
         return config_file
 
     def _get_docker_clients(self, env={}):
-        """Gets DockerClient and APIClient objects. Returns a tuple of DockerClient
-        and APIClient objects, respectively. Returns None types for each client
-        if they fail to fetch."""
+        """Gets DockerClient and APIClient objects. Sets DockerClient
+        and APIClient objects, respectively. Sets each client to None types if
+        they fail to fetch."""
 
         self.logger.verbose(
             "Attempting to locate Docker socket file for current Docker context..."
@@ -196,7 +261,34 @@ class Environment:
             api_client = docker.APIClient(base_url=socket)
             self.docker_client, self.api_client = docker_client, api_client
         except:
-            return None, None
+            self.docker_client, self.api_client = None, None
+
+    def _list_clusters(self) -> list:
+        """Lists all clusters. Returns a list of cluster names."""
+        containers = self.docker_client.containers.list(
+            filters={"label": [RESOURCE_LABEL]},
+            all=True,
+        )
+
+        clusters = []
+        for container in containers:
+            for k, v in container.labels.items():
+                if k == COMPOSE_LABEL:
+                    clusters.append(v.split("minitrino-")[1])
+
+        clusters = list(set(clusters))
+        return clusters
+
+    def _fetch_docker_objects(self, docker_filter={"label": []}) -> tuple:
+        """Returns a tuple of cluster's docker objects (containers, volumes,
+        images, networks)."""
+
+        containers = self.docker_client.containers.list(filters=docker_filter, all=True)
+        volumes = self.docker_client.volumes.list(filters=docker_filter)
+        images = self.docker_client.images.list(filters=docker_filter, all=True)
+        networks = self.docker_client.networks.list(filters=docker_filter)
+
+        return containers, volumes, images, networks
 
 
 class EnvironmentVariables(dict):
@@ -216,7 +308,8 @@ class EnvironmentVariables(dict):
     @utils.exception_handler
     def __init__(self, ctx=None):
         super().__init__()
-
+        if ctx is None:  # Has not been initialized
+            return
         self._ctx = ctx
         self._parse_user_env()
         self._parse_os_env()
@@ -237,19 +330,32 @@ class EnvironmentVariables(dict):
         """Parses environment variables from the user's shell. Second order of
         precedence."""
 
-        append = [
-            "DOCKER_HOST",
+        shell_source = [
+            "CLUSTER_NAME",
+            "CLUSTER_VER",
             "CONFIG_PROPERTIES",
+            "DOCKER_HOST",
+            "IMAGE",
             "JVM_CONFIG",
             "LIB_PATH",
-            "CLUSTER_VER",
-            "TEXT_EDITOR",
             "LIC_PATH",
+            "TEXT_EDITOR",
         ]
+
+        # Grab all minitrino.env vars that start with __PORT, then add the
+        # variable names to the shell source list. If the file doesn't exist,
+        # skip this step.
+        try:
+            lib_env = self._parse_library_env(dry_run=True)
+            for k, v in lib_env.items():
+                if k.startswith("__PORT"):
+                    shell_source.append(k)
+        except:
+            pass
 
         for k, v in os.environ.items():
             k = k.upper()
-            if k in append and not self.get(k, None):
+            if k in shell_source and not self.get(k, None):
                 self[k] = v
 
     def _parse_minitrino_config(self):
@@ -276,10 +382,12 @@ class EnvironmentVariables(dict):
             )
             return
 
-    def _parse_library_env(self):
+    def _parse_library_env(self, dry_run=False):
         """Parses the Minitrino library's `minitrino.env` file. Lowest
-        precedence in environment variable order, loaded during
-        `_user_init()`."""
+        precedence in environment variable order, loaded during `initialize()`.
+        If `dry_run` is set to `True`, the function will not modify the
+        environment variables, but will still parse the file and return the
+        parsed variables."""
 
         env_file = os.path.join(self._ctx.minitrino_lib_dir, "minitrino.env")
         if not os.path.isfile(env_file):
@@ -289,13 +397,18 @@ class EnvironmentVariables(dict):
                 f"present in that library?",
             )
 
+        lib_env = {}
         with open(env_file, "r") as f:
             for env_var in f:
                 env_var = utils.parse_key_value_pair(env_var, err_type=err.UserError)
                 if env_var is None:
                     continue
                 if not self.get(env_var[0], None):
-                    self[env_var[0]] = env_var[1]
+                    if not dry_run:
+                        self[env_var[0]] = env_var[1]
+                    lib_env[env_var[0]] = env_var[1]
+
+        return lib_env
 
     def _log_env_vars(self):
         """Logs environment variables."""
@@ -321,6 +434,8 @@ class Modules:
 
     @utils.exception_handler
     def __init__(self, ctx=None):
+        if ctx is None:  # Has not been initialized
+            return
         self.data = {}
         self._ctx = ctx
         self._load_modules()
@@ -330,27 +445,33 @@ class Modules:
         Docker labels)."""
 
         utils.check_daemon(self._ctx.docker_client)
-        containers = self._ctx.docker_client.containers.list(
-            filters={"label": RESOURCE_LABEL}
-        )
+        resources = self._ctx.get_cluster_resources()
+        containers = resources["containers"]
 
         if not containers:
-            return []
+            return {}
 
-        modules = []
+        # Cluster name could be *, so we need to pick up the actual cluster name
+        # from the container labels
+        modules = {}
         for container in containers:
-            label_set = {}
-            ids = ["admin-", "catalog-", "security-"]
+            labels = {}
+            categories = ["admin-", "catalog-", "security-"]
+            _cluster_name = None
             for k, v in container.labels.items():
-                for _id in ids:
-                    if "org.minitrino" in k and _id in v:
-                        modules.append(v.lower().strip().replace(_id, ""))
-                        label_set[k] = v
+                if k == COMPOSE_LABEL:
+                    _cluster_name = v.replace("minitrino-", "")
+            for k, v in container.labels.items():
+                for category in categories:
+                    if "org.minitrino" in k and category in v:
+                        modules[v.lower().strip().replace(category, "")] = _cluster_name
+                        labels[k] = v
             # All containers except the cluster containers must have
             # module-specific labels. The cluster container only has module labels
             # if a module applies labels to it
-            if not label_set and not (
-                "minitrino-worker" in container.name or container.name == "minitrino"
+            if not labels and not (
+                "minitrino-worker" in container.name
+                or container.name == f"minitrino-{_cluster_name}"
             ):
                 raise err.UserError(
                     f"Missing Minitrino labels for container '{container.name}'.",
@@ -358,7 +479,6 @@ class Modules:
                     f"following the documentation on labels.",
                 )
 
-        modules = list(set(modules))
         for module in modules:
             if not isinstance(self.data.get(module), dict):
                 raise err.UserError(
@@ -457,6 +577,8 @@ class CommandExecutor:
 
     @utils.exception_handler
     def __init__(self, ctx=None):
+        if ctx is None:  # Has not been initialized
+            return
         self._ctx = ctx
 
     def execute_commands(self, *args, **kwargs):

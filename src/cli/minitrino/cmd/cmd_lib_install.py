@@ -1,11 +1,11 @@
-#!usr/bin/env/python3
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 import os
 import sys
 import click
 import shutil
 
+from minitrino.components import Environment
 from minitrino.cli import pass_environment
 from minitrino import errors as err
 from minitrino import utils
@@ -24,7 +24,7 @@ from minitrino import utils
 )
 @utils.exception_handler
 @pass_environment
-def cli(ctx, version):
+def cli(ctx: Environment, version):
     """Library installation command for Minitrino."""
 
     if not version:
@@ -48,7 +48,7 @@ def cli(ctx, version):
 
 
 @pass_environment
-def download_and_extract(ctx, version=""):
+def download_and_extract(ctx: Environment, version=""):
     github_uri = (
         f"https://github.com/jefflester/minitrino/archive/refs/tags/{version}.tar.gz"
     )
@@ -90,7 +90,7 @@ def download_and_extract(ctx, version=""):
 
 
 @pass_environment
-def cleanup(ctx, tarball="", file_basename="", trigger_error=True):
+def cleanup(ctx: Environment, tarball="", file_basename="", trigger_error=True):
     ctx.cmd_executor.execute_commands(
         f"rm -rf {tarball} {os.path.join(ctx.minitrino_user_dir, file_basename)}",
         trigger_error=trigger_error,

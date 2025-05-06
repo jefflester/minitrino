@@ -1,5 +1,4 @@
-#!usr/bin/env/python3
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 import src.common as common
 import src.cli.utils as utils

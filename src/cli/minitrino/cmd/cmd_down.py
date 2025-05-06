@@ -1,10 +1,10 @@
-#!usr/bin/env/python3
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 import sys
 import click
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from minitrino.components import Environment
 from minitrino.cli import pass_environment
 from minitrino import utils
 from minitrino.settings import RESOURCE_LABEL
@@ -13,9 +13,15 @@ from minitrino.settings import RESOURCE_LABEL
 @click.command(
     "down",
     help=(
-        """Bring down running Minitrino containers. This command follows the
-        behavior of `docker compose down` where containers are both stopped and
-        removed."""
+        """Stop and remove all running cluster containers. By default, applies
+        to 'default' cluster.
+        
+        Stop and remove containers in specific cluster by using the
+        `CLUSTER_NAME` environment variable or the `--cluster-name` / `-c`
+        option, e.g.: 
+        
+        `minitrino -c my-cluster down`, or restart all clusters via:\n
+        `minitrino -c '*' down`"""
     ),
 )
 @click.option(
@@ -36,16 +42,15 @@ from minitrino.settings import RESOURCE_LABEL
 )
 @utils.exception_handler
 @pass_environment
-def cli(ctx, sig_kill, keep):
+def cli(ctx: Environment, sig_kill, keep):
     """Down command for Minitrino. Exits with a 0 status code if there are no
     running minitrino containers."""
 
     utils.check_daemon(ctx.docker_client)
     utils.check_lib(ctx)
 
-    containers = ctx.docker_client.containers.list(
-        filters={"label": RESOURCE_LABEL}, all=True
-    )
+    resources = ctx.get_cluster_resources()
+    containers = resources["containers"]
 
     if len(containers) == 0:
         ctx.logger.info("No containers to bring down.")

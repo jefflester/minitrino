@@ -1,8 +1,8 @@
-#!usr/bin/env/python3
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 import click
 
+from minitrino.components import Environment
 from minitrino.cli import pass_environment
 from minitrino import utils
 
@@ -13,7 +13,7 @@ from minitrino import utils
 )
 @utils.exception_handler
 @pass_environment
-def cli(ctx):
+def cli(ctx: Environment):
     """Version command for Minitrino."""
 
     cli_version = utils.get_cli_ver()

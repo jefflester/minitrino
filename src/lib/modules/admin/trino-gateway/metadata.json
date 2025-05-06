@@ -1,0 +1,22 @@
+{
+  "description": "Trino Gateway module",
+  "incompatibleModules": [],
+  "dependentModules": [],
+  "enterprise": false,
+  "dependentClusters": [
+    {
+      "name": "trino",
+      "modules": [
+        "postgres"
+      ],
+      "workers": 1
+    },
+    {
+      "name": "trino-2",
+      "modules": [
+        "postgres"
+      ],
+      "workers": 0
+    }
+  ]
+}

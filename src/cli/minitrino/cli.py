@@ -1,9 +1,7 @@
-#!usr/bin/env/python3
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 import os
 import click
-
 from minitrino import components
 
 pass_environment = click.make_pass_decorator(components.Environment, ensure=True)
@@ -51,8 +49,22 @@ class CommandLineInterface(click.MultiCommand):
         https://github.com/jefflester/minitrino/wiki/Environment-Variables-and-Config"""
     ),
 )
+@click.option(
+    "-c",
+    "--cluster-name",
+    default="",
+    type=str,
+    help=(
+        """Sets the cluster name. Defaults to 'default'. 
+
+        Setting a custom cluster name allows you to run multiple clusters on the
+        same host. The cluster name is used to create uniquely-named objects in
+        the cluster, such as the cluster's Docker network and the cluster's
+        Docker containers."""
+    ),
+)
 @pass_environment
-def cli(ctx, verbose, env):
+def cli(ctx, verbose, env, cluster_name):
     """Welcome to the Minitrino command line interface.
 
     To report issues and ask questions, please file a GitHub issue and apply a
@@ -60,4 +72,4 @@ def cli(ctx, verbose, env):
     https://github.com/jefflester/minitrino
     """
 
-    ctx._user_init(verbose, env)
+    ctx.initialize(verbose, env, cluster_name)

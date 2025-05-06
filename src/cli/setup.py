@@ -1,5 +1,4 @@
-#!usr/bin/env/python3
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 import os
 from pathlib import Path
@@ -33,6 +32,8 @@ setup(
         "docker==7.1.0",
         "PyYAML",
         "requests>=2.32.2",
+        "tabulate",
+        "humanize",
     ],
     entry_points={"console_scripts": ["minitrino=minitrino.cli:cli"]},
 )

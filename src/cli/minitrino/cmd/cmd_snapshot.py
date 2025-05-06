@@ -1,5 +1,4 @@
-#!usr/bin/env/python3
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 import os
 import sys
@@ -9,6 +8,7 @@ import shutil
 import tarfile
 import fileinput
 
+from minitrino.components import Environment
 from minitrino.cli import pass_environment
 from minitrino import utils
 from minitrino import errors as err
@@ -26,14 +26,24 @@ from minitrino.settings import SCRUB_KEYS
 @click.command(
     "snapshot",
     help=(
-        """Create a snapshot of a Minitrino environment. A tarball is placed in
-        the Minitrino `lib/snapshots/` directory.
+        """Create a snapshot of a Minitrino environment. By default, applies to
+        'default' cluster.
+        
+        Once a snapshot is created, a tarball is placed in the Minitrino
+        `lib/snapshots/` directory.
 
-        To take a snapshot of an active environment, leave the `--module` and
-        option out of the command. 
+        To take a snapshot of an active environment, leave the `--module` option
+        out of the command.
 
         To take a snapshot of modules whether they are active or not, specify
-        the modules via the `--module` option."""
+        the modules via the `--module` option.
+        
+        To take a snapshot of a specific, running cluster, use the
+        `CLUSTER_NAME` environment variable or the `--cluster-name` / `-c`
+        option, e.g.: 
+        
+        `minitrino -c my-cluster snapshot`, or specify all clusters via:\n
+        `minitrino -c '*' snapshot`"""
     ),
 )
 @click.option(
@@ -85,7 +95,7 @@ from minitrino.settings import SCRUB_KEYS
 )
 @utils.exception_handler
 @pass_environment
-def cli(ctx, modules, name, directory, force, no_scrub):
+def cli(ctx: Environment, modules, name, directory, force, no_scrub):
     """Snapshot command for Minitrino."""
 
     # The snapshot temp files are saved in ~/.minitrino/snapshots/<name>
@@ -120,7 +130,7 @@ def cli(ctx, modules, name, directory, force, no_scrub):
             )
         else:
             ctx.logger.info(f"Creating snapshot of active environment...")
-            modules = utils.check_dependent_modules(ctx, modules)
+            modules = utils.check_dependent_modules(ctx, list(modules.keys()))
         snapshot_runner(name, no_scrub, True, modules, directory)
 
     check_complete(name, directory)
@@ -130,7 +140,7 @@ def cli(ctx, modules, name, directory, force, no_scrub):
 
 
 @pass_environment
-def validate_name(ctx, name):
+def validate_name(ctx: Environment, name):
     """Validates the chosen filename for correct input."""
 
     for char in name:
@@ -143,7 +153,7 @@ def validate_name(ctx, name):
 
 
 @pass_environment
-def check_exists(ctx, name, directory, force):
+def check_exists(ctx: Environment, name, directory, force):
     """Checks if the resulting tarball exists. If it exists, the user is
     prompted to overwrite the existing file."""
 
@@ -161,7 +171,7 @@ def check_exists(ctx, name, directory, force):
 
 
 @pass_environment
-def prepare_snapshot_dir(ctx, name, active, no_scrub, modules):
+def prepare_snapshot_dir(ctx: Environment, name, active, no_scrub, modules):
     """Checks if the snapshot temp directory exists. If it does, clears
     files/directories inside of it. If it doesn't, (1) creates it and clones the
     library structure, (2) adds a Bash file that can be executed to spin up the
@@ -187,7 +197,9 @@ def prepare_snapshot_dir(ctx, name, active, no_scrub, modules):
 
 
 @pass_environment
-def build_snapshot_command(ctx, snapshot_name_dir, modules=[], active=True):
+def build_snapshot_command(
+    ctx: Environment, snapshot_name_dir, modules=[], active=True
+):
     """Builds a basic shell command that can be used to provision an environment
     with the minitrino CLI. Used for snapshot purposes."""
 
@@ -196,7 +208,7 @@ def build_snapshot_command(ctx, snapshot_name_dir, modules=[], active=True):
 
 
 @pass_environment
-def build_command_string(ctx, modules=[]):
+def build_command_string(ctx: Environment, modules=[]):
     """Builds a command string that can be used to create an environment with
     the designated modules."""
 
@@ -217,7 +229,9 @@ def build_command_string(ctx, modules=[]):
 
 
 @pass_environment
-def create_snapshot_command_file(ctx, command_string="", snapshot_name_dir=""):
+def create_snapshot_command_file(
+    ctx: Environment, command_string="", snapshot_name_dir=""
+):
     """Creates an .sh file in the minitrino directory for usage by the snapshot
     command. This way, a similar command used to provision the environment is
     preserved."""
@@ -245,7 +259,7 @@ def create_snapshot_command_file(ctx, command_string="", snapshot_name_dir=""):
 
 
 @pass_environment
-def clone_lib_dir(ctx, name):
+def clone_lib_dir(ctx: Environment, name):
     """Clones the library directory structure and necessary top-level files in
     preparation for copying over module directories.
 
@@ -281,7 +295,7 @@ def clone_lib_dir(ctx, name):
 
 
 @pass_environment
-def handle_copy_config_file(ctx, snapshot_name_dir, no_scrub):
+def handle_copy_config_file(ctx: Environment, snapshot_name_dir, no_scrub):
     """Handles the copying of the user config file to the named snapshot
     directory. Calls `scrub_config_file()` if `no_scrub` is True."""
 
@@ -299,7 +313,7 @@ def handle_copy_config_file(ctx, snapshot_name_dir, no_scrub):
 
 
 @pass_environment
-def copy_config_file(ctx, snapshot_name_dir, no_scrub=False):
+def copy_config_file(ctx: Environment, snapshot_name_dir, no_scrub=False):
     """Copies user config file to the named snapshot directory."""
 
     if os.path.isfile(ctx.config_file):
@@ -315,7 +329,7 @@ def copy_config_file(ctx, snapshot_name_dir, no_scrub=False):
 
 
 @pass_environment
-def scrub_config_file(ctx, snapshot_name_dir):
+def scrub_config_file(ctx: Environment, snapshot_name_dir):
     """Scrubs the user config file of sensitive data."""
 
     snapshot_config_file = os.path.join(snapshot_name_dir, "minitrino.cfg")
@@ -332,7 +346,7 @@ def scrub_config_file(ctx, snapshot_name_dir):
 
 
 @pass_environment
-def scrub_line(ctx, line):
+def scrub_line(ctx: Environment, line):
     """Scrubs a line from a snapshot config file. Returns the scrubbed line."""
 
     # If the key has a substring that matches any of the scrub keys, we know
@@ -345,7 +359,7 @@ def scrub_line(ctx, line):
 
 
 @pass_environment
-def copy_module_dirs(ctx, snapshot_name_dir, modules=[]):
+def copy_module_dirs(ctx: Environment, snapshot_name_dir, modules=[]):
     """Copies module directories into the named snapshot directory."""
 
     for module in modules:
@@ -359,7 +373,7 @@ def copy_module_dirs(ctx, snapshot_name_dir, modules=[]):
 
 
 @pass_environment
-def create_named_tarball(ctx, name, snapshot_name_dir, save_dir):
+def create_named_tarball(ctx: Environment, name, snapshot_name_dir, save_dir):
     """Creates a tarball of the named snapshot directory and placed in the
     library's snapshot directory."""
 
@@ -376,7 +390,7 @@ def snapshot_runner(name, no_scrub, active, modules=[], directory=""):
 
 
 @pass_environment
-def check_complete(ctx, name, directory):
+def check_complete(ctx: Environment, name, directory):
     """Checks if the snapshot completed. If detected as incomplete, exists with
     a non-zero status code."""
 

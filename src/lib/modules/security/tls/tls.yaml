@@ -10,7 +10,7 @@ services:
         http-server.https.keystore.key=changeit
       MINITRINO_BOOTSTRAP: bootstrap-cluster.sh
     ports:
-      - 8443:8443
+      - ${__PORT_MINITRINO_TLS}:8443
     volumes:
       - ~/.minitrino/tls-mnt:${ETC}/tls-mnt
     labels:

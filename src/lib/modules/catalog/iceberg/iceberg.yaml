@@ -9,7 +9,7 @@ services:
 
   iceberg-catalog-cp:
     image: busybox
-    container_name: iceberg-catalog-cp
+    container_name: iceberg-catalog-cp-${CLUSTER_NAME}
     volumes:
       - ./modules/catalog/iceberg/resources/cluster/iceberg.properties:/tmp/iceberg.properties
       - catalogs:/etc/${CLUSTER_DIST}/catalog
@@ -23,7 +23,7 @@ services:
 
   iceberg-rest:
     image: tabulario/iceberg-rest:${ICEBERG_REST_VER}
-    container_name: iceberg-rest
+    container_name: iceberg-rest-${CLUSTER_NAME}
     environment:
       AWS_ACCESS_KEY_ID: access-key
       AWS_SECRET_ACCESS_KEY: secret-key
@@ -33,7 +33,7 @@ services:
       CATALOG_IO__IMPL: org.apache.iceberg.aws.s3.S3FileIO
       CATALOG_S3_ENDPOINT: http://s3.us-east-1.minio.com:9000
     ports:
-      - 8181:8181
+      - ${__PORT_ICEBERG_REST_METASTORE}:8181
     volumes:
       - iceberg-metadata:/home/iceberg
     labels:
@@ -53,19 +53,19 @@ services:
 
   minio-iceberg:
     image: minio/minio:${MINIO_VER}
-    container_name: minio-iceberg
+    container_name: minio-iceberg-${CLUSTER_NAME}
     environment:
       MINIO_ROOT_USER: access-key
       MINIO_ROOT_PASSWORD: secret-key
       MINIO_DOMAIN: s3.us-east-1.minio.com
-    command: server --address :9000 --console-address :9003 /data
+    command: server --address :9000 --console-address :9001 /data
     networks:
       default:
         aliases:
           - sample-bucket.s3.us-east-1.minio.com
     ports:
       - :9000
-      - 9003:9003
+      - ${__PORT_MINIO_ICEBERG}:9001
     volumes:
       - minio-iceberg-data:/data
     labels:
@@ -74,7 +74,7 @@ services:
 
   create-minio-iceberg-buckets:
     image: minio/mc:${MINIO_MC_VER}
-    container_name: create-minio-iceberg-buckets
+    container_name: create-minio-iceberg-buckets-${CLUSTER_NAME}
     entrypoint: |-
       /bin/sh -c "
       wfi=wait-for-it && \

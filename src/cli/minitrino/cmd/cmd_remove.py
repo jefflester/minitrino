@@ -1,20 +1,29 @@
-#!usr/bin/env/python3
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 import sys
 import click
 
+from minitrino.components import Environment
 from minitrino.cli import pass_environment
 from minitrino import utils
 from minitrino.settings import IMAGE
 from minitrino.settings import VOLUME
 from minitrino.settings import RESOURCE_LABEL
+from minitrino.settings import COMPOSE_LABEL
 from docker.errors import APIError
 
 
 @click.command(
     "remove",
-    help=("""Remove Minitrino resources."""),
+    help=(
+        """Remove Minitrino resources. By default, applies to 'default' cluster.
+        
+        Remove resources for a specific cluster by using the `CLUSTER_NAME`
+        environment variable or the `--cluster-name` / `-c` option, e.g.: 
+        
+        `minitrino -c my-cluster remove`, or specify all clusters via:\n
+        `minitrino -c '*' remove`"""
+    ),
 )
 @click.option(
     "-i",
@@ -54,12 +63,14 @@ from docker.errors import APIError
 )
 @utils.exception_handler
 @pass_environment
-def cli(ctx, images, volumes, labels, force):
+def cli(ctx: Environment, images, volumes, labels, force):
     """Remove command for Minitrino."""
 
     utils.check_daemon(ctx.docker_client)
 
-    if all((not images, not volumes, not labels)) or all((images, volumes, not labels)):
+    if all((not images, not volumes, not labels, ctx.cluster_name == "*")) or all(
+        (images, volumes, not labels, ctx.cluster_name == "*")
+    ):
         response = ctx.logger.prompt_msg(
             "You are about to all remove minitrino images and volumes. Continue? [Y/N]"
         )
@@ -79,7 +90,7 @@ def cli(ctx, images, volumes, labels, force):
 
 
 @pass_environment
-def remove_items(ctx, item_type, force, labels=[]):
+def remove_items(ctx: Environment, item_type, force, labels=[]):
     """Removes Docker items. If no labels are passed in, all Minitrino
     resources are removed. If label(s) are passed in, the removal is limited to
     the passed in labels."""
@@ -90,10 +101,11 @@ def remove_items(ctx, item_type, force, labels=[]):
     images = []
     volumes = []
     for label in labels:
+        resources = ctx.get_cluster_resources([label])
         if item_type == IMAGE:
-            images.extend(ctx.docker_client.images.list(filters={"label": label}))
+            images.extend(resources["images"])
         if item_type == VOLUME:
-            volumes.extend(ctx.docker_client.volumes.list(filters={"label": label}))
+            volumes.extend(resources["volumes"])
 
     images = list(set(images))
     for image in images:

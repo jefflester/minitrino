@@ -1,5 +1,4 @@
-#!usr/bin/env/python3
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 import os
 import sys
@@ -7,9 +6,9 @@ import traceback
 import pkg_resources
 
 from minitrino import errors as err
+from minitrino.settings import RESOURCE_LABEL
+from minitrino.settings import COMPOSE_LABEL
 from minitrino.settings import DEFAULT_INDENT
-from minitrino.settings import MIN_CLUSTER_VER
-
 from click import echo, style, prompt
 from textwrap import fill
 from shutil import get_terminal_size
@@ -55,6 +54,9 @@ class Logger:
         if not level:
             level = self.INFO
 
+        if level == self.VERBOSE and not self._log_verbose:
+            return  # Suppress verbose messages if not enabled
+
         for msg in args:
             msgs = str(msg).replace("\r", "\n").split("\n")
 
@@ -70,15 +72,19 @@ class Logger:
                 echo(f"{msg_prefix}{msg}")
 
     def info(self, *args, stream=False):
+        """Logs an info message."""
         self.log(*args, level=self.INFO, stream=stream)
 
     def warn(self, *args, stream=False):
+        """Logs a warning message."""
         self.log(*args, level=self.WARN, stream=stream)
 
     def error(self, *args, stream=False):
+        """Logs an error message."""
         self.log(*args, level=self.ERROR, stream=stream)
 
     def verbose(self, *args, stream=False):
+        """Logs a verbose message."""
         if self._log_verbose:
             self.log(*args, level=self.VERBOSE, stream=stream)
 
@@ -198,80 +204,7 @@ def check_daemon(docker_client):
 
 def check_lib(ctx):
     """Checks if a Minitrino library exists."""
-
     ctx.minitrino_lib_dir
-
-
-def check_cluster_ver(ctx):
-    """Checks if a proper cluster version is provided."""
-
-    cluster_dist = ctx.env.get("CLUSTER_DIST", "")
-    cluster_ver = ctx.env.get("CLUSTER_VER", "")
-
-    if cluster_dist == "starburst":
-        error_msg = (
-            f"Provided Starburst version '{cluster_ver}' is invalid. "
-            f"The version must be {MIN_CLUSTER_VER}-e or higher."
-        )
-        try:
-            cluster_ver_int = int(cluster_ver[0:3])
-            if cluster_ver_int < MIN_CLUSTER_VER or "-e" not in cluster_ver:
-                raise err.UserError(error_msg)
-        except:
-            raise err.UserError(error_msg)
-    elif cluster_dist == "trino":
-        error_msg = (
-            f"Provided Trino version '{cluster_ver}' is invalid. "
-            f"The version must be {MIN_CLUSTER_VER} or higher."
-        )
-        if "-e" in cluster_ver:
-            raise err.UserError(
-                f"The provided Trino version '{cluster_ver}' cannot contain '-e'. "
-                "Did you mean to use Starburst via the --image option?"
-            )
-        try:
-            cluster_ver_int = int(cluster_ver[0:3])
-            if cluster_ver_int < MIN_CLUSTER_VER:
-                raise err.UserError(error_msg)
-        except:
-            raise err.UserError(error_msg)
-
-
-def check_version_requirements(ctx, modules=[]):
-    """Checks for cluster version validity per version requirements defined in
-    module metadata."""
-
-    for module in modules:
-        versions = ctx.modules.data.get(module, {}).get("versions", [])
-
-        if not versions:
-            continue
-        if len(versions) > 2:
-            raise err.UserError(
-                f"Invalid versions specification for module '{module}' in metadata.json file: {versions}",
-                f'The valid structure is: {{"versions": [min-ver, max-ver]}}. If the versions key is '
-                f"present, the minimum version is required, and the maximum version is optional.",
-            )
-
-        cluster_ver = int(ctx.env.get("CLUSTER_VER", "")[0:3])
-        min_ver = int(versions.pop(0))
-        max_ver = None
-        if versions:
-            max_ver = int(versions.pop())
-
-        begin_msg = (
-            f"The supplied cluster version {cluster_ver} is incompatible with module '{module}'. "
-            f"Per the module's metadata.json file, the"
-        )
-
-        if cluster_ver < min_ver:
-            raise err.UserError(
-                f"{begin_msg} minimum required cluster version for the module is: {min_ver}."
-            )
-        if max_ver and cluster_ver > max_ver:
-            raise err.UserError(
-                f"{begin_msg} maximum required cluster version for the module is: {max_ver}."
-            )
 
 
 def check_dependent_modules(ctx, modules=[]):
@@ -428,3 +361,8 @@ def restart_containers(ctx, c_restart=[], log_level=Logger.VERBOSE):
                 ctx.logger.error(
                     f"Error while restarting container '{container_name}': {str(e)}"
                 )
+
+
+def get_compose_project_name(cluster_name=""):
+    """Returns the compose project name for a given cluster name."""
+    return f"minitrino-{cluster_name}"

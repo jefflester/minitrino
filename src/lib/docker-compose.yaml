@@ -13,10 +13,10 @@ services:
         - org.minitrino=root
         - org.minitrino.module=minitrino
     image: minitrino/cluster:${CLUSTER_VER}-${CLUSTER_DIST}
-    container_name: minitrino
+    container_name: minitrino-${CLUSTER_NAME}
     restart: 'no'
     ports:
-      - 8080:8080
+      - ${__PORT_MINITRINO}:8080
     volumes:
       - ${LIC_PATH}:${LIC_MOUNT_PATH}
       - catalogs:/etc/${CLUSTER_DIST}/catalog
@@ -26,6 +26,14 @@ services:
 
 volumes:
   catalogs:
+    labels:
+      - org.minitrino=root
+      - org.minitrino.module=minitrino
+
+networks:
+  default:
+    name: minitrino_${CLUSTER_NAME}
+    driver: bridge
     labels:
       - org.minitrino=root
       - org.minitrino.module=minitrino

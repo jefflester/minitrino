@@ -7,13 +7,13 @@ services:
 
   mysql:
     image: mysql:${MYSQL_VER}
-    container_name: mysql
+    container_name: mysql-${CLUSTER_NAME}
     environment:
       MINITRINO_BOOTSTRAP: bootstrap-mysql.sh
     env_file:
       - ./modules/catalog/mysql/resources/mysql/mysql.env
     ports:
-      - 3306:3306
+      - ${__PORT_MYSQL}:3306
     volumes:
       - mysql-data:/var/lib/mysql
     labels:

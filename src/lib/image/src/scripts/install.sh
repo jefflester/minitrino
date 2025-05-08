@@ -63,7 +63,8 @@ create_directories() {
     mkdir -p \
         /usr/lib/"${CLUSTER_DIST}"/ \
         /data/"${CLUSTER_DIST}"/ \
-        /home/"${CLUSTER_DIST}"/
+        /home/"${CLUSTER_DIST}"/ \
+        /mnt/etc/ \ 
 }
 
 prune_plugins() {
@@ -159,7 +160,8 @@ download_and_extract() {
 }
 
 copy_scripts() {
-    echo "Copying run-minitrino scripts..."
+    echo "Copying entrypoint scripts..."
+    cp /tmp/copy-config.sh /usr/lib/"${CLUSTER_DIST}"/bin/
     cp /tmp/run-minitrino.sh /usr/lib/"${CLUSTER_DIST}"/bin/
 }
 
@@ -169,12 +171,14 @@ set_ownership_and_perms() {
         /usr/lib/"${CLUSTER_DIST}" \
         /data/"${CLUSTER_DIST}" \
         /etc/"${CLUSTER_DIST}" \
-        /home/"${CLUSTER_DIST}"
+        /home/"${CLUSTER_DIST}" \
+        /mnt/etc
     chmod -R g=u \
         /usr/lib/"${CLUSTER_DIST}" \
         /data/"${CLUSTER_DIST}" \
         /etc/"${CLUSTER_DIST}" \
-        /home/"${CLUSTER_DIST}"
+        /home/"${CLUSTER_DIST}" \
+        /mnt/etc
 }
 
 configure_jvm() {

@@ -5,7 +5,7 @@ services:
     environment:
       MINITRINO_BOOTSTRAP: bootstrap-elasticsearch.sh
     volumes:
-      - ./modules/catalog/elasticsearch/resources/cluster/elasticsearch.properties:${ETC}/catalog/elasticsearch.properties
+      - ./modules/catalog/elasticsearch/resources/cluster/elasticsearch.properties:/mnt/etc/catalog/elasticsearch.properties:ro
 
   elasticsearch:
     image: elasticsearch:${ELASTICSEARCH_VER}

@@ -11,6 +11,6 @@ services:
         access-control.config-files=etc/biac.properties
       MINITRINO_BOOTSTRAP: bootstrap-cluster.sh
     volumes:
-      - ./modules/security/biac/resources/cluster/biac.properties:${ETC}/biac.properties
+      - ./modules/security/biac/resources/cluster/biac.properties:/mnt/etc/biac.properties:ro
     labels:
       - org.minitrino.module.biac=security-biac

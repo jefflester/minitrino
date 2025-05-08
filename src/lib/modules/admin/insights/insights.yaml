@@ -10,7 +10,7 @@ services:
         insights.persistence-enabled=true
         insights.metrics-persistence-enabled=true
     volumes:
-      - ./modules/admin/insights/resources/cluster/backend_svc.properties:${ETC}/catalog/backend_svc.properties
+      - ./modules/admin/insights/resources/cluster/backend_svc.properties:/mnt/etc/catalog/backend_svc.properties:ro
 
   postgres-backend-svc:
     image: postgres:${POSTGRES_SEP_BACKEND_SVC_VER}

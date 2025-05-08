@@ -3,7 +3,7 @@ services:
 
   minitrino:
     volumes:
-      - ./modules/catalog/pinot/resources/cluster/pinot.properties:${ETC}/catalog/pinot.properties
+      - ./modules/catalog/pinot/resources/cluster/pinot.properties:/mnt/etc/catalog/pinot.properties:ro
 
   pinot-zookeeper:
     image: zookeeper:${ZOOKEEPER_VER}

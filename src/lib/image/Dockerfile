@@ -31,10 +31,7 @@ RUN \
         apache2-utils \
         python3 python-is-python3 python3-pip && \
     locale-gen en_US.UTF-8 && \
-    chmod +x \
-        /tmp/install.sh \
-        /tmp/install-java.sh \
-        /tmp/run-minitrino.sh
+    chmod +x /tmp/*.sh
 
 FROM base 
 
@@ -45,6 +42,7 @@ ARG UID=1000
 ARG GROUP=root
 ARG GID=0
 
+ENV BUILD_USER=${BUILD_USER}
 ENV CLUSTER_VER=${CLUSTER_VER}
 ENV CLUSTER_DIST=${CLUSTER_DIST}
 

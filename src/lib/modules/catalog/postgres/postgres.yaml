@@ -3,7 +3,7 @@ services:
 
   minitrino:
     volumes:
-      - ./modules/catalog/postgres/resources/cluster/postgres.properties:${ETC}/catalog/postgres.properties
+      - ./modules/catalog/postgres/resources/cluster/postgres.properties:/mnt/etc/catalog/postgres.properties:ro
 
   postgres:
     image: postgres:${POSTGRES_VER}

@@ -3,7 +3,7 @@ services:
 
   minitrino:
     volumes:
-      - ./modules/admin/session-property-manager/resources/cluster/session-property.json:${ETC}/session-property.json
-      - ./modules/admin/session-property-manager/resources/cluster/session-property-config.properties:${ETC}/session-property-config.properties
+      - ./modules/admin/session-property-manager/resources/cluster/session-property.json:/mnt/etc/session-property.json:ro
+      - ./modules/admin/session-property-manager/resources/cluster/session-property-config.properties:/mnt/etc/session-property-config.properties:ro
     labels:
       - org.minitrino.module.session-property-manager=admin-session-property-manager

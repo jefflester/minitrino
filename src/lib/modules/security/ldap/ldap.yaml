@@ -6,8 +6,8 @@ services:
       CONFIG_PROPERTIES: http-server.authentication.type=PASSWORD
       MINITRINO_BOOTSTRAP: bootstrap-cluster.sh
     volumes:
-      - ./modules/security/ldap/resources/cluster/password-authenticator.properties:${ETC}/password-authenticator.properties
-      - ./modules/security/ldap/resources/ldap/ldap-users:${ETC}/ldap-users
+      - ./modules/security/ldap/resources/cluster/password-authenticator.properties:/mnt/etc/password-authenticator.properties:ro
+      - ./modules/security/ldap/resources/ldap/ldap-users:/mnt/etc/ldap-users:ro
     links:
       - ldap:ldap.minitrino.starburstdata.com
 

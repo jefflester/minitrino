@@ -4,22 +4,8 @@ services:
   minitrino:
     environment:
       MINITRINO_BOOTSTRAP: 458-native-fs-workaround.sh
-    depends_on:
-      - hive-catalog-cp
-
-  hive-catalog-cp:
-    image: busybox
-    container_name: hive-catalog-cp-${CLUSTER_NAME}
     volumes:
-      - ./modules/catalog/hive/resources/cluster/hive.properties:/tmp/hive.properties
-      - catalogs:/etc/${CLUSTER_DIST}/catalog
-    command:
-      - sh
-      - -c
-      - cp /tmp/hive.properties /etc/${CLUSTER_DIST}/catalog/hive.properties
-    labels:
-      - org.minitrino=root
-      - org.minitrino.module.hive=catalog-hive
+      - ./modules/catalog/hive/resources/cluster/hive.properties:/mnt/etc/catalog/hive.properties:ro
 
   postgres-hive:
     image: postgres:${POSTGRES_HMS_VER}

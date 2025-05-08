@@ -4,22 +4,8 @@ services:
   minitrino:
     environment:
       MINITRINO_BOOTSTRAP: 458-native-fs-workaround.sh
-    depends_on:
-      - delta-catalog-cp
-
-  delta-catalog-cp:
-    image: busybox
-    container_name: delta-catalog-cp-${CLUSTER_NAME}
     volumes:
-      - ./modules/catalog/delta-lake/resources/cluster/delta.properties:/tmp/delta.properties
-      - catalogs:/etc/${CLUSTER_DIST}/catalog
-    command:
-      - sh
-      - -c
-      - cp /tmp/delta.properties /etc/${CLUSTER_DIST}/catalog/delta.properties
-    labels:
-      - org.minitrino=root
-      - org.minitrino.module.delta-lake=catalog-delta-lake
+      - ./modules/catalog/delta-lake/resources/cluster/delta.properties:/mnt/etc/catalog/delta.properties:ro
 
   postgres-delta-lake:
     image: postgres:${POSTGRES_HMS_VER}

@@ -3,7 +3,7 @@ services:
 
   minitrino:
     volumes:
-      - ./modules/catalog/sqlserver/resources/cluster/sqlserver.properties:${ETC}/catalog/sqlserver.properties
+      - ./modules/catalog/sqlserver/resources/cluster/sqlserver.properties:/mnt/etc/catalog/sqlserver.properties:ro
 
   sqlserver:
     image: mcr.microsoft.com/mssql/server:${SQLSERVER_VER}

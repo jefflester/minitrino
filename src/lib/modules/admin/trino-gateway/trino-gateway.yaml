@@ -3,6 +3,6 @@ services:
 
   minitrino:
     volumes:
-      - ./modules/admin/trino-gateway/resources/cluster/foo.txt:${ETC}/catalog/foo.txt
+      - ./modules/admin/trino-gateway/resources/cluster/foo.txt:/mnt/etc/catalog/foo.txt:ro
     labels:
       - org.minitrino.module.trino-gateway=admin-trino-gateway

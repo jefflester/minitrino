@@ -62,26 +62,3 @@ Or, remove them directly using the Docker CLI:
 ```sh
 docker volume rm minitrino_iceberg-metadata minitrino_minio-iceberg-data
 ```
-
-## Editing the `iceberg.properties` File
-
-This module uses a roundabout way to mount the `iceberg.properties` file that
-allows for edits to be made to the file inside cluster containers without the
-source file being modified on the host. To edit the file, exec into the
-`minitrino` container, make the desired changes, and then restart the container
-for the changes to take effect:
-
-```sh
-docker exec -it minitrino bash 
-vi /etc/"${CLUSTER_DIST}"/catalog/iceberg.properties
-exit
-
-docker restart minitrino
-```
-
-The properties file can also be edited directly from the module directory prior
-to provisioning the module:
-
-```txt
-lib/modules/catalog/<module>/resources/cluster/<module>.properties
-```

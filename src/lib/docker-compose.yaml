@@ -19,13 +19,6 @@ services:
       - ${__PORT_MINITRINO}:8080
     volumes:
       - ${LIC_PATH}:${LIC_MOUNT_PATH}
-      - catalogs:/etc/${CLUSTER_DIST}/catalog
-    labels:
-      - org.minitrino=root
-      - org.minitrino.module=minitrino
-
-volumes:
-  catalogs:
     labels:
       - org.minitrino=root
       - org.minitrino.module=minitrino

@@ -3,7 +3,7 @@ services:
 
   minitrino:
     volumes:
-      - ./modules/catalog/clickhouse/resources/cluster/clickhouse.properties:${ETC}/catalog/clickhouse.properties
+      - ./modules/catalog/clickhouse/resources/cluster/clickhouse.properties:/mnt/etc/catalog/clickhouse.properties:ro
 
   clickhouse:
     image: clickhouse/clickhouse-server:${CLICKHOUSE_VER}

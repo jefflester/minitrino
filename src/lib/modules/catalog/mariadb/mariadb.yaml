@@ -3,7 +3,7 @@ services:
 
   minitrino:
     volumes:
-      - ./modules/catalog/mariadb/resources/cluster/mariadb.properties:${ETC}/catalog/mariadb.properties
+      - ./modules/catalog/mariadb/resources/cluster/mariadb.properties:/mnt/etc/catalog/mariadb.properties:ro
 
   mariadb:
     image: mariadb:${MARIADB_VER}

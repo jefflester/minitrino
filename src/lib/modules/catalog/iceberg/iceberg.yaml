@@ -4,22 +4,8 @@ services:
   minitrino:
     environment:
       MINITRINO_BOOTSTRAP: 458-native-fs-workaround.sh
-    depends_on:
-      - iceberg-catalog-cp
-
-  iceberg-catalog-cp:
-    image: busybox
-    container_name: iceberg-catalog-cp-${CLUSTER_NAME}
     volumes:
-      - ./modules/catalog/iceberg/resources/cluster/iceberg.properties:/tmp/iceberg.properties
-      - catalogs:/etc/${CLUSTER_DIST}/catalog
-    command:
-      - sh
-      - -c
-      - cp /tmp/iceberg.properties /etc/${CLUSTER_DIST}/catalog/iceberg.properties
-    labels:
-      - org.minitrino=root
-      - org.minitrino.module.iceberg=catalog-iceberg
+      - ./modules/catalog/iceberg/resources/cluster/iceberg.properties:/mnt/etc/catalog/iceberg.properties:ro
 
   iceberg-rest:
     image: tabulario/iceberg-rest:${ICEBERG_REST_VER}

@@ -1,160 +1,78 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 import os
 import sys
 import traceback
 import pkg_resources
 
-from minitrino import errors as err
-from minitrino.settings import RESOURCE_LABEL
-from minitrino.settings import COMPOSE_LABEL
-from minitrino.settings import DEFAULT_INDENT
-from click import echo, style, prompt
-from textwrap import fill
-from shutil import get_terminal_size
+from minitrino.core.logger import MinitrinoLogger
+from minitrino.core.errors import UserError, MinitrinoError
+
 from functools import wraps
-from docker.errors import NotFound
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from inspect import signature
+from click import echo, make_pass_decorator
+
+from typing import TYPE_CHECKING, Optional, Dict, Any
+
+if TYPE_CHECKING:
+    from minitrino.core.context import MinitrinoContext
 
 
-class Logger:
-    """Minitrino logging class. Outputs to the user's terminal using `click.echo()`
-    with color-coded levels and optional verbosity.
+def pass_environment() -> Any:
+    """
+    Returns a Click pass decorator for the MinitrinoContext.
 
-    ### Parameters
-    - `log_verbose`: If `True`, verbose messages will be logged; otherwise, they're
-      suppressed.
+    Returns
+    -------
+    `Any`
+        A decorator that passes the MinitrinoContext instance.
+    """
+    from minitrino.core.context import MinitrinoContext
 
-    ### Attributes
-    - `INFO`, `WARN`, `ERROR`, `VERBOSE`: Log level configurations.
-
-    ### Methods
-    - `log()`: Logs a message to the terminal with specified level and format.
-    - `info()`, `warn()`, `error()`, `verbose()`: Convenience methods for logging.
-    - `prompt_msg()`: Logs a prompt message and returns user input."""
-
-    INFO = {"prefix": "[i]  ", "prefix_color": "cyan"}
-    WARN = {"prefix": "[w]  ", "prefix_color": "yellow"}
-    ERROR = {"prefix": "[e]  ", "prefix_color": "red"}
-    VERBOSE = {"prefix": "[v]  ", "prefix_color": "magenta", "verbose": True}
-
-    def __init__(self, log_verbose=False):
-        self._log_verbose = log_verbose
-
-    def log(self, *args, level=None, stream=False):
-        """Logs messages to the user's console. Defaults to 'info' log level.
-
-        ### Parameters
-        - `*args`: Messages to log.
-        - `level`: The level of the log message (info, warn, error, verbose).
-        - `stream`: If `True`, the logger will not apply a prefix to each line streamed
-          to the console.
-        """
-
-        if not level:
-            level = self.INFO
-
-        if level == self.VERBOSE and not self._log_verbose:
-            return  # Suppress verbose messages if not enabled
-
-        for msg in args:
-            msgs = str(msg).replace("\r", "\n").split("\n")
-
-            for i, msg in enumerate(msgs):
-                msg = self._format(msg)
-                if not msg:
-                    continue
-                msg_prefix = (
-                    DEFAULT_INDENT
-                    if stream or i > 0
-                    else style(level["prefix"], fg=level["prefix_color"], bold=True)
-                )
-                echo(f"{msg_prefix}{msg}")
-
-    def info(self, *args, stream=False):
-        """Logs an info message."""
-        self.log(*args, level=self.INFO, stream=stream)
-
-    def warn(self, *args, stream=False):
-        """Logs a warning message."""
-        self.log(*args, level=self.WARN, stream=stream)
-
-    def error(self, *args, stream=False):
-        """Logs an error message."""
-        self.log(*args, level=self.ERROR, stream=stream)
-
-    def verbose(self, *args, stream=False):
-        """Logs a verbose message."""
-        if self._log_verbose:
-            self.log(*args, level=self.VERBOSE, stream=stream)
-
-    def prompt_msg(self, msg=""):
-        """Logs a prompt message and returns the user's input.
-
-        ### Parameters
-        - `msg`: The prompt message"""
-
-        msg = self._format(str(msg))
-        styled_prefix = style(
-            self.INFO["prefix"], fg=self.INFO["prefix_color"], bold=True
-        )
-
-        return prompt(
-            f"{styled_prefix}{msg}",
-            type=str,
-        )
-
-    def _format(self, msg):
-        """Formats strings prior to displaying to the user."""
-
-        msg = msg.rstrip()
-        if not msg:
-            return ""
-
-        terminal_width, _ = get_terminal_size()
-        msg = msg.replace("\n", f"\n{DEFAULT_INDENT}")
-        msg = fill(
-            msg,
-            terminal_width - 4,
-            subsequent_indent=DEFAULT_INDENT,
-            replace_whitespace=False,
-            break_on_hyphens=False,
-            break_long_words=True,
-        )
-
-        return msg
+    return make_pass_decorator(MinitrinoContext, ensure=True)
 
 
-def handle_exception(error=Exception, additional_msg="", skip_traceback=False):
-    """Handles a single exception. Wrapped by `@exception_handler` decorator.
+def handle_exception(
+    error: Exception,
+    ctx: Optional[Any] = None,
+    additional_msg: str = "",
+    skip_traceback: bool = False,
+) -> None:
+    """
+    Handles a single exception. Wrapped by `@exception_handler` decorator.
 
-    ### Parameters
-    - `error`: The exception object.
-    - `additional_msg`: An additional message to log, if any. Can be useful if
-      handling a generic exception and you need to append a user-friendly
-      message to the log.
-    - `skip_traceback`: If `True`, the traceback will not be printed to the
-      user's terminal. Defaults to `True` for user errors, but it is `False`
-      otherwise."""
+    Parameters
+    ----------
+    `error` : `Exception`
+        The exception object.
+    `ctx` : `Optional[Any]`
+        Optional CLI context object with logger.
+    `additional_msg` : `str`
+        Additional message to log, if any.
+    `skip_traceback` : `bool`
+        If True, suppresses traceback output unless overridden by error type.
 
-    if isinstance(error, err.UserError):
+    Raises
+    ------
+    `SystemExit`
+        Exits the program with the appropriate exit code.
+    """
+    if isinstance(error, UserError):
         error_msg = error.msg
         exit_code = error.exit_code
         skip_traceback = True
-    elif isinstance(error, err.MinitrinoError):
+    elif isinstance(error, MinitrinoError):
         error_msg = error.msg
         exit_code = error.exit_code
-    elif isinstance(error, Exception):
+    else:
         error_msg = str(error)
         exit_code = 1
-    else:
-        raise err.MinitrinoError(
-            f"Invalid type given to 'e' parameter of {handle_exception.__name__}. "
-            f"Expected an Exception type, but got type {type(error).__name__}"
-        )
 
-    logger = Logger()
+    logger = getattr(ctx, "logger", MinitrinoLogger())
     logger.error(additional_msg, error_msg)
+
     if not skip_traceback:
         echo()  # Force a newline
         echo(f"{traceback.format_exc()}", err=True)
@@ -162,37 +80,58 @@ def handle_exception(error=Exception, additional_msg="", skip_traceback=False):
     sys.exit(exit_code)
 
 
-def exception_handler(func):
-    """A decorator that handles unhandled exceptions. Why? A few reasons.
+def exception_handler(func: Any) -> Any:
+    """
+    A decorator that handles unhandled exceptions with optional context access.
 
-    1. Inner functions still have the liberty to do try/catch and perform
-       inner-function exception handling how they wish.
-    2. Functions that catch exceptions which need specialized handling can
-       manually invoke the handle_exception() utility.
-    3. For all other generic exceptions and unhandled exceptions, they will be
-       siphoned to the handle_exception() utility.
+    Parameters
+    ----------
+    `func` : `Callable`
+        The function to wrap.
 
-    This is especially useful when decorating main/runner functions and class
-    constructors."""
+    Returns
+    -------
+    `Callable`
+        The wrapped function with exception handling.
+    """
 
     @wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        sig = signature(func)
+        ctx = None
+        if "ctx" in sig.parameters:
+            try:
+                ctx = kwargs.get("ctx") or args[list(sig.parameters).index("ctx")]
+            except Exception:
+                ctx = None
+
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            handle_exception(e)
+            handle_exception(e, ctx)
 
     return wrapper
 
 
-def check_daemon(docker_client):
-    """Checks if the Docker daemon is running. If an exception is thrown, it is
-    handled."""
+def check_daemon(docker_client: Any) -> None:
+    """
+    Checks if the Docker daemon is running. If an exception is thrown, it is
+    handled.
 
+    Parameters
+    ----------
+    `docker_client` : `Any`
+        Docker client instance.
+
+    Raises
+    ------
+    `UserError`
+        If the Docker daemon is not running or cannot be pinged.
+    """
     try:
         docker_client.ping()
     except Exception as e:
-        raise err.UserError(
+        raise UserError(
             f"Error when pinging the Docker server. Is the Docker daemon running?\n"
             f"Error from Docker: {str(e)}",
             f"You may need to initialize your Docker daemon. If Docker is already running, "
@@ -202,41 +141,42 @@ def check_daemon(docker_client):
         )
 
 
-def check_lib(ctx):
-    """Checks if a Minitrino library exists."""
-    ctx.minitrino_lib_dir
+def check_lib(ctx: MinitrinoContext) -> None:
+    """
+    Checks if a Minitrino library exists.
+
+    Parameters
+    ----------
+    `ctx` : `MinitrinoContext`
+        Context object containing library directory information.
+    """
+    ctx.lib_dir
 
 
-def check_dependent_modules(ctx, modules=[]):
-    """Checks if any of the provided modules have module dependencies."""
+def generate_identifier(identifiers: Optional[Dict[str, Any]] = None) -> str:
+    """
+    Returns an 'object identifier' string used for creating log messages, e.g.
+    '[ID: 12345] [Name: minitrino]'.
 
-    for module in modules:
-        dependent_modules = ctx.modules.data.get(module, {}).get("dependentModules", [])
-        if not dependent_modules:
-            continue
-        for dependent_module in dependent_modules:
-            if not dependent_module in modules:
-                modules.insert(0, dependent_module)
-                ctx.logger.verbose(
-                    f"Module dependency for module '{module}' will be included: '{dependent_module}'",
-                )
-    return list(set(modules))
+    Parameters
+    ----------
+    `identifiers` : `Optional[Dict[str, Any]]`, optional
+        Dictionary of "identifier_key": "identifier_value" pairs, by default
+        None.
 
+    Returns
+    -------
+    `str`
+        Formatted string with identifiers enclosed in brackets.
 
-def generate_identifier(identifiers=None):
-    """Returns an 'object identifier' string used for creating log messages,
-    e.g. '[ID: 12345] [Name: minitrino]'.
-
-    ### Parameters
-    - `identifiers`: Dictionary of "identifier_value": "identifier_key" pairs.
-
-    ### Usage
-    ```python
-    identifier = generate_identifier(
+    Examples
+    --------
+    ```python identifier = generate_identifier(
         {"ID": container.short_id, "Name": container.name}
-    ) # Will Spit out -> "[ID: 12345] [Name: minitrino]"
-    ```"""
-
+    ) # Output: "[ID: 12345] [Name: minitrino]" ```
+    """
+    if identifiers is None:
+        identifiers = {}
     identifier = []
     for key, value in identifiers.items():
         identifier.append(f"[{key}: {value}]")
@@ -244,125 +184,116 @@ def generate_identifier(identifiers=None):
 
 
 def parse_key_value_pair(
-    key_value_pair, err_type=err.MinitrinoError, key_to_upper=True
-):
-    """Parses a key-value pair in string form and returns the resulting pair as
-    both a 2-element list. If the string cannot be split by "=", a
-    MinitrinoError is raised.
+    kv_pair: str,
+    err_type: Any = MinitrinoError,
+    key_to_upper: bool = True,
+) -> list[str]:
+    """
+    Parses a key-value pair in string form and returns the resulting pair as a
+    list. Raises an exception if the string cannot be split by "=".
 
-    ### Parameters
-    - `key_value_pair`: A string formatted as a key-value pair, i.e.
-      `"CLUSTER_VER=388-e"`.
-    - `err_type`: The exception to raise if an "=" delimiter is not in the
-      key-value pair. Defaults to `MinitrinoError`.
-    - `key_to_upper`: If `True`, the key will be forced to uppercase.
+    Parameters
+    ----------
+    `kv_pair` : `str`
+        A string formatted as a key-value pair, e.g. "CLUSTER_VER=388-e".
+    `err_type` : `Exception` class, optional
+        The exception to raise if an "=" delimiter is not in the key-value pair,
+        by default MinitrinoError.
+    `key_to_upper` : `bool`, optional
+        If True, the key will be converted to uppercase, by default True.
 
-    ### Return Values
-    - A list `[k, v]`, but will return `None` if the stripped input is an empty
-      string."""
+    Returns
+    -------
+    `list[str]`
+        A list `[key, value]` if parsing is successful.
 
-    # Return None of empty string or special char (i.e. '\n')
-    key_value_pair = key_value_pair.strip()
-    if not key_value_pair:
-        return None
+    Raises
+    ------
+    `Exception` : `MinitrinoError` or `UserError`
+        If the key-value pair is invalid or improperly formatted.
+    """
+    kv_pair = kv_pair.strip()
+    if not kv_pair:
+        return ["", ""]
 
-    key_value_pair = key_value_pair.split("=", 1)
+    kv_pair_list = kv_pair.split("=", 1)
     err_msg = (
-        f"Invalid key-value pair: '{'='.join(key_value_pair)}'. "
+        f"Invalid key-value pair: '{'='.join(kv_pair_list)}'. "
         f"Key-value pairs should be formatted as 'KEY=VALUE'"
     )
 
-    # Raise an error if the key has no value
-    if not key_value_pair[0]:
+    if not kv_pair_list or not kv_pair_list[0]:
         raise err_type(err_msg)
 
-    if isinstance(key_value_pair, list):
-        for i in range(len(key_value_pair)):
-            key_value_pair[i] = key_value_pair[i].strip()
-        if not key_value_pair[0]:
-            raise err_type(err_msg)
-        elif key_to_upper:
-            key_value_pair[0] = key_value_pair[0].upper()
-    if not len(key_value_pair) == 2:
+    for i in range(len(kv_pair_list)):
+        kv_pair_list[i] = kv_pair_list[i].strip()
+    if not kv_pair_list[0]:
+        raise err_type(err_msg)
+    elif key_to_upper:
+        kv_pair_list[0] = kv_pair_list[0].upper()
+    if not len(kv_pair_list) == 2:
         raise err_type(err_msg)
 
-    return key_value_pair
+    return kv_pair_list
 
 
-def get_cli_ver():
-    """Returns the version of the Minitrino CLI."""
+def cli_ver() -> str:
+    """
+    Returns the version of the Minitrino CLI.
 
+    Returns
+    -------
+    `str`
+        The CLI version string.
+    """
     return pkg_resources.require("Minitrino")[0].version
 
 
-def get_lib_ver(library_path=""):
-    """Returns the version of the Minitrino library.
+def lib_ver(ctx: Optional[MinitrinoContext] = None, lib_path: str = "") -> str:
+    """
+    Returns the version of the Minitrino library.
 
-    ### Parameters
-    - `library_path`: The Minitrino library directory."""
+    Parameters
+    ----------
+    `ctx` : `MinitrinoContext`, optional
+        Partially initialized context object to extract library path from.
+    `lib_path` : `str`, optional
+        The Minitrino library directory, by default "".
 
-    version_file = os.path.join(library_path, "version")
+    Returns
+    -------
+    `str`
+        The version string if found, otherwise "NOT INSTALLED".
+    """
+    if ctx is None and not lib_path:
+        raise ValueError("lib_path must be provided if ctx is None")
+
+    if ctx is not None and not lib_path:
+        lib_path = ctx.lib_dir
+
+    version_file = os.path.join(lib_path, "version")
     try:
         with open(version_file, "r") as f:
-            for line in f:
-                line = line.strip()
-                if line:
-                    return line
-            return "NOT INSTALLED"
-    except:
+            return next((line.strip() for line in f if line.strip()), "NOT INSTALLED")
+    except Exception:
         return "NOT INSTALLED"
 
 
-def validate_yes(response=""):
-    """Validates 'yes' user input. Returns `True` if a 'yes' input is
-    detected."""
+def validate_yes(response: str = "") -> bool:
+    """
+    Validates 'yes' user input.
 
+    Parameters
+    ----------
+    `response` : `str`, optional
+        The user input string, by default "".
+
+    Returns
+    -------
+    `bool`
+        True if the input is 'y' or 'yes' (case-insensitive), False otherwise.
+    """
     response = response.replace(" ", "")
     if response.lower() == "y" or response.lower() == "yes":
         return True
     return False
-
-
-def restart_containers(ctx, c_restart=[], log_level=Logger.VERBOSE):
-    """Restarts all the containers in the list."""
-
-    if c_restart == []:
-        return
-
-    c_restart = list(set(c_restart))
-
-    def restart_container(container_name):
-        """Helper function to restart a single container."""
-        try:
-            container = ctx.docker_client.containers.get(container_name)
-            ctx.logger.log(
-                f"Restarting container '{container.name}'...", level=log_level
-            )
-            container.restart()
-            ctx.logger.log(
-                f"Container '{container.name}' restarted successfully.", level=log_level
-            )
-        except NotFound:
-            raise err.MinitrinoError(
-                f"Attempting to restart container '{container_name}', but the container was not found."
-            )
-
-    with ThreadPoolExecutor() as executor:
-        futures = {
-            executor.submit(restart_container, container): container
-            for container in c_restart
-        }
-
-        for future in as_completed(futures):
-            container_name = futures[future]
-            try:
-                future.result()
-            except err.MinitrinoError as e:
-                ctx.logger.error(
-                    f"Error while restarting container '{container_name}': {str(e)}"
-                )
-
-
-def get_compose_project_name(cluster_name=""):
-    """Returns the compose project name for a given cluster name."""
-    return f"minitrino-{cluster_name}"

@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "minitrino"
+version = "3.0.0"
+description = "A command line tool that makes it easy to run modular Trino environments locally."
+readme = "readme.md"
+requires-python = ">=3.10"
+license = {text = "Apache-2.0"}
+authors = [
+  {name = "Jeff Lester", email = "jeff.lester.dev@gmail.com"}
+]
+urls = {"Homepage" = "https://github.com/jefflester/minitrino"}
+keywords = ["trino", "starburst", "docker", "minitrino"]
+
+dependencies = [
+  "click==8.1.8",
+  "colorama",
+  "docker==7.1.0",
+  "PyYAML",
+  "requests>=2.32.2",
+  "tabulate",
+  "humanize",
+  "python-dateutil"
+]
+
+[project.scripts]
+minitrino = "minitrino.cli:cli"
+
+[project.optional-dependencies]
+dev = [
+  "setuptools",
+  "wheel",
+  "black",
+  "mypy",
+  "types-docker",
+  "types-PyYAML",
+  "types-setuptools",
+  "types-tabulate",
+  "types-python-dateutil"
+]
+
+[tool.setuptools]
+package-dir = {"" = "src/cli"}

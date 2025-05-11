@@ -20,8 +20,8 @@ jobs:
           python-version: '3.10'
       - name: Install project dependencies
         run: |-
-          pip install --editable ./src/cli/
-          pip install --editable ./src/test/
+          pip install -e .
+          pip install -e ./src/test/
       - name: Run CLI tests
         run: |-
           minitrino --help || exit 1

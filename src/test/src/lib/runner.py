@@ -7,10 +7,10 @@ import time
 import argparse
 import jsonschema
 
-import src.common as common
-from src.lib.specs import SPECS
-from src.lib.utils import cleanup
-from src.lib.utils import dump_container_logs
+import common
+from lib.specs import SPECS
+from lib.utils import cleanup
+from lib.utils import dump_container_logs
 
 from minitrino.settings import MIN_CLUSTER_VER
 

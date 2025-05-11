@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-import src.common as common
-import src.cli.utils as utils
+import common
+import cli.utils as utils
 from minitrino.settings import MODULE_ADMIN
 from minitrino.settings import MODULE_CATALOG
 from minitrino.settings import MODULE_SECURITY

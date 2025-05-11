@@ -4,9 +4,9 @@ import os
 import re
 import json
 
-import src.common as common
+import common
 from minitrino.cli import cli
-from src.common import CONFIG_FILE
+from common import CONFIG_FILE
 
 from click.testing import CliRunner
 

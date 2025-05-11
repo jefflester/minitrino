@@ -3,8 +3,8 @@
 import docker
 import yaml
 
-import src.common as common
-import src.cli.utils as utils
+import common
+from cli import utils
 from minitrino.settings import RESOURCE_LABEL
 from minitrino.settings import MIN_CLUSTER_VER
 

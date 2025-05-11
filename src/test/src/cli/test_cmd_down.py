@@ -2,8 +2,8 @@
 
 import docker
 
-import src.common as common
-import src.cli.utils as utils
+import common
+import cli.utils as utils
 from minitrino.settings import RESOURCE_LABEL
 
 from inspect import currentframe

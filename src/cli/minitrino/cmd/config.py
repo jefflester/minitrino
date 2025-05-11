@@ -3,39 +3,34 @@
 import os
 import click
 
-from minitrino.components import Environment
-from minitrino.cli import pass_environment
 from minitrino import utils
+from minitrino.core.context import MinitrinoContext
 from minitrino.settings import CONFIG_TEMPLATE
-
-from shutil import rmtree
 
 
 @click.command(
     "config",
-    help=("""Edit the Minitrino user configuration file."""),
+    help="Edit the Minitrino config file (minitrino.cfg).",
 )
 @click.option(
     "-r",
     "--reset",
     is_flag=True,
     default=False,
-    help=(
-        """Reset the Minitrino user configuration file and create a new config
-        file from a template.
-
-        WARNING: This will remove your configuration file (if it exists) and
-        replace it with a template."""
-    ),
+    help="Reset the config file with default values.",
 )
 @utils.exception_handler
-@pass_environment
-def cli(ctx: Environment, reset):
-    """Config command for Minitrino."""
+@utils.pass_environment()
+def cli(ctx: MinitrinoContext, reset: bool) -> None:
+    """
+    Edits or resets the Minitrino config file. If `--reset` is used, replaces
+    the current config file with a template.
 
-    if not os.path.isdir(ctx.minitrino_user_dir):
-        ctx.logger.info(f"No {ctx.minitrino_user_dir} directory found. Creating...")
-        os.mkdir(ctx.minitrino_user_dir)
+    Parameters
+    ----------
+    `reset` : `bool`
+        If True, resets the config file with default values.
+    """
 
     if os.path.isfile(ctx.config_file) and not reset:
         ctx.logger.verbose(
@@ -58,27 +53,26 @@ def cli(ctx: Environment, reset):
         edit_file()
 
 
-@pass_environment
-def write_template(ctx: Environment):
-    """Writes configuration template."""
+@utils.pass_environment()
+def write_template(ctx: MinitrinoContext) -> None:
+    """
+    Writes the default configuration template to the user's config file path.
+    """
 
     with open(ctx.config_file, "w") as config_file:
         config_file.write(CONFIG_TEMPLATE.lstrip())
 
-    editor = ctx.env.get("TEXT_EDITOR", None)
-    if not editor:
-        editor = None
 
+@utils.pass_environment()
+def edit_file(ctx: MinitrinoContext) -> None:
+    """
+    Opens the config file in the user's preferred editor.
 
-@pass_environment
-def edit_file(ctx: Environment):
-    """Gets the editor from user configuration and passes to the Click edit
-    function if the value is present."""
+    Editor preference is sourced from the `TEXT_EDITOR` environment variable.
+    Falls back to system default if not set.
+    """
 
-    editor = ctx.env.get("TEXT_EDITOR", None)
-    if not editor:
-        editor = None
-
+    editor = ctx.env.get("TEXT_EDITOR") or None
     click.edit(
         filename=ctx.config_file,
         editor=editor,

@@ -6,8 +6,6 @@ COMPOSE_LABEL = "com.docker.compose.project"
 MODULE_LABEL_KEY_ROOT = "org.minitrino.module"
 
 # Generic Constants
-IMAGE = "image"
-VOLUME = "volume"
 LIB = "lib"
 MODULE_ROOT = "modules"
 MODULE_ADMIN = "admin"
@@ -30,17 +28,17 @@ SNAPSHOT_ROOT_FILES = [
     "image",
 ]
 
-# Terminal
-DEFAULT_INDENT = " " * 5
-
 # Scrub Keys
 SCRUB_KEYS = [
-    "accesskey",
-    "apikey",
-    "secretkey",
+    "key",
     "-key",
     "_key",
     "password",
+    "-password",
+    "_password",
+    "token",
+    "-token",
+    "_token",
 ]
 
 # Templates

@@ -3,8 +3,8 @@
 
 import pkg_resources
 
-import src.common as common
-import src.cli.utils as utils
+import common
+import cli.utils as utils
 
 from inspect import currentframe
 from types import FrameType

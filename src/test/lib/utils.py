@@ -3,7 +3,7 @@
 import os
 import docker
 
-import common
+from test import common
 from minitrino.settings import RESOURCE_LABEL
 
 

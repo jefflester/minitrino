@@ -2,8 +2,8 @@
 
 import docker
 
-import common
-import cli.utils as utils
+from test import common
+from test.cli import utils
 
 from inspect import currentframe
 from types import FrameType

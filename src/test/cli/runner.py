@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from cli import (
+from test.cli import (
     test_misc,
     test_cmd_config,
     test_cmd_down,

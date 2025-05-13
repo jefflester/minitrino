@@ -9,7 +9,8 @@ import subprocess
 from minitrino import utils
 from minitrino.core.errors import MinitrinoError
 
-from typing import cast, TypedDict, TYPE_CHECKING
+from dataclasses import dataclass
+from typing import cast, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from minitrino.core.context import MinitrinoContext
@@ -387,7 +388,8 @@ class CommandExecutor:
         return ansi_regex.sub("", value)
 
 
-class CommandResult(TypedDict):
+@dataclass
+class CommandResult:
     """
     Command result.
 

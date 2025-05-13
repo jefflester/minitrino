@@ -8,7 +8,6 @@ import time
 import yaml
 import socket
 
-from minitrino.core.cmd_exec import CommandResult
 from minitrino.core.errors import MinitrinoError, UserError
 
 from minitrino.settings import (
@@ -327,14 +326,14 @@ class ClusterConfigManager:
             A tuple of parsed key-value config lists for both files.
         """
         fq_container_name = self._cluster.resource.fq_container_name("minitrino")
-        current_cfgs: list[CommandResult] = self._ctx.cmd_executor.execute(
+        current_cfgs = self._ctx.cmd_executor.execute(
             f"bash -c 'cat {ETC_DIR}/{CLUSTER_CONFIG}'",
             f"bash -c 'cat {ETC_DIR}/{CLUSTER_JVM_CONFIG}'",
             container=self._cluster.resource.container(fq_container_name),
             suppress_output=True,
         )
 
-        current_cluster_cfgs = self._split_config(current_cfgs[0].get("output", ""))
-        current_jvm_cfg = self._split_config(current_cfgs[1].get("output", ""))
+        current_cluster_cfgs = self._split_config(current_cfgs[0].output)
+        current_jvm_cfg = self._split_config(current_cfgs[1].output)
 
         return current_cluster_cfgs, current_jvm_cfg

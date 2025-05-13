@@ -16,10 +16,7 @@ from minitrino.settings import (
     WORKER_CONFIG_PROPS,
 )
 
-from docker.models.containers import Container
 from docker.models.images import Image
-from docker.models.networks import Network
-from docker.models.volumes import Volume
 from docker.errors import APIError, NotFound
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import cast, Optional, TYPE_CHECKING
@@ -82,7 +79,6 @@ class ClusterOperations:
             self._ctx.logger.info("No containers to bring down.")
             return
 
-        # Helper function to stop a container
         def stop_container(container):
             identifier = utils.generate_identifier(
                 {"ID": container.short_id, "Name": container.name}
@@ -95,7 +91,6 @@ class ClusterOperations:
                 self._ctx.logger.verbose(f"Stopped container: {identifier}")
             return container
 
-        # Helper function to remove a container
         def remove_container(container):
             identifier = utils.generate_identifier(
                 {"ID": container.short_id, "Name": container.name}
@@ -103,7 +98,6 @@ class ClusterOperations:
             container.remove()
             self._ctx.logger.verbose(f"Removed container: {identifier}")
 
-        # Stop containers in parallel
         with ThreadPoolExecutor() as executor:
             stop_futures = {
                 executor.submit(stop_container, container): container
@@ -118,7 +112,6 @@ class ClusterOperations:
                         f"Error stopping container '{container.name}': {str(e)}"
                     )
 
-        # Remove containers in parallel if not keeping them
         if not keep:
             with ThreadPoolExecutor() as executor:
                 remove_futures = {

@@ -338,7 +338,7 @@ class MinitrinoContext:
             output = self.cmd_executor.execute(
                 "docker context inspect", environment=env, suppress_output=True
             )
-            context = json.loads(output[0].get("output", ""))[0]
+            context = json.loads(output[0].output)[0]
             socket = context["Endpoints"]["docker"].get("Host", "")
         except Exception as e:
             raise MinitrinoError(

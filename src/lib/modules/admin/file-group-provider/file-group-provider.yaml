@@ -6,4 +6,4 @@ services:
       - ./modules/admin/file-group-provider/resources/cluster/group-provider.properties:/mnt/etc/group-provider.properties:ro
       - ./modules/admin/file-group-provider/resources/cluster/groups.txt:/mnt/etc/groups.txt:ro
     labels:
-      - org.minitrino.module.file-group-provider=admin-file-group-provider
+      - org.minitrino.module=admin-file-group-provider

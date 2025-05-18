@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Commands for installing Minitrino libraries."""
 
 import os
 import click
@@ -23,23 +23,17 @@ from minitrino.core.errors import MinitrinoError
 @utils.exception_handler
 @utils.pass_environment()
 def cli(ctx: MinitrinoContext, version: str) -> None:
-    """
-    Installs the Minitrino library from a tagged GitHub release.
+    """Install the Minitrino library from a tagged GitHub release.
 
-    If a library directory already exists, prompts the user for permission
-    before overwriting it. The version defaults to the current CLI version if
-    not explicitly specified.
+    If a library directory already exists, prompt the user for permission before
+    overwriting it. The version defaults to the current CLI version if not explicitly
+    specified.
 
     Parameters
     ----------
-    `version` : `str`
+    version : str
         The library version to install. If empty, defaults to the CLI version.
-
-    Returns
-    -------
-    `None`
     """
-
     if not version:
         version = utils.cli_ver()
 
@@ -56,25 +50,23 @@ def cli(ctx: MinitrinoContext, version: str) -> None:
             ctx.logger.info("Opted to skip library installation.")
             return
 
-    download_and_extract(version)
+    download_and_extract(ctx, version)
     ctx.logger.info("Library installation complete.")
 
 
 @utils.pass_environment()
 def download_and_extract(ctx: MinitrinoContext, version: str = "") -> None:
-    """
-    Downloads and extracts the Minitrino library from GitHub.
+    """Download and extract the Minitrino library from GitHub.
 
-    Downloads the release tarball for the given version, unpacks it, and moves
-    the `lib/` directory to the user's Minitrino directory. If the library fails
-    to install, raises a `MinitrinoError`.
+    Download the release tarball for the given version, unpack it, and move the `lib/`
+    directory to the user's Minitrino directory. If the library fails to install, raise
+    a `MinitrinoError`.
 
     Parameters
     ----------
-    `version` : `str`, optional
+    version : str, optional
         The version to download. Defaults to an empty string.
     """
-
     github_uri = (
         f"https://github.com/jefflester/minitrino/archive/refs/tags/{version}.tar.gz"
     )
@@ -106,10 +98,10 @@ def download_and_extract(ctx: MinitrinoContext, version: str = "") -> None:
             raise MinitrinoError(f"Library failed to install (not found at {lib_dir})")
 
         # Cleanup
-        cleanup(tarball, file_basename)
+        cleanup(ctx, tarball, file_basename)
 
     except Exception as e:
-        cleanup(tarball, file_basename, False)
+        cleanup(ctx, tarball, file_basename, False)
         raise MinitrinoError(str(e))
 
 
@@ -120,20 +112,19 @@ def cleanup(
     file_basename: str = "",
     trigger_error: bool = True,
 ) -> None:
-    """
-    Removes the downloaded tarball and extracted files from the user's
-    directory.
+    """Remove the downloaded tarball and extracted files.
+
+    Removes the downloaded tarball and extracted files from the user's directory.
 
     Parameters
     ----------
-    `tarball` : `str`, optional
+    tarball : str, optional
         Path to the downloaded tarball.
-    `file_basename` : `str`, optional
+    file_basename : str, optional
         Base name of the unpacked directory to remove.
-    `trigger_error` : `bool`, optional
-        If True, triggers command errors on failure. Default is True.
+    trigger_error : bool, optional
+        If True, trigger command errors on failure. Default is True.
     """
-
     ctx.cmd_executor.execute(
         f"rm -rf {tarball} {os.path.join(ctx.minitrino_user_dir, file_basename)}",
         trigger_error=trigger_error,

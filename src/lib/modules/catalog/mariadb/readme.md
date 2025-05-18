@@ -41,7 +41,7 @@ volumes:
   mariadb-data:
     labels:
       - org.minitrino=root
-      - org.minitrino.module.mariadb=catalog-mariadb
+      - org.minitrino.module=catalog-mariadb
 ```
 
 The user-facing implication is that MariaDB data is retained even after shutting
@@ -56,7 +56,7 @@ for these warnings:
 To remove these volumes, run:
 
 ```sh
-minitrino -v remove --volumes --label org.minitrino.module.mariadb=catalog-mariadb
+minitrino -v remove --volumes --label org.minitrino.module=catalog-mariadb
 ```
   
 Or, remove them directly using the Docker CLI:

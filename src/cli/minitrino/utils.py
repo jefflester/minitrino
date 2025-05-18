@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Utility functions for Minitrino CLI and core operations."""
 
 from __future__ import annotations
 
@@ -22,11 +22,11 @@ if TYPE_CHECKING:
 
 def pass_environment() -> Any:
     """
-    Returns a Click pass decorator for the MinitrinoContext.
+    Return a Click pass decorator for the MinitrinoContext.
 
     Returns
     -------
-    `Any`
+    Any
         A decorator that passes the MinitrinoContext instance.
     """
     from minitrino.core.context import MinitrinoContext
@@ -41,22 +41,22 @@ def handle_exception(
     skip_traceback: bool = False,
 ) -> None:
     """
-    Handles a single exception. Wrapped by `@exception_handler` decorator.
+    Handle a single exception, wrapped by `@exception_handler` decorator.
 
     Parameters
     ----------
-    `error` : `Exception`
+    error : Exception
         The exception object.
-    `ctx` : `Optional[Any]`
+    ctx : Optional[Any]
         Optional CLI context object with logger.
-    `additional_msg` : `str`
+    additional_msg : str
         Additional message to log, if any.
-    `skip_traceback` : `bool`
+    skip_traceback : bool
         If True, suppresses traceback output unless overridden by error type.
 
     Raises
     ------
-    `SystemExit`
+    SystemExit
         Exits the program with the appropriate exit code.
     """
     if isinstance(error, UserError):
@@ -82,16 +82,16 @@ def handle_exception(
 
 def exception_handler(func: Any) -> Any:
     """
-    A decorator that handles unhandled exceptions with optional context access.
+    Handle unhandled exceptions with optional context access.
 
     Parameters
     ----------
-    `func` : `Callable`
+    func : Callable
         The function to wrap.
 
     Returns
     -------
-    `Callable`
+    Callable
         The wrapped function with exception handling.
     """
 
@@ -115,17 +115,16 @@ def exception_handler(func: Any) -> Any:
 
 def check_daemon(docker_client: Any) -> None:
     """
-    Checks if the Docker daemon is running. If an exception is thrown, it is
-    handled.
+    Check if the Docker daemon is running.
 
     Parameters
     ----------
-    `docker_client` : `Any`
+    docker_client : Any
         Docker client instance.
 
     Raises
     ------
-    `UserError`
+    UserError
         If the Docker daemon is not running or cannot be pinged.
     """
     try:
@@ -143,11 +142,11 @@ def check_daemon(docker_client: Any) -> None:
 
 def check_lib(ctx: MinitrinoContext) -> None:
     """
-    Checks if a Minitrino library exists.
+    Check if a Minitrino library exists.
 
     Parameters
     ----------
-    `ctx` : `MinitrinoContext`
+    ctx : MinitrinoContext
         Context object containing library directory information.
     """
     ctx.lib_dir
@@ -155,25 +154,22 @@ def check_lib(ctx: MinitrinoContext) -> None:
 
 def generate_identifier(identifiers: Optional[Dict[str, Any]] = None) -> str:
     """
-    Returns an 'object identifier' string used for creating log messages, e.g.
-    '[ID: 12345] [Name: minitrino]'.
+    Return an object identifier string used for creating log messages.
 
     Parameters
     ----------
-    `identifiers` : `Optional[Dict[str, Any]]`, optional
-        Dictionary of "identifier_key": "identifier_value" pairs, by default
-        None.
+    identifiers : Optional[Dict[str, Any]], optional
+        Dictionary of "identifier_key": "identifier_value" pairs, by default None.
 
     Returns
     -------
-    `str`
+    str
         Formatted string with identifiers enclosed in brackets.
 
     Examples
     --------
-    ```python identifier = generate_identifier(
-        {"ID": container.short_id, "Name": container.name}
-    ) # Output: "[ID: 12345] [Name: minitrino]" ```
+    >>> generate_identifier({"cluster": "default", "module": "test"})
+    >>> '[cluster: default] [module: test]'
     """
     if identifiers is None:
         identifiers = {}
@@ -183,87 +179,44 @@ def generate_identifier(identifiers: Optional[Dict[str, Any]] = None) -> str:
     return " ".join(identifier)
 
 
-def parse_key_value_pair(
-    kv_pair: str,
-    err_type: Any = MinitrinoError,
-    key_to_upper: bool = True,
-) -> list[str]:
+def parse_key_value_pair(pair: str) -> tuple[str, str]:
     """
-    Parses a key-value pair in string form and returns the resulting pair as a
-    list. Raises an exception if the string cannot be split by "=".
+    Parse a key-value pair from a string.
 
     Parameters
     ----------
-    `kv_pair` : `str`
-        A string formatted as a key-value pair, e.g. "CLUSTER_VER=388-e".
-    `err_type` : `Exception` class, optional
-        The exception to raise if an "=" delimiter is not in the key-value pair,
-        by default MinitrinoError.
-    `key_to_upper` : `bool`, optional
-        If True, the key will be converted to uppercase, by default True.
+    pair : str
+        Key-value pair to parse.
 
     Returns
     -------
-    `list[str]`
-        A list `[key, value]` if parsing is successful.
-
-    Raises
-    ------
-    `Exception` : `MinitrinoError` or `UserError`
-        If the key-value pair is invalid or improperly formatted.
+    tuple[str, str]
+        Tuple of key and value.
     """
-    kv_pair = kv_pair.strip()
-    if not kv_pair:
-        return ["", ""]
-
-    kv_pair_list = kv_pair.split("=", 1)
-    err_msg = (
-        f"Invalid key-value pair: '{'='.join(kv_pair_list)}'. "
-        f"Key-value pairs should be formatted as 'KEY=VALUE'"
-    )
-
-    if not kv_pair_list or not kv_pair_list[0]:
-        raise err_type(err_msg)
-
-    for i in range(len(kv_pair_list)):
-        kv_pair_list[i] = kv_pair_list[i].strip()
-    if not kv_pair_list[0]:
-        raise err_type(err_msg)
-    elif key_to_upper:
-        kv_pair_list[0] = kv_pair_list[0].upper()
-    if not len(kv_pair_list) == 2:
-        raise err_type(err_msg)
-
-    return kv_pair_list
+    key, value = pair.split("=", 1)
+    return key, value
 
 
 def cli_ver() -> str:
     """
-    Returns the version of the Minitrino CLI.
+    Return the CLI version.
 
     Returns
     -------
-    `str`
-        The CLI version string.
+    str
+        CLI version.
     """
     return pkg_resources.require("Minitrino")[0].version
 
 
 def lib_ver(ctx: Optional[MinitrinoContext] = None, lib_path: str = "") -> str:
     """
-    Returns the version of the Minitrino library.
-
-    Parameters
-    ----------
-    `ctx` : `MinitrinoContext`, optional
-        Partially initialized context object to extract library path from.
-    `lib_path` : `str`, optional
-        The Minitrino library directory, by default "".
+    Return the library version.
 
     Returns
     -------
-    `str`
-        The version string if found, otherwise "NOT INSTALLED".
+    str
+        Library version.
     """
     if ctx is None and not lib_path:
         raise ValueError("lib_path must be provided if ctx is None")
@@ -279,21 +232,21 @@ def lib_ver(ctx: Optional[MinitrinoContext] = None, lib_path: str = "") -> str:
         return "NOT INSTALLED"
 
 
-def validate_yes(response: str = "") -> bool:
+def validate_yes(value: str) -> bool:
     """
-    Validates 'yes' user input.
+    Validate if the input is an affirmative response.
 
     Parameters
     ----------
-    `response` : `str`, optional
-        The user input string, by default "".
+    value : str
+        Value to validate.
 
     Returns
     -------
-    `bool`
-        True if the input is 'y' or 'yes' (case-insensitive), False otherwise.
+    bool
+        `True` if the input is 'y' or 'yes' (case-insensitive), `False` otherwise.
     """
-    response = response.replace(" ", "")
+    response = value.replace(" ", "")
     if response.lower() == "y" or response.lower() == "yes":
         return True
     return False

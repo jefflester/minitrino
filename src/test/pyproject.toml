@@ -12,6 +12,7 @@ dependencies = [
   "minitrino",
   "jsonschema",
   "PyYAML",
+  "pytest",
   "requests>=2.32.2"
 ]
 

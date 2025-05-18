@@ -6,4 +6,4 @@ services:
       - ./modules/security/file-access-control/resources/cluster/access-control.properties:/mnt/etc/access-control.properties:ro
       - ./modules/security/file-access-control/resources/cluster/rules.json:/mnt/etc/rules.json:ro
     labels:
-      - org.minitrino.module.file-access-control=security-file-access-control
+      - org.minitrino.module=security-file-access-control

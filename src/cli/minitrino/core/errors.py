@@ -1,20 +1,20 @@
-#!/usr/bin/env python3
+"""Error classes for Minitrino CLI."""
 
 
 class MinitrinoError(Exception):
     """
     Base exception class for all Minitrino-related errors.
 
-    Constructor Parameters
-    ----------------------
-    `msg` : `str`, optional
+    Parameters
+    ----------
+    msg : str, optional
         Message to log and include in the exception.
 
     Attributes
     ----------
-    `msg` : `str`
+    msg : str
         Error message associated with the exception.
-    `exit_code` : `int`
+    exit_code : int
         Exit code for the error type. Defaults to 1.
     """
 
@@ -25,6 +25,7 @@ class MinitrinoError(Exception):
         self.msg = msg
 
     def __str__(self) -> str:
+        """Return the error message as a string."""
         return self.msg
 
 
@@ -34,18 +35,18 @@ class UserError(MinitrinoError):
 
     Attributes
     ----------
-    `msg` : `str`
+    msg : str
         Primary error message to display.
-    `hint_msg` : `str`
+    hint_msg : str
         Optional user guidance for resolving the issue.
-    `exit_code` : `int`
+    exit_code : int
         Exit code used to signal a user-handled error. Defaults to 2.
 
-    Constructor Parameters
-    ----------------------
-    `msg` : `str`, optional
+    Parameters
+    ----------
+    msg : str, optional
         Message to log and include in the exception.
-    `hint_msg` : `str`, optional
+    hint_msg : str, optional
         Additional guidance for resolving the issue.
     """
 

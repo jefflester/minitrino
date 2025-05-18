@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Cluster interface and operations for Minitrino clusters."""
 
 from __future__ import annotations
 
@@ -17,20 +17,20 @@ class Cluster:
     """
     Exposes various cluster operations.
 
-    Constructor Parameters
-    ----------------------
-    `ctx` : `MinitrinoContext`
-        An instantiated `MinitrinoContext` object with user input and context.
+    Parameters
+    ----------
+    ctx : MinitrinoContext
+        An instantiated MinitrinoContext object with user input and context.
 
     Attributes
     ----------
-    `ops` : `ClusterOperations`
+    ops : ClusterOperations
         A cluster operations manager for the current cluster.
-    `config` : `ClusterConfigManager`
+    config : ClusterConfigManager
         A cluster configuration manager for the current cluster.
-    `resource` : `ClusterResourceManager`
+    resource : ClusterResourceManager
         A cluster resource manager for the current cluster.
-    `validator` : `ClusterValidator`
+    validator : ClusterValidator
         A validator for the current cluster.
     """
 

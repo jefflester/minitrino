@@ -21,10 +21,10 @@ services:
       - postgres-insights-data:/var/lib/postgresql/data
     labels:
       - org.minitrino=root
-      - org.minitrino.module.insights=admin-insights
+      - org.minitrino.module=admin-insights
 
 volumes:
   postgres-insights-data:
     labels:
       - org.minitrino=root
-      - org.minitrino.module.insights=admin-insights
+      - org.minitrino.module=admin-insights

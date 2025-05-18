@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Cluster operations and resource management for Minitrino clusters."""
 
 from __future__ import annotations
 
@@ -6,13 +6,12 @@ import re
 
 from minitrino import utils
 from minitrino.core.logger import LogLevel
-from minitrino.core.cluster.resource import ClusterDockerObject
 from minitrino.core.errors import MinitrinoError, UserError
+from minitrino.core.cluster.resource import ClusterDockerObject
 
 from minitrino.settings import (
-    RESOURCE_LABEL,
-    CLUSTER_CONFIG,
     ETC_DIR,
+    CLUSTER_CONFIG,
     WORKER_CONFIG_PROPS,
 )
 
@@ -27,32 +26,31 @@ if TYPE_CHECKING:
 
 
 class ClusterOperations:
-    """
-    Cluster operations manager for the current cluster.
+    """Cluster operations manager for the current cluster.
 
-    Constructor Parameters
-    ----------------------
-    `ctx` : `MinitrinoContext`
-        An instantiated `MinitrinoContext` object with user input and context.
-    `cluster` : `Cluster`
+    Parameters
+    ----------
+    ctx : MinitrinoContext
+        An instantiated MinitrinoContext object with user input and context.
+    cluster : Cluster
         An instantiated `Cluster` object.
 
     Methods
     -------
-    `down(sig_kill: bool = False, keep: bool = False)`
+    down(sig_kill: bool = False, keep: bool = False)
         Stops and optionally removes all containers for the current cluster.
-    `remove(obj_type: str, force: bool, labels: Optional[list[str]] = None)`
-        Removes Docker objects (images, volumes, or networks) associated with
-        the current cluster.
-    `restart()`
+    remove(obj_type: str, force: bool, labels: Optional[list[str]] = None)
+        Removes Docker objects (images, volumes, or networks) associated with the
+        current cluster.
+    restart()
         Restarts all cluster containers (coordinator and workers).
-    `restart_containers(c_restart: Optional[list[str]] = None, log_level:
-    LogLevel = LogLevel.VERBOSE)`
-        Restarts all the containers in the provided list. Can apply to any
-        container in the environment, not just the coordinator and workers.
-    `rollback()`
+    restart_containers(c_restart: Optional[list[str]] = None, log_level: LogLevel =
+    LogLevel.VERBOSE)
+        Restarts all the containers in the provided list. Can apply to any container in
+        the environment, not just the coordinator and workers.
+    rollback()
         Terminates the provision operations and removes the cluster.
-    `provision_workers(workers: int)`
+    provision_workers(workers: int)
         Provisions or adjusts worker containers based on the specified number.
     """
 
@@ -61,15 +59,13 @@ class ClusterOperations:
         self._cluster = cluster
 
     def down(self, sig_kill: bool = False, keep: bool = False) -> None:
-        """
-        Stops and optionally removes all containers for the current cluster.
+        """Stop and optionally remove all containers for the current cluster.
 
         Parameters
         ----------
-        `sig_kill` : `bool`
-            If True, containers will be stopped using SIGKILL instead of
-            SIGTERM.
-        `keep` : `bool`
+        sig_kill : bool, optional
+            If True, containers will be stopped using SIGKILL instead of SIGTERM.
+        keep : bool, optional
             If True, containers will be stopped but not removed.
         """
         resources = self._cluster.resource.resources()
@@ -130,61 +126,71 @@ class ClusterOperations:
         self._ctx.logger.info("Brought down all Minitrino containers.")
 
     def remove(
-        self, obj_type: str, force: bool, labels: Optional[list[str]] = None
+        self, obj_type: str, force: bool, modules: Optional[list[str]] = None
     ) -> None:
         """
-        Removes Docker objects (images, volumes, or networks) associated with
-        the current cluster.
-
-        This method deletes the specified Docker resource type filtered by
-        label. If the `obj_type` is `"image"` and the active cluster is not
-        `"*"`, the operation is blocked to avoid removing images tied to
-        specific clusters.
+        Remove Docker objects associated with the current cluster.
 
         Parameters
         ----------
-        `obj_type` : `str`
-            Type of Docker object to remove. Must be one of `"image"`,
-            `"volume"`, or `"network"`.
-        `force` : `bool`
+        obj_type : str
+            Type of Docker object to remove. Must be one of `"image"`, `"volume"`, or
+            `"network"`.
+        force : bool
             If True, forces removal even if the resource is in use.
-        `labels` : `list[str]`, optional
-            Additional labels to filter which resources should be removed.
-            Defaults to `[RESOURCE_LABEL]`.
+        modules : list[str], optional
+            Module names to filter which resources should be removed.
 
         Raises
         ------
-        `UserError`
-            If attempting to remove images for a specific cluster name.
-        """
-        if labels is None or not labels:
-            labels = [RESOURCE_LABEL]
+        UserError
+            If attempting to remove images for a specific cluster or module.
 
-        items: list[ClusterDockerObject | Image] = []
-        for label in labels:
-            resources = self._cluster.resource.resources([label])
-            if obj_type == "image":
-                items.extend(resources.images())
-            elif obj_type == "volume":
-                items.extend(resources.volumes())
-            elif obj_type == "network":
-                items.extend(resources.networks())
+        Notes
+        -----
+        This method deletes the specified Docker resource type(s) filtered by labels
+        (sourced from provided modules, cluster name, or the project root label).
+
+        Because images are global project resources (they are not tied to any one
+        cluster or module), they can only be removed as a global operation (using
+        `--cluster all` and omitting `--module`).
+        """
+        modules = modules or []
+        if obj_type == "image":
+            if modules:
+                self._ctx.logger.warn(
+                    "Cannot remove images for a specific module. Skipping image removal."
+                )
+                return
+            if not self._ctx.all_clusters:
+                self._ctx.logger.warn(
+                    "Cannot remove images for a specific cluster. Skipping image removal."
+                )
+                return
+
+        labels = []
+        for module_name in modules:
+            module: dict | None = self._ctx.modules.data.get(module_name)
+            if module is None:
+                raise UserError(f"Module '{module_name}' not found.")
+            labels.append(module["label"])
+
+        resources = self._cluster.resource.resources(labels)
+        resource_getters = {
+            "image": resources.images,
+            "volume": resources.volumes,
+            "network": resources.networks,
+        }
+        items: list[ClusterDockerObject | Image] = resource_getters[obj_type]()
 
         for obj in items:
-            if obj_type == "image" and not self._ctx.all_clusters:
-                raise UserError(
-                    "Cannot remove images for a specific cluster. Use `--cluster all` "
-                    "to remove all images."
-                )
             try:
                 fields = self._get_identifier_fields(obj_type, obj)
                 identifier = utils.generate_identifier(fields)
-
-                if obj_type in ("volume", "image"):
-                    obj.remove(force=force)
-                elif obj_type == "network":
+                if obj_type == "network":
                     obj.remove()
-
+                else:
+                    obj.remove(force=force)
                 self._ctx.logger.info(f"{obj_type.title()} removed: {identifier}")
             except APIError as e:
                 self._ctx.logger.verbose(
@@ -193,9 +199,7 @@ class ClusterOperations:
                 )
 
     def restart(self) -> None:
-        """
-        Restarts all cluster containers (coordinator and workers).
-        """
+        """Restart all cluster containers (coordinator and workers)."""
         cluster_resources = self._cluster.resource.resources()
         containers = cluster_resources.containers()
 
@@ -222,14 +226,13 @@ class ClusterOperations:
         log_level: LogLevel = LogLevel.VERBOSE,
     ) -> None:
         """
-        Restarts all the containers in the provided list. Can apply to any
-        container in the environment, not just the coordinator and workers.
+        Restart all the containers in the provided list.
 
         Parameters
         ----------
-        `c_restart` : `Optional[List[str]]`, optional
+        c_restart : Optional[list[str]], optional
             List of fully-qualified container names to restart, by default None.
-        `log_level` : `LogLevel`, optional
+        log_level : LogLevel, optional
             Log level for restart messages, by default LogLevel.VERBOSE.
         """
         if c_restart is None:
@@ -238,17 +241,16 @@ class ClusterOperations:
         c_restart = list(set(c_restart))
 
         def _restart_container(container_name: str) -> None:
-            """
-            Helper function to restart a single container.
+            """Restart a single container by name.
 
             Parameters
             ----------
-            `container_name` : `str`
+            container_name : str
                 The name of the container to restart.
 
             Raises
             ------
-            `MinitrinoError`
+            MinitrinoError
                 If the container is not found.
             """
             try:
@@ -282,12 +284,10 @@ class ClusterOperations:
                     )
 
     def rollback(self) -> None:
-        """Terminates the provision operations and removes the cluster."""
-
+        """Terminate the provision operations and remove the cluster."""
         self._ctx.logger.warn(
             f"Rolling back cluster '{self._ctx.cluster_name}'...",
         )
-
         resources = self._cluster.resource.resources()
         containers = resources.containers()
         for c in containers:
@@ -298,26 +298,18 @@ class ClusterOperations:
                     pass
 
     def provision_workers(self, workers: int = 0) -> None:
-        """
-        Provisions or adjusts worker containers based on the specified number.
-
-        Handles five scenarios:
-          1. No `workers` value is provided and no workers are currently running
-             — does nothing.
-          2. A positive `workers` value is provided and no workers exist —
-             provisions new workers.
-          3. No `workers` value is provided but some are already running — uses
-             current count.
-          4. Provided `workers` value is greater than running workers —
-             provisions more workers.
-          5. Provided `workers` value is less than running workers — removes
-             excess workers.
-
-        Parameters
-        ----------
-        `workers` : `int`, optional
-            Number of desired worker containers. Defaults to 0.
-        """
+        """Provision or adjust worker containers based on the specified number."""
+        # Handles five scenarios:
+        #  1. No `workers` value is provided and no workers are currently running — does
+        #     nothing.
+        #  2. A positive `workers` value is provided and no workers exist — provisions
+        #     new workers.
+        #  3. No `workers` value is provided but some are already running — uses current
+        #     count.
+        #  4. Provided `workers` value is greater than running workers — provisions more
+        #     workers.
+        #  5. Provided `workers` value is less than running workers — removes excess
+        #     workers.
 
         # Check for running worker containers
         containers = self._ctx.docker_client.containers.list()
@@ -329,23 +321,20 @@ class ClusterOperations:
             if c.name.startswith("minitrino-worker-")
             and c.labels.get("org.minitrino") == "root"
         ]
+        running_workers = len(worker_containers)
 
         # Scenario 1
-        if workers == 0 and len(worker_containers) == 0:
+        if workers == 0 and running_workers == 0:
             return
-        # Scenario 2
-        if workers > len(worker_containers):
-            pass
+
         # Scenario 3
-        if workers == 0 and len(worker_containers) > 0:
-            workers = len(worker_containers)
-        # Scenario 4
-        if workers > len(worker_containers):
-            pass
+        if workers == 0 and running_workers > 0:
+            workers = running_workers
+
         # Scenario 5
-        if workers < len(worker_containers):
+        if workers < running_workers:
             worker_containers.sort(reverse=True)
-            excess = len(worker_containers) - workers
+            excess = running_workers - workers
             remove = worker_containers[:excess]
             for c in remove:
                 c = self._cluster.resource.container(c)
@@ -390,8 +379,7 @@ class ClusterOperations:
             user = self._ctx.env.get("BUILD_USER")
             tar_path = "/tmp/${CLUSTER_DIST}.tar.gz"
 
-            # Copy the source directory from the coordinator to the worker
-            # container
+            # Copy the source directory from the coordinator to the worker container
             self._ctx.cmd_executor.execute(
                 f"bash -c 'tar czf {tar_path} -C /etc ${{CLUSTER_DIST}}'",
                 container=coordinator,
@@ -429,19 +417,18 @@ class ClusterOperations:
         self, obj_type: str, item: ClusterDockerObject | Image
     ) -> dict[str, str]:
         """
-        Returns a dictionary of identifying fields used to generate
-        human-readable labels for Docker resources.
+        Return a dictionary of identifying fields for Docker resources.
 
         Parameters
         ----------
-        `obj_type` : `str`
+        obj_type : str
             Type of Docker object (container, image, volume, network).
-        `item` : `docker.models` object
+        item : docker.models object
             The Docker object to extract metadata from.
 
         Returns
         -------
-        `dict[str, str]`
+        dict[str, str]
             Mapping of human-readable keys and values.
         """
         if obj_type == "image":

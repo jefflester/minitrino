@@ -25,4 +25,4 @@ services:
       - ${__PORT_LDAP}:636
     labels:
       - org.minitrino=root
-      - org.minitrino.module.ldap=security-ldap
+      - org.minitrino.module=security-ldap

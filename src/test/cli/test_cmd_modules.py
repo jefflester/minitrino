@@ -1,165 +1,246 @@
-#!/usr/bin/env python3
+from logging import Logger
+from typing import Optional
+from dataclasses import dataclass
+from pytest.mark import parametrize, usefixtures
 
-from test import common
+from minitrino.settings import MODULE_ADMIN, MODULE_CATALOG, MODULE_SECURITY
+
 from test.cli import utils
-from minitrino.settings import MODULE_ADMIN
-from minitrino.settings import MODULE_CATALOG
-from minitrino.settings import MODULE_SECURITY
 
-from inspect import currentframe
-from types import FrameType
-from typing import cast
+CMD_MODULES = {"base": "modules"}
+CMD_PROVISION = {"base": "provision", "append": ["--module", "test"]}
+CMD_DOWN = {"base": "down", "append": ["--sig-kill"]}
 
 
-def main():
-    common.log_status(__file__)
-    test_invalid_module()
-    test_valid_module()
-    test_all_modules()
-    test_json()
-    test_type()
-    test_running()
+@dataclass
+class ModuleNameScenario:
+    """
+    Module name scenario.
+
+    Parameters
+    ----------
+    id : str
+        Identifier for scenario, used in pytest parametrize ids.
+    module_name : str
+        The name of the module to test.
+    type_flag : Optional[str]
+        The type flag to use.
+    expected_exit_code : int
+        The expected exit code.
+    expected_output : str
+        The expected output.
+    log_msg : str
+        The log message.
+    """
+
+    id: str
+    module_name: str
+    type_flag: Optional[str]
+    expected_exit_code: int
+    expected_output: str
+    log_msg: str
 
 
-def test_invalid_module():
-    """Ensures Minitrino exists with a user error if an invalid module name is
-    provided."""
+module_name_scenarios = [
+    ModuleNameScenario(
+        id="invalid_module",
+        module_name="not-a-real-module",
+        type_flag=None,
+        expected_exit_code=2,
+        expected_output="Module %s not found.",
+        log_msg="Invalid module name should not be found",
+    ),
+    ModuleNameScenario(
+        id="valid_module",
+        module_name="test",
+        type_flag=None,
+        expected_exit_code=0,
+        expected_output="Module: test",
+        log_msg="Valid module name should print metadata",
+    ),
+    ModuleNameScenario(
+        id="no_match",
+        module_name="test",
+        type_flag="admin",
+        expected_exit_code=0,
+        expected_output="No modules match the specified criteria",
+        log_msg="No matching module for type filter",
+    ),
+]
 
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    result = utils.execute_cli_cmd(["-v", "modules", "--module", "not-a-real-module"])
-    assert result.exit_code == 0, f"Command failed with output: {result.output}"
-    assert "No modules match the specified criteria" in result.output
+@parametrize(
+    "scenario",
+    module_name_scenarios,
+    ids=utils.get_scenario_ids(module_name_scenarios),
+)
+@usefixtures("log_test")
+def test_module_name_scenarios(
+    scenario: ModuleNameScenario,
+    logger: Logger,
+) -> None:
+    """Run each ModuleNameScenario."""
+    append = ["--module", scenario.module_name]
+    if scenario.type_flag:
+        append.extend(["--type", scenario.type_flag])
+    result = utils.cli_cmd(utils.build_cmd(**CMD_MODULES, append=append), logger)
+    utils.assert_exit_code(result, expected=scenario.expected_exit_code)
+    utils.assert_in_output(
+        scenario.expected_output % scenario.module_name, result=result
+    )
 
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
+
+@dataclass
+class TypeScenario:
+    """
+    Module type scenario.
+
+    Parameters
+    ----------
+    id : str
+        Identifier for scenario, used in pytest parametrize ids.
+    type_flag : str
+        The type flag to use.
+    validate_type : str
+        The type to validate.
+    log_msg : str
+        The log message.
+    """
+
+    id: str
+    type_flag: str
+    validate_type: str
+    log_msg: str
 
 
-def test_valid_module():
-    """Ensures the `module` command works when providing a valid module name."""
+type_scenarios = [
+    TypeScenario(
+        id="admin_type",
+        type_flag=MODULE_ADMIN,
+        validate_type=MODULE_ADMIN,
+        log_msg="Type filter works as expected",
+    ),
+    TypeScenario(
+        id="catalog_type",
+        type_flag=MODULE_CATALOG,
+        validate_type=MODULE_CATALOG,
+        log_msg="Type filter works as expected",
+    ),
+    TypeScenario(
+        id="security_type",
+        type_flag=MODULE_SECURITY,
+        validate_type=MODULE_SECURITY,
+        log_msg="Type filter works as expected",
+    ),
+]
 
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    result = utils.execute_cli_cmd(["-v", "modules", "--module", "test"])
+@usefixtures("log_test")
+@parametrize("scenario", type_scenarios, ids=utils.get_scenario_ids(type_scenarios))
+def test_type_scenarios(scenario: TypeScenario, logger: Logger) -> None:
+    """Run each TypeScenario."""
+    append = ["--type", scenario.type_flag, "--json"]
+    result = utils.cli_cmd(utils.build_cmd(**CMD_MODULES, append=append), logger)
+    utils.assert_exit_code(result)
+    types = [MODULE_ADMIN, MODULE_CATALOG, MODULE_SECURITY]
+    types.remove(scenario.validate_type)
+    msg = "Expected path not found in output: /src/lib/modules/%s"
+    for t in types:
+        assert f"/src/lib/modules/{t}" not in result.output, msg % t
+    assert f"/src/lib/modules/{scenario.validate_type}" in result.output, (
+        msg % scenario.validate_type
+    )
 
-    assert result.exit_code == 0, f"Command failed with output: {result.output}"
-    assert all(("Module: test" in result.output, "Test module" in result.output))
 
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
+ALL_MODULES_MSG = "Print all module metadata if no module name is passed"
 
 
-def test_all_modules():
-    """Ensures that all module metadata is printed to the console if a module
-    name is not passed to the command."""
-
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
-
-    result = utils.execute_cli_cmd(["-v", "modules"])
-
-    assert result.exit_code == 0, f"Command failed with output: {result.output}"
-    # Check if "Module:" appears more than 5 times (arbitrary threshold)
-    module_count = result.output.count("Module:")
-    assert (
-        module_count > 5
-    ), f"Expected more modules in the output, found {module_count}."
-
-    # Ensure key fields are present at least once
+@usefixtures("log_test")
+@parametrize("log_msg", [ALL_MODULES_MSG], indirect=True)
+def test_all_modules(logger: Logger) -> None:
+    """
+    Ensure all module metadata is printed to the console if no module name is passed.
+    """
+    result = utils.cli_cmd(utils.build_cmd(**CMD_MODULES), logger)
+    utils.assert_exit_code(result)
     expected_fields = [
         "Description:",
         "IncompatibleModules:",
         "DependentModules:",
         "Versions:",
         "Enterprise:",
+        "DependentClusters:",
     ]
-    for field in expected_fields:
-        assert field in result.output, f"Expected field '{field}' not found in output."
-
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
+    utils.assert_in_output(*expected_fields, result=result)
 
 
-def test_json():
-    """Ensures the `module` command can output module metadata in JSON
-    format."""
+JSON_OUTPUT_MSG = "Output module metadata in JSON format"
 
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    result = utils.execute_cli_cmd(["-v", "modules", "--module", "test", "--json"])
+@usefixtures("log_test")
+@parametrize("log_msg", [JSON_OUTPUT_MSG], indirect=True)
+def test_json(logger: Logger) -> None:
+    """Ensure module metadata is outputted in JSON format."""
+    append = ["--module", "test", "--json"]
+    result = utils.cli_cmd(utils.build_cmd(**CMD_MODULES, append=append), logger)
+    utils.assert_exit_code(result)
+    utils.assert_in_output(f'"type": "{MODULE_CATALOG}"', result=result)
+    utils.assert_in_output('"test":', result=result)
 
-    assert result.exit_code == 0
-    assert all(
-        (f'"type": "{MODULE_CATALOG}"' in result.output, '"test":' in result.output)
+
+TYPE_MODULE_MISMATCH_MSG = "Type + module mismatch returns no modules found"
+
+
+@usefixtures("log_test")
+@parametrize("log_msg", [TYPE_MODULE_MISMATCH_MSG], indirect=True)
+def test_type_module_mismatch(logger: Logger) -> None:
+    """Ensure type + module mismatch returns no modules found."""
+    append = ["--module", "postgres", "--type", MODULE_SECURITY]
+    cmd = utils.build_cmd(**CMD_MODULES, append=append)
+    result = utils.cli_cmd(cmd, logger)
+    utils.assert_exit_code(result)
+    utils.assert_in_output("No modules match the specified criteria", result=result)
+
+
+@parametrize(
+    ("log_msg", "provision_clusters"),
+    [("Output metadata for running modules", {"keepalive": True})],
+    indirect=True,
+)
+@usefixtures("log_test", "provision_clusters", "down")
+def test_running(logger: Logger) -> None:
+    """Ensure the `module` command can output metadata for running modules."""
+    result = utils.cli_cmd(
+        utils.build_cmd(**CMD_MODULES, append=["--json", "--running"]), logger
+    )
+    utils.assert_exit_code(result)
+    utils.assert_in_output(
+        f'"type": "{MODULE_CATALOG}"',
+        f'"type": "{MODULE_SECURITY}"',
+        "file-access-control",
+        result=result,
     )
 
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
+
+RUNNING_CLUSTER_MSG = "Output metadata for running modules in a specific cluster"
 
 
-def test_type():
-    """Ensures type filter works as expected."""
-
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
-
-    result = utils.execute_cli_cmd(["-v", "modules", "--type", MODULE_ADMIN, "--json"])
-    assert result.exit_code == 0
-    assert f"/src/lib/modules/{MODULE_ADMIN}" in result.output
-    assert all(
-        (
-            f"/src/lib/modules/{MODULE_CATALOG}" not in result.output,
-            f"/src/lib/modules/{MODULE_SECURITY}" not in result.output,
-        )
+@parametrize(
+    ("log_msg", "provision_clusters"),
+    [(RUNNING_CLUSTER_MSG, {"keepalive": True})],
+    indirect=True,
+)
+@usefixtures("log_test", "provision_clusters", "down")
+def test_running_cluster(logger: Logger) -> None:
+    """
+    Ensure module metadata is outputted for running modules tied to a specific cluster.
+    """
+    cmd = utils.build_cmd(**CMD_MODULES, append=["--json", "--running"])
+    result = utils.cli_cmd(cmd, logger)
+    utils.assert_exit_code(result)
+    utils.assert_in_output(
+        f'"type": "{MODULE_CATALOG}"',
+        f'"type": "{MODULE_SECURITY}"',
+        "file-access-control",
+        result=result,
     )
-
-    result = utils.execute_cli_cmd(
-        ["-v", "modules", "--type", MODULE_CATALOG, "--json"]
-    )
-    assert result.exit_code == 0
-    assert f"/src/lib/modules/{MODULE_CATALOG}" in result.output
-    assert all(
-        (
-            f"/src/lib/modules/{MODULE_ADMIN}" not in result.output,
-            f"/src/lib/modules/{MODULE_SECURITY}" not in result.output,
-        )
-    )
-
-    result = utils.execute_cli_cmd(
-        ["-v", "modules", "--type", MODULE_SECURITY, "--json"]
-    )
-    assert result.exit_code == 0
-    assert f"/src/lib/modules/{MODULE_SECURITY}" in result.output
-    assert all(
-        (
-            f"/src/lib/modules/{MODULE_ADMIN}" not in result.output,
-            f"/src/lib/modules/{MODULE_CATALOG}" not in result.output,
-        )
-    )
-
-    result = utils.execute_cli_cmd(
-        ["-v", "modules", "--module", "postgres", "--type", MODULE_SECURITY]
-    )
-    assert result.exit_code == 0, f"Command failed with output: {result.output}"
-    assert "No modules match the specified criteria" in result.output
-
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-
-
-def test_running():
-    """Ensures the `module` command can output metadata for running modules."""
-
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
-
-    utils.execute_cli_cmd(["-v", "provision", "--module", "test"])
-    result = utils.execute_cli_cmd(["-v", "modules", "--json", "--running"])
-
-    assert result.exit_code == 0
-    assert all(
-        (
-            f'"type": "{MODULE_CATALOG}"' in result.output,
-            f'"type": "{MODULE_SECURITY}"' in result.output,
-            "file-access-control" in result.output,
-        )
-    )
-
-    utils.execute_cli_cmd(["-v", "down", "--sig-kill"])
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-
-
-if __name__ == "__main__":
-    main()

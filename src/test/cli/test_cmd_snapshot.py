@@ -1,18 +1,28 @@
-#!/usr/bin/env python3
-
 import os
+import shutil
+
+from logging import Logger
+from dataclasses import dataclass
+from typing import Callable, Optional
+from pytest.mark import parametrize, usefixtures
 
 from test import common
 from test.cli import utils
+from test.common import (
+    SNAPSHOT_DIR,
+    MINITRINO_USER_SNAPSHOTS_DIR,
+    MINITRINO_USER_DIR,
+)
 
-from inspect import currentframe
-from types import FrameType
-from typing import cast
+CMD_SNAPSHOT = {"base": "snapshot"}
+CMD_SNAPSHOT_TEST = {"base": "snapshot", "append": ["--name", "test"]}
+CMD_PROVISION = ["-v", "provision", "--module", "test"]
+CMD_DOWN = ["-v", "down", "--sig-kill"]
 
 
-def snapshot_test_yaml_file(snapshot_name="test"):
+def snapshot_test_yaml_file(snapshot_name: str = "test") -> str:
     return os.path.join(
-        common.MINITRINO_USER_SNAPSHOTS_DIR,
+        MINITRINO_USER_SNAPSHOTS_DIR,
         snapshot_name,
         "lib",
         "modules",
@@ -22,326 +32,385 @@ def snapshot_test_yaml_file(snapshot_name="test"):
     )
 
 
-def snapshot_config_file(snapshot_name="test"):
+def snapshot_config_file(snapshot_name: str = "test") -> str:
+    return os.path.join(MINITRINO_USER_SNAPSHOTS_DIR, snapshot_name, "minitrino.cfg")
+
+
+def snapshot_provision_file(snapshot_name: str = "test") -> str:
     return os.path.join(
-        common.MINITRINO_USER_SNAPSHOTS_DIR, snapshot_name, "minitrino.cfg"
+        MINITRINO_USER_SNAPSHOTS_DIR, snapshot_name, "provision-snapshot.sh"
     )
 
 
-def main():
-    common.log_status(__file__)
-    common.start_docker_daemon()
-    test_snapshot_no_directory()
-    test_snapshot_standalone()
-    test_snapshot_active_env()
-    test_snapshot_inactive_env()
-    test_valid_name()
-    test_invalid_name()
-    test_specific_directory()
-    test_specific_directory_invalid()
-    test_command_snapshot_file()
-    test_force()
-    test_scrub()
-    test_no_scrub()
-
-
-def test_snapshot_no_directory():
-    """Verifies that a snapshot can be created when there is no existing
-    snapshots directory in the Minitrino user home directory."""
-
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
-
-    cleanup()
-    common.execute_command(f"rm -rf {common.MINITRINO_USER_SNAPSHOTS_DIR}")
-    result = utils.execute_cli_cmd(
-        ["-v", "snapshot", "--name", "test", "--module", "test"],
-        command_input="y\n",
-    )
-
-    run_assertions(result)
-
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-
-
-def test_snapshot_active_env():
-    """Verifies that a snapshot can be successfully created from an active
-    environment."""
-
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
-
-    cleanup()
-    utils.execute_cli_cmd(["-v", "provision", "--module", "test"])
-    result = utils.execute_cli_cmd(
-        ["-v", "snapshot", "--name", "test"],
-        command_input="y\n",
-    )
-
-    run_assertions(result, False)
-    assert "Creating snapshot of active environment" in result.output
-
-    # This also verifies we pick up on dependent modules that are provisioned
-    # alongside another module
-    command_snapshot_file = os.path.join(
-        common.MINITRINO_USER_SNAPSHOTS_DIR, "test", "provision-snapshot.sh"
-    )
-    with open(command_snapshot_file, "r") as f:
-        assert (
-            "--module file-access-control" and "--module test" in f.read()
-        ), "Expected modules not found in snapshot provisioning file"
-
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-
-
-def test_snapshot_standalone():
-    """Verifies that a the standalone cluster module can be snapshotted."""
-
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
-
-    cleanup()
-    result = utils.execute_cli_cmd(
-        ["-v", "snapshot", "--name", "test"],
-        command_input="y\n",
-    )
-
-    run_assertions(result, False)
-    assert "Snapshotting cluster resources only" in result.output
-
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-
-
-def test_snapshot_inactive_env():
-    """Verifies that a snapshot can be successfully created from an inactive
-    environment."""
-
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
-
-    cleanup()
-    result = utils.execute_cli_cmd(
-        ["-v", "snapshot", "--name", "test", "--module", "test"],
-        command_input="y\n",
-    )
-
-    run_assertions(result)
-    assert "Creating snapshot of specified modules" in result.output
-
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-
-
-def test_valid_name():
-    """Tests that all valid characters can be present and succeed for a given
-    snapshot name."""
-
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
-
-    cleanup()
-    result = utils.execute_cli_cmd(
-        ["-v", "snapshot", "--name", "my-test_123", "--module", "test"],
-        command_input="y\n",
-    )
-
-    run_assertions(result, snapshot_name="my-test_123")
-    assert "Creating snapshot of specified modules" in result.output
-
-    cleanup(snapshot_name="my-test_123")
-
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-
-
-def test_invalid_name():
-    """Tests that all valid characters can be present and succeed for a given
-    snapshot name."""
-
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
-
-    cleanup()
-    result = utils.execute_cli_cmd(
-        ["-v", "snapshot", "--name", "##.my-test?", "--module", "test"],
-        command_input="y\n",
-    )
-
-    assert result.exit_code == 2
-    assert "Illegal character found in provided filename" in result.output
-
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-
-
-def test_specific_directory():
-    """Tests that the snapshot file can be saved in a user-specified
-    directory."""
-
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
-
-    cleanup()
-    result = utils.execute_cli_cmd(
-        [
-            "-v",
-            "snapshot",
-            "--name",
-            "test",
-            "--module",
-            "test",
-            "--directory",
-            "/tmp/",
-        ],
-        command_input="y\n",
-    )
-
-    run_assertions(result, True, check_path=os.path.join(os.sep, "tmp"))
-    assert "Creating snapshot of specified modules" in result.output
-
-    common.execute_command("rm -rf /tmp/test.tar.gz")
-
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-
-
-def test_specific_directory_invalid():
-    """Tests that the snapshot file cannot be saved in an invalid directory."""
-
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
-
-    cleanup()
-    result = utils.execute_cli_cmd(
-        [
-            "-v",
-            "snapshot",
-            "--name",
-            "test",
-            "--module",
-            "test",
-            "--directory",
-            "/tmppp/",
-        ],
-        command_input="y\n",
-    )
-
-    assert "Cannot save snapshot in nonexistent directory:" in result.output
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-
-
-def test_command_snapshot_file():
-    """Verifies that an environment can be provisioned from a snapshot command
-    file (these are written when a snapshot is created so that other users can
-    easily reproduce the environment)."""
-
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
-
-    cleanup()
-    utils.execute_cli_cmd(["-v", "provision", "--module", "test"])
-    utils.execute_cli_cmd(
-        ["-v", "snapshot", "--name", "test"],
-        command_input="y\n",
-    )
-    utils.execute_cli_cmd(["down", "--sig-kill"])
-
-    command_snapshot_file = os.path.join(
-        common.MINITRINO_USER_SNAPSHOTS_DIR, "test", "provision-snapshot.sh"
-    )
-    output = common.execute_command(command_snapshot_file)
-
-    assert output.get("exit_code", None) == 0
-    assert "Environment provisioning complete" in output.get("output", "")
-
-    cleanup()
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-
-
-def test_force():
-    """Verifies that the user can override the check to see if the resulting
-    tarball exists."""
-
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
-
-    result = utils.execute_cli_cmd(
-        ["-v", "snapshot", "--name", "test", "--module", "test", "--force"],
-        command_input="y\n",
-    )
-
-    run_assertions(result)
-    assert "Creating snapshot of specified modules" in result.output
-
-    cleanup()
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-
-
-def test_no_scrub():
-    """Verifies that the user config file is retained in full when scrubbing is
-    disabled."""
-
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
-
-    utils.make_sample_config()
-    result = utils.execute_cli_cmd(
-        ["-v", "snapshot", "--name", "test", "--module", "test", "--no-scrub"],
-        True,
-        command_input="y\n",
-    )
-
-    run_assertions(result)
-    with open(snapshot_config_file()) as f:
-        assert "*" * 20 not in f.read()
-
-    cleanup()
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-
-
-def test_scrub():
-    """Verifies that sensitive data in user config file is scrubbed when
-    scrubbing is enabled."""
-
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
-
-    utils.make_sample_config()
-    result = utils.execute_cli_cmd(
-        ["-v", "snapshot", "--name", "test", "--module", "test"], command_input="y\n"
-    )
-
-    run_assertions(result)
-    with open(snapshot_config_file()) as f:
-        assert "*" * 20 in f.read()
-
-    cleanup()
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
+def snapshot_parametrize_args():
+    return [
+        pytest.param(
+            scenario,
+            "my-test_123",
+            f"Testing snapshot scenario: {getattr(scenario, 'snapshot_name', 'unknown')}",
+            id=scenario.snapshot_name if hasattr(scenario, "snapshot_name") else str(i),
+        )
+        for i, scenario in enumerate(snapshot_scenarios)
+    ]
 
 
 def run_assertions(
-    result, check_yaml=True, snapshot_name="test", check_path=common.SNAPSHOT_DIR
-):
-    """Runs standard assertions for the snapshot command."""
-
+    result: any,
+    check_yaml: bool = True,
+    snapshot_name: str = "test",
+    check_path: str = SNAPSHOT_DIR,
+    logger: Logger = Logger,
+) -> None:
+    """Run standard assertions for the snapshot command."""
+    logger.info(f"Running snapshot assertions for: {snapshot_name}")
     if check_yaml:
-        assert os.path.isfile(
-            snapshot_test_yaml_file(snapshot_name)
-        ), f"Not a valid file: {snapshot_test_yaml_file(snapshot_name)}"
-
-    assert "Snapshot complete" in result.output
-    assert result.exit_code == 0
-    if os.path.isfile(os.path.join(common.MINITRINO_USER_DIR, "minitrino.cfg")):
-        assert os.path.isfile(snapshot_config_file(snapshot_name))
-
-    command_snapshot_file = os.path.join(
-        common.MINITRINO_USER_SNAPSHOTS_DIR, snapshot_name, "provision-snapshot.sh"
-    )
-    assert os.path.isfile(command_snapshot_file)
-
-    # Check that snapshot tarball exists
-    assert os.path.isfile(os.path.join(check_path, f"{snapshot_name}.tar.gz"))
-
-    with open(command_snapshot_file) as f:
-        assert "minitrino -v --env LIB_PATH=" in f.read()
-
-
-def cleanup(snapshot_name="test"):
-    """Removes test snapshot tarball and turns off running resources."""
-
-    if not snapshot_name == "test":
-        common.execute_command(
-            f"rm -rf {os.path.join(common.MINITRINO_USER_SNAPSHOTS_DIR, snapshot_name)}.tar.gz"
+        logger.debug(
+            f"Checking YAML file for snapshot: {snapshot_test_yaml_file(snapshot_name)}"
         )
-    else:
-        common.execute_command(f"rm -rf {common.SNAPSHOT_FILE}")
+        utils.assert_is_file(snapshot_test_yaml_file(snapshot_name))
+    utils.assert_exit_code(result)
+    utils.assert_in_output("Snapshot complete", result=result)
+    if os.path.isfile(os.path.join(MINITRINO_USER_DIR, "minitrino.cfg")):
+        logger.debug(
+            f"Checking config file for snapshot: {snapshot_config_file(snapshot_name)}"
+        )
+        utils.assert_is_file(snapshot_config_file(snapshot_name))
+    provision_file = snapshot_provision_file(snapshot_name)
+    utils.assert_is_file(provision_file)
+    utils.assert_is_file(os.path.join(check_path, f"{snapshot_name}.tar.gz"))
+    utils.assert_in_file("minitrino -v --env LIB_PATH=", provision_file)
+    logger.info(f"Snapshot assertions passed for: {snapshot_name}")
 
-    utils.execute_cli_cmd(["down", "--sig-kill"])
+
+@dataclass
+class SnapshotScenario:
+    setup: Optional[Callable]
+    cmd: str
+    append_flags: list[str]
+    input_val: Optional[str]
+    check_yaml: bool
+    snapshot_name: str
+    check_path: str
+    expected_exit_code: int
+    expected_output: Optional[str]
+    expected_in_file: Optional[str | list[str]]
+    expected_not_in_file: Optional[str | list[str]]
 
 
-if __name__ == "__main__":
-    main()
+snapshot_scenarios = [
+    SnapshotScenario(
+        setup=lambda: shutil.rmtree(MINITRINO_USER_SNAPSHOTS_DIR),
+        cmd=CMD_SNAPSHOT,
+        append_flags=["--name", "test", "--module", "test"],
+        input_val="y\n",
+        check_yaml=True,
+        snapshot_name="test",
+        check_path=SNAPSHOT_DIR,
+        expected_exit_code=0,
+        expected_output="Snapshot complete",
+        expected_in_file=None,
+        expected_not_in_file=None,
+    ),
+    SnapshotScenario(
+        setup=None,
+        cmd=CMD_SNAPSHOT,
+        append_flags=["--name", "test"],
+        input_val="y\n",
+        check_yaml=False,
+        snapshot_name="test",
+        check_path=SNAPSHOT_DIR,
+        expected_exit_code=0,
+        expected_output="Creating snapshot of active environment",
+        expected_in_file=["--module file-access-control", "--module test"],
+        expected_not_in_file=None,
+    ),
+    SnapshotScenario(
+        setup=None,
+        cmd=CMD_SNAPSHOT,
+        append_flags=["--name", "test"],
+        input_val="y\n",
+        check_yaml=False,
+        snapshot_name="test",
+        check_path=SNAPSHOT_DIR,
+        expected_exit_code=0,
+        expected_output="Creating snapshot of cluster resources only",
+        expected_in_file=None,
+        expected_not_in_file=None,
+    ),
+    SnapshotScenario(
+        setup=None,
+        cmd=CMD_SNAPSHOT,
+        append_flags=["--name", "test", "--module", "test"],
+        input_val="y\n",
+        check_yaml=True,
+        snapshot_name="test",
+        check_path=SNAPSHOT_DIR,
+        expected_exit_code=0,
+        expected_output="Creating snapshot of specified modules",
+        expected_in_file=None,
+        expected_not_in_file=None,
+    ),
+]
+
+
+@parametrize(
+    "scenario,cleanup_snapshot,log_msg",
+    snapshot_parametrize_args(),
+    indirect=["cleanup_snapshot", "log_msg"],
+)
+@usefixtures("log_test", "down", "cleanup_snapshot")
+def test_snapshot_scenarios(
+    scenario: SnapshotScenario,
+    logger: Logger,
+) -> None:
+    """
+    Run each SnapshotScenario.
+
+    Parameters
+    ----------
+    scenario : SnapshotScenario
+        The scenario to run.
+    logger : Logger
+        Logger to use for logging.
+    """
+    if scenario.setup:
+        logger.info("Running scenario setup function.")
+        scenario.setup()
+    cmd = utils.build_cmd(scenario.cmd, append=scenario.append_flags)
+    result = utils.cli_cmd(cmd, logger, scenario.input_val)
+    if scenario.check_yaml:
+        logger.debug(
+            f"Checking YAML file for snapshot: {snapshot_test_yaml_file(scenario.snapshot_name)}"
+        )
+        utils.assert_is_file(snapshot_test_yaml_file(scenario.snapshot_name))
+    utils.assert_exit_code(result, expected=scenario.expected_exit_code)
+    if scenario.expected_output:
+        logger.debug(f"Checking expected output: {scenario.expected_output}")
+        utils.assert_in_output(scenario.expected_output, result=result)
+    if scenario.expected_in_file:
+        logger.debug(f"Checking expected content in file: {scenario.expected_in_file}")
+        if isinstance(scenario.expected_in_file, list):
+            for item in scenario.expected_in_file:
+                utils.assert_in_file(
+                    item, snapshot_provision_file(scenario.snapshot_name)
+                )
+        else:
+            utils.assert_in_file(
+                scenario.expected_in_file,
+                snapshot_provision_file(scenario.snapshot_name),
+            )
+    if scenario.expected_not_in_file:
+        logger.debug(f"Checking content NOT in file: {scenario.expected_not_in_file}")
+        if isinstance(scenario.expected_not_in_file, list):
+            for item in scenario.expected_not_in_file:
+                utils.assert_not_in_file(
+                    item, snapshot_config_file(scenario.snapshot_name)
+                )
+        else:
+            utils.assert_not_in_file(
+                scenario.expected_not_in_file,
+                snapshot_config_file(scenario.snapshot_name),
+            )
+    if os.path.isfile(os.path.join(MINITRINO_USER_DIR, "minitrino.cfg")):
+        logger.debug(
+            f"Checking config file for snapshot: {snapshot_config_file(scenario.snapshot_name)}"
+        )
+        utils.assert_is_file(snapshot_config_file(scenario.snapshot_name))
+    provision_file = snapshot_provision_file(scenario.snapshot_name)
+    utils.assert_is_file(provision_file)
+    utils.assert_is_file(
+        os.path.join(scenario.check_path, f"{scenario.snapshot_name}.tar.gz")
+    )
+    utils.assert_in_file("minitrino -v --env LIB_PATH=", provision_file)
+
+
+@parametrize(
+    "cleanup_snapshot,log_msg",
+    [
+        pytest.param(
+            **{
+                "cleanup_snapshot": "my-test_123",
+                "log_msg": "Testing snapshot with valid name",
+            },
+            id="valid_name",
+        ),
+    ],
+    indirect=["cleanup_snapshot", "log_msg"],
+)
+@usefixtures("log_test", "down", "cleanup_snapshot")
+def test_valid_name(logger: Logger):
+    """Test valid snapshot name."""
+    cmd = utils.build_cmd(
+        **CMD_SNAPSHOT, append=["--name", "my-test_123", "--module", "test"]
+    )
+    result = utils.cli_cmd(cmd, logger, "y\n")
+    run_assertions(result, snapshot_name="my-test_123", logger=logger)
+    utils.assert_in_output("Creating snapshot of specified modules", result=result)
+
+
+@parametrize(
+    "log_msg",
+    [pytest.param("Testing invalid snapshot name: ##.my-test?", id="invalid_name")],
+    indirect=True,
+)
+@usefixtures("log_test", "down", "cleanup_snapshot")
+def test_invalid_name(logger: Logger) -> None:
+    """
+    Test invalid snapshot name.
+
+    Parameters
+    ----------
+    logger : Logger
+        Logger to use for logging.
+    """
+    cmd = utils.build_cmd(
+        **CMD_SNAPSHOT, append=["--name", "##.my-test?", "--module", "test"]
+    )
+    result = utils.cli_cmd(cmd, logger, "y\n")
+    utils.assert_exit_code(result, expected=2)
+    utils.assert_in_output(
+        "Illegal character found in provided filename", result=result
+    )
+
+
+@parametrize(
+    "log_msg",
+    [
+        pytest.param(
+            "Testing snapshot to user-specified directory: /tmp/",
+            id="specific_directory",
+        )
+    ],
+    indirect=True,
+)
+@usefixtures("log_test", "down", "cleanup_snapshot")
+def test_specific_directory(logger: Logger) -> None:
+    """
+    Test that the snapshot file can be saved in a user-specified directory.
+
+    Parameters
+    ----------
+    logger : Logger
+        Logger to use for logging.
+    """
+    cmd = utils.build_cmd(**CMD_SNAPSHOT_TEST, append=["--directory", "/tmp/"])
+    result = utils.cli_cmd(cmd, logger, "y\n")
+    run_assertions(result, True, check_path=os.path.join(os.sep, "tmp"), logger=logger)
+    utils.assert_in_output("Creating snapshot of specified modules", result=result)
+    os.remove(os.path.join(os.sep, "tmp", "test.tar.gz"))
+
+
+@parametrize(
+    "log_msg",
+    [
+        pytest.param(
+            "Testing snapshot to invalid directory: /tmppp/",
+            id="specific_directory_invalid",
+        )
+    ],
+    indirect=True,
+)
+@usefixtures("log_test", "down", "cleanup_snapshot")
+def test_specific_directory_invalid(logger: Logger) -> None:
+    """
+    Test that the snapshot file cannot be saved in an invalid directory.
+
+    Parameters
+    ----------
+    logger : Logger
+        Logger to use for logging.
+    """
+    cmd = utils.build_cmd(**CMD_SNAPSHOT_TEST, append=["--directory", "/tmppp/"])
+    result = utils.cli_cmd(cmd, logger, "y\n")
+    utils.assert_exit_code(result, expected=2)
+    utils.assert_in_output(
+        "Cannot save snapshot in nonexistent directory:", result=result
+    )
+
+
+@parametrize(
+    "log_msg",
+    [pytest.param("Testing snapshot provision file execution", id="provision_file")],
+    indirect=True,
+)
+@usefixtures("log_test", "down", "cleanup_snapshot")
+def test_provision_file(logger: Logger) -> None:
+    """
+    Test snapshot `provision-snapshot.sh` execution.
+
+    Parameters
+    ----------
+    logger : Logger
+        Logger to use for logging.
+    """
+    utils.cli_cmd(CMD_PROVISION, logger)
+    utils.cli_cmd(CMD_SNAPSHOT_TEST, logger, "y\n")
+    utils.cli_cmd(CMD_DOWN, logger)
+    provision_file = snapshot_provision_file()
+    logger.debug(f"Executing provision file: {provision_file}")
+    output = common.execute_cmd(["sh", provision_file])
+    utils.assert_exit_code(output)
+    utils.assert_in_output("Environment provisioning complete", result=output)
+
+
+@parametrize(
+    "log_msg",
+    [pytest.param("Testing --force option for snapshot command", id="force")],
+    indirect=True,
+)
+@usefixtures("log_test", "down", "cleanup_snapshot")
+def test_force(logger: Logger) -> None:
+    """
+    Verify overwrite of existing snapshot.
+
+    Parameters
+    ----------
+    logger : Logger
+        Logger to use for logging.
+    """
+    cmd = utils.build_cmd(**CMD_SNAPSHOT_TEST, append=["--force"])
+    result = utils.cli_cmd(cmd, logger, "y\n")
+    run_assertions(result, logger=logger)
+    utils.assert_in_output("Creating snapshot of specified modules", result=result)
+
+
+@parametrize(
+    "log_msg",
+    [pytest.param("Testing --no-scrub option for snapshot command", id="no_scrub")],
+    indirect=True,
+)
+@usefixtures("log_test", "down", "cleanup_snapshot")
+def test_no_scrub(logger: Logger) -> None:
+    """
+    Verify that the user config file is retained in full when scrubbing is disabled.
+
+    Parameters
+    ----------
+    logger : Logger
+        Logger to use for logging.
+    """
+    cmd = utils.build_cmd(**CMD_SNAPSHOT_TEST, append=["--no-scrub"])
+    result = utils.cli_cmd(cmd, logger, "y\n")
+    run_assertions(result, logger=logger)
+    utils.assert_not_in_file("*" * 20, snapshot_config_file())
+
+
+@parametrize(
+    "log_msg",
+    [pytest.param("Testing scrubbing enabled for snapshot command", id="scrub")],
+    indirect=True,
+)
+@usefixtures("log_test", "down", "cleanup_snapshot")
+def test_scrub(logger: Logger) -> None:
+    """
+    Verify that sensitive data in user config file is scrubbed.
+
+    Parameters
+    ----------
+    logger : Logger
+        Logger to use for logging.
+    """
+    cmd = utils.build_cmd(**CMD_SNAPSHOT_TEST)
+    result = utils.cli_cmd(cmd, logger, "y\n")
+    run_assertions(result, logger=logger)
+    utils.assert_in_file("*" * 20, snapshot_config_file())

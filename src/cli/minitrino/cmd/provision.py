@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Provisioning commands for Minitrino CLI."""
 
 import os
 import stat
@@ -69,28 +69,26 @@ def cli(
     no_rollback: bool,
     docker_native: str,
 ) -> None:
-    """
-    Provisions a Minitrino environment using the specified modules and settings.
-    If no options are provided, a standalone coordinator is provisioned.
+    """Provision the environment with the specified modules and settings.
 
-    Supports Trino or Starburst distributions, dynamic worker scaling, and
-    native Docker Compose arguments. Dependent clusters are automatically
-    provisioned after the primary environment is launched.
+    If no options are provided, a standalone coordinator is provisioned. Supports Trino
+    or Starburst distributions, dynamic worker scaling, and native Docker Compose
+    arguments. Dependent clusters are automatically provisioned after the primary
+    environment is launched.
 
     Parameters
     ----------
-    `modules` : list[str]
-        A list of module names to provision.
-    `image` : str
-        The cluster image to use ('trino' or 'starburst').
-    `workers` : int
-        Number of workers to provision. Defaults to 0.
-    `no_rollback` : bool
-        If True, skips cleanup in the event of a failure.
-    `docker_native` : str
+    modules : list[str]
+        One or more modules to provision in the cluster.
+    image : str
+        Cluster image type (trino or starburst).
+    workers : int
+        Number of cluster workers to provision.
+    no_rollback : bool
+        If True, disables rollback on failure.
+    docker_native : str
         Additional Docker Compose flags to append to the launch command.
     """
-
     # An asterisk is invalid in this context
     if ctx.all_clusters:
         raise UserError(
@@ -118,7 +116,7 @@ def cli(
     utils.check_daemon(ctx.docker_client)
     utils.check_lib(ctx)
     ctx.cluster.validator.check_cluster_ver()
-    ctx.cluster.validator.check_version_requirements(modules_list)
+    ctx.modules.check_module_version_requirements(modules_list)
     modules_list = append_running_modules(modules_list)
     modules_list = ctx.modules.check_dep_modules(modules_list)
     runner(modules_list, workers, no_rollback, docker_native)
@@ -139,25 +137,24 @@ def runner(
     docker_native: str = "",
     cluster: Optional[dict] = None,
 ) -> None:
-    """
-    Executes the provisioning flow for a given cluster and module set.
+    """Execute the provisioning flow for a given cluster and module set.
 
-    If provisioning a dependent cluster, updates the cluster context and
-    environment variables before executing the provisioning steps.
+    If provisioning a dependent cluster, updates the cluster context and environment
+    variables before executing the provisioning steps.
 
     Parameters
     ----------
-    `modules` : list[str], optional
+    modules : list[str], optional
         The modules to provision. Defaults to an empty list if not provided.
-    `workers` : int, optional
+    workers : int, optional
         The number of workers to provision. Defaults to 0.
-    `no_rollback` : bool, optional
+    no_rollback : bool, optional
         Whether rollback should be skipped on failure. Defaults to False.
-    `docker_native` : str, optional
+    docker_native : str, optional
         Additional Docker Compose flags to include. Defaults to an empty string.
-    `cluster` : dict, optional
-        Optional dictionary representing a dependent cluster configuration.
-        Defaults to None.
+    cluster : dict, optional
+        Optional dictionary representing a dependent cluster configuration. Defaults to
+        None.
     """
     if modules is None:
         modules = []
@@ -168,9 +165,9 @@ def runner(
         f"Starting {ctx.env.get('CLUSTER_DIST').title()} cluster provisioning..."
     )
 
-    # If a dependent cluster is being provisioned, we need to grab the cluster's
-    # modules and workers, then update the environment variables so that the
-    # Compose YAMLs use the correct values.
+    # If a dependent cluster is being provisioned, we need to grab the cluster's modules
+    # and workers, then update the environment variables so that the Compose YAMLs use
+    # the correct values.
     if cluster:
         ctx.logger.info(f"Provisioning dependent cluster: {cluster['name']}...")
         modules = cluster.get("modules", [])
@@ -199,26 +196,17 @@ def runner(
         ctx.cluster.ops.provision_workers(workers)
 
     except Exception as e:
-        rollback(no_rollback)
+        rollback(ctx, no_rollback)
         raise e
 
 
 @utils.pass_environment()
-def set_distribution(ctx: MinitrinoContext, image: str = "") -> None:
-    """
-    Determines the distribution type (Trino or Starburst) based on the provided
-    image type and sets distribution-specific environment variables.
+def set_distribution(ctx: MinitrinoContext) -> None:
+    """Determine the cluster distribution.
 
-    If the image is not specified, it defaults to 'trino'.
-
-    Parameters
-    ----------
-    `image` : str, optional
-        The image type to set ('trino' or 'starburst'). Defaults to empty
-        string, which results in 'trino' being used.
+    Set the distribution for the cluster based on the configuration.
     """
-    if not image:
-        image = ctx.env.get("IMAGE", "trino")
+    image = ctx.env.get("IMAGE", "trino")
     if image != "trino" and image != "starburst":
         raise UserError(
             f"Invalid image type '{image}'. Please specify either 'trino' or 'starburst'.",
@@ -232,27 +220,11 @@ def set_distribution(ctx: MinitrinoContext, image: str = "") -> None:
 
 
 @utils.pass_environment()
-def append_running_modules(
-    ctx: MinitrinoContext, modules: Optional[list[str]] = None
-) -> list[str]:
+def append_running_modules(ctx: MinitrinoContext) -> list[str]:
+    """Check for running modules.
+
+    Append running modules to the context.
     """
-    Checks if any modules are currently running. If they are, appends them to
-    the provided modules list and returns the updated list without duplicates.
-
-    Parameters
-    ----------
-    `modules` : list[str], optional
-        The list of modules to which running modules will be appended. Defaults
-        to an empty list if not provided.
-
-    Returns
-    -------
-    list[str]
-        The updated list of modules including any running modules.
-    """
-    if modules is None:
-        modules = []
-
     ctx.logger.verbose("Checking for running modules...")
     running_modules = ctx.modules.running_modules()
 
@@ -262,31 +234,18 @@ def append_running_modules(
             f"Appending the running module list to the list of modules to provision.",
         )
 
-    modules = list(modules)
+    modules = []
     modules.extend(running_modules.keys())
     return list(set(modules))
 
 
 @utils.pass_environment()
-def chunk(ctx: MinitrinoContext, modules: Optional[list[str]] = None) -> str:
-    """
+def chunk(ctx: MinitrinoContext) -> str:
+    """Construct a chunk of configuration.
+
     Constructs a docker compose command chunk for the specified modules.
-
-    Parameters
-    ----------
-    `modules` : list[str], optional
-        The list of modules to include in the command chunk. Defaults to an
-        empty list if not provided.
-
-    Returns
-    -------
-    `str`
-        A string containing the docker compose command chunk with module YAML
-        paths.
     """
-    if modules is None:
-        modules = []
-
+    modules = ctx.modules.data.keys()
     chunk: list[str] = []
     for module in modules:
         yaml_file = ctx.modules.data.get(module, {}).get("yaml_file", "")
@@ -298,22 +257,9 @@ def chunk(ctx: MinitrinoContext, modules: Optional[list[str]] = None) -> str:
 def build_command(
     ctx: MinitrinoContext, docker_native: str = "", chunk: str = ""
 ) -> str:
-    """
+    """Build the cluster command.
+
     Builds a formatted docker compose command string for shell execution.
-
-    Parameters
-    ----------
-    `docker_native` : str, optional
-        Additional native Docker Compose options to append to the command.
-        Defaults to an empty string.
-    `chunk` : str, optional
-        The docker compose command chunk containing module YAML paths. Defaults
-        to an empty string.
-
-    Returns
-    -------
-    `str`
-        The full docker compose command string ready for execution.
     """
     cmd = []
     cmd.extend(
@@ -338,15 +284,9 @@ def build_command(
 def execute_bootstraps(
     ctx: MinitrinoContext, modules: Optional[list[str]] = None
 ) -> None:
-    """
-    Executes bootstrap scripts inside module containers. After executing each
-    bootstrap script, the container is restarted.
+    """Execute bootstrap scripts.
 
-    Parameters
-    ----------
-    `modules` : list[str], optional
-        The list of modules whose bootstrap scripts should be executed. Defaults
-        to an empty list if not provided.
+    Run all bootstrap scripts for the cluster.
     """
     if modules is None:
         modules = []
@@ -360,11 +300,11 @@ def execute_bootstraps(
             continue
         container_name = service[1].get("container_name", "")
         if not container_name:
-            # If there is no container name, the service name becomes the name
-            # of the container
+            # If there is no container name, the service name becomes the name of the
+            # container
             container_name = service[0]
         fq_container_name = ctx.cluster.resource.fq_container_name(container_name)
-        execute_container_bootstrap(bootstrap, fq_container_name, service[2])
+        execute_container_bootstrap(ctx, bootstrap, fq_container_name, service[2])
         ctx.cluster.ops.restart_containers([fq_container_name])
 
 
@@ -375,17 +315,9 @@ def execute_container_bootstrap(
     fq_container_name: str = "",
     yaml_file: str = "",
 ) -> None:
-    """
-    Executes a single bootstrap script inside a specified container.
+    """Execute a container bootstrap.
 
-    Parameters
-    ----------
-    `bootstrap` : str
-        The name of the bootstrap script to execute.
-    `fq_container_name` : str
-        The fully qualified container name where the bootstrap will be executed.
-    `yaml_file` : str
-        The path to the module's YAML file, used to locate the bootstrap script.
+    Executes a single bootstrap script inside a specified container.
     """
     bootstrap_file = os.path.join(
         os.path.dirname(yaml_file), "resources", "bootstrap", bootstrap
@@ -421,15 +353,9 @@ def execute_container_bootstrap(
 
 @utils.pass_environment()
 def rollback(ctx: MinitrinoContext, no_rollback: bool = False) -> None:
-    """
-    Performs rollback of provisioned clusters in case of errors unless rollback
-    is disabled.
+    """Perform a rollback operation.
 
-    Parameters
-    ----------
-    `no_rollback` : bool, optional
-        If True, disables rollback and leaves provisioned resources intact.
-        Defaults to False.
+    Roll back the cluster to a previous state.     Defaults to False.
     """
     if no_rollback:
         ctx.logger.warn(

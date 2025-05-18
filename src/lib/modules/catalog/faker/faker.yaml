@@ -6,4 +6,4 @@ services:
       - ./modules/catalog/faker/resources/cluster/faker.properties:/mnt/etc/catalog/faker.properties:ro
     labels:
       - org.minitrino=root
-      - org.minitrino.module.faker=catalog-faker
+      - org.minitrino.module=catalog-faker

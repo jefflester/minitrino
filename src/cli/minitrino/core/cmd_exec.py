@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Command execution utilities for Minitrino clusters."""
 
 from __future__ import annotations
 
@@ -18,19 +18,17 @@ if TYPE_CHECKING:
 
 class CommandExecutor:
     """
-    Provides execution of commands in the host shell or within Docker
-    containers, with customizable handling of standard output and error streams,
-    environment variables, and error management.
+    Execute commands in the host shell or within Docker containers.
 
-    Constructor Parameters
-    ----------------------
-    `ctx` : `MinitrinoContext`
+    Parameters
+    ----------
+    ctx : MinitrinoContext
         An instantiated MinitrinoContext object with user input and context.
 
     Methods
     -------
-    `execute(*args, **kwargs)`
-        Executes commands in the user's shell or inside a container.
+    execute(*args, **kwargs)
+        Execute commands in the user's shell or inside a container.
     """
 
     def __init__(self, ctx: MinitrinoContext) -> None:
@@ -38,47 +36,38 @@ class CommandExecutor:
 
     def execute(self, *args: str, **kwargs) -> list[CommandResult]:
         """
-        Executes commands in the user's shell or inside a Docker container.
-
-        This method returns the output from each command and also stores the
-        result in the `output` attribute.
+        Execute commands in the user's shell or inside a Docker container.
 
         Parameters
         ----------
-        `*args` : `str`
+        *args : str
             One or more command strings to execute, in the order provided.
-
-        Keyword Arguments
-        -----------------
-        `trigger_error` : `bool`, optional
-            If False, errors (non-zero exit codes) from executed commands will
-            not raise an exception. Defaults to True.
-        `environment` : `dict`, optional
-            A dictionary of environment variables to pass to the subprocess or
-            container.
-        `suppress_output` : `bool`, optional
-            If True, suppresses printing command output to stdout.
-        `container` : `docker.models.containers.Container`, optional
-            If provided, the command is executed inside the given Docker
-            container.
-        `docker_user` : `str`, optional
-            The user to execute the command as within the Docker container.
-            Defaults to root.
+        **kwargs : dict
+            Keyword arguments to pass to the subprocess or container.
 
         Returns
         -------
-        `list[CommandResult]`
-            A list of `CommandResult` objects, one per command, with the
-            following attributes:
+        list[CommandResult]
+            A list of `CommandResult` objects, one per command.
 
-            - `command` : `str`
-                The command string that was executed.
-            - `output` : `str`
-                The combined output of stdout and stderr.
-            - `exit_code` : `int`
-                The exit code returned by the command.
+        Notes
+        -----
+        Valid keyword arguments are:
+
+        trigger_error : bool, optional
+            If `False`, errors (non-zero exit codes) from executed commands will not
+            raise an exception. Defaults to `True`.
+        environment : dict, optional
+            A dictionary of environment variables to pass to the subprocess or
+            container.
+        suppress_output : bool, optional
+            If `True`, suppresses printing command output to stdout.
+        container : docker.models.containers.Container, optional
+            If provided, the command is executed inside the given Docker container.
+        docker_user : str, optional
+            The user to execute the command as within the Docker container. Defaults to
+            `root`.
         """
-
         output: list[CommandResult] = []
         if kwargs.get("container", None):
             kwargs["environment"] = self._construct_environment(
@@ -92,50 +81,24 @@ class CommandExecutor:
             )
             for command in args:
                 output.append(self._execute_in_shell(command, **kwargs))
-
         return output
 
     def _execute_in_shell(self, command: str, **kwargs) -> CommandResult:
         """
-        Executes a command in the host shell.
-
-        This method uses `subprocess.Popen` to run a shell command in the host
-        environment, optionally streaming or suppressing its output. ANSI escape
-        sequences in the output are stripped before returning. If the command
-        fails and `trigger_error` is `True`, a `MinitrinoError` is raised.
+        Execute a command in the user's shell.
 
         Parameters
         ----------
-        `command` : `str`
-            The shell command to execute.
-
-        Keyword Arguments
-        -----------------
-        `environment` : `dict`, optional
-            Environment variables to use in the shell process.
-        `suppress_output` : `bool`, optional
-            If True, suppresses logging of the command output. Defaults to
-            False.
-        `trigger_error` : `bool`, optional
-            If True, raises an error when the command exits with a non-zero
-            code. Defaults to True.
+        command : str
+            The command string to execute.
+        **kwargs : dict
+            Keyword arguments to pass to the subprocess.
 
         Returns
         -------
-        `CommandResult`
-            A dictionary containing:
-
-            - `command` : `str` — the original command.
-            - `output` : `str` — the processed output (with ANSI codes
-                removed).
-            - `exit_code` : `int` — the command's exit status code.
-
-        Raises
-        ------
-        `MinitrinoError`
-            If the command fails and trigger_error is True.
+        CommandResult
+            The result of the command execution.
         """
-
         self._ctx.logger.verbose(
             f"Executing command in shell:\n{command}",
         )
@@ -151,9 +114,9 @@ class CommandExecutor:
 
         if not kwargs.get("suppress_output", False):
             # Stream the output of the executed command line-by-line.
-            # `universal_newlines=True` ensures output is generated as a string,
-            # so there is no need to decode bytes. The only cleansing we need to
-            # do is to run the string through the `_strip_ansi()` function.
+            # `universal_newlines=True` ensures output is generated as a string, so
+            # there is no need to decode bytes. The only cleansing we need to do is to
+            # run the string through the `_strip_ansi()` function.
 
             started_stream = False
             output = ""
@@ -186,50 +149,20 @@ class CommandExecutor:
 
     def _execute_in_container(self, command: str = "", **kwargs) -> CommandResult:
         """
-        Executes a command inside a Docker container using the Docker SDK.
-
-        This method is similar to `docker exec`, streaming output line-by-line
-        from the container. ANSI escape sequences are removed, and execution
-        failures are handled with optional error suppression or exceptions.
+        Execute a command inside a Docker container.
 
         Parameters
         ----------
-        `command` : `str`, optional
-            The command to execute inside the container. Defaults to an empty
-            string.
-
-        Keyword Arguments
-        -----------------
-        `container` : `docker.models.containers.Container`
-            The Docker container object in which to execute the command.
-        `environment` : `dict`, optional
-            Environment variables to set within the container execution context.
-        `suppress_output` : `bool`, optional
-            If True, suppresses logging of output during execution. Defaults
-            to False.
-        `docker_user` : `str`, optional
-            The user inside the container to run the command as. Defaults to
-            'root'.
-        `trigger_error` : `bool`, optional
-            If True, raises an error when the command exits with a non-zero
-            status. Defaults to True.
+        command : str
+            The command to execute inside the container. Defaults to an empty string.
+        **kwargs : dict
+            Keyword arguments to pass to the subprocess.
 
         Returns
         -------
-        `CommandResult`
-            A `CommandResult` object containing:
-
-            - `command` : `str` — the original command string.
-            - `output` : `str` — the captured output with ANSI codes stripped.
-            - `exit_code` : `int` — the container's exit code for the command.
-
-        Raises
-        ------
-        `MinitrinoError`
-            If no container is provided, or if the command fails and
-            `trigger_error` is True.
+        CommandResult
+            The result of the command execution.
         """
-
         container = kwargs.get("container", None)
         if container is None:
             raise MinitrinoError(
@@ -255,12 +188,11 @@ class CommandExecutor:
         # `output` is a generator that yields response chunks
         output_generator = self._ctx.api_client.exec_start(exec_handler, stream=True)
 
-        # Output from the generator is returned as bytes, so they need to be
-        # decoded to strings. Response chunks are not guaranteed to be full
-        # lines. A newline in the output chunk will trigger a log dump of the
-        # current `full_line` up to the first newline in the current chunk. The
-        # remainder of the chunk (if any) resets the `full_line` var, then log
-        # dumped when the next newline is received.
+        # Output from the generator is returned as bytes, so they need to be decoded to
+        # strings. Response chunks are not guaranteed to be full lines. A newline in the
+        # output chunk will trigger a log dump of the current `full_line` up to the
+        # first newline in the current chunk. The remainder of the chunk (if any) resets
+        # the `full_line` var, then log dumped when the next newline is received.
 
         output = ""
         full_line = ""
@@ -316,31 +248,20 @@ class CommandExecutor:
         self, environment: dict | None = None, container=None
     ) -> dict:
         """
-        Merges a provided environment dictionary with the base environment.
-
-        For shell execution, this uses the host's current environment. For
-        container execution, it pulls environment variables from the container.
-        In both cases, user-provided variables in `environment` take precedence.
+        Construct the environment dictionary for command execution.
 
         Parameters
         ----------
-        `environment` : `dict`, optional
-            A dictionary of environment variables to merge into the base
-            environment. These variables override any duplicates in the host or
-            container environment. Defaults to an empty dictionary.
-        `container` : `docker.models.containers.Container`, optional
-            If provided, retrieves the base environment from the container
-            instead of the host.
+        environment : dict, optional
+            Additional environment variables to include.
+        container : docker.models.containers.Container, optional
+            The container for which to construct the environment.
 
         Returns
         -------
-        `dict`
-            A merged environment dictionary suitable for shell or container
-            execution.
+        dict
+            The constructed environment dictionary.
         """
-
-        # Remove conflicting keys from host environment; Minitrino environment
-        # variables take precedence
         if environment is None:
             environment = {}
 
@@ -370,20 +291,20 @@ class CommandExecutor:
 
     def _strip_ansi(self, value: str = "") -> str:
         """
-        Removes ANSI escape sequences from the given string.
+        Remove ANSI escape sequences from the given string.
 
         Parameters
         ----------
-        `value` : `str`, optional
+        value : str, optional
             Input string possibly containing ANSI escape codes.
 
         Returns
         -------
-        `str`
+        str
             The cleaned string with ANSI codes removed.
         """
-        # Strip ANSI codes before Click so that our logging helpers know if it's
-        # an empty string or not.
+        # Strip ANSI codes before Click so that our logging helpers know if it's an
+        # empty string or not.
         ansi_regex = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
         return ansi_regex.sub("", value)
 
@@ -395,11 +316,11 @@ class CommandResult:
 
     Attributes
     ----------
-    `command` : `str`
+    command : str
         The command string that was executed.
-    `output` : `str`
+    output : str
         The combined output of stdout and stderr.
-    `exit_code` : `int`
+    exit_code : int
         The exit code returned by the command.
     """
 

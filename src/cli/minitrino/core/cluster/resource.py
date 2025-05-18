@@ -1,8 +1,12 @@
-#!/usr/bin/env python3
+"""Cluster resource management for Minitrino.
+
+This module provides classes and functions to manage Docker resources (containers,
+volumes, images, networks) for Minitrino clusters.
+"""
 
 from __future__ import annotations
 
-from minitrino.settings import COMPOSE_LABEL, RESOURCE_LABEL
+from minitrino.settings import COMPOSE_LABEL_KEY, ROOT_LABEL
 
 from docker.models.containers import Container
 from docker.models.images import Image
@@ -16,29 +20,28 @@ if TYPE_CHECKING:
 
 class ClusterResourceManager:
     """
-    Exposes cluster resources operations.
+    Expose cluster resources operations.
 
-    Constructor Parameters
-    ----------------------
-    `ctx` : `MinitrinoContext`
-        An instantiated `MinitrinoContext` object with user input and context.
+    Parameters
+    ----------
+    ctx : MinitrinoContext
+        An instantiated MinitrinoContext object with user input and context.
 
     Methods
     -------
-    `resources(addl_labels: Optional[list[str]] = None)`
-        Collects Docker objects (containers, volumes, images, networks) for the
-        current cluster or all clusters if the context's cluster name is
-        `"all"`.
-    `unfiltered_resources()`
-        Collects all Docker objects associated with Minitrino. Unlike the
-        `resources()` method, this method does not group resources by cluster or
-        take additional labels to filter by.
-    `compose_project_name(cluster_name: str = "")`
+    resources(addl_labels: Optional[list[str]] = None)
+        Collects Docker objects (containers, volumes, images, networks) for the current
+        cluster or all clusters if the context's cluster name is `"all"`.
+    unfiltered_resources()
+        Collects all Docker objects associated with Minitrino. Unlike the `resources()`
+        method, this method does not group resources by cluster or take additional
+        labels to filter by.
+    compose_project_name(cluster_name: str = "")
         Computes the Docker Compose project name for a cluster.
-    `fq_container_name(container_name: str)`
-        Constructs a fully qualified Docker container name by appending the
-        active cluster name to a base container name.
-    `container(fq_container_name: str)`
+    fq_container_name(container_name: str)
+        Constructs a fully qualified Docker container name by appending the active
+        cluster name to a base container name.
+    container(fq_container_name: str)
         Retrieves a Docker container object by fully qualified name.
     """
 
@@ -49,20 +52,26 @@ class ClusterResourceManager:
         self, addl_labels: Optional[list[str]] = None
     ) -> ClusterResourcesView:
         """
-        Collects Docker objects (containers, volumes, networks, and images) for
-        the current cluster or all clusters if the context's cluster name is
-        `"all"`.
+        Fetch Docker objects for the current context.
 
         Parameters
         ----------
-        `addl_labels` : `list[str]`, optional
-            A list of additional labels to filter resources by.
+        addl_labels : list[str], optional
+            A list of additional labels to filter resources by. All Docker objects must
+            match all labels in the list to be included in the result. If not provided,
+            resource retrieval is limited only to the root label `ROOT_LABEL`
+            (`org.minitrino=root`).
 
         Returns
         -------
-        `ClusterResourcesView`
-            An object that exposes grouped and typed access to resources by
-            cluster and type. Images are grouped under a separate global key.
+        ClusterResourcesView
+            An object that exposes grouped and typed access to resources by cluster and
+            type. Images are grouped under a separate global key.
+
+        Notes
+        -----
+        If the context's cluster name is `"all"`, resources for all clusters are
+        returned.
         """
         addl_labels = addl_labels or []
         unfiltered = self.unfiltered_resources()
@@ -89,18 +98,12 @@ class ClusterResourceManager:
         self,
     ) -> dict[str, list[Container | Volume | Image | Network]]:
         """
-        Collects all Docker objects associated with Minitrino. Unlike the
-        `resources()` method, this method does not group resources by cluster or
-        take additional labels to filter by.
-
-        Fetches containers, volumes, images, and networks that are tagged with
-        the global label `RESOURCE_LABEL` (`org.minitrino=root`).
+        Collect all Docker objects associated with Minitrino.
 
         Returns
         -------
-        `dict[str, list[Container | Volume | Image | Network]]`
-            Dictionary containing the following keys and corresponding Docker
-            objects:
+        dict[str, list[Container | Volume | Image | Network]]
+            Dictionary containing the following keys and corresponding Docker objects.
 
         Examples
         --------
@@ -110,9 +113,15 @@ class ClusterResourceManager:
                 "images": [Image("baz"), ...],
                 "networks": [Network("qux"), ...],
             }
-        """
 
-        filter = {"label": [RESOURCE_LABEL]}
+        Notes
+        -----
+        Unlike the `resources()` method, this method does not group resources by cluster
+        or take additional labels to filter by. Fetch containers, volumes, images, and
+        networks that are tagged with the global label `ROOT_LABEL`
+        (`org.minitrino=root`).
+        """
+        filter = {"label": [ROOT_LABEL]}
         retval: dict[str, list[Container | Volume | Image | Network]] = {
             "containers": [],
             "volumes": [],
@@ -133,16 +142,16 @@ class ClusterResourceManager:
 
     def compose_project_name(self, cluster_name: str = "") -> str:
         """
-        Computes the Docker Compose project name for a cluster.
+        Compute the Docker Compose project name for a cluster.
 
         Parameters
         ----------
-        `cluster_name` : `str`, optional
+        cluster_name : str, optional
             A specific cluster name. If omitted, uses the current cluster name.
 
         Returns
         -------
-        `str`
+        str
             The composed project name.
         """
         if not cluster_name:
@@ -151,39 +160,38 @@ class ClusterResourceManager:
 
     def fq_container_name(self, name: str = "") -> str:
         """
-        Constructs a fully qualified Docker container name by appending the
-        active cluster name to a base container name.
+        Construct and return a fully-qualified Docker container name.
 
         Parameters
         ----------
-        `name` : `str`
+        name : str
             The base container name.
 
         Returns
         -------
-        `str`
-            Fully qualified container name.
+        str
+            Fully-qualified container name.
         """
-        # If we receive a container name with a literal suffix
-        # `-${CLUSTER_NAME}`, remove it. In this case, the container name was
-        # sourced by reading the Docker Compose file directly, which literally
-        # appends `-${CLUSTER_NAME}` to each container name.
+        # If we receive a container name with a literal suffix `-${CLUSTER_NAME}`,
+        # remove it. In this case, the container name was sourced by reading the Docker
+        # Compose file directly, which literally appends `-${CLUSTER_NAME}` to each
+        # container name.
         if "-${CLUSTER_NAME}" in name:
             name = name.replace("-${CLUSTER_NAME}", "")
         return f"{name}-{self._ctx.cluster_name}"
 
     def container(self, fq_container_name: str = "") -> Container:
         """
-        Retrieves a Docker container object by fully qualified name.
+        Retrieve a Docker container object by fully-qualified name.
 
         Parameters
         ----------
-        `fq_container_name` : `str`
-            Fully qualified container name to fetch.
+        fq_container_name : str
+            Fully-qualified container name to fetch.
 
         Returns
         -------
-        `docker.models.containers.Container`
+        docker.models.containers.Container
             The matching container object.
         """
         return self._ctx.docker_client.containers.get(fq_container_name)
@@ -192,30 +200,30 @@ class ClusterResourceManager:
         self, resources: dict[str, list[Container | Volume | Image | Network]]
     ) -> list[str]:
         """
-        Derives cluster names from Docker resources such as containers, volumes,
-        and networks. Images are excluded since they do not maintain a
-        one-to-one relationship with a specific cluster.
+        Derive cluster names from Docker resources.
 
         Parameters
         ----------
-        `resources` : `dict[str, list[Container | Volume | Image | Network]]`
-            Dictionary containing lists of Docker objects keyed by type
-            (`containers`, `volumes`, `networks`, `images`, etc.).
+        resources : dict[str, list[Container | Volume | Image | Network]]
+            Dictionary containing lists of Docker objects keyed by type.
 
         Returns
         -------
-        `list[str]`
-            A sorted list of unique cluster names inferred from Docker resource
-            labels.
-        """
+        list[str]
+            A sorted list of unique cluster names inferred from Docker resource labels.
 
+        Notes
+        -----
+        Cluster names cannot be derived from images since they do not maintain a
+        one-to-one relationship with a specific cluster.
+        """
         cluster_names = []
         for obj_type, objects in resources.items():
             if obj_type == "images":
                 continue
             for obj in objects:
                 labels = self._docker_labels(obj)
-                project = labels.get(COMPOSE_LABEL) if labels else None
+                project = labels.get(COMPOSE_LABEL_KEY) if labels else None
                 if project:
                     cluster_names.append(project.split("minitrino-")[1])
 
@@ -232,41 +240,39 @@ class ClusterResourceManager:
         addl_labels: Optional[list[str]] = None,
     ) -> dict[str, list[Container | Volume | Image | Network]]:
         """
-        Filters Docker resources by cluster name and label criteria.
-
-        Resources are grouped by type and filtered using both the required
-        `RESOURCE_LABEL` and the appropriate `COMPOSE_LABEL` corresponding to
-        each cluster. Images are excluded from filtering beyond the standard
-        `RESOURCE_LABEL` and are returned as-is.
+        Filter Docker resources by cluster name and label criteria.
 
         Parameters
         ----------
-        `resources` : `dict[str, list[Container | Volume | Image | Network]]`
-            Dictionary of Docker resources categorized by type (e.g.,
-            `containers`, `volumes`, `images`, `networks`).
-
-        `clusters` : `list[str]`
+        resources : dict[str, list[Container | Volume | Image | Network]]
+            Dictionary of Docker resources categorized by type.
+        clusters : list[str]
             List of cluster names used to construct label filters.
-
-        `addl_labels` : `list[str]`, optional
+        addl_labels : list[str], optional
             Additional label filters to apply to the resources.
 
         Returns
         -------
-        `dict[str, list[Container | Volume | Image | Network]]`
-            Dictionary of filtered Docker resources, organized by type, as
-            native Docker objects.
+        dict[str, list[Container | Volume | Image | Network]]
+            Dictionary of filtered Docker resources, organized by type, as native Docker
+            objects.
+
+        Notes
+        -----
+        Resources are grouped by type and filtered using both the required `ROOT_LABEL`
+        and the appropriate `COMPOSE_LABEL_KEY` corresponding to each cluster. Images
+        are excluded from filtering beyond the standard `ROOT_LABEL` and are returned
+        as-is.
         """
         base_labels = list(addl_labels) if addl_labels is not None else []
-        if RESOURCE_LABEL not in base_labels:
-            base_labels.append(RESOURCE_LABEL)
+        if ROOT_LABEL not in base_labels:
+            base_labels.append(ROOT_LABEL)
 
         filtered: dict[str, list] = {k: [] for k in resources.keys()}
-
         for cluster in clusters:
             docker_labels = list(base_labels)
             docker_labels.append(
-                f"{COMPOSE_LABEL}={self.compose_project_name(cluster)}"
+                f"{COMPOSE_LABEL_KEY}={self.compose_project_name(cluster)}"
             )
             for obj_type, objects in resources.items():
                 for obj in objects:
@@ -286,7 +292,6 @@ class ClusterResourceManager:
                             break
                     if match:
                         filtered[obj_type].append(obj)
-
         for key in filtered:
             seen_ids = set()
             deduped = []
@@ -303,20 +308,20 @@ class ClusterResourceManager:
             filtered[key] = deduped
         return filtered
 
-    def _docker_labels(self, obj) -> dict[str, str]:
+    def _docker_labels(
+        self, obj: Container | Volume | Network | Image
+    ) -> dict[str, str]:
         """
-        Safely retrieves Docker labels from a container, volume, network, or
-        image.
+        Retrieve Docker labels from a container, volume, network, or image.
 
         Parameters
         ----------
-        `obj` : Docker SDK object
-            A Docker object with labels accessible via `.labels` or
-            `.attrs["Labels"]`.
+        obj : Container | Volume | Network | Image
+            A Docker object with labels accessible via `.labels` or `.attrs["Labels"]`.
 
         Returns
         -------
-        `dict[str, str]`
+        dict[str, str]
             A dictionary of labels, or an empty dictionary if none are found.
         """
         try:
@@ -330,18 +335,18 @@ class ClusterResourceManager:
 
 class ClusterResourcesView:
     """
-    Provides structured access to Docker resources grouped by cluster.
+    Provide structured access to Docker resources grouped by cluster.
 
-    This class is returned by the `resources()` method and exposes convenient
-    accessors for retrieving all containers, volumes, networks, or images across
-    clusters. The original grouped dictionary is also accessible via `raw()`.
+    Parameters
+    ----------
+    resources : dict[str, dict[str, list[Container | Volume | Network | Image]]]
+        A dictionary of Docker resources grouped by cluster name and object type.
 
-    Constructor Parameters
-    ----------------------
-    `resources` : `dict[str, dict[str, list[Container | Volume | Network |
-    Image]]]`
-        A dictionary of Docker resources grouped by cluster name and object
-        type.
+    Notes
+    -----
+    This class is returned by the `resources()` method and exposes convenient accessors
+    for retrieving all containers, volumes, networks, or images across clusters. The
+    original grouped dictionary is also accessible via `raw()`.
     """
 
     def __init__(
@@ -352,115 +357,131 @@ class ClusterResourcesView:
 
     def containers(self) -> list[ClusterDockerObject]:
         """
-        Retrieves all container objects across clusters specified in the
-        context.
+        Retrieve all container objects across clusters specified in the context.
 
         Returns
         -------
-        `list[ClusterDockerObject]`
+        list[ClusterDockerObject]
             A list of all container objects present in the environment.
         """
         return cast(list[ClusterDockerObject], self._collect("containers"))
 
     def volumes(self) -> list[ClusterDockerObject]:
         """
-        Retrieves all volume objects across clusters specified in the context.
+        Retrieve all volume objects across clusters specified in the context.
 
         Returns
         -------
-        `list[ClusterDockerObject]`
+        list[ClusterDockerObject]
             A list of all volume objects present in the environment.
         """
         return cast(list[ClusterDockerObject], self._collect("volumes"))
 
     def networks(self) -> list[ClusterDockerObject]:
         """
-        Retrieves all network objects across clusters specified in the context.
+        Retrieve all network objects across clusters specified in the context.
 
         Returns
         -------
-        `list[ClusterDockerObject]`
+        list[ClusterDockerObject]
             A list of all network objects present in the environment.
         """
         return cast(list[ClusterDockerObject], self._collect("networks"))
 
     def images(self) -> list[Image]:
         """
-        Retrieves all global image objects associated with Minitrino. These
-        images are not associated with any specific cluster and are grouped
+        Retrieve all global image objects associated with Minitrino.
+
+        These images are not associated with any specific cluster and are grouped
         separately.
 
         Returns
         -------
-        `list[Image]`
-            A list of Docker image objects tagged with the Minitrino project
-            label.
+        list[Image]
+            A list of Docker image objects tagged with the Minitrino project label.
         """
         return cast(list[Image], self._resources.get("images", {}).get("images", []))
 
     def raw(self) -> dict[str, dict[str, list[Container | Volume | Network | Image]]]:
         """
-        Returns the full grouped dictionary of Docker resources.
+        Return the full grouped dictionary of Docker resources.
 
         Returns
         -------
-        `dict[str, dict[str, list[Container | Volume | Network | Image]]]`
+        dict[str, dict[str, list[Container | Volume | Network | Image]]]
             The original dictionary of resources grouped by cluster.
 
         Examples
         --------
         >>> {
-                "default": {
-                    "containers": [Container("foo"), ...],
-                    "volumes": [Volume("bar"), ...],
-                    "networks": [Network("qux"), ...],
-                },
-                "cluster-1": {
-                    "containers": [Container("foo"), ...],
-                    "volumes": [Volume("bar"), ...],
-                    "networks": [Network("qux"), ...],
-                },
-                "images": {
-                    "images": [Image("baz"), ...]
-                }
+            "default": {
+                "containers": [Container("foo"), ...],
+                "volumes": [Volume("bar"), ...],
+                "networks": [Network("qux"), ...],
+            },
+            "cluster-1": {
+                "containers": [Container("foo"), ...],
+                "volumes": [Volume("bar"), ...],
+                "networks": [Network("qux"), ...],
+            },
+            "images": {
+                "images": [Image("baz"), ...]
             }
+        }
         """
         return self._resources
 
     def _collect(self, key: str) -> list[ClusterDockerObject]:
         """
-        Internal helper that collects Docker resources (containers, volumes,
-        networks) across all clusters.
+        Collect Docker resources (containers, volumes, networks) across all clusters.
 
         Parameters
         ----------
-        `key` : `str`
+        key : str
             The resource type to collect (containers, volumes, or networks).
 
         Returns
         -------
-        `list[ClusterDockerObject]`
-            A flat list of resource objects wrapped with their associated
-            cluster metadata.
+        list[ClusterDockerObject]
+            A flat list of resource objects wrapped with their associated cluster
+            metadata.
         """
-        results: list[ClusterDockerObject] = []
-        for cluster_name, grouped in self._resources.items():
-            if cluster_name == "images":  # Images are not associated with a cluster
+        result = []
+        for cluster, resources in self._resources.items():
+            if cluster == "images":
                 continue
-            for obj in grouped.get(key, []):
-                typed_obj = cast(Container | Volume | Network, obj)
-                results.append(ClusterDockerObject(typed_obj, cluster_name))
-        return results
+            for obj in resources.get(key, []):
+                result.append(ClusterDockerObject(obj, cluster))
+        return result
 
 
 class ClusterDockerObject:
     """
-    A wrapper for Docker objects which can be associated with a cluster.
+    Wrap a Docker object that can be associated with a cluster.
+
+    Parameters
+    ----------
+    obj : Container | Volume | Network
+        The Docker object to wrap.
+    cluster : str
+        The name of the associated cluster.
     """
 
     def __init__(self, obj: Container | Volume | Network, cluster: str):
         self.obj = obj
         self.cluster = cluster
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Container | Volume | Network:
+        """Delegate attribute access to the wrapped Docker object.
+
+        Parameters
+        ----------
+        name : str
+            The attribute name to access.
+
+        Returns
+        -------
+        Container | Volume | Network
+            The attribute value from the wrapped Docker object.
+        """
         return getattr(self.obj, name)

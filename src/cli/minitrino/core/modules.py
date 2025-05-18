@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Module management for Minitrino CLI."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from minitrino import utils
 from minitrino.core.errors import MinitrinoError, UserError
 
 from minitrino.settings import (
-    COMPOSE_LABEL,
+    COMPOSE_LABEL_KEY,
     LIC_VOLUME_MOUNT,
     LIC_MOUNT_PATH,
     DUMMY_LIC_MOUNT_PATH,
@@ -18,9 +18,9 @@ from minitrino.settings import (
     MODULE_ADMIN,
     MODULE_SECURITY,
     MODULE_CATALOG,
+    MODULE_LABEL_KEY,
 )
 
-from docker.models.containers import Container
 from typing import cast, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -29,74 +29,66 @@ if TYPE_CHECKING:
 
 class Modules:
     """
-    Contains information about all valid Minitrino modules.
+    Module validation and management for Minitrino CLI.
 
     This class is responsible for loading, storing, and exposing metadata about
     available Minitrino modules based on the current `MinitrinoContext`.
 
-    Constructor Parameters
-    ----------------------
-    `ctx` : `MinitrinoContext`
-        An instantiated `MinitrinoContext` object with user input and context.
+    Parameters
+    ----------
+    ctx : MinitrinoContext
+        An instantiated MinitrinoContext object with user input and context.
 
     Attributes
     ----------
-    `data` : `dict`
+    data : dict
         A dictionary of loaded module metadata keyed by module name.
 
     Methods
     -------
-    `running_modules()` :
+    running_modules() :
         Returns a dictionary of modules that are currently running.
-    `check_dep_modules(modules: Optional[list[str]] = None)` :
+    check_dep_modules(modules: Optional[list[str]] = None) :
         Check if provided modules have dependencies and include them.
-    `check_compatibility(modules: Optional[list[str]] = None)` :
+    check_module_version_requirements(modules: Optional[list[str]] = None) :
+        Check module version compatibility against the provided cluster version.
+    check_compatibility(modules: Optional[list[str]] = None) :
         Check for mutually exclusive modules among the provided modules.
-    `check_enterprise(modules: Optional[list[str]] = None)` :
-        Check if any provided modules are Starburst Enterprise features and
-        validate license.
-    `module_services(modules: Optional[list[str]] = None)` :
+    check_enterprise(modules: Optional[list[str]] = None) :
+        Check if any provided modules are Starburst Enterprise features and validate
+        license.
+    module_services(modules: Optional[list[str]] = None) :
         Get all services defined in the provided modules.
-    `check_volumes(modules: Optional[list[str]] = None)` :
-        Check if any of the provided modules have persistent volumes and warn
-        the user.
+    check_volumes(modules: Optional[list[str]] = None) :
+        Check if any of the provided modules have persistent volumes and warn the user.
     """
 
     def __init__(self, ctx: MinitrinoContext) -> None:
-        """
-        Initialize the Modules instance and load module metadata.
-
-        Parameters
-        ----------
-        `ctx` : `Optional[MinitrinoContext]`, optional
-            An instantiated `MinitrinoContext` object with user input and
-            context. Default is `None`.
-        """
         self.data: dict = {}
         self._ctx = ctx
         self._load_modules()
 
     def running_modules(self) -> dict[str, str]:
         """
-        Retrieve currently running modules by inspecting active Docker
-        containers.
-
-        This method inspects active Docker containers for the current cluster
-        and extracts module names and their associated cluster from Docker
-        labels. Only containers with valid `org.minitrino` labels are considered
-        modules.
+        Retrieve running modules by inspecting active Docker containers.
 
         Returns
         -------
-        `dict[str, str]`
-            A dictionary mapping module names (lowercase strings) to their
-            associated cluster name.
+        dict[str, str]
+            A dictionary mapping module names (lowercase strings) to their associated
+            cluster name.
 
         Raises
         ------
-        `UserError`
-            If any container lacks expected Minitrino labels or if a running
-            module is not found in the loaded library data.
+        UserError
+            If any container lacks expected Minitrino labels or if a running module is
+            not found in the loaded library data.
+
+        Notes
+        -----
+        This method inspects active Docker containers for the current cluster and
+        extracts module names and their associated cluster from Docker labels. Only
+        containers with valid `org.minitrino` labels are considered modules.
         """
         utils.check_daemon(self._ctx.docker_client)
 
@@ -111,7 +103,7 @@ class Modules:
         hint_msg = "Check the compose.yaml file for this module at %s"
         for container in containers:
             labels = container.labels or {}
-            cluster_name = labels.get(COMPOSE_LABEL)
+            cluster_name = labels.get(COMPOSE_LABEL_KEY)
             if cluster_name:
                 cluster_name = cluster_name.replace("minitrino-", "")
 
@@ -125,7 +117,7 @@ class Modules:
                         if cluster_name is None:
                             raise UserError(
                                 f"Unable to determine cluster name for container '{container.name}'. "
-                                f"Container '{container.name}' is either missing the '{COMPOSE_LABEL}' "
+                                f"Container '{container.name}' is either missing the '{COMPOSE_LABEL_KEY}' "
                                 f"label or it is malformed.",
                                 hint_msg=hint_msg.format(
                                     self.data.get(module, {}).get(
@@ -162,12 +154,12 @@ class Modules:
 
         Parameters
         ----------
-        `modules` : `Optional[list[str]]`, optional
+        modules : Optional[list[str]]
             List of module names to check. Default is `None`.
 
         Returns
         -------
-        `list[str]`
+        list[str]
             List of modules dependent to the modules provided.
         """
         if modules is None:
@@ -185,18 +177,67 @@ class Modules:
                     )
         return list(set(modules))
 
+    def check_module_version_requirements(
+        self, modules: Optional[list[str]] = None
+    ) -> None:
+        """
+        Check module version compatibility against the provided cluster version.
+
+        Parameters
+        ----------
+        modules : list[str]
+            A list of module names to check version requirements for.
+
+        Raises
+        ------
+        UserError
+            If the version constraints are invalid or not satisfied.
+        """
+        modules = modules or []
+        for module in modules:
+            versions = self._ctx.modules.data.get(module, {}).get("versions", [])
+
+            if not versions:
+                continue
+            if len(versions) > 2:
+                raise UserError(
+                    f"Invalid versions specification for module '{module}' in metadata.json file: {versions}",
+                    f'The valid structure is: {{"versions": [min-ver, max-ver]}}. If the versions key is '
+                    f"present, the minimum version is required, and the maximum version is optional.",
+                )
+
+            cluster_ver = int(self._ctx.env.get("CLUSTER_VER", "")[0:3])
+            min_ver = int(versions.pop(0))
+            max_ver = None
+            if versions:
+                max_ver = int(versions.pop())
+
+            begin_msg = (
+                f"The supplied cluster version {cluster_ver} is incompatible with module '{module}'. "
+                f"Per the module's metadata.json file, the"
+            )
+
+            if cluster_ver < min_ver:
+                raise UserError(
+                    f"{begin_msg} minimum required cluster version for the module is: {min_ver}."
+                )
+            if max_ver and cluster_ver > max_ver:
+                raise UserError(
+                    f"{begin_msg} maximum required cluster version for the module is: {max_ver}."
+                )
+
     def check_compatibility(self, modules: Optional[list[str]] = None) -> None:
         """
         Check for mutually exclusive modules among the provided modules.
 
         Parameters
         ----------
-        `modules` : `Optional[list[str]]`, optional
+        modules : Optional[list[str]]
             List of module names to check. Default is `None`.
 
         Raises
         ------
-        `UserError`
+        UserError
             If incompatible modules are detected.
         """
         if modules is None:
@@ -221,19 +262,17 @@ class Modules:
 
     def check_enterprise(self, modules: Optional[list[str]] = None) -> None:
         """
-        Check if any provided modules are Starburst Enterprise features and
-        validate license.
+        Check for Starburst Enterprise modules and validate license.
 
         Parameters
         ----------
-        `modules` : `Optional[list[str]]`, optional
+        modules : Optional[list[str]]
             List of module names to check. Default is `None`.
 
         Raises
         ------
-        `UserError`
-            If enterprise modules are detected without proper license or
-            configuration.
+        UserError
+            If a required license is missing.
         """
         if modules is None:
             modules = []
@@ -285,18 +324,18 @@ class Modules:
 
         Parameters
         ----------
-        `modules` : `Optional[list[str]]`, optional
+        modules : Optional[list[str]]
             List of module names to retrieve services from. Default is `None`.
 
         Returns
         -------
-        `list[list]`
-            List of services, each as a list containing the service key (`str`),
-            service dictionary (`dict`), and the YAML file path (`str`).
+        list[list]
+            List of services, each as a list containing the service key (`str`), service
+            dictionary (`dict`), and the YAML file path (`str`).
 
         Raises
         ------
-        `MinitrinoError`
+        MinitrinoError
             If a module's Docker Compose YAML file lacks a 'services' section.
         """
         if modules is None:
@@ -320,12 +359,11 @@ class Modules:
 
     def check_volumes(self, modules: Optional[list[str]] = None) -> None:
         """
-        Check if any of the provided modules have persistent volumes and warn
-        the user.
+        Check for persistent volumes and warn the user if any are found.
 
         Parameters
         ----------
-        `modules` : `Optional[list[str]]`, optional
+        modules : Optional[list[str]]
             List of module names to check. Default is `None`.
         """
         if modules is None:
@@ -346,19 +384,20 @@ class Modules:
         """
         Load module data during class instantiation.
 
-        This method scans the Minitrino library for valid module directories
-        under the `admin`, `catalog`, and `security` sections. Each module must
-        include a matching `.yaml` file, and may optionally include a
-        `metadata.json` file. Parsed module information is stored in the `data`
-        attribute.
-
         Raises
         ------
-        `MinitrinoError`
+        MinitrinoError
             If the resolved `modules_dir` path is not a directory.
 
-        `UserError`
+        UserError
             If a module is missing its expected `.yaml` file.
+
+        Notes
+        -----
+        This method scans the Minitrino library for valid module directories under the
+        `admin`, `catalog`, and `security` sections. Each module must include a matching
+        `.yaml` file, and may optionally include a `metadata.json` file. Parsed module
+        information is stored in the `data` attribute.
         """
         self._ctx.logger.verbose("Loading modules...")
 
@@ -428,3 +467,8 @@ class Modules:
                     )
                 for k, v in metadata.items():
                     self.data[module_name][k] = v
+
+                # Add module label
+                self.data[module_name][
+                    "label"
+                ] = f"{MODULE_LABEL_KEY}={self.data[module_name]['type']}-{module_name}"

@@ -1,8 +1,9 @@
-#!/usr/bin/env python3
+"""Command to handle removal of containers, networks, and volumes."""
 
 import click
 
 from minitrino import utils
+from minitrino.core.errors import UserError
 from minitrino.core.context import MinitrinoContext
 
 
@@ -11,11 +12,11 @@ from minitrino.core.context import MinitrinoContext
     help=(
         """Remove Minitrino resources. By default, applies to 'default' cluster.
         
-        Remove resources for a specific cluster by using the `CLUSTER_NAME`
-        environment variable or the `--cluster` / `-c` option, e.g.: 
+        Remove resources for a specific cluster by using the `CLUSTER_NAME` environment
+        variable or the `--cluster` / `-c` option, e.g.: 
         
-        `minitrino -c my-cluster remove`, or specify all clusters via:\n
-        `minitrino -c all remove`"""
+        `minitrino -c my-cluster remove`, or specify all clusters via:\n`minitrino -c
+        all remove`"""
     ),
 )
 @click.option(
@@ -40,13 +41,13 @@ from minitrino.core.context import MinitrinoContext
     help="Remove networks.",
 )
 @click.option(
-    "-l",
-    "--label",
-    "labels",
+    "-m",
+    "--module",
+    "modules",
     type=str,
     default=[],
     multiple=True,
-    help="Filter removal by Docker labels (format: key-value pair(s)).",
+    help="Filter removal by module.",
 )
 @click.option(
     "-f",
@@ -62,29 +63,37 @@ def cli(
     images: bool,
     volumes: bool,
     networks: bool,
-    labels: list[str],
+    modules: list[str],
     force: bool,
 ):
-    """
-    Handles removal of containers, images, volumes, and networks associated with
-    the Minitrino cluster environment. Supports full resource purges when used
-    with `--cluster all`, and allows fine-grained control via resource type
-    flags and label filters.
+    """Handle removal of containers, networks, and volumes.
+
+    Handles removal of containers, networks, and volumes for the current environment.
 
     Parameters
     ----------
-    `images` : `bool`
+    ctx : MinitrinoContext
+        The Minitrino context.
+    images : bool
         If True, removes Docker images tagged with Minitrino labels.
-    `volumes` : `bool`
+    volumes : bool
         If True, removes Docker volumes associated with Minitrino containers.
-    `networks` : `bool`
+    networks : bool
         If True, removes Docker networks associated with the Minitrino cluster.
-    `labels` : `list[str]`
-        List of specific Docker label filters to target for removal.
-    `force` : `bool`
+    modules : list[str]
+        List of modules to filter removal by.
+    force : bool
         If True, forces removal even if the resource is in use.
     """
     utils.check_daemon(ctx.docker_client)
+
+    if images and modules:
+        raise UserError(
+            "Cannot remove images for a specific module because images are global "
+            "resources.",
+            "Run the command again without providing a module and ensure `--cluster "
+            "all` is used to remove all images.",
+        )
 
     remove_types = [
         t
@@ -98,8 +107,8 @@ def cli(
     if not remove_types:
         remove_types = ["image", "volume", "network"]
 
-    labels = labels or []
-    remove_all = ctx.all_clusters and not labels and len(remove_types) == 3
+    modules = modules or []
+    remove_all = ctx.all_clusters and not modules and len(remove_types) == 3
 
     if remove_all:
         response = ctx.logger.prompt_msg(
@@ -110,10 +119,10 @@ def cli(
             return
         else:
             for t in remove_types:
-                ctx.cluster.ops.remove(t, force, labels)
+                ctx.cluster.ops.remove(t, force, modules)
             return
 
     for t in remove_types:
-        ctx.cluster.ops.remove(t, force, labels)
+        ctx.cluster.ops.remove(t, force, modules)
 
     ctx.logger.info("Removal complete.")

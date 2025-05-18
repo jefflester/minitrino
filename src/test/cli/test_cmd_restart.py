@@ -1,72 +1,72 @@
-#!/usr/bin/env python3
+from logging import Logger
+from dataclasses import dataclass
+from pytest.mark import parametrize, usefixtures
 
-import docker
-
-from test import common
 from test.cli import utils
-from minitrino.settings import RESOURCE_LABEL
+from test.cli.constants import CLUSTER_NAME, MINITRINO_CONTAINER
 
-from inspect import currentframe
-from types import FrameType
-from typing import cast
-
-
-def main():
-    common.log_status(__file__)
-    common.start_docker_daemon()
-    cleanup()
-    test_coordinator_only()
-    test_workers()
+CMD_RESTART = {"base": "restart"}
+CMD_PROVISION = {"base": "provision"}
 
 
-def test_coordinator_only():
-    """Verifies that the restart command works when only the coordinator is
-    running."""
+@dataclass
+class RestartScenario:
+    """
+    Restart scenario.
 
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
+    Parameters
+    ----------
+    id : str
+        Identifier for scenario, used in pytest parametrize ids.
+    provision_args : list[str]
+        Arguments to pass to the provision command.
+    expected_outputs : list[str]
+        List of expected output substrings after restart.
+    log_msg : str
+        The log message to display before running the test.
+    """
 
-    utils.execute_cli_cmd(["-v", "provision"])
-    result = utils.execute_cli_cmd(["-v", "restart"])
-
-    assert result.exit_code == 0
-    assert "'minitrino' restarted successfully" in result.output
-    assert check_containers() == 0, "There should be no running containers"
-
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-    cleanup()
-
-
-def test_workers():
-    """Verifies that the restart command works when a coordinator and workers
-    are running."""
-
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
-
-    utils.execute_cli_cmd(["-v", "provision", "--workers", "2"])
-    result = utils.execute_cli_cmd(["-v", "restart"])
-
-    assert result.exit_code == 0
-    assert "'minitrino' restarted successfully" in result.output
-    assert "'minitrino-worker-2' restarted successfully." in result.output
-    assert check_containers() == 0, "There should be no running containers"
-
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-    cleanup()
+    id: str
+    provision_args: list[str]
+    expected_outputs: list[str]
+    log_msg: str
 
 
-def check_containers():
-    """Checks for running Minitrino containers."""
+restart_scenarios = [
+    RestartScenario(
+        id="coordinator_only",
+        provision_args=[],
+        expected_outputs=[f"'{MINITRINO_CONTAINER}' restarted successfully"],
+        log_msg="Restart coordinator only",
+    ),
+    RestartScenario(
+        id="with_workers",
+        provision_args=["--workers", "2"],
+        expected_outputs=[
+            f"'{MINITRINO_CONTAINER}' restarted successfully",
+            f"'{MINITRINO_CONTAINER}-worker-2' restarted successfully.",
+        ],
+        log_msg="Restart with workers",
+    ),
+]
 
-    docker_client = docker.from_env()
-    containers = docker_client.containers.list(filters={"label": RESOURCE_LABEL})
-    return len(containers)
 
-
-def cleanup():
-    """Stops/removes containers."""
-
-    utils.execute_cli_cmd(["-v", "down", "--sig-kill"])
-
-
-if __name__ == "__main__":
-    main()
+@parametrize(
+    "scenario",
+    restart_scenarios,
+    ids=utils.get_scenario_ids(restart_scenarios),
+)
+@usefixtures("log_test", "cleanup_config", "down")
+def test_restart_scenarios(
+    logger: Logger,
+    scenario: RestartScenario,
+) -> None:
+    """Run each RestartScenario."""
+    cmd = utils.build_cmd(**CMD_PROVISION, append=scenario.provision_args)
+    result = utils.cli_cmd(cmd, logger)
+    utils.assert_exit_code(result)
+    result = utils.cli_cmd(utils.build_cmd(**CMD_RESTART), logger)
+    utils.assert_exit_code(result)
+    for expected in scenario.expected_outputs:
+        utils.assert_in_output(expected, result=result)
+    utils.assert_num_containers(0)

@@ -18,10 +18,10 @@ services:
       - mariadb-data:/var/lib/mysql
     labels:
       - org.minitrino=root
-      - org.minitrino.module.mariadb=catalog-mariadb
+      - org.minitrino.module=catalog-mariadb
 
 volumes:
   mariadb-data:
     labels:
       - org.minitrino=root
-      - org.minitrino.module.mariadb=catalog-mariadb
+      - org.minitrino.module=catalog-mariadb

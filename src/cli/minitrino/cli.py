@@ -1,10 +1,11 @@
-#!/usr/bin/env python3
+"""Minitrino CLI entrypoint module."""
 
 import os
 import sys
 import click
 import difflib
 
+from typing import Any
 from importlib import import_module
 
 from minitrino import utils
@@ -15,7 +16,7 @@ class CommandLineInterface(click.MultiCommand):
     """Click MultiCommand class for loading and executing commands."""
 
     def list_commands(self, ctx) -> list[str]:
-        """Returns a list of available commands."""
+        """List available commands."""
         cmd_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "cmd"))
         commands = [
             filename[:-3].replace("_", "-")
@@ -24,8 +25,8 @@ class CommandLineInterface(click.MultiCommand):
         ]
         return sorted(commands)
 
-    def get_command(self, ctx, name: str):
-        """Attempts to load and return the command module."""
+    def get_command(self, ctx, name) -> Any:
+        """Load and return the command module."""
         from minitrino.core.logger import MinitrinoLogger
 
         logger = MinitrinoLogger()
@@ -46,7 +47,7 @@ class CommandLineInterface(click.MultiCommand):
 
 
 def version_string() -> str:
-    """Returns the version of the CLI and the library."""
+    """Return the version of the CLI and the library as a string."""
     cli_version = utils.cli_ver()
     try:
         ctx = MinitrinoContext()

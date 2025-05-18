@@ -1,491 +1,813 @@
-#!/usr/bin/env python3
-
-import docker
 import yaml
+
+from logging import Logger
+from dataclasses import dataclass
+from pytest.mark import parametrize, usefixtures
+from minitrino.settings import MIN_CLUSTER_VER
 
 from test import common
 from test.cli import utils
-from minitrino.settings import RESOURCE_LABEL
-from minitrino.settings import MIN_CLUSTER_VER
+from test.cli.constants import CLUSTER_NAME, MINITRINO_CONTAINER, TEST_CONTAINER
 
-from inspect import currentframe
-from types import FrameType
-from typing import cast
+CMD_PROVISION = {"base": "provision"}
+CMD_PROVISION_MOD = {"base": "provision", "append": ["--module", "test"]}
 
 
-def main():
-    common.log_status(__file__)
-    common.start_docker_daemon()
-    cleanup()
-    test_standalone()
-    test_bad_sep_version()
-    test_invalid_module()
-    test_docker_native()
-    test_bootstrap()
-    test_enterprise()
-    test_version_requirements()
-    test_valid_user_config()
-    test_duplicate_config_props()
-    test_incompatible_modules()
-    test_provision_append()
-    test_workers()
-    test_catalogs_volume()
+@dataclass
+class VersionScenario:
+    """
+    Version scenario.
+
+    Parameters
+    ----------
+    id : str
+        Identifier for scenario, used in pytest parametrize ids.
+    image_type : str
+        The cluster image type (trino or starburst).
+    version : str
+        The cluster version to test.
+    expected_exit_code : int
+        The expected exit code.
+    expected_output : str
+        The expected output string to assert.
+    log_msg : str
+        The log message to display before running the test.
+    """
+
+    id: str
+    image_type: str
+    version: str
+    expected_exit_code: int
+    expected_output: str
+    log_msg: str
 
 
-def test_standalone():
-    """Verifies that a standalone cluster is provisioned when no options
-    are passed in."""
+version_scenarios = [
+    VersionScenario(
+        id="version_lower_bound_starburst",
+        image_type="starburst",
+        version=f"{MIN_CLUSTER_VER - 1}-e",
+        expected_exit_code=2,
+        expected_output="Provided Starburst version",
+        log_msg="Version requirements: lower bound Starburst version should error",
+    ),
+    VersionScenario(
+        id="version_lower_bound_trino",
+        image_type="trino",
+        version=f"{MIN_CLUSTER_VER - 1}",
+        expected_exit_code=2,
+        expected_output="Provided Trino version",
+        log_msg="Version requirements: lower bound Trino version should error",
+    ),
+    VersionScenario(
+        id="standalone",
+        image_type="",
+        version="",
+        expected_exit_code=0,
+        expected_output="Provisioning standalone",
+        log_msg="Version requirements: standalone should succeed",
+    ),
+]
 
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    result = utils.execute_cli_cmd(["-v", "provision"])
+@parametrize(
+    "scenario",
+    version_scenarios,
+    ids=utils.get_scenario_ids(version_scenarios),
+    indirect=False,
+)
+@usefixtures("log_test", "down")
+def test_version_scenarios(
+    scenario: VersionScenario,
+    logger: Logger,
+) -> None:
+    """Run each VersionScenario."""
+    append = []
+    if scenario.image_type:
+        append.extend(["--type", scenario.image_type])
+    prepend = []
+    if scenario.version:
+        prepend.extend(["--env", f"CLUSTER_VER={scenario.version}"])
+    cmd = utils.build_cmd(**CMD_PROVISION, prepend=prepend, append=append)
+    result = utils.cli_cmd(cmd, logger)
+    utils.assert_exit_code(result, expected=scenario.expected_exit_code)
+    utils.assert_in_output(scenario.expected_output, result=result)
+    if scenario.expected_exit_code == 0:
+        utils.assert_num_containers(1, all=True)
+        utils.assert_containers_exist("minitrino-default")
+    else:
+        utils.assert_num_containers(0, all=True)
 
-    assert result.exit_code == 0
-    assert "Provisioning standalone" in result.output
 
-    containers = get_containers()
-    assert len(containers) == 1
+@dataclass
+class ModuleRequirementsScenario:
+    """
+    Module requirements scenario.
 
-    for container in containers:
-        assert container.name == "minitrino"
+    Parameters
+    ----------
+    id : str
+        Identifier for scenario, used in pytest parametrize ids.
+    module_names : list[str]
+        The module names to test.
+    expected_exit_code : int
+        The expected exit code.
+    expected_output : str
+        The expected output string to assert.
+    log_msg : str
+        The log message to display before running the test.
+    """
 
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-    cleanup()
+    id: str
+    module_names: list[str]
+    expected_exit_code: int
+    expected_output: str
+    log_msg: str
 
 
-def test_bad_sep_version():
-    """Verifies that a non-zero status code is returned when attempting to
-    provide an invalid SEP version."""
+module_requirements_scenarios = [
+    ModuleRequirementsScenario(
+        id="invalid_module",
+        module_names=["nonexistent"],
+        expected_exit_code=2,
+        expected_output="Invalid module",
+        log_msg="Module requirements: invalid module name should error",
+    ),
+    ModuleRequirementsScenario(
+        id="valid_module",
+        module_names=["test"],
+        expected_exit_code=0,
+        expected_output="",
+        log_msg="Module requirements: valid module name should succeed",
+    ),
+    ModuleRequirementsScenario(
+        id="incompatible_module",
+        module_names=["test", "ldap"],
+        expected_exit_code=2,
+        expected_output="Incompatible modules detected",
+        log_msg="Module requirements: incompatible modules should error",
+    ),
+]
 
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    result = utils.execute_cli_cmd(
-        ["-v", "--env", "CLUSTER_VER=332-e", "provision", "--image", "starburst"]
+@parametrize(
+    "scenario",
+    module_requirements_scenarios,
+    ids=utils.get_scenario_ids(module_requirements_scenarios),
+    indirect=False,
+)
+@usefixtures("log_test", "down")
+def test_module_requirements_scenarios(
+    scenario: ModuleRequirementsScenario,
+    logger: Logger,
+) -> None:
+    """Run each ModuleRequirementsScenario."""
+    append = [item for module in scenario.module_names for item in ("--module", module)]
+    result = utils.cli_cmd(utils.build_cmd(**CMD_PROVISION, append=append), logger)
+    utils.assert_exit_code(result, expected=scenario.expected_exit_code)
+    if scenario.expected_output:
+        utils.assert_in_output(scenario.expected_output, result=result)
+    if scenario.expected_exit_code == 0:
+        utils.assert_num_containers(2, all=True)
+        for module_name in scenario.module_names:
+            utils.assert_containers_exist("minitrino-default", f"{module_name}-default")
+    else:
+        utils.assert_num_containers(0, all=True)
+
+
+@dataclass
+class EnterpriseScenario:
+    """
+    Enterprise scenario.
+
+    Parameters
+    ----------
+    id : str
+        Identifier for scenario, used in pytest parametrize ids.
+    enterprise : bool
+        Whether the module is enterprise.
+    module_name : str
+        The module name to test.
+    license_path : str | None
+        The path to the license file.
+    expected_exit_code : int
+        The expected exit code.
+    expected_output : str
+        The expected output string to assert.
+    log_msg : str
+        The log message to display before running the test.
+    """
+
+    id: str
+    enterprise: bool
+    module_name: str
+    license_path: str | None
+    expected_exit_code: int
+    expected_output: str
+    log_msg: str
+
+
+enterprise_scenarios = [
+    EnterpriseScenario(
+        id="enterprise_no_license",
+        enterprise=True,
+        module_name="test",
+        license_path=None,
+        expected_exit_code=2,
+        expected_output="You must provide a path to a Starburst license",
+        log_msg="Enterprise: missing license should error",
+    ),
+    EnterpriseScenario(
+        id="enterprise_with_license",
+        enterprise=True,
+        module_name="test",
+        license_path="/tmp/dummy.license",
+        expected_exit_code=0,
+        expected_output="LIC_PATH",
+        log_msg="Enterprise: with license should succeed",
+    ),
+]
+
+
+@parametrize(
+    "scenario",
+    enterprise_scenarios,
+    ids=utils.get_scenario_ids(enterprise_scenarios),
+    indirect=False,
+)
+@usefixtures("log_test", "down", "reset_metadata")
+def test_enterprise_scenarios(
+    scenario: EnterpriseScenario,
+    logger: Logger,
+) -> None:
+    """Run each EnterpriseScenario."""
+    data = [{"enterprise": scenario.enterprise}]
+    utils.update_metadata_json(scenario.module_name, data)
+    if scenario.license_path:
+        utils.write_file(scenario.license_path, "dummy")
+    prepend = (
+        ["--env", f"LIC_PATH={scenario.license_path}"] if scenario.license_path else []
     )
-
-    assert result.exit_code == 2
-    assert "Provided Starburst version" in result.output
-
-    containers = get_containers()
-    assert len(containers) == 0
-
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-    cleanup()
+    append = ["--module", scenario.module_name, "--no-rollback"]
+    cmd = utils.build_cmd(**CMD_PROVISION, prepend=prepend, append=append)
+    result = utils.cli_cmd(cmd, logger)
+    utils.assert_exit_code(result, expected=scenario.expected_exit_code)
+    utils.assert_in_output(scenario.expected_output, result=result)
 
 
-def test_invalid_module():
-    """Verifies that a non-zero status code is returned when attempting to
-    provision an invalid module."""
+@dataclass
+class DependencyScenario:
+    """
+    Dependency scenario.
 
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
+    Parameters
+    ----------
+    id : str
+        Identifier for scenario, used in pytest parametrize ids.
+    modules : list[str]
+        The modules to provision.
+    workers : int
+        The number of workers to provision.
+    expected_containers : int
+        The expected number of containers.
+    expected_output : str
+        The expected output string to assert.
+    log_msg : str
+        The log message to display before running the test.
+    """
 
-    result = utils.execute_cli_cmd(
-        ["-v", "provision", "--module", "hive", "--module", "not-a-real-module"]
-    )
-
-    assert result.exit_code == 2
-    assert "Invalid module" in result.output
-
-    containers = get_containers()
-    assert len(containers) == 0
-
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-    cleanup()
-
-
-def test_docker_native():
-    """Ensures that native Docker Compose command options can be appended to the
-    provisioning command."""
-
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
-
-    result = utils.execute_cli_cmd(
-        ["-v", "provision", "--module", "test", "--docker-native", "--build"]
-    )
-
-    containers = get_containers()
-    assert "Received native Docker Compose options" in result.output
-    assert len(containers) == 2
-
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-    cleanup()
+    id: str
+    modules: list[str]
+    workers: int
+    expected_containers: int
+    expected_output: str
+    log_msg: str
 
 
-def test_enterprise():
-    """Ensures that the enterprise license checker works properly."""
+dependency_scenarios = [
+    DependencyScenario(
+        id="single_module",
+        modules=["postgres"],
+        workers=0,
+        expected_containers=4,
+        expected_output="Provisioning dependent cluster",
+        log_msg="Dependency: single module, no workers",
+    ),
+    DependencyScenario(
+        id="multiple_modules",
+        modules=["postgres", "mysql"],
+        workers=0,
+        expected_containers=5,
+        expected_output="Provisioning dependent cluster",
+        log_msg="Dependency: multiple modules, no workers",
+    ),
+    DependencyScenario(
+        id="with_workers",
+        modules=["postgres"],
+        workers=1,
+        expected_containers=5,
+        expected_output="Provisioning dependent cluster",
+        log_msg="Dependency: single module with workers",
+    ),
+    DependencyScenario(
+        id="circular_dependency",
+        modules=["test"],
+        workers=0,
+        expected_containers=1,
+        expected_output="Circular dependency detected",
+        log_msg="Dependency: circular dependency should error",
+    ),
+]
 
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    utils.update_metadata_json("test", [{"enterprise": True}])
-    result = utils.execute_cli_cmd(["-v", "provision", "--module", "test"])
-
-    assert result.exit_code == 2
-    assert "You must provide a path to a Starburst license" in result.output
-    cleanup()
-
-    # Create dummy license
-    common.execute_command("touch /tmp/dummy.license")
-
-    result = utils.execute_cli_cmd(
-        [
-            "-v",
-            "--env",
-            "LIC_PATH=/tmp/dummy.license",
-            "provision",
-            "--module",
+@parametrize(
+    "scenario",
+    dependency_scenarios,
+    ids=utils.get_scenario_ids(dependency_scenarios),
+    indirect=False,
+)
+@usefixtures("log_test", "down", "reset_metadata")
+def test_dependency_scenarios(
+    scenario: DependencyScenario,
+    logger: Logger,
+) -> None:
+    """Run each DependencyScenario."""
+    if scenario.expected_output == "Circular dependency detected":
+        utils.update_metadata_json("test", [dep_cluster_metadata("test", ["test"])])
+        expected_exit_code = 1
+    else:
+        utils.update_metadata_json(
             "test",
-            "--no-rollback",
-        ]
+            [dep_cluster_metadata(modules=scenario.modules, workers=scenario.workers)],
+        )
+        expected_exit_code = 0
+    result = utils.cli_cmd(utils.build_cmd(**CMD_PROVISION_MOD), logger)
+    utils.assert_exit_code(result, expected=expected_exit_code)
+    utils.assert_in_output(scenario.expected_output, result=result)
+    if expected_exit_code == 0:
+        utils.assert_num_containers(scenario.expected_containers, all=True)
+        containers = [MINITRINO_CONTAINER]
+        if "postgres" in scenario.modules:
+            containers.append(f"postgres-{CLUSTER_NAME}")
+        if "mysql" in scenario.modules:
+            containers.append(f"mysql-{CLUSTER_NAME}")
+        if scenario.workers > 0:
+            containers.append(f"{MINITRINO_CONTAINER}-worker-1")
+        utils.assert_containers_exist(*containers)
+    else:
+        utils.assert_num_containers(0, all=True)
+
+
+@dataclass
+class AppendConfigScenario:
+    """
+    Append config scenario.
+
+    Parameters
+    ----------
+    id : str
+        Identifier for scenario, used in pytest parametrize ids.
+    config_type : str
+        The type of config to set.
+    config_value : str
+        The value of the config to set.
+    expected_exit_code : int
+        The expected exit code.
+    expected_output : str
+        The expected output string to assert.
+    log_msg : str
+        The log message to display before running the test.
+    """
+
+    id: str
+    config_type: str
+    config_value: str
+    expected_exit_code: int
+    expected_output: str
+    log_msg: str
+
+
+config_scenarios = [
+    AppendConfigScenario(
+        id="valid_config",
+        config_type="CONFIG_PROPERTIES",
+        config_value="query.max-stage-count=85\nquery.max-execution-time=1h",
+        expected_exit_code=0,
+        expected_output="Appending user-defined config to cluster container config",
+        log_msg="Config: valid config should succeed",
+    ),
+    AppendConfigScenario(
+        id="duplicate_config",
+        config_type="CONFIG_PROPERTIES",
+        config_value="query.max-stage-count=85\nquery.max-stage-count=100",
+        expected_exit_code=0,
+        expected_output="Duplicate configuration properties detected",
+        log_msg="Config: duplicate config props should warn",
+    ),
+]
+
+
+@parametrize(
+    "scenario",
+    config_scenarios,
+    ids=utils.get_scenario_ids(config_scenarios),
+    indirect=False,
+)
+@usefixtures("log_test", "down")
+def test_append_config_scenarios(
+    scenario: AppendConfigScenario,
+    logger: Logger,
+) -> None:
+    """Run each AppendConfigScenario."""
+    prepend = ["--env", f"{scenario.config_type}={scenario.config_value}"]
+    result = utils.cli_cmd(
+        utils.build_cmd(**CMD_PROVISION_MOD, prepend=prepend), logger
     )
-
-    assert "LIC_PATH" and "/tmp/dummy.license" in result.output
-    utils.reset_test_metadata_json()
-    cleanup()
-
-    # Ensure default dummy license satisfies Compose env vars
-    result = utils.execute_cli_cmd(["-v", "provision", "--module", "test"])
-
-    assert result.exit_code == 0
-    etc_ls = common.execute_command("docker exec -i minitrino ls /etc/${CLUSTER_DIST}/")
-    assert "dummy.license" in etc_ls["output"]
-
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-    cleanup()
+    utils.assert_exit_code(result, expected=scenario.expected_exit_code)
+    utils.assert_in_output(scenario.expected_output, result=result)
+    if scenario.expected_exit_code == 0:
+        utils.assert_num_containers(2, all=True)
+        utils.assert_containers_exist(MINITRINO_CONTAINER, TEST_CONTAINER)
 
 
-def test_version_requirements():
-    """Ensures that module version requirements are properly enforced."""
+@dataclass
+class DockerNativeScenario:
+    """
+    Native Docker flag scenario.
 
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
+    Parameters
+    ----------
+    id : str
+        Identifier for scenario, used in pytest parametrize ids.
+    docker_native : str
+        The docker native option to use.
+    expected_output : str
+        The expected output string to assert.
+    expected_containers : int
+        The expected number of containers.
+    expected_exit_code : int
+        The expected exit code.
+    log_msg : str
+        The log message to display before running the test.
+    """
 
-    utils.update_metadata_json("test", [{"versions": [MIN_CLUSTER_VER + 1, 998]}])
+    id: str
+    docker_native: str
+    expected_output: str
+    expected_containers: int
+    expected_exit_code: int
+    log_msg: str
 
-    # Should fail - lower bound
-    result = utils.execute_cli_cmd(
-        [
-            "-v",
-            "--env",
-            f"CLUSTER_VER={MIN_CLUSTER_VER}-e",
-            "provision",
-            "--module",
-            "test",
-        ]
+
+docker_native_scenarios = [
+    DockerNativeScenario(
+        id="valid_docker_native_build",
+        docker_native="--build",
+        expected_output="Received native Docker Compose options",
+        expected_containers=2,
+        expected_exit_code=0,
+        log_msg="Docker native: valid docker native should succeed",
+    ),
+    DockerNativeScenario(
+        id="valid_docker_native_dry_run",
+        docker_native="--dry-run",
+        expected_output="Received native Docker Compose options",
+        expected_containers=2,
+        expected_exit_code=0,
+        log_msg="Docker native: valid docker native should succeed",
+    ),
+    DockerNativeScenario(
+        id="invalid_docker_native",
+        docker_native="--foo-bar",
+        expected_output="Received native Docker Compose options",
+        expected_containers=0,
+        expected_exit_code=2,
+        log_msg="Docker native: invalid docker native should fail",
+    ),
+]
+
+
+@parametrize(
+    "scenario",
+    docker_native_scenarios,
+    ids=utils.get_scenario_ids(docker_native_scenarios),
+    indirect=False,
+)
+@usefixtures("log_test", "down")
+def test_docker_native_scenarios(
+    scenario: DockerNativeScenario, logger: Logger
+) -> None:
+    """Run each DockerNativeScenario."""
+    append = ["--module", "test", "--docker-native", scenario.docker_native]
+    result = utils.cli_cmd(utils.build_cmd(**CMD_PROVISION, append=append), logger)
+    utils.assert_exit_code(result, expected=scenario.expected_exit_code)
+    utils.assert_in_output(scenario.expected_output, result=result)
+    if scenario.expected_exit_code == 0:
+        utils.assert_num_containers(scenario.expected_containers, all=True)
+        utils.assert_containers_exist(MINITRINO_CONTAINER, TEST_CONTAINER)
+    else:
+        utils.assert_num_containers(0, all=True)
+
+
+@dataclass
+class ModuleAddScenario:
+    """
+    Module-add scenario.
+
+    Parameters
+    ----------
+    id : str
+        Identifier for scenario, used in pytest parametrize ids.
+    modules_list : list[str]
+        The list of modules to append.
+    expected_containers : int
+        The expected number of containers.
+    sequential : bool
+        Whether to add the modules sequentially.
+    expected_output : str
+        The expected output string to assert.
+    log_msg : str
+        The log message to display before running the test.
+    """
+
+    id: str
+    modules_list: list[str]
+    expected_containers: int
+    sequential: bool
+    expected_output: str
+    log_msg: str
+
+
+module_add_scenarios = [
+    ModuleAddScenario(
+        id="single_module_add",
+        modules_list=["test"],
+        expected_containers=2,
+        sequential=False,
+        expected_output="",
+        log_msg="Module add: single module",
+    ),
+    ModuleAddScenario(
+        id="multiple_modules_add",
+        modules_list=["test", "postgres"],
+        expected_containers=3,
+        sequential=False,
+        expected_output="Identified the following running modules",
+        log_msg="Module add: two modules",
+    ),
+    ModuleAddScenario(
+        id="sequential_modules_add",
+        modules_list=["test", "postgres"],
+        expected_containers=3,
+        sequential=True,
+        expected_output="Identified the following running modules",
+        log_msg="Module add: sequential modules",
+    ),
+]
+
+
+@parametrize(
+    "scenario",
+    module_add_scenarios,
+    ids=utils.get_scenario_ids(module_add_scenarios),
+    indirect=False,
+)
+@parametrize(
+    "provision_clusters",
+    [{"keepalive": True}, {"no_modules": True}],
+    indirect=True,
+)
+@usefixtures("log_test", "provision_clusters", "down")
+def test_module_add_scenarios(
+    scenario: ModuleAddScenario,
+    logger: Logger,
+) -> None:
+    """Run each ModuleAddScenario."""
+    if len(scenario.modules_list) == 1:
+        pass
+    elif scenario.sequential:
+        for module in scenario.modules_list:
+            _provision_module([module], scenario, logger)
+    else:
+        _provision_module(scenario.modules_list, scenario, logger)
+    _assert_catalog_files(scenario.modules_list)
+
+
+def _provision_module(modules, scenario, logger):
+    module_flags = [flag for m in modules for flag in ("--module", m)]
+    result = utils.cli_cmd(
+        utils.build_cmd(**CMD_PROVISION, append=module_flags), logger
     )
+    utils.assert_exit_code(result)
+    if scenario.expected_output:
+        utils.assert_in_output(scenario.expected_output, result=result)
+    utils.assert_num_containers(scenario.expected_containers)
 
-    assert result.exit_code == 2
-    assert "minimum required" in result.output
-    cleanup()
 
-    # Should fail - upper bound
-    result = utils.execute_cli_cmd(
-        ["-v", "--env", "CLUSTER_VER=999-e", "provision", "--module", "test"]
+def _assert_catalog_files(modules):
+    etc_ls = common.execute_cmd(
+        "docker exec -i minitrino-default ls /etc/${CLUSTER_DIST}/catalog/"
     )
-
-    assert result.exit_code == 2
-    assert "maximum required" in result.output
-
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-    utils.reset_test_metadata_json()
-    cleanup()
+    for m in modules:
+        if m != "test":  # Skip test module as it doesn't create catalog files
+            utils.assert_in_output(f"{m}.properties", result=etc_ls)
 
 
-def test_bootstrap():
-    """Ensures that bootstrap scripts properly execute in containers."""
+@dataclass
+class WorkerScenario:
+    """
+    Worker provisioning scenario.
 
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
+    Parameters
+    ----------
+    id : str
+        Identifier for scenario, used in pytest parametrize ids.
+    workers : int
+        Number of workers to provision
+    expected_containers : int
+        Expected number of containers
+    expected_output : str
+        Expected output string to assert
+    log_msg : str
+        Log message to display before running the test
+    """
 
-    def add_yaml_bootstrap(yaml_path=""):
-        # In case left over from previous run
-        del_yaml_bootstrap(yaml_path)
+    id: str
+    workers: int
+    expected_containers: int
+    expected_output: str
+    log_msg: str
 
+
+worker_scenarios = [
+    WorkerScenario(
+        id="single_worker",
+        workers=1,
+        expected_containers=2,
+        expected_output="started worker container: 'minitrino-worker-1'",
+        log_msg="Workers: single worker",
+    ),
+    WorkerScenario(
+        id="multiple_workers",
+        workers=2,
+        expected_containers=3,
+        expected_output="started worker container: 'minitrino-worker-2'",
+        log_msg="Workers: multiple workers",
+    ),
+    WorkerScenario(
+        id="downsize_workers",
+        workers=1,
+        expected_containers=2,
+        expected_output="Removed excess worker",
+        log_msg="Workers: downsize workers",
+    ),
+]
+
+
+@parametrize(
+    "scenario",
+    worker_scenarios,
+    ids=utils.get_scenario_ids(worker_scenarios),
+    indirect=False,
+)
+@usefixtures("log_test", "down")
+def test_worker_scenarios(
+    scenario: WorkerScenario,
+    logger: Logger,
+) -> None:
+    """Run each WorkerScenario."""
+    result = utils.cli_cmd(
+        utils.build_cmd(**CMD_PROVISION, append=["--workers", str(scenario.workers)]),
+        logger,
+    )
+    utils.assert_exit_code(result)
+    utils.assert_in_output(scenario.expected_output, result=result)
+    utils.assert_num_containers(scenario.expected_containers)
+
+    if scenario.workers > 0:
+        result = utils.cli_cmd(utils.build_cmd(**CMD_PROVISION_MOD), logger)
+        utils.assert_exit_code(result)
+        utils.assert_in_output(
+            "Restarting container 'minitrino-worker-1'", result=result
+        )
+        utils.assert_num_containers(scenario.expected_containers + 1)
+
+
+TEST_BOOTSTRAP_MSG = "Test bootstrap script execution in containers"
+
+
+@usefixtures("log_test", "down")
+@parametrize("log_msg", [TEST_BOOTSTRAP_MSG], indirect=True)
+def test_bootstrap(logger: Logger) -> None:
+    """Ensure bootstrap scripts execute in containers."""
+
+    def add_yaml_bootstrap(yaml_path):
         with open(yaml_path, "r") as file:
             data = yaml.safe_load(file)
-
         for svc_name, svc_content in data.get("services", {}).items():
             if "environment" not in svc_content:
                 svc_content["environment"] = {
                     "MINITRINO_BOOTSTRAP": f"bootstrap-{svc_name}.sh"
                 }
-
         with open(yaml_path, "w") as file:
             yaml.dump(data, file, default_flow_style=False)
 
-    def del_yaml_bootstrap(yaml_path=""):
+    def del_yaml_bootstrap(yaml_path):
         with open(yaml_path, "r") as file:
             data = yaml.safe_load(file)
-
-        try:
-            for _, svc_content in data.get("services", {}).items():
-                if "environment" in svc_content:
-                    del svc_content["environment"]
-            with open(yaml_path, "w") as file:
-                yaml.dump(data, file, default_flow_style=False)
-        except:
-            pass
+        for _, svc_content in data.get("services", {}).items():
+            if "environment" in svc_content:
+                del svc_content["environment"]
+        with open(yaml_path, "w") as file:
+            yaml.dump(data, file, default_flow_style=False)
 
     yaml_path = utils.get_module_yaml_path("test")
     add_yaml_bootstrap(yaml_path)
-
-    result = utils.execute_cli_cmd(
-        [
-            "-v",
-            "provision",
-            "--module",
-            "test",
-        ]
+    utils.cli_cmd(utils.build_cmd(**CMD_PROVISION_MOD), logger)
+    utils.assert_exit_code(result)
+    utils.assert_in_output(
+        "Successfully executed bootstrap script in container 'minitrino'",
+        "Successfully executed bootstrap script in container 'test'",
+        result=result,
     )
-
-    assert all(
-        (
-            "Successfully executed bootstrap script in container 'minitrino'"
-            in result.output,
-            "Successfully executed bootstrap script in container 'test'"
-            in result.output,
-        )
+    minitrino_bootstrap = common.execute_cmd(
+        "docker exec -i minitrino cat /tmp/bootstrap.txt"
     )
-
-    minitrino_bootstrap = common.execute_command(
-        f"docker exec -i minitrino cat /tmp/bootstrap.txt"
-    )
-    test_bootstrap = common.execute_command(
-        f"docker exec -i test cat /tmp/bootstrap.txt"
-    )
-
-    assert "hello world" in minitrino_bootstrap.get(
-        "output", ""
-    ) and test_bootstrap.get("output", "")
-
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
+    test_bootstrap = common.execute_cmd("docker exec -i test cat /tmp/bootstrap.txt")
+    utils.assert_in_output("hello world", result=minitrino_bootstrap)
+    utils.assert_in_output("hello world", result=test_bootstrap)
     del_yaml_bootstrap(yaml_path)
-    cleanup()
 
 
-def test_valid_user_config():
-    """Ensures that valid, user-defined cluster and JVM config can be successfully
-    appended to cluster's config files."""
+TEST_VALID_USER_CONFIG_MSG = "Test valid user-defined cluster and JVM config"
 
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    result = utils.execute_cli_cmd(
-        [
-            "-v",
-            "--env",
-            "CONFIG_PROPERTIES=query.max-stage-count=85\nquery.max-execution-time=1h",
-            "--env",
-            "JVM_CONFIG=-Xms1G\n-Xmx2G",
-            "provision",
-            "--module",
-            "test",
-        ]
+@usefixtures("log_test", "down")
+@parametrize("log_msg", [TEST_VALID_USER_CONFIG_MSG], indirect=True)
+def test_valid_user_config(logger: Logger) -> None:
+    """Ensure valid configs can be appended to cluster config files."""
+    prepend = [
+        "--env",
+        "CONFIG_PROPERTIES=query.max-stage-count=85\nquery.max-execution-time=1h",
+        "--env",
+        "JVM_CONFIG=-Xms1G\n-Xmx2G",
+    ]
+    built_cmd = utils.build_cmd(**CMD_PROVISION_MOD, prepend=prepend)
+    result = utils.cli_cmd(built_cmd, logger)
+    utils.assert_exit_code(result)
+    utils.assert_in_output("Appending user-defined config", result=result)
+
+    cmd = "docker exec -i minitrino cat /etc/${CLUSTER_DIST}"
+    jvm_config = common.execute_cmd(f"{cmd}/jvm.config")
+    cluster_config = common.execute_cmd(f"{cmd}/config.properties")
+    utils.assert_in_output("-Xms1G", "-Xmx2G", result=jvm_config)
+    utils.assert_in_output(
+        "query.max-stage-count=85", "query.max-execution-time=1h", result=cluster_config
     )
 
-    assert result.exit_code == 0
-    assert (
-        "Appending user-defined config to cluster container config..." in result.output
+
+TEST_DUPLICATE_CONFIG_PROPS_MSG = "Test duplicate configuration properties warning"
+
+
+@usefixtures("log_test", "down")
+@parametrize("log_msg", [TEST_DUPLICATE_CONFIG_PROPS_MSG], indirect=True)
+def test_duplicate_config_props(logger: Logger) -> None:
+    """Ensure that duplicate config properties are logged as a warning to the user."""
+    prepend = [
+        "--env",
+        "CLUSTER_VER=3.2.0",
+        "--env",
+        "CONFIG_PROPERTIES=query.max-stage-count=85\nquery.max-stage-count=100",
+        "--env",
+        "JVM_CONFIG=-Xms1G\n-Xms1G",
+    ]
+    built_cmd = utils.build_cmd(**CMD_PROVISION, prepend=prepend)
+    result = utils.cli_cmd(built_cmd, logger)
+    utils.assert_exit_code(result)
+    utils.assert_in_output(
+        "Duplicate configuration properties detected in 'config.properties' file",
+        "query.max-stage-count=85",
+        "query.max-stage-count=100",
+        "Duplicate configuration properties detected in 'jvm.config' file",
+        "-Xms1G",
+        result=result,
     )
-
-    jvm_config = common.execute_command(
-        "docker exec -i minitrino cat /etc/${CLUSTER_DIST}/jvm.config"
-    )
-    cluster_config = common.execute_command(
-        "docker exec -i minitrino cat /etc/${CLUSTER_DIST}/config.properties"
-    )
-
-    assert all(("-Xmx2G" in jvm_config["output"], "-Xms1G" in jvm_config["output"]))
-    assert all(
-        (
-            "query.max-stage-count=85" in cluster_config["output"],
-            "query.max-execution-time=1h" in cluster_config["output"],
-        )
-    )
-
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-    cleanup()
+    utils.assert_exit_code(result)
 
 
-def test_duplicate_config_props():
-    """Ensures that duplicate configuration properties are logged as a
-    warning to the user."""
+def dep_cluster_metadata(name="test", modules=["postgres"], workers=0) -> dict:
+    """
+    Return a dictionary with dependent cluster metadata.
 
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
-
-    result = utils.execute_cli_cmd(
-        [
-            "-v",
-            "--env",
-            "CONFIG_PROPERTIES=query.max-stage-count=85\nquery.max-stage-count=100",
-            "--env",
-            "JVM_CONFIG=-Xms1G\n-Xms1G",
-            "provision",
-        ]
-    )
-
-    assert all(
-        (
-            "Duplicate configuration properties detected in 'config.properties' file"
-            in result.output,
-            "query.max-stage-count=85" in result.output,
-            "query.max-stage-count=100" in result.output,
-            "Duplicate configuration properties detected in 'jvm.config' file"
-            in result.output,
-            "-Xms1G" in result.output,
-        )
-    )
-
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-    cleanup()
-
-
-def test_incompatible_modules():
-    """Verifies that chosen modules are not mutually-exclusive."""
-
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
-
-    result = utils.execute_cli_cmd(
-        ["-v", "provision", "--module", "ldap", "--module", "test"]
-    )
-
-    assert result.exit_code == 2
-    assert all(
-        (
-            "Incompatible modules detected" in result.output,
-            "incompatible with module" in result.output,
-            "ldap" in result.output,
-        )
-    )
-
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-    cleanup()
-
-
-def test_provision_append():
-    """Verifies that modules can be appended to already-running environments."""
-
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
-
-    utils.execute_cli_cmd(["-v", "provision", "--module", "test"])
-    result = utils.execute_cli_cmd(["-v", "provision", "--module", "postgres"])
-    containers = get_containers()
-
-    assert result.exit_code == 0
-    assert "Identified the following running modules" in result.output
-    assert len(containers) == 3  # minitrino, test, and postgres
-
-    # Ensure new volume mount was activated; indicates container was
-    # properly recreated
-    etc_ls = common.execute_command(
-        "docker exec -i minitrino ls /etc/${CLUSTER_DIST}/catalog/"
-    )
-    assert "postgres.properties" in etc_ls["output"]
-
-    # Add one more module
-    result = utils.execute_cli_cmd(["-v", "provision", "--module", "mysql"])
-    etc_ls = common.execute_command(
-        "docker exec -i minitrino ls /etc/${CLUSTER_DIST}/catalog/"
-    )
-    assert "mysql.properties" and "postgres.properties" in etc_ls["output"]
-
-    containers = get_containers()
-
-    assert result.exit_code == 0
-    assert len(containers) == 4  # minitrino, test, postgres, and mysql
-
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-    cleanup()
-
-
-def test_workers():
-    """Verifies that worker provisioning works."""
-
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
-
-    # Provision 1 worker
-    result = utils.execute_cli_cmd(["-v", "provision", "--workers", "1"])
-    containers = get_containers()
-
-    assert result.exit_code == 0
-    assert "started worker container: 'minitrino-worker-1'" in result.output
-    assert len(containers) == 2  # coordinator, worker
-
-    # Provision a second worker
-    result = utils.execute_cli_cmd(["-v", "provision", "--workers", "2"])
-    containers = get_containers()
-
-    assert result.exit_code == 0
-    assert "started worker container: 'minitrino-worker-2'" in result.output
-    assert len(containers) == 3  # coordinator, (2) worker
-
-    # Downsize workers (remove worker 2)
-    result = utils.execute_cli_cmd(["-v", "provision", "--workers", "1"])
-    containers = get_containers()
-
-    assert result.exit_code == 0
-    assert "Removed excess worker" and "minitrino-worker-2" in result.output
-    assert len(containers) == 2  # coordinator, worker
-
-    # Provision a module in a running environment with a worker already present,
-    # but don't specify any workers
-    result = utils.execute_cli_cmd(["-v", "provision", "--module", "test"])
-    containers = get_containers()
-
-    assert result.exit_code == 0
-    assert "Restarting container 'minitrino-worker-1'" in result.output
-    assert len(containers) == 3  # coordinator, worker, test
-
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-    cleanup()
-
-
-def test_catalogs_volume():
-    """Verifies that the `catalogs` named volume functions as expected."""
-
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
-
-    result = utils.execute_cli_cmd(["-v", "provision", "--module", "hive"])
-    assert result.exit_code == 0
-
-    hive = common.execute_command(
-        "docker exec -i minitrino cat /etc/${CLUSTER_DIST}/catalog/hive.properties"
-    )
-
-    assert "connector.name=hive" in hive["output"]
-
-    cleanup()
-
-    result = utils.execute_cli_cmd(
-        ["-v", "provision", "--module", "hive", "--module", "delta-lake"]
-    )
-    assert result.exit_code == 0
-    assert "Removed 'minitrino_catalogs' volume" in result.output
-
-    hive = common.execute_command(
-        "docker exec -i minitrino cat /etc/${CLUSTER_DIST}/catalog/hive.properties"
-    )
-    delta = common.execute_command(
-        "docker exec -i minitrino cat /etc/${CLUSTER_DIST}/catalog/delta.properties"
-    )
-
-    assert (
-        "connector.name=hive" in hive["output"]
-        and "connector.name=delta-lake" in delta["output"]
-    )
-
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-    cleanup()
-
-
-def get_containers():
-    """Returns all running minitrino containers."""
-
-    docker_client = docker.from_env()
-    return docker_client.containers.list(filters={"label": RESOURCE_LABEL})
-
-
-def cleanup():
-    """Brings down containers and removes resources."""
-
-    utils.execute_cli_cmd(["down", "--sig-kill"])
-
-
-if __name__ == "__main__":
-    main()
+    Parameters
+    ----------
+    name : str
+        Name of the dependent cluster.
+    modules : list[str]
+        List of modules to be provisioned in the dependent cluster.
+    workers : int
+        Number of workers to be provisioned in the dependent cluster.
+    """
+    return {
+        "dependentClusters": [{"name": name, "modules": modules, "workers": workers}]
+    }

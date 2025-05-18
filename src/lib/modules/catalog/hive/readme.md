@@ -44,11 +44,11 @@ volumes:
   postgres-hive-data:
     labels:
       - org.minitrino=root
-      - org.minitrino.module.hive=catalog-hive
+      - org.minitrino.module=catalog-hive
   minio-hive-data:
     labels:
       - org.minitrino=root
-      - org.minitrino.module.hive=catalog-hive
+      - org.minitrino.module=catalog-hive
 ```
 
 The user-facing implication is that the data in the Hive metastore and the data
@@ -63,7 +63,7 @@ module with named volumes is deployed––be sure to look out for these warning
 To remove these volumes, run:
 
 ```sh
-minitrino -v remove --volumes --label org.minitrino.module.hive=catalog-hive
+minitrino -v remove --volumes --label org.minitrino.module=catalog-hive
 ```
 
 Or, remove them directly using the Docker CLI:

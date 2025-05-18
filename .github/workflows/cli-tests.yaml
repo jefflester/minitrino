@@ -23,6 +23,8 @@ jobs:
           pip install -e .
           pip install -e ./src/test/
       - name: Run CLI tests
+        env:
+          GH_WORKFLOW_RUNNING: true
         run: |-
           minitrino --help || exit 1
-          python ./src/test/src/cli/runner.py
+          pytest src/test/cli

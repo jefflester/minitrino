@@ -32,7 +32,7 @@ volumes:
   mysql-data:
     labels:
       - org.minitrino=root
-      - org.minitrino.module.mysql=catalog-mysql
+      - org.minitrino.module=catalog-mysql
 ```
 
 The user-facing implication is that MySQL data is retained even after shutting
@@ -47,7 +47,7 @@ for these warnings:
 To remove these volumes, run:
 
 ```sh
-minitrino -v remove --volumes --label org.minitrino.module.mysql=catalog-mysql
+minitrino -v remove --volumes --label org.minitrino.module=catalog-mysql
 ```
 
 Or, remove them directly using the Docker CLI:

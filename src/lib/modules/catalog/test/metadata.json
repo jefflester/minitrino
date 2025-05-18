@@ -7,5 +7,6 @@
     "file-access-control"
   ],
   "versions": [],
-  "enterprise": false
+  "enterprise": false,
+  "dependentClusters": []
 }

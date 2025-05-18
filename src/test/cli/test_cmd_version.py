@@ -1,31 +1,13 @@
-#!/usr/bin/env python3
-
-
 import pkg_resources
-
-from test import common
+from logging import Logger
 from test.cli import utils
 
-from inspect import currentframe
-from types import FrameType
-from typing import cast
 
-
-def main():
-    common.log_status(__file__)
-    test_version()
-
-
-def test_version():
-    """Tests for correct version output."""
-
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
-
-    result = utils.execute_cli_cmd(["version"])
-    assert pkg_resources.require("Minitrino")[0].version in result.output
-
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-
-
-if __name__ == "__main__":
-    main()
+@pytest.mark.usefixtures("log_test")
+@pytest.mark.parametrize("log_msg", ["Testing version"], id="version")
+def test_version(logger: Logger) -> None:
+    """Test for correct version output."""
+    result = utils.cli_cmd(utils.build_cmd("version"), logger)
+    version = pkg_resources.require("Minitrino")[0].version
+    utils.assert_exit_code(result)
+    utils.assert_in_output(version, result=result)

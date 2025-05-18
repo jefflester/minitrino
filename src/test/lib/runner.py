@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Test runner for Minitrino module tests."""
 
 import os
 import re
@@ -9,29 +9,34 @@ import jsonschema
 
 from test import common
 from test.lib.specs import SPECS
-from test.lib.utils import cleanup
-from test.lib.utils import dump_container_logs
+from test.lib.utils import cleanup, log_status, log_success, dump_container_logs
 
 from minitrino.settings import MIN_CLUSTER_VER
 
 
 class ModuleTest:
+    """
+    Test class for Minitrino modules.
+
+    Parameters
+    ----------
+    json_data : dict
+        JSON containing module test data.
+    module : str
+        Module name.
+    image : str
+        Image to use for cluster containers.
+    specs : dict
+        JSON schema specifications for different test types.
+    """
+
     def __init__(self, json_data={}, module="", image=""):
-        """Module Tests.
-
-        Attributes
-        ----------
-        - `json_data`: JSON containing module test data.
-        - `module`: Module name.
-        - `image`: Image to use for cluster containers.
-        - `specs`: JSON schema specifications for different test types."""
-
         self.json_data = json_data
         self.module = module
         self.image = image
         self.specs = SPECS
 
-        common.log_status(f"Module tests for module: '{module}'")
+        log_status(f"Module tests for module: '{module}'")
         if self.skip_enterprise():
             return
 
@@ -43,45 +48,61 @@ class ModuleTest:
         cleanup()
         self.run_tests(tests, True)
 
-    def skip_enterprise(self):
-        """Skips the test if the module is enterprise and the image is
-        'trino'."""
+    def skip_enterprise(self) -> bool:
+        """
+        Skip enterprise tests under certain conditions.
 
-        output = common.execute_command(
+        Returns
+        -------
+        bool
+            `True` if the tests should be skipped, `False` otherwise.
+
+        Notes
+        -----
+        Skips tests if the module is enterprise and the image is 'trino'.
+        """
+        cmd_result = common.execute_cmd(
             f"minitrino modules -m {self.module} -j | jq --arg module {self.module} '.[$module].enterprise'"
         )
-        if self.image == "trino" and output.get("output") == "true":
-            common.log_status(
-                f"Module '{self.module}' is an enterprise module, skipping test"
-            )
+        if self.image == "trino" and cmd_result.output == "true":
+            log_status(f"Module '{self.module}' is an enterprise module, skipping test")
             return True
+        return False
 
-    def run_tests(self, tests=[], workers=False):
-        """Runs module tests."""
+    def run_tests(self, tests=[], workers=False) -> None:
+        """
+        Run all tests for the module.
 
+        Parameters
+        ----------
+        tests : list
+            List of tests to run.
+        workers : bool
+            Whether to run tests with workers.
+        """
         if self.image == "starburst":
             cluster_ver = str(MIN_CLUSTER_VER) + "-e"
         else:
-            cluster_ver = MIN_CLUSTER_VER
+            cluster_ver = str(MIN_CLUSTER_VER)
 
         if not workers:
-            output = common.execute_command(
+            cmd_result = common.execute_cmd(
                 f"minitrino -v -e CLUSTER_VER={cluster_ver} "
                 f"provision -i {self.image} -m {self.module}"
             )
         else:
-            output = common.execute_command(
+            cmd_result = common.execute_cmd(
                 f"minitrino -v -e CLUSTER_VER={cluster_ver} "
                 f"provision -i {self.image} -m {self.module} --workers 1"
             )
 
-        if output.get("exit_code") != 0:
+        if cmd_result.exit_code != 0:
             raise RuntimeError(
                 f"Provisioning of module '{self.module}' failed. Exiting test."
             )
 
         for t in tests:
-            common.log_status(
+            log_status(
                 f"Running test type '{t.get('type')}' for module '{self.module}': '{t.get('name')}'"
             )
             if t.get("type") == "query":
@@ -90,13 +111,19 @@ class ModuleTest:
                 self.test_shell(t)
             if t.get("type") == "logs":
                 self.test_logs(t)
-            common.log_success(
+            log_success(
                 f"Module test type '{t.get('type')}' for module: '{self.module}'"
             )
 
-    def test_query(self, json_data={}):
-        "Runs a query inside the cluster container using the trino-cli."
+    def test_query(self, json_data={}) -> None:
+        """
+        Test query execution.
 
+        Parameters
+        ----------
+        json_data : dict
+            JSON containing query test data.
+        """
         # Check inputs
         contains = json_data.get("contains", [])
         row_count = json_data.get("rowCount", None)
@@ -110,8 +137,8 @@ class ModuleTest:
         i = 0
         cmd = "curl -X GET -H 'Accept: application/json' -H 'X-Trino-User: admin' 'localhost:8080/v1/info/'"
         while i <= 60:
-            output = common.execute_command(cmd, "minitrino")
-            if '"starting":false' in output.get("output", ""):
+            cmd_result = common.execute_cmd(cmd, "minitrino")
+            if '"starting":false' in cmd_result.output:
                 time.sleep(5)  # hard stop to ensure coordinator is ready
                 break
             elif i < 60:
@@ -132,21 +159,27 @@ class ModuleTest:
                 cmd += f" {i}"
 
         # Execute query
-        output = common.execute_command(cmd, "minitrino", json_data.get("env", {}))
+        cmd_result = common.execute_cmd(cmd, "minitrino", json_data.get("env", {}))
 
         # Run assertions
         for c in contains:
-            assert c in output.get("output"), f"Output '{c}' not in query result"
+            assert c in cmd_result.output, f"Output '{c}' not in query result"
         if row_count:
             row_count += 1  # Account for column header row
-            query_row_count = output.get("output").count("\n")
+            query_row_count = cmd_result.output.count("\n")
             assert (
                 row_count == query_row_count
             ), f"Expected row count: {row_count}, actual row count: {query_row_count}"
 
-    def test_shell(self, json_data={}):
-        """Runs a command in a container or on the host shell."""
+    def test_shell(self, json_data={}) -> None:
+        """
+        Test shell command execution.
 
+        Parameters
+        ----------
+        json_data : dict
+            JSON containing shell test data.
+        """
         # Check inputs
         contains = json_data.get("contains", [])
         exit_code = json_data.get("exitCode", None)
@@ -164,31 +197,34 @@ class ModuleTest:
         # Run command
         cmd = json_data.get("command", "")
         container = json_data.get("container", None)
-        output = common.execute_command(cmd, container, json_data.get("env", {}))
+        cmd_result = common.execute_cmd(cmd, container, json_data.get("env", {}))
 
         # Run assertions
         if exit_code is not None:
-            cmd_exit_code = output.get("exit_code")
             assert (
-                exit_code == cmd_exit_code
-            ), f"Unexpected exit code: {cmd_exit_code} expected: {exit_code}"
+                exit_code == cmd_result.exit_code
+            ), f"Unexpected exit code: {cmd_result.exit_code} expected: {exit_code}"
 
         for c in contains:
-            assert c in output.get("output"), f"'{c}' not in command output"
+            assert c in cmd_result.output, f"'{c}' not in command output"
 
         # Run subcommands
         subcommands = json_data.get("subCommands", [])
         if subcommands:
             for s in subcommands:
-                output = self._execute_subcommand(
-                    s, prev_output=output.get("output", "")
-                )
+                self._execute_subcommand(s, prev_output=cmd_result.output)
 
-    def test_logs(self, json_data):
-        """Checks for matching strings in container logs."""
+    def test_logs(self, json_data) -> None:
+        """
+        Test log output.
 
+        Parameters
+        ----------
+        json_data : dict
+            JSON containing log test data.
+        """
         timeout = json_data.get("timeout", 30)
-        container = common.get_container(json_data.get("container"))
+        container = common.get_containers(json_data.get("container"))[0]
 
         i = 0
         while True:
@@ -205,9 +241,21 @@ class ModuleTest:
                 else:
                     raise TimeoutError(f"'{c}' not found in container log output")
 
-    def _execute_subcommand(self, json_data={}, healthcheck=False, prev_output=""):
-        """Executes healthchecks and subcommands."""
+    def _execute_subcommand(
+        self, json_data={}, healthcheck=False, prev_output=""
+    ) -> None:
+        """
+        Execute a subcommand.
 
+        Parameters
+        ----------
+        json_data : dict
+            JSON containing subcommand data.
+        healthcheck : bool
+            Whether this is a healthcheck.
+        prev_output : str
+            Previous output.
+        """
         if healthcheck:
             cmd_type = "healthcheck"
             retry = json_data.get("retries", 30)
@@ -229,18 +277,15 @@ class ModuleTest:
 
         i = 0
         while True:
-            output = common.execute_command(cmd, container, json_data.get("env", {}))
+            cmd_result = common.execute_cmd(cmd, container, json_data.get("env", {}))
             try:
                 for c in contains:
-                    assert c in output.get(
-                        "output", ""
-                    ), f"'{c}' not in {cmd_type} output"
-                cmd_exit_code = output.get("exit_code")
+                    assert c in cmd_result.output, f"'{c}' not in {cmd_type} output"
                 if isinstance(exit_code, int):
                     assert (
-                        exit_code == cmd_exit_code
-                    ), f"Unexpected exit code: {cmd_exit_code} expected: {exit_code}"
-                return output
+                        exit_code == cmd_result.exit_code
+                    ), f"Unexpected exit code: {cmd_result.exit_code} expected: {exit_code}"
+                return cmd_result
             except AssertionError as e:
                 if i < retry:
                     print(f"{cmd_type.title()} did not succeed. Retrying...")
@@ -251,25 +296,23 @@ class ModuleTest:
                         f"'{c}' not in {cmd_type} output after {retry} retries. Last error: {e}"
                     )
 
-    def _validate(self, json_data={}):
-        """Validates JSON input."""
+    def _validate(self, json_data={}) -> None:
+        """
+        Validate JSON input.
 
+        Parameters
+        ----------
+        json_data : dict
+            JSON containing test data.
+        """
         test_type = json_data.get("type", "")
         spec = self.specs.get(test_type)
+        assert isinstance(spec, dict), f"Invalid test type: {test_type}"
         jsonschema.validate(json_data, spec)
 
 
-def main():
-    """Minitrino library test runner.
-
-    To run a specific module test, invoke this file with a module name as an
-    arg, i.e. `python runner.py ldap`.
-
-    If `--remove-images` is supplied as an argument, then all images (except the
-    `minitrino/cluster` image) will be removed after each test. This is used to
-    ensure the tests don't consume all the disk space on the GitHub Actions
-    runner."""
-
+def main() -> None:
+    """Run the test runner main entry point."""
     parser = argparse.ArgumentParser(
         description="Run module tests with optional flags."
     )
@@ -304,7 +347,7 @@ def main():
             ModuleTest(json_data, module, args.image)
             cleanup(args.remove_images)
         except Exception as e:
-            common.log_status(f"Module {module} test failed: {e}")
+            log_status(f"Module {module} test failed: {e}")
             dump_container_logs()
             cleanup(args.remove_images)
             raise e

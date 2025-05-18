@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Test specifications for Minitrino modules."""
 
 SPECS = {
     "query": {

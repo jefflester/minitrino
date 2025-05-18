@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Cluster validation utilities for Minitrino CLI."""
 
 from __future__ import annotations
 
@@ -14,32 +14,25 @@ if TYPE_CHECKING:
 
 class ClusterValidator:
     """
-    Validates cluster configuration and environment variables.
+    Validate cluster configuration and environment variables.
 
-    This class is responsible for validating cluster configuration and
-    environment variables based on the current `MinitrinoContext`.
-
-    Constructor Parameters
-    ----------------------
-    `ctx` : `MinitrinoContext`
-        An instantiated `MinitrinoContext` object with user input and context.
-    `cluster` : `Cluster`
+    Parameters
+    ----------
+    ctx : MinitrinoContext
+        An instantiated MinitrinoContext object with user input and context.
+    cluster : Cluster
         An instantiated `Cluster` object.
 
     Methods
     -------
-    `check_cluster_ver()`
-        Validates that the current `CLUSTER_VER` and `CLUSTER_DIST` environment
-        variables meet minimum requirements for either Trino or Starburst
-        distributions.
-    `check_version_requirements(modules: Optional[list[str]] = None)`
-        Validates cluster version compatibility against constraints defined in
-        each module's `metadata.json`.
-    `check_dependent_clusters(modules: Optional[list[str]] = None)`
-        Identifies dependent clusters for the specified modules.
-    `check_dup_config()`
-        Checks for duplicate entries in `config.properties` and `jvm.config` and
-        logs warnings if duplicates are found.
+    check_cluster_ver()
+        Validate that the current `CLUSTER_VER` and `CLUSTER_DIST` environment variables
+        meet minimum requirements for either Trino or Starburst distributions.
+    check_dependent_clusters(modules: Optional[list[str]] = None)
+        Identify dependent clusters for the specified modules.
+    check_dup_config()
+        Check for duplicate entries in `config.properties` and `jvm.config` and log
+        warnings if duplicates are found.
     """
 
     def __init__(self, ctx: MinitrinoContext, cluster: Cluster):
@@ -48,16 +41,13 @@ class ClusterValidator:
 
     def check_cluster_ver(self) -> None:
         """
-        Validates that the current `CLUSTER_VER` and `CLUSTER_DIST` environment
-        variables meet minimum requirements for either Trino or Starburst
-        distributions.
+        Validate that the cluster version meets minimum requirements.
 
         Raises
         ------
-        `UserError`
+        UserError
             If the provided version is too low or formatted incorrectly.
         """
-
         cluster_dist = self._ctx.env.get("CLUSTER_DIST", "")
         cluster_ver = self._ctx.env.get("CLUSTER_VER", "")
 
@@ -89,73 +79,22 @@ class ClusterValidator:
             except:
                 raise UserError(error_msg)
 
-    def check_version_requirements(self, modules: Optional[list[str]] = None) -> None:
-        """
-        Validates cluster version compatibility against constraints defined in
-        each module's `metadata.json`.
-
-        Parameters
-        ----------
-        `modules` : `list[str]`
-            A list of module names to check version requirements for.
-
-        Raises
-        ------
-        `UserError`
-            If the version constraints are invalid or not satisfied.
-        """
-
-        modules = modules or []
-        for module in modules:
-            versions = self._ctx.modules.data.get(module, {}).get("versions", [])
-
-            if not versions:
-                continue
-            if len(versions) > 2:
-                raise UserError(
-                    f"Invalid versions specification for module '{module}' in metadata.json file: {versions}",
-                    f'The valid structure is: {{"versions": [min-ver, max-ver]}}. If the versions key is '
-                    f"present, the minimum version is required, and the maximum version is optional.",
-                )
-
-            cluster_ver = int(self._ctx.env.get("CLUSTER_VER", "")[0:3])
-            min_ver = int(versions.pop(0))
-            max_ver = None
-            if versions:
-                max_ver = int(versions.pop())
-
-            begin_msg = (
-                f"The supplied cluster version {cluster_ver} is incompatible with module '{module}'. "
-                f"Per the module's metadata.json file, the"
-            )
-
-            if cluster_ver < min_ver:
-                raise UserError(
-                    f"{begin_msg} minimum required cluster version for the module is: {min_ver}."
-                )
-            if max_ver and cluster_ver > max_ver:
-                raise UserError(
-                    f"{begin_msg} maximum required cluster version for the module is: {max_ver}."
-                )
-
     def check_dependent_clusters(
         self, modules: Optional[list[str]] = None
     ) -> list[dict]:
         """
-        Identifies dependent clusters for the specified modules.
+        Identify dependent clusters for the specified modules.
 
         Parameters
         ----------
-        `modules` : `list[str]`
+        modules : list[str]
             A list of module names to check for dependencies.
 
         Returns
         -------
-        `list[dict]`
-            A list of cluster definitions that should be treated as
-            dependencies.
+        list[dict]
+            A list of cluster definitions that should be treated as dependencies.
         """
-
         self._ctx.logger.verbose("Checking for dependent clusters...")
         dependent_clusters = []
         modules = modules or []
@@ -170,10 +109,7 @@ class ClusterValidator:
         return list(dependent_clusters)
 
     def check_dup_config(self) -> None:
-        """
-        Checks for duplicate entries in `config.properties` and `jvm.config` and
-        logs warnings if duplicates are found.
-        """
+        """Check and warn for duplicate entries in cluster config files."""
 
         def log_duplicates(cfgs, filename):
             self._ctx.logger.verbose(

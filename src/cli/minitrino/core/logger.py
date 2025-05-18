@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Logging utilities for Minitrino clusters."""
 
 from click import echo, style, prompt
 from textwrap import fill
@@ -9,6 +9,8 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class LogMeta:
+    """Logging metadata."""
+
     prefix: str
     color: str
     verbose: bool = False
@@ -16,17 +18,17 @@ class LogMeta:
 
 class LogLevel(Enum):
     """
-    Logging level configuration.
+    Log levels.
 
     Attributes
     ----------
-    `INFO` : `LogMeta`
+    INFO : LogMeta
         Info level configuration (default).
-    `WARN` : `LogMeta`
+    WARN : LogMeta
         Warning level configuration.
-    `ERROR` : `LogMeta`
+    ERROR : LogMeta
         Error level configuration.
-    `VERBOSE` : `LogMeta`
+    VERBOSE : LogMeta
         Verbose level configuration.
     """
 
@@ -38,40 +40,40 @@ class LogLevel(Enum):
 
 class MinitrinoLogger:
     """
-    Minitrino logging utility for color-coded terminal output.
+    Minitrino logging utility.
 
-    This class provides standardized logging methods (`info`, `warn`, `error`,
-    `verbose`) that emit formatted messages to the console using `click.echo()`.
-    It also supports interactive prompting and message styling with configurable
-    verbosity.
-
-    Constructor Parameters
-    ----------------------
-    `log_verbose` : `bool`, optional
-        If `True`, verbose messages will be shown; otherwise, they are
-        suppressed.
+    Parameters
+    ----------
+    log_verbose : bool, optional
+        If `True`, verbose messages will be shown; otherwise, they are suppressed.
 
     Attributes
     ----------
-    `DEFAULT_INDENT` : `str`
+    DEFAULT_INDENT : str
         Standard indent used for multi-line log output.
 
     Methods
     -------
-    `log(*args, level=LogLevel.INFO, stream=False)` :
-        Logs a message with optional styling and indentation.
-    `info(*args, stream=False)` :
-        Logs a message at the info level.
-    `warn(*args, stream=False)` :
-        Logs a message at the warning level.
-    `error(*args, stream=False)` :
-        Logs a message at the error level.
-    `verbose(*args, stream=False)` :
-        Logs a message at the verbose level, if verbosity is enabled.
-    `prompt_msg(msg="")` :
-        Prompts the user with a message and captures input.
-    `styled_prefix(level=LogLevel.INFO)` :
-        Returns the ANSI-styled log prefix.
+    log(*args, level=LogLevel.INFO, stream=False) :
+        Log a message with optional styling and indentation.
+    info(*args, stream=False) :
+        Log a message at the info level.
+    warn(*args, stream=False) :
+        Log a message at the warning level.
+    error(*args, stream=False) :
+        Log a message at the error level.
+    verbose(*args, stream=False) :
+        Log a message at the verbose level, if verbosity is enabled.
+    prompt_msg(msg="") :
+        Prompt the user with a message and capture input.
+    styled_prefix(level=LogLevel.INFO) :
+        Return the ANSI-styled log prefix.
+
+    Notes
+    -----
+    This class provides standardized logging methods (`info`, `warn`, `error`,
+    `verbose`) that emit formatted messages to the console using `click.echo()`. It also
+    supports interactive prompting and message styling with configurable verbosity.
     """
 
     DEFAULT_INDENT = " " * 5
@@ -82,19 +84,7 @@ class MinitrinoLogger:
     def log(
         self, *args: str, level: LogLevel = LogLevel.INFO, stream: bool = False
     ) -> None:
-        """
-        Logs messages to the terminal using color-coded levels.
-
-        Parameters
-        ----------
-        `*args` : `str`
-            Messages to log.
-        `level` : `LogLevel`, optional
-            Logging level configuration. Defaults to LogLevel.INFO.
-        `stream` : `bool`, optional
-            If True, disables prefix on multi-line streamed output.
-        """
-
+        """Log messages to the terminal using color-coded levels."""
         if level == LogLevel.VERBOSE and not self._log_verbose:
             return  # Suppress verbose messages if not enabled
 
@@ -113,37 +103,24 @@ class MinitrinoLogger:
                 echo(f"{msg_prefix}{msg}")
 
     def info(self, *args: str, stream: bool = False) -> None:
-        """Logs an info-level message."""
+        """Log an info-level message."""
         self.log(*args, level=LogLevel.INFO, stream=stream)
 
     def warn(self, *args: str, stream: bool = False) -> None:
-        """Logs a warning message."""
+        """Log a warning message."""
         self.log(*args, level=LogLevel.WARN, stream=stream)
 
     def error(self, *args: str, stream: bool = False) -> None:
-        """Logs an error message."""
+        """Log an error message."""
         self.log(*args, level=LogLevel.ERROR, stream=stream)
 
     def verbose(self, *args: str, stream: bool = False) -> None:
-        """Logs a verbose message."""
+        """Log a verbose message if verbosity is enabled."""
         if self._log_verbose:
             self.log(*args, level=LogLevel.VERBOSE, stream=stream)
 
     def prompt_msg(self, msg: str = "") -> str:
-        """
-        Prompts the user with a styled message and returns input.
-
-        Parameters
-        ----------
-        `msg` : `str`, optional
-            Message to display before input prompt.
-
-        Returns
-        -------
-        `str`
-            User-entered string.
-        """
-
+        """Prompt the user with a styled message and return input."""
         msg = self._format(str(msg))
         styled_prefix = style(
             LogLevel.INFO.value.prefix, fg=LogLevel.INFO.value.color, bold=True
@@ -155,49 +132,26 @@ class MinitrinoLogger:
         )
 
     def styled_prefix(self, level: LogLevel = LogLevel.INFO) -> str:
-        """
-        Returns a styled log-level prefix.
-
-        Parameters
-        ----------
-        `level` : `LogLevel`, optional
-            Logging level configuration. Defaults to LogLevel.INFO.
-
-        Returns
-        -------
-        `str`
-            ANSI-styled prefix string.
-        """
+        """Return the ANSI-styled log prefix."""
         return style(level.value.prefix, fg=level.value.color, bold=True)
 
-    def _format(self, msg: str) -> str:
+    def _format(self, msg: str, meta: LogMeta) -> str:
         """
-        Formats a message for clean terminal output.
+        Format a log message with the given metadata.
 
         Parameters
         ----------
-        `msg` : `str`
+        msg : str
             The message to format.
+        meta : LogMeta
+            The log metadata.
 
         Returns
         -------
-        `str`
-            Formatted string for terminal display.
+        str
+            Formatted log message string.
         """
-
-        msg = msg.rstrip()
-        if not msg:
-            return ""
-
-        terminal_width, _ = get_terminal_size()
-        msg = msg.replace("\n", f"\n{self.DEFAULT_INDENT}")
-        msg = fill(
-            msg,
-            terminal_width - 4,
-            subsequent_indent=self.DEFAULT_INDENT,
-            replace_whitespace=False,
-            break_on_hyphens=False,
-            break_long_words=True,
-        )
-
-        return msg
+        indent = self.DEFAULT_INDENT
+        msg = fill(msg, width=get_terminal_size().columns - len(indent))
+        msg = msg.replace("\n", "\n" + indent)
+        return style(f"{meta.prefix}{msg}", fg=meta.color)

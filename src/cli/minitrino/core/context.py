@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Core context and controls for Minitrino CLI."""
 
 import os
 import re
@@ -19,43 +19,46 @@ from typing import cast, Optional
 
 class MinitrinoContext:
     """
-    Provides context and core controls that are globally accessible in command
-    scripts. This class should not be instantiated from anywhere but the CLI's
-    entrypoint, as it depends on user-provided inputs.
+    Expose context and core controls to CLI scripts.
 
     Attributes
     ----------
-    `logger` : `MinitrinoLogger`
+    logger : MinitrinoLogger
         Logs CLI activity.
-    `env` : `EnvironmentVariables`
+    env : EnvironmentVariables
         CLI environment variables, subdivided by sections.
-    `modules` : `Modules`
+    modules : Modules
         Metadata about Minitrino modules.
-    `cmd_executor` : `CommandExecutor`
+    cmd_executor : CommandExecutor
         Executes shell commands in host and containers.
-    `docker_client` : `docker.DockerClient`
+    docker_client : docker.DockerClient
         Docker client for high-level API access.
-    `api_client` : `docker.APIClient`
+    api_client : docker.APIClient
         Docker API client for low-level access.
-    `all_clusters` : `bool`
+    all_clusters : bool
         If True, operations are applied to all clusters.
-    `verbose` : `bool`
+    verbose : bool
         If True, enables verbose logging to stdout.
-    `user_home_dir` : `str`
+    user_home_dir : str
         Home directory of the current user.
-    `minitrino_user_dir` : `str`
+    minitrino_user_dir : str
         Path to ~/.minitrino/ directory.
-    `config_file` : `str`
+    config_file : str
         Path to user's minitrino.cfg file.
-    `snapshot_dir` : `str`
+    snapshot_dir : str
         Path to snapshot directory for temporary tarballs.
-    `lib_dir` : `str`
+    lib_dir : str
         Path to Minitrino's library directory.
 
     Methods
     -------
-    `initialize(verbose: bool, user_env: Optional[list], cluster_name: str)` :
+    initialize(verbose: bool, user_env: Optional[list], cluster_name: str)
         Initializes attributes that depend on user-provided input.
+
+    Notes
+    -----
+    This class should not be instantiated from anywhere but the CLI's entrypoint, as it
+    depends on user-provided inputs.
     """
 
     def __init__(self):
@@ -90,26 +93,25 @@ class MinitrinoContext:
         version_only: bool = False,
     ) -> None:
         """
-        Initializes core CLI context attributes.
+        Initialize core CLI context attributes.
 
         This method sets up logging, environment variables, and context-specific
-        resources like the cluster and Docker clients. If `version_only` is
-        True, initialization is limited to what is required to resolve the CLI
-        and library versions.
+        resources like the cluster and Docker clients. If `version_only` is True,
+        initialization is limited to what is required to resolve the CLI and library
+        versions.
 
         Parameters
         ----------
-        `verbose` : `bool`, optional
+        verbose : bool, optional
             Enables verbose logging to stdout.
-        `user_env` : `list[str]`, optional
+        user_env : list[str], optional
             A list of user-provided environment variables.
-        `cluster_name` : `str`, optional
+        cluster_name : str, optional
             The cluster name to scope operations to. Defaults to "default".
-        `version_only` : `bool`, optional
-            If True, initializes only the attributes required for version
-            fetching (e.g. `minitrino --version`).
+        version_only : bool, optional
+            If True, initializes only the attributes required for version fetching (e.g.
+            `minitrino --version`).
         """
-
         self.verbose = verbose
         self._user_env = user_env or []
 
@@ -131,20 +133,20 @@ class MinitrinoContext:
     @property
     def lib_dir(self) -> str:
         """
-        Gets the library directory.
-
-        The directory is determined using the following order of precedence:
-
-        1. Use `LIB_PATH` if provided via environment (through `--env` option,
-           OS environment variables, or the Minitrino config file).
-        2. Check if the library exists relative to the location of the
-           `components.py` file, assuming the project is running in a repository
-           context.
+        Get the library directory.
 
         Returns
         -------
-        `str`
+        str
             Path to the resolved library directory.
+
+        Notes
+        -----
+        The directory is determined using the following order of precedence:
+
+        1. Use `LIB_PATH` if provided via environment.
+        2. Check if the library exists relative to the location of this file,
+        assuming the project is running in a repository context.
         """
         if not self._lib_dir:
             self._lib_dir = self._get_lib_dir()
@@ -152,20 +154,16 @@ class MinitrinoContext:
 
     def _get_lib_dir(self) -> str:
         """
-        Determines and validates the path to the Minitrino library directory.
-
-        The method checks various potential locations for the `lib` directory,
-        including a user-specified path, a default installation path, and a
-        repository-relative path.
+        Determine and validate the path to the Minitrino library directory.
 
         Returns
         -------
-        `str`
+        str
             Resolved library directory path.
 
         Raises
         ------
-        `UserError`
+        UserError
             If a valid library cannot be found.
         """
         lib_dir = ""
@@ -200,14 +198,19 @@ class MinitrinoContext:
 
     def _handle_minitrino_user_dir(self) -> str:
         """
-        Checks if a Minitrino directory exists in the user home directory. If it
-        does not exist, the directory is created.
+        Check and create the user's `~/.minitrino` directory if it does not exist.
 
         Returns
         -------
-        `str`
-            Path to the Minitrino user home directory.
+        str
+            Path to the user's `~/.minitrino` directory.
         """
+        minitrino_user_dir = os.path.abspath(
+            os.path.join(self.user_home_dir, ".minitrino")
+        )
+        if not os.path.isdir(minitrino_user_dir):
+            os.mkdir(minitrino_user_dir)
+            return minitrino_user_dir
 
         minitrino_user_dir = os.path.abspath(
             os.path.join(self.user_home_dir, ".minitrino")
@@ -218,17 +221,13 @@ class MinitrinoContext:
 
     def _config_file(self) -> str:
         """
-        Determines the path to the user's `minitrino.cfg` configuration file.
-
-        If the file does not exist, a warning is issued but no exception is
-        raised.
+        Determine the path to the user's `minitrino.cfg` file.
 
         Returns
         -------
-        `str`
-            Path to the configuration file.
+        str
+            Path to the user's `minitrino.cfg` file.
         """
-
         config_file = os.path.join(self.minitrino_user_dir, "minitrino.cfg")
         if not os.path.isfile(config_file):
             self.logger.warn(
@@ -238,20 +237,14 @@ class MinitrinoContext:
         return config_file
 
     def _try_parse_library_env(self) -> None:
-        """
-        Attempts to parse the Minitrino library's `minitrino.env` file. If the
-        file does not exist, it is silently skipped.
-        """
+        """Attempt to parse the library environment file if present."""
         try:
             self.env._parse_library_env()
         except:  # Skip lib-related procedures if the lib is not found
             pass
 
     def _compare_versions(self) -> None:
-        """
-        Compares the CLI version with the library version and logs a warning if
-        they do not match.
-        """
+        """Compare CLI and library versions for compatibility."""
         cli_ver = utils.cli_ver()
         lib_ver = utils.lib_ver(lib_path=self.lib_dir)
         if cli_ver != lib_ver:
@@ -264,7 +257,12 @@ class MinitrinoContext:
 
     def _set_cluster_attrs(self, cluster_name: str) -> None:
         """
-        Sets cluster attributes based on the active cluster name.
+        Set cluster-related attributes for the context.
+
+        Parameters
+        ----------
+        cluster_name : str
+            The name of the cluster to set.
         """
         self._set_cluster_name(cluster_name)
         self.cluster = Cluster(self)
@@ -278,11 +276,11 @@ class MinitrinoContext:
 
     def _set_cluster_name(self, cluster_name: str) -> None:
         """
-        Determines and validates the active cluster name.
+        Determine and validate the active cluster name.
 
         Parameters
         ----------
-        `cluster_name` : `str`
+        cluster_name : str
             The user-specified or default cluster name.
         """
         if cluster_name:
@@ -314,17 +312,17 @@ class MinitrinoContext:
 
     def _set_docker_clients(self, env: Optional[dict] = None) -> None:
         """
-        Initializes Docker clients for both high-level and low-level API access.
+        Initialize Docker clients.
 
         Parameters
         ----------
-        `env` : `dict`, optional
-            Dictionary of environment variables used when resolving the current
-            Docker context. Defaults to an empty dictionary.
+        env : dict, optional
+            Dictionary of environment variables used when resolving the current Docker
+            context. Defaults to an empty dictionary.
 
         Raises
         ------
-        `MinitrinoError`
+        MinitrinoError
             If the Docker socket file cannot be determined.
         """
         if env is None:
@@ -335,10 +333,10 @@ class MinitrinoContext:
         )
 
         try:
-            output = self.cmd_executor.execute(
+            inspect = self.cmd_executor.execute(
                 "docker context inspect", environment=env, suppress_output=True
-            )
-            context = json.loads(output[0].output)[0]
+            )[0]
+            context = json.loads(inspect.output)[0]
             socket = context["Endpoints"]["docker"].get("Host", "")
         except Exception as e:
             raise MinitrinoError(

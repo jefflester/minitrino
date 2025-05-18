@@ -1,184 +1,339 @@
-#!/usr/bin/env python3
+import os
 
-from test import common
+from typing import Optional
+from logging import Logger
+from dataclasses import dataclass
+from pytest.mark import parametrize, usefixtures
+
+from test.common import CONFIG_FILE
 from test.cli import utils
 
-from inspect import currentframe
-from types import FrameType
-from typing import cast
+
+@dataclass
+class DaemonOffScenario:
+    """
+    Daemon off scenario.
+
+    Parameters
+    ----------
+    id : str
+        Identifier for scenario, used in pytest parametrize ids.
+    cmd : dict
+        The command to run.
+    input_val : Optional[str]
+        The input value.
+    expected_exit_code : int
+        The expected exit code.
+    expected_in_output : str
+        The expected output string to assert.
+    log_msg : str
+        The log message to display before running the test.
+    """
+
+    id: str
+    cmd: dict
+    input_val: Optional[str]
+    expected_exit_code: int
+    expected_in_output: str
+    log_msg: str
 
 
-def main():
-    common.log_status(__file__)
-    test_daemon_off_all(
-        ["-v", "down"],
-        ["-v", "provision"],
-        ["-v", "remove"],
-        [
-            "-v",
-            "snapshot",
-            "--name",
-            "test",
-        ],  # Applicable only when snapshotting active environment
-        ["-v", "modules", "--running"],
-    )
-    test_env()
-    test_multiple_env()
-    test_invalid_env()
-    test_invalid_lib()
+daemon_off_scenarios = [
+    DaemonOffScenario(
+        id="down_daemon_off",
+        cmd={"base": "down"},
+        input_val=None,
+        expected_exit_code=2,
+        expected_in_output="Error when pinging the Docker server",
+        log_msg="Down command: fails when daemon is off",
+    ),
+    DaemonOffScenario(
+        id="provision_daemon_off",
+        cmd={"base": "provision"},
+        input_val=None,
+        expected_exit_code=2,
+        expected_in_output="Error when pinging the Docker server",
+        log_msg="Provision command: fails when daemon is off",
+    ),
+    DaemonOffScenario(
+        id="remove_daemon_off",
+        cmd={"base": "remove"},
+        input_val=None,
+        expected_exit_code=2,
+        expected_in_output="Error when pinging the Docker server",
+        log_msg="Remove command: fails when daemon is off",
+    ),
+    DaemonOffScenario(
+        id="snapshot_daemon_off",
+        cmd={"base": "snapshot", "append": ["--name", "test"]},
+        input_val="y\n",
+        expected_exit_code=2,
+        expected_in_output="Error when pinging the Docker server",
+        log_msg="Snapshot command: fails when daemon is off",
+    ),
+    DaemonOffScenario(
+        id="modules_daemon_off",
+        cmd={"base": "modules", "append": ["--running"]},
+        input_val=None,
+        expected_exit_code=2,
+        expected_in_output="Error when pinging the Docker server",
+        log_msg="Modules (running) command: fails when daemon is off",
+    ),
+]
 
 
-def test_daemon_off_all(*args):
-    """Verifies that each Minitrino command properly exits properly if the
-    Docker daemon is off or unresponsive."""
-
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
-
-    def run_daemon_assertions(result):
-        """Runs standard assertions."""
-
-        assert result.exit_code == 2, f"Invalid exit code: {result.exit_code}"
-        assert (
-            "Error when pinging the Docker server. Is the Docker daemon running?"
-            in result.output
-        ), f"Unexpected output: {result.output}"
-
-    common.stop_docker_daemon()
-
-    for arg in args:
-        if "snapshot" in arg:
-            result = utils.execute_cli_cmd(arg, command_input="y\n")
-        else:
-            result = utils.execute_cli_cmd(arg)
-        run_daemon_assertions(result)
-
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
+@parametrize(
+    "scenario",
+    daemon_off_scenarios,
+    ids=utils.get_scenario_ids(daemon_off_scenarios),
+    indirect=False,
+)
+@usefixtures("log_test", "stop_docker")
+def test_daemon_off_scenarios(
+    scenario: DaemonOffScenario,
+    logger: Logger,
+) -> None:
+    """Run each DaemonOffScenario."""
+    result = utils.cli_cmd(utils.build_cmd(**scenario.cmd), logger, scenario.input_val)
+    utils.assert_exit_code(result, expected=scenario.expected_exit_code)
+    utils.assert_in_output(scenario.expected_in_output, result=result)
 
 
-def test_env():
-    """Verifies that an environment variable can be successfully passed in."""
+@dataclass
+class EnvScenario:
+    """
+    Env scenario.
 
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
+    Parameters
+    ----------
+    id : str
+        Identifier for scenario, used in pytest parametrize ids.
+    envvar : str
+        The environment variable to set.
+    envval : str
+        The value of the environment variable.
+    source : str
+        The source of the environment variable.
+    expected_present : bool
+        Whether the environment variable is expected to be present.
+    log_msg : str
+        The log message to display before running the test.
+    """
 
-    # User environment variable
-    result = utils.execute_cli_cmd(
-        ["-v", "--env", "COMPOSE_PROJECT_NAME=test", "version"]
-    )
-
-    assert result.exit_code == 0
-    assert "COMPOSE_PROJECT_NAME" and "test" in result.output
-
-    # Shell environment variable
-    result = utils.execute_cli_cmd(
-        ["-v", "version"],
-        env={"COMPOSE_PROJECT_NAME": "test"},
-    )
-
-    assert result.exit_code == 0
-    assert "COMPOSE_PROJECT_NAME" and "test" in result.output
-
-    # Config environment variable
-    utils.make_sample_config()
-    cmd = (
-        f'bash -c "cat << EOF >> {common.CONFIG_FILE}\n'
-        f"COMPOSE_PROJECT_NAME=test\n"
-        f'EOF"'
-    )
-    common.execute_command(cmd)
-
-    result = utils.execute_cli_cmd(
-        ["-v", "version"],
-    )
-
-    assert result.exit_code == 0
-    assert "COMPOSE_PROJECT_NAME" and "test" in result.output
-
-    common.execute_command(f'bash -c "rm {common.CONFIG_FILE}\n"')
-
-    result = utils.execute_cli_cmd(
-        ["-v", "version"],
-    )
-
-    assert result.exit_code == 0
-    assert "COMPOSE_PROJECT_NAME" and "minitrino" in result.output
-
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
+    id: str
+    envvar: str
+    envval: str
+    source: str
+    expected_present: bool
+    log_msg: str
 
 
-def test_multiple_env():
-    """Verifies that multiple environment variables can be successfully passed
-    in."""
+env_scenarios = [
+    EnvScenario(
+        id="env_from_cli",
+        envvar="CONFIG_PROPERTIES",
+        envval="query.max-memory=1PB",
+        source="cli",
+        expected_present=True,
+        log_msg="Env passed from CLI - should be set",
+    ),
+    EnvScenario(
+        id="env_from_shell",
+        envvar="CONFIG_PROPERTIES",
+        envval="query.max-memory=1PB",
+        source="shell",
+        expected_present=True,
+        log_msg="Env passed from shell - should be set",
+    ),
+    EnvScenario(
+        id="env_from_config",
+        envvar="CONFIG_PROPERTIES",
+        envval="query.max-memory=1PB",
+        source="config",
+        expected_present=True,
+        log_msg="Env passed from config - should be set",
+    ),
+    EnvScenario(
+        id="env_unset",
+        envvar="CONFIG_PROPERTIES",
+        envval="query.max-memory=1PB",
+        source="unset",
+        expected_present=False,
+        log_msg="Env unset - should not be set",
+    ),
+]
 
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
 
-    result = utils.execute_cli_cmd(
-        [
-            "-v",
-            "--env",
-            "COMPOSE_PROJECT_NAME=test",
-            "--env",
-            "CLUSTER_VER=388-e",
-            "--env",
-            "TRINO=is=awesome",
-            "version",
-        ]
-    )
-
-    assert result.exit_code == 0
-    assert all(
-        (
-            '"COMPOSE_PROJECT_NAME": "test"' in result.output,
-            '"CLUSTER_VER": "388-e"' in result.output,
-            '"TRINO": "is=awesome"' in result.output,
+@parametrize(
+    "scenario",
+    env_scenarios,
+    ids=utils.get_scenario_ids(env_scenarios),
+    indirect=False,
+)
+@usefixtures("log_test", "cleanup_config")
+def test_env_scenarios(
+    scenario: EnvScenario,
+    logger: Logger,
+) -> None:
+    """Run each EnvScenario."""
+    if scenario.source == "cli":
+        result = utils.cli_cmd(
+            utils.build_cmd(
+                "version", prepend=["--env", f"{scenario.envvar}={scenario.envval}"]
+            ),
+            logger,
         )
+    elif scenario.source == "shell":
+        result = utils.cli_cmd(
+            utils.build_cmd("version"),
+            logger,
+            env={scenario.envvar: scenario.envval},
+        )
+    elif scenario.source == "config":
+        utils.write_file(CONFIG_FILE, f"{scenario.envvar}={scenario.envval}", mode="a")
+        result = utils.cli_cmd(utils.build_cmd("version"), logger)
+        os.remove(CONFIG_FILE)
+    else:  # unset
+        result = utils.cli_cmd(utils.build_cmd("version"), logger)
+    utils.assert_exit_code(result)
+    if scenario.expected_present:
+        utils.assert_in_output(scenario.envvar, scenario.envval, result=result)
+    else:
+        utils.assert_not_in_output(scenario.envvar, scenario.envval, result=result)
+
+
+@dataclass
+class InvalidEnvScenario:
+    """
+    Invalid environment variable scenario.
+
+    Parameters
+    ----------
+    id : str
+        Identifier for scenario, used in pytest parametrize ids.
+    envflag : str
+        The environment variable flag.
+    log_msg : str
+        The log message to display before running the test.
+    """
+
+    id: str
+    envflag: str
+    log_msg: str
+
+
+invalid_env_scenarios = [
+    InvalidEnvScenario(
+        id="missing_equals",
+        envflag="COMPOSE_PROJECT_NAMEtest",
+        log_msg="Env var missing equals - should error",
+    ),
+    InvalidEnvScenario(
+        id="empty_key_value",
+        envflag="=",
+        log_msg="Env var empty key - should error",
+    ),
+]
+
+
+@parametrize(
+    "scenario",
+    invalid_env_scenarios,
+    ids=utils.get_scenario_ids(invalid_env_scenarios),
+    indirect=False,
+)
+@usefixtures("log_test", "cleanup_config")
+def test_invalid_env_scenarios(scenario: InvalidEnvScenario, logger: Logger) -> None:
+    """Run each InvalidEnvScenario."""
+    result = utils.cli_cmd(
+        utils.build_cmd("version", prepend=["--env", scenario.envflag]), logger
+    )
+    utils.assert_exit_code(result, expected=2)
+    utils.assert_in_output("Invalid key-value pair", result=result)
+
+
+@dataclass
+class InvalidLibScenario:
+    """
+    Invalid library scenario.
+
+    Parameters
+    ----------
+    id : str
+        Identifier for scenario, used in pytest parametrize ids.
+    lib_path : str
+        The library path to test.
+    log_msg : str
+        The log message to display before running the test.
+    """
+
+    id: str
+    lib_path: str
+    log_msg: str
+
+
+invalid_lib_scenarios = [
+    InvalidLibScenario(
+        id="nonexistent_dir",
+        lib_path="/_foo_bar/",
+        log_msg="Point lib path to nonexistent directory",
+    ),
+    InvalidLibScenario(
+        id="real_dir_not_library",
+        lib_path="/tmp/",
+        log_msg="Point library to real directory that is not a valid library",
+    ),
+]
+
+
+@parametrize(
+    "scenario",
+    invalid_lib_scenarios,
+    ids=utils.get_scenario_ids(invalid_lib_scenarios),
+    indirect=False,
+)
+@usefixtures("log_test", "cleanup_config")
+def test_invalid_lib_scenarios(scenario: InvalidLibScenario, logger: Logger) -> None:
+    """Run each InvalidLibScenario."""
+    result = utils.cli_cmd(
+        utils.build_cmd("modules", prepend=["--env", f"LIB_PATH={scenario.lib_path}"]),
+        logger,
+    )
+    utils.assert_exit_code(result, expected=2)
+    utils.assert_in_output(
+        "This operation requires a library to be installed", result=result
     )
 
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
 
+@usefixtures("log_test", "cleanup_config")
+@parametrize("log_msg", ["Pass in multiple environment variables"], indirect=True)
+def test_multiple_env(logger: Logger) -> None:
+    """
+    Verify that multiple environment variables can be successfully passed in.
 
-def test_invalid_env():
-    """Verifies that an invalid environment variable will cause the CLI to exit
-    with a non-zero status code."""
-
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
-
-    result = utils.execute_cli_cmd(
-        ["-v", "--env", "COMPOSE_PROJECT_NAMEtest", "version"]
+    Parameters
+    ----------
+    logger : Logger
+        Logger to use for logging.
+    """
+    result = utils.cli_cmd(
+        utils.build_cmd(
+            "version",
+            prepend=[
+                "--env",
+                "COMPOSE_PROJECT_NAME=test",
+                "--env",
+                "CLUSTER_VER=420-e",
+                "--env",
+                "TRINO=is=awesome",
+            ],
+        ),
+        logger,
     )
-
-    assert result.exit_code == 2
-    assert "Invalid key-value pair" in result.output
-
-    result = utils.execute_cli_cmd(["-v", "--env", "=", "version"])
-
-    assert result.exit_code == 2
-    assert "Invalid key-value pair" in result.output
-
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-
-
-def test_invalid_lib():
-    """Verifies that Minitrino exists with a user error if pointing to an
-    invalid library."""
-
-    common.log_status(cast(FrameType, currentframe()).f_code.co_name)
-
-    # Real directory, but ain't a real library
-    result = utils.execute_cli_cmd(["-v", "--env", "LIB_PATH=/tmp/", "modules"])
-
-    assert result.exit_code == 2
-    assert "This operation requires a library to be installed" in result.output
-
-    # Fake directory
-    result = utils.execute_cli_cmd(
-        ["-v", "--env", "LIB_PATH=/gucci-is-overrated/", "modules"]
+    utils.assert_exit_code(result)
+    utils.assert_in_output(
+        '"COMPOSE_PROJECT_NAME": "test"',
+        '"CLUSTER_VER": "420-e"',
+        '"TRINO": "is=awesome"',
+        result=result,
     )
-
-    assert result.exit_code == 2
-    assert "This operation requires a library to be installed" in result.output
-
-    common.log_success(cast(FrameType, currentframe()).f_code.co_name)
-
-
-if __name__ == "__main__":
-    main()

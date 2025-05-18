@@ -1,9 +1,9 @@
-#!/usr/bin/env python3
+"""Settings and configuration for Minitrino CLI."""
 
 # Docker labels
-RESOURCE_LABEL = "org.minitrino=root"
-COMPOSE_LABEL = "com.docker.compose.project"
-MODULE_LABEL_KEY_ROOT = "org.minitrino.module"
+ROOT_LABEL = "org.minitrino=root"
+MODULE_LABEL_KEY = "org.minitrino.module"
+COMPOSE_LABEL_KEY = "com.docker.compose.project"
 
 # Generic Constants
 LIB = "lib"
@@ -65,6 +65,7 @@ http-server.http.port=8080
 discovery.uri=http://minitrino:8080
 internal-communication.shared-secret=bWluaXRyaW5vUm9ja3MxNQo="""
 
+# fmt: off
 PROVISION_SNAPSHOT_TEMPLATE = """
 #!/usr/bin/env bash
 
@@ -79,3 +80,4 @@ PROVISION_SNAPSHOT_TEMPLATE = """
 
 
 """
+# fmt: on

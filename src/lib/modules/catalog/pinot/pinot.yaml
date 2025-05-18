@@ -18,7 +18,7 @@ services:
       - pinot-zookeeper-datalog:/datalog
     labels:
       - org.minitrino=root
-      - org.minitrino.module.pinot=catalog-pinot
+      - org.minitrino.module=catalog-pinot
 
   pinot-controller:
     image: apachepinot/pinot:${PINOT_VER}
@@ -37,7 +37,7 @@ services:
       - pinot-controller-data:/tmp/data/PinotController
     labels:
       - org.minitrino=root
-      - org.minitrino.module.pinot=catalog-pinot
+      - org.minitrino.module=catalog-pinot
 
   pinot-broker:
     image: apachepinot/pinot:${PINOT_VER}
@@ -52,7 +52,7 @@ services:
       - :8099
     labels:
       - org.minitrino=root
-      - org.minitrino.module.pinot=catalog-pinot
+      - org.minitrino.module=catalog-pinot
 
   pinot-server:
     image: apachepinot/pinot:${PINOT_VER}
@@ -69,22 +69,22 @@ services:
       - pinot-server-data:/tmp/data/pinotServerData
     labels:
       - org.minitrino=root
-      - org.minitrino.module.pinot=catalog-pinot
+      - org.minitrino.module=catalog-pinot
 
 volumes:
   pinot-zookeeper-data:
     labels:
       - org.minitrino=root
-      - org.minitrino.module.pinot=catalog-pinot
+      - org.minitrino.module=catalog-pinot
   pinot-zookeeper-datalog:
     labels:
       - org.minitrino=root
-      - org.minitrino.module.pinot=catalog-pinot
+      - org.minitrino.module=catalog-pinot
   pinot-controller-data:
     labels:
       - org.minitrino=root
-      - org.minitrino.module.pinot=catalog-pinot
+      - org.minitrino.module=catalog-pinot
   pinot-server-data:
     labels:
       - org.minitrino=root
-      - org.minitrino.module.pinot=catalog-pinot
+      - org.minitrino.module=catalog-pinot

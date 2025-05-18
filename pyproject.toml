@@ -35,8 +35,11 @@ dev = [
   "wheel",
   "black",
   "mypy",
+  "pydocstyle",
+  "types-click",
   "types-docker",
   "types-PyYAML",
+  "types-jsonschema",
   "types-setuptools",
   "types-tabulate",
   "types-python-dateutil"

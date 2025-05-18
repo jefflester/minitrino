@@ -5,4 +5,4 @@ services:
     volumes:
       - ./modules/admin/trino-gateway/resources/cluster/foo.txt:/mnt/etc/catalog/foo.txt:ro
     labels:
-      - org.minitrino.module.trino-gateway=admin-trino-gateway
+      - org.minitrino.module=admin-trino-gateway

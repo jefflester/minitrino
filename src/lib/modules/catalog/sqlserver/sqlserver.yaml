@@ -16,10 +16,10 @@ services:
       - sqlserver-data:/var/opt/mssql
     labels:
       - org.minitrino=root
-      - org.minitrino.module.sqlserver=catalog-sqlserver
+      - org.minitrino.module=catalog-sqlserver
 
 volumes:
   sqlserver-data:
     labels:
       - org.minitrino=root
-      - org.minitrino.module.sqlserver=catalog-sqlserver
+      - org.minitrino.module=catalog-sqlserver

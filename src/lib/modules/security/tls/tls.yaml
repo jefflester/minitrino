@@ -14,4 +14,4 @@ services:
     volumes:
       - ~/.minitrino/tls-mnt:${ETC}/tls-mnt
     labels:
-      - org.minitrino.module.tls=security-tls
+      - org.minitrino.module=security-tls

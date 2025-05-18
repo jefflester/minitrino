@@ -17,10 +17,10 @@ services:
       - ./modules/catalog/clickhouse/resources/clickhouse/init.sh:/docker-entrypoint-initdb.d/init.sh
     labels:
       - org.minitrino=root
-      - org.minitrino.module.clickhouse=catalog-clickhouse
+      - org.minitrino.module=catalog-clickhouse
 
 volumes:
   clickhouse-data:
     labels:
       - org.minitrino=root
-      - org.minitrino.module.clickhouse=catalog-clickhouse
+      - org.minitrino.module=catalog-clickhouse

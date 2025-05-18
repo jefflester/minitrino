@@ -1,4 +1,8 @@
-#!/usr/bin/env python3
+"""Snapshot command for Minitrino CLI.
+
+Provides functionality to create, validate, and manage snapshots of Minitrino
+environments, including modules and configuration files.
+"""
 
 import os
 import click
@@ -37,14 +41,14 @@ from minitrino.settings import (
 
         To snapshot an active environment, do not pass in the `--module` option.
 
-        To snapshot modules whether they are active or not, specify target
-        modules via the `--module` option.
+        To snapshot modules whether they are active or not, specify target modules via
+        the `--module` option.
         
-        To snapshot a specific running cluster, use the `CLUSTER_NAME`
-        environment variable or the `--cluster` / `-c` option, e.g.: 
+        To snapshot a specific running cluster, use the `CLUSTER_NAME` environment
+        variable or the `--cluster` / `-c` option, e.g.: 
         
-        `minitrino -c my-cluster snapshot`, or specify all clusters via:\n
-        `minitrino -c '*' snapshot`"""
+        `minitrino -c my-cluster snapshot`, or specify all clusters via:\n `minitrino -c
+        '*' snapshot`"""
     ),
 )
 @click.option(
@@ -92,26 +96,24 @@ def cli(
     force: bool,
     no_scrub: bool,
 ) -> None:
-    """
-    Main entrypoint for the `snapshot` command in Minitrino.
+    """Run the main entrypoint for the `snapshot` command in Minitrino.
 
     Parameters
     ----------
-    `modules` : `list` of `str`
+    modules : list of str
         Modules to snapshot. If empty, snapshots active environment.
-    `name` : `str`
+    name : str
         Basename for the resulting snapshot tarball.
-    `directory` : `str`
+    directory : str
         Directory to save the snapshot file in.
-    `force` : `bool`
+    force : bool
         If True, overwrite the file if it already exists.
-    `no_scrub` : `bool`
+    no_scrub : bool
         If True, do not scrub sensitive data from user config file.
     """
-
-    # The snapshot temp files are saved in ~/.minitrino/snapshots/<name>
-    # regardless of the directory provided. The artifact (tarball) will go to
-    # either the default directory or the user-provided directory.
+    # The snapshot temp files are saved in ~/.minitrino/snapshots/<name> regardless of
+    # the directory provided. The artifact (tarball) will go to either the default
+    # directory or the user-provided directory.
 
     utils.check_lib(ctx)
 
@@ -151,20 +153,18 @@ def cli(
 
 
 def validate_name(name: str) -> None:
-    """
-    Validate the chosen filename for correct input.
+    """Validate the chosen filename for correct input.
 
     Parameters
     ----------
-    `name` : `str`
+    name : str
         The filename to validate.
 
     Raises
     ------
-    `UserError`
+    UserError
         If the filename contains illegal characters.
     """
-
     for char in name:
         if all((char != "_", char != "-", not char.isalnum())):
             raise UserError(
@@ -176,20 +176,19 @@ def validate_name(name: str) -> None:
 
 @utils.pass_environment()
 def check_exists(ctx: MinitrinoContext, name: str, directory: str, force: bool) -> None:
-    """
-    Check if the resulting tarball exists. If it exists, prompt the user to
-    overwrite.
+    """Check if the resulting tarball exists.
+
+    If it exists, prompt the user to overwrite.
 
     Parameters
     ----------
-    `name` : `str`
+    name : str
         Name of the snapshot file.
-    `directory` : `str`
+    directory : str
         Directory containing the snapshot file.
-    `force` : `bool`
+    force : bool
         If True, overwrite without prompting.
     """
-
     if force:
         return
 
@@ -207,28 +206,25 @@ def check_exists(ctx: MinitrinoContext, name: str, directory: str, force: bool) 
 def prepare_snapshot_dir(
     ctx: MinitrinoContext, name: str, no_scrub: bool, modules: list[str]
 ) -> str:
-    """
-    Prepare the snapshot temporary directory.
+    """Prepare the snapshot temporary directory.
 
-    If the directory exists, it is cleared. Otherwise, it is created and the
-    library structure is cloned, along with a shell script to provision the
-    environment.
+    If the directory exists, clear it. Otherwise, create it and clone the library
+    structure, along with a shell script to provision the environment.
 
     Parameters
     ----------
-    `name` : `str`
+    name : str
         Name of the snapshot.
-    `no_scrub` : `bool`
+    no_scrub : bool
         If True, do not scrub sensitive data from config.
-    `modules` : `list` of `str`
+    modules : list of str
         List of modules to include in the snapshot.
 
     Returns
     -------
-    `str`
+    str
         Absolute path of the named snapshot directory.
     """
-
     if os.path.isdir(ctx.snapshot_dir):
         ctx.logger.verbose(
             "Snapshot temp directory exists. Removing and recreating...",
@@ -249,15 +245,13 @@ def prepare_snapshot_dir(
 def create_snapshot_shell_script(
     snapshot_name_dir: str, modules: Optional[list[str]] = None
 ) -> None:
-    """
-    Write a shell script to the snapshot directory for provisioning the
-    environment.
+    """Write a shell script to the snapshot directory for provisioning the environment.
 
     Parameters
     ----------
-    `snapshot_name_dir` : `str`
+    snapshot_name_dir : str
         Directory where the shell script will be created.
-    `modules` : `list` of `str`, optional
+    modules : list of str, optional
         List of modules to include in the command.
     """
     if modules is None:
@@ -267,18 +261,16 @@ def create_snapshot_shell_script(
 
 
 def build_command_string(modules: Optional[list[str]] = None) -> str:
-    """
-    Build a command string for provisioning an environment with designated
-    modules.
+    """Build a command string for provisioning an environment with designated modules.
 
     Parameters
     ----------
-    `modules` : `list` of `str`, optional
+    modules : list of str, optional
         List of modules to include in the command.
 
     Returns
     -------
-    `str`
+    str
         The constructed command string.
     """
     modules = modules or []
@@ -297,19 +289,18 @@ def build_command_string(modules: Optional[list[str]] = None) -> str:
     return command_string.replace("  ", " ")
 
 
-@utils.pass_environment()
 def write_snapshot_shell_script(
     ctx: MinitrinoContext, command_string: str = "", snapshot_name_dir: str = ""
 ) -> None:
-    """
-    Write a shell script to the snapshot directory for provisioning the
-    environment.
+    """Write a shell script to the snapshot directory for provisioning the environment.
+
+    Write a shell script to the snapshot directory for provisioning the environment.
 
     Parameters
     ----------
-    `command_string` : `str`, optional
+    command_string : str, optional
         The command string to write to the file.
-    `snapshot_name_dir` : `str`, optional
+    snapshot_name_dir : str, optional
         The directory where the shell file will be created.
     """
     file_dest = os.path.join(snapshot_name_dir, "provision-snapshot.sh")
@@ -317,8 +308,7 @@ def write_snapshot_shell_script(
         f"Creating snapshot command to file at path: {file_dest}",
     )
 
-    # Create provisioning command snapshot file from template and make it
-    # executable
+    # Create provisioning command snapshot file from template and make it executable
     with open(file_dest, "w") as provision_command_file:
         provision_command_file.write(PROVISION_SNAPSHOT_TEMPLATE.lstrip())
     st = os.stat(file_dest)
@@ -333,21 +323,21 @@ def write_snapshot_shell_script(
 
 @utils.pass_environment()
 def clone_lib_dir(ctx: MinitrinoContext, name: str) -> str:
-    """
-    Clone the library directory structure and necessary top-level files in
-    preparation for copying over module directories.
+    """Clone the library directory structure and necessary top-level files.
+
+    Clone the library directory structure and necessary top-level files in preparation
+    for copying over module directories.
 
     Parameters
     ----------
-    `name` : `str`
+    name : str
         Name of the snapshot.
 
     Returns
     -------
-    `str`
+    str
         Absolute path of the named snapshot directory.
     """
-
     snapshot_name_dir = os.path.join(ctx.snapshot_dir, name)
     os.makedirs(os.path.join(snapshot_name_dir, LIB, MODULE_ROOT, MODULE_ADMIN))
     os.mkdir(os.path.join(snapshot_name_dir, LIB, MODULE_ROOT, MODULE_CATALOG))
@@ -381,16 +371,16 @@ def clone_lib_dir(ctx: MinitrinoContext, name: str) -> str:
 def handle_copy_config_file(
     ctx: MinitrinoContext, snapshot_name_dir: str, no_scrub: bool
 ) -> None:
-    """
-    Handle copying of the user config file to the snapshot directory. If
-    `no_scrub` is True, prompt the user to confirm inclusion of sensitive data.
-    If declined, scrub the config file.
+    """Handle copying of the user config file to the snapshot directory.
+
+    If `no_scrub` is True, prompt the user to confirm inclusion of sensitive data. If
+    declined, scrub the config file.
 
     Parameters
     ----------
-    `snapshot_name_dir` : `str`
+    snapshot_name_dir : str
         Directory where the config file will be copied.
-    `no_scrub` : `bool`
+    no_scrub : bool
         If True, do not scrub sensitive data from config.
     """
     if no_scrub:
@@ -410,15 +400,15 @@ def handle_copy_config_file(
 def copy_config_file(
     ctx: MinitrinoContext, snapshot_name_dir: str, no_scrub: bool = False
 ) -> None:
-    """
-    Copy the user config file to the named snapshot directory. Optionally scrub
-    sensitive data.
+    """Copy the user config file to the named snapshot directory.
+
+    Optionally scrub sensitive data.
 
     Parameters
     ----------
-    `snapshot_name_dir` : `str`
+    snapshot_name_dir : str
         Directory where the config file will be copied.
-    `no_scrub` : `bool`, optional
+    no_scrub : bool, optional
         If True, do not scrub sensitive data from config.
     """
     if os.path.isfile(ctx.config_file):
@@ -435,12 +425,11 @@ def copy_config_file(
 
 @utils.pass_environment()
 def scrub_config_file(ctx: MinitrinoContext, snapshot_name_dir: str) -> None:
-    """
-    Scrub sensitive data from the user config file in the snapshot directory.
+    """Scrub sensitive data from the user config file in the snapshot directory.
 
     Parameters
     ----------
-    `snapshot_name_dir` : `str`
+    snapshot_name_dir : str
         Directory containing the config file to scrub.
     """
     snapshot_config_file = os.path.join(snapshot_name_dir, "minitrino.cfg")
@@ -457,24 +446,22 @@ def scrub_config_file(ctx: MinitrinoContext, snapshot_name_dir: str) -> None:
 
 
 def scrub_line(line: str) -> str:
-    """
-    Scrub a line from a snapshot config file.
+    """Scrub a line from a snapshot config file.
 
-    If the key in the line matches any of the sensitive keys, its value is
-    replaced.
+    If the key in the line matches any of the sensitive keys, its value is replaced.
 
     Parameters
     ----------
-    `line` : `str`
+    line : str
         The line to scrub.
 
     Returns
     -------
-    `str`
+    str
         The scrubbed line.
     """
-    # If the key has a substring that matches any of the scrub keys, we know
-    # it's an item whose value needs to be scrubbed
+    # If the key has a substring that matches any of the scrub keys, we know it's an
+    # item whose value needs to be scrubbed
     k, v = utils.parse_key_value_pair(line, err_type=UserError)
     if any(item in k.lower() for item in SCRUB_KEYS):
         v = "*" * 20
@@ -486,14 +473,13 @@ def scrub_line(line: str) -> str:
 def copy_module_dirs(
     ctx: MinitrinoContext, snapshot_name_dir: str, modules: Optional[list[str]] = None
 ) -> None:
-    """
-    Copy module directories into the named snapshot directory.
+    """Copy module directories into the named snapshot directory.
 
     Parameters
     ----------
-    `snapshot_name_dir` : `str`
+    snapshot_name_dir : str
         Directory where modules will be copied.
-    `modules` : `list` of `str`, optional
+    modules : list of str, optional
         List of modules to copy.
     """
     if modules is None:
@@ -509,17 +495,15 @@ def copy_module_dirs(
 
 
 def create_named_tarball(name: str, snapshot_name_dir: str, save_dir: str) -> None:
-    """
-    Create a tarball of the named snapshot directory and place it in the
-    snapshot directory.
+    """Create a snapshot tarball.
 
     Parameters
     ----------
-    `name` : `str`
+    name : str
         Name of the snapshot.
-    `snapshot_name_dir` : `str`
+    snapshot_name_dir : str
         Directory to archive.
-    `save_dir` : `str`
+    save_dir : str
         Directory to save the tarball.
     """
     with tarfile.open(os.path.join(save_dir, f"{name}.tar.gz"), "w:gz") as tar:
@@ -533,21 +517,19 @@ def snapshot_runner(
     modules: Optional[list[str]] = None,
     directory: str = "",
 ) -> None:
-    """
-    Execute the sequential snapshot command functions.
+    """Execute the sequential snapshot command functions.
 
     Parameters
     ----------
-    `name` : `str`
+    name : str
         Name of the snapshot.
-    `no_scrub` : `bool`
+    no_scrub : bool
         If True, do not scrub sensitive data from config.
-    `active_env` : `bool`
-        If True, snapshot active environment; otherwise, snapshot specified
-        modules.
-    `modules` : `list` of `str`, optional
+    active_env : bool
+        If True, snapshot active environment; otherwise, snapshot specified modules.
+    modules : list[str], optional
         List of modules to snapshot.
-    `directory` : `str`, optional
+    directory : str, optional
         Directory to save the snapshot tarball.
     """
     if modules is None:
@@ -557,21 +539,21 @@ def snapshot_runner(
     create_named_tarball(name, snapshot_name_dir, directory)
 
 
-def check_complete(name: str, directory: str) -> None:
-    """
-    Check if the snapshot completed successfully. If incomplete, raises an
-    error.
+def check_complete(name: str, directory: str):
+    """Check if the snapshot completed successfully.
+
+    If incomplete, raise an error.
 
     Parameters
     ----------
-    `name` : `str`
+    name : str
         Name of the snapshot.
-    `directory` : `str`
+    directory : str
         Directory containing the snapshot file.
 
     Raises
     ------
-    `MinitrinoError`
+    MinitrinoError
         If the snapshot tarball was not written.
     """
     snapshot_file = os.path.join(directory, f"{name}.tar.gz")

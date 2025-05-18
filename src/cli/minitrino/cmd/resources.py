@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Resource management commands for Minitrino CLI."""
 
 import sys
 import time
@@ -8,13 +8,13 @@ import itertools
 import threading
 import textwrap
 
-from minitrino import utils
-from minitrino.core.context import MinitrinoContext
-
 from tabulate import tabulate
 from datetime import datetime, timezone
 from dateutil.parser import parse as parse_date
-from typing import Any, List, Optional, Tuple
+from typing import Any, Optional
+
+from minitrino import utils
+from minitrino.core.context import MinitrinoContext
 
 
 @click.command(
@@ -29,9 +29,11 @@ from typing import Any, List, Optional, Tuple
 )
 @utils.exception_handler
 @utils.pass_environment()
-def cli(ctx: MinitrinoContext) -> None:
-    """Displays all Docker resources in the Minitrino environment in a tabular
-    format."""
+def cli(ctx: MinitrinoContext):
+    """Display resource information.
+
+    Show resource usage for the environment.
+    """
     utils.check_daemon(ctx.docker_client)
 
     resources = ctx.cluster.resource.resources()
@@ -144,20 +146,13 @@ def cli(ctx: MinitrinoContext) -> None:
 
 
 @utils.pass_environment()
-def start_spinner(
-    ctx: MinitrinoContext, message: str = "Fetching container stats..."
-) -> threading.Event:
-    """Starts a terminal spinner animation in a separate thread.
+def start_spinner(message: str = "Fetching container stats..."):
+    """Start the spinner.
 
     Parameters
     ----------
-    `message` : `str`
+    message : str
         Message to display alongside the spinner.
-
-    Returns
-    -------
-    `threading.Event`
-        Event object used to signal when the spinner should stop.
     """
     spinner_done = threading.Event()
 
@@ -175,21 +170,19 @@ def start_spinner(
     return spinner_done
 
 
-def render_table(
-    rows: Optional[List[List[Any]]], headers: List[str]
-) -> Tuple[str, int]:
-    """Renders a tabular representation of resource data.
+def render_table(rows: Optional[list[list[Any]]], headers: list[str]):
+    """Render a table of resources.
 
     Parameters
     ----------
-    `rows` : `list[list[Any]]`
+    rows : list[list[Any]]
         Data rows to be rendered.
-    `headers` : `list[str]`
+    headers : list[str]
         Table column headers.
 
     Returns
     -------
-    `tuple[str, int]`
+    tuple[str, int]
         Rendered table string and the length of its longest line.
     """
     if rows is None:
@@ -199,16 +192,16 @@ def render_table(
     return rendered, divider_len
 
 
-def format_bytes(val: int | float) -> str:
-    """Formats a byte count into a human-readable string.
+def format_bytes(val: int | float):
+    """Format bytes as a human-readable string.
 
     Parameters
     ----------
-    `val` : `int` or `float`
+    val : int or float
 
     Returns
     -------
-    `str`
+    str
         Human-readable memory string or 'N/A'.
     """
     return (
@@ -218,32 +211,32 @@ def format_bytes(val: int | float) -> str:
     )
 
 
-def format_cpus(nanos: int) -> str:
-    """Converts CPU nanoseconds to a human-readable percentage string.
+def format_cpus(nanos: int):
+    """Convert CPU units to a readable format.
 
     Parameters
     ----------
-    `nanos` : `int`
+    nanos : int
 
     Returns
     -------
-    `str`
+    str
         CPU usage as a percentage string or 'N/A'.
     """
     return f"{nanos / 1e9:.2f}" if isinstance(nanos, int) and nanos > 0 else "N/A"
 
 
-def color_status(status: str) -> str:
-    """Applies color formatting to container status strings.
+def color_status(status: str):
+    """Apply color to status text.
 
     Parameters
     ----------
-    `status` : `str`
+    status : str
         Container status (e.g., 'running', 'exited').
 
     Returns
     -------
-    `str`
+    str
         Colorized status string.
     """
     if "up" in status.lower():
@@ -254,15 +247,15 @@ def color_status(status: str) -> str:
 
 
 def get_container_stats(container) -> dict:
-    """Fetches memory and CPU usage statistics for a container.
+    """Fetch memory and CPU usage statistics for a container.
 
     Parameters
     ----------
-    `container` : `docker.models.containers.Container`
+    container : docker.models.containers.Container
 
     Returns
     -------
-    `dict`
+    dict
         Dictionary with keys 'memory' and 'cpu' representing usage stats.
     """
     try:

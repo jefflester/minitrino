@@ -1,4 +1,9 @@
-#!/usr/bin/env python3
+"""Configuration management for Minitrino clusters.
+
+This module provides classes and functions to manage cluster configuration files and
+settings for Minitrino, including writing config files, setting ports, and handling user
+overrides.
+"""
 
 from __future__ import annotations
 
@@ -25,24 +30,17 @@ if TYPE_CHECKING:
 
 class ClusterConfigManager:
     """
-    Cluster configuration manager for the current cluster.
+    Manage cluster configuration for the current cluster.
 
-    Constructor Parameters
-    ----------------------
-    `ctx` : `MinitrinoContext`
-        An instantiated `MinitrinoContext` object with user input and context.
-    `cluster` : `Cluster`
+    This class handles reading, writing, and updating configuration files for Minitrino
+    clusters, including dynamic port assignment and user overrides.
+
+    Parameters
+    ----------
+    ctx : MinitrinoContext
+        An instantiated MinitrinoContext object with user input and context.
+    cluster : Cluster
         An instantiated `Cluster` object.
-
-    Methods
-    -------
-    `write_config(modules: Optional[list[str]] = None)`
-        Appends user- and/or module-specified configurations to
-        `config.properties` and `jvm.config` in the coordinator container,
-        restarting it if updates occur.
-    `set_external_ports(modules: Optional[list[str]] = None)`
-        Dynamically assigns host ports for Minitrino and module containers that
-        expose services on default or user-defined ports.
     """
 
     def __init__(self, ctx: MinitrinoContext, cluster: Cluster):
@@ -51,15 +49,12 @@ class ClusterConfigManager:
 
     def write_config(self, modules: Optional[list[str]] = None) -> None:
         """
-        Appends user- and/or module-specified configurations to
-        `config.properties` and `jvm.config` in the coordinator container,
-        restarting it if updates occur.
+        Append configs to cluster config files.
 
         Parameters
         ----------
-        `modules` : `list[str]`
-            A list of module names to include when collecting configuration
-            overrides.
+        modules : list[str], optional
+            A list of module names to include when collecting configuration overrides.
         """
 
         def handle_password_authenticators(cfgs):
@@ -166,9 +161,10 @@ class ClusterConfigManager:
                 retry += 1
 
         def append_config(coordinator, usr_cfgs, current_cfgs, filename):
-            """If there is an overlapping config key, replace it with the user
-            config."""
+            """Replace overlapping config keys with the user config.
 
+            If there is an overlapping config key, replace it with the user config.
+            """
             if not usr_cfgs:
                 return
 
@@ -213,12 +209,11 @@ class ClusterConfigManager:
 
     def set_external_ports(self, modules: Optional[list[str]] = None) -> None:
         """
-        Dynamically assigns host ports for Minitrino and module containers that
-        expose services on default or user-defined ports.
+        Dynamically assign host ports to containers.
 
         Parameters
         ----------
-        `modules` : `list[str]`
+        modules : list[str], optional
             A list of module names to scan for port mappings.
         """
 
@@ -293,16 +288,16 @@ class ClusterConfigManager:
 
     def _split_config(self, cfgs: str = "") -> list[list[str]]:
         """
-        Splits raw config strings into key-value pairs.
+        Split raw config strings into key-value pairs.
 
         Parameters
         ----------
-        `cfgs` : `str`
+        cfgs : str
             Multi-line string of key=value pairs.
 
         Returns
         -------
-        `list[list[str]]`
+        list[list[str]]
             List of [key, value] pairs.
         """
         cfgs_list = cfgs.strip().split("\n")
@@ -317,12 +312,11 @@ class ClusterConfigManager:
 
     def _current_config(self) -> tuple[list[list[str]], list[list[str]]]:
         """
-        Fetches current contents of `config.properties` and `jvm.config` from
-        the Minitrino coordinator container.
+        Fetch current cluster configs from the coordinator container.
 
         Returns
         -------
-        `tuple[list[list[str]], list[list[str]]]`
+        tuple[list[list[str]], list[list[str]]]
             A tuple of parsed key-value config lists for both files.
         """
         fq_container_name = self._cluster.resource.fq_container_name("minitrino")

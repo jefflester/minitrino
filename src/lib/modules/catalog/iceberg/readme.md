@@ -35,11 +35,11 @@ volumes:
   iceberg-metadata:
     labels:
       - org.minitrino=root
-      - org.minitrino.module.iceberg=catalog-iceberg 
+      - org.minitrino.module=catalog-iceberg 
   minio-iceberg-data:
     labels:
       - org.minitrino=root
-      - org.minitrino.module.iceberg=catalog-iceberg
+      - org.minitrino.module=catalog-iceberg
 ```
 
 The user-facing implication is that the Iceberg's metadata and the data files
@@ -54,7 +54,7 @@ module with named volumes is deployed––be sure to look out for these warning
 To remove these volumes, run:
 
 ```sh
-minitrino -v remove --volumes --label org.minitrino.module.iceberg=catalog-iceberg
+minitrino -v remove --volumes --label org.minitrino.module=catalog-iceberg
 ```
   
 Or, remove them directly using the Docker CLI:

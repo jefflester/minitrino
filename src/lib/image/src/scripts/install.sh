@@ -25,7 +25,7 @@ create_directories() {
         /usr/lib/"${CLUSTER_DIST}"/ \
         /data/"${CLUSTER_DIST}"/ \
         /home/"${CLUSTER_DIST}"/ \
-        /mnt/etc/ \ 
+        /mnt/etc/
 }
 
 copy_scripts() {

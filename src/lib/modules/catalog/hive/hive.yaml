@@ -21,7 +21,7 @@ services:
       - postgres-hive-data:/var/lib/postgresql/data
     labels:
       - org.minitrino=root
-      - org.minitrino.module.hive=catalog-hive
+      - org.minitrino.module=catalog-hive
 
   metastore-hive:
     image: jefflester/hive-metastore:${HMS_VER}
@@ -35,7 +35,7 @@ services:
       - :9083
     labels:
       - org.minitrino=root
-      - org.minitrino.module.hive=catalog-hive
+      - org.minitrino.module=catalog-hive
 
   minio:
     image: minio/minio:${MINIO_VER}
@@ -51,7 +51,7 @@ services:
       - minio-hive-data:/data
     labels:
       - org.minitrino=root
-      - org.minitrino.module.hive=catalog-hive
+      - org.minitrino.module=catalog-hive
 
   create-minio-buckets:
     image: minio/mc:${MINIO_MC_VER}
@@ -72,14 +72,14 @@ services:
       "
     labels:
       - org.minitrino=root
-      - org.minitrino.module.hive=catalog-hive
+      - org.minitrino.module=catalog-hive
 
 volumes:
   postgres-hive-data:
     labels:
       - org.minitrino=root
-      - org.minitrino.module.hive=catalog-hive
+      - org.minitrino.module=catalog-hive
   minio-hive-data:
     labels:
       - org.minitrino=root
-      - org.minitrino.module.hive=catalog-hive
+      - org.minitrino.module=catalog-hive

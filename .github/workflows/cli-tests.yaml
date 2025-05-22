@@ -20,9 +20,11 @@ jobs:
           python-version: '3.10'
       - name: Install project dependencies
         run: |-
-          pip install --editable ./src/cli/
-          pip install --editable ./src/test/
+          pip install -e .
+          pip install -e ./src/test/
       - name: Run CLI tests
+        env:
+          GH_WORKFLOW_RUNNING: true
         run: |-
           minitrino --help || exit 1
-          python ./src/test/src/cli/runner.py
+          pytest src/test/cli

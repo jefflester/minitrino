@@ -50,11 +50,11 @@ volumes:
   postgres-delta-lake-data:
     labels:
       - org.minitrino=root
-      - org.minitrino.module.delta-lake=catalog-delta-lake
+      - org.minitrino.module=catalog-delta-lake
   minio-delta-lake-data:
     labels:
       - org.minitrino=root
-      - org.minitrino.module.delta-lake=catalog-delta-lake
+      - org.minitrino.module=catalog-delta-lake
 ```
 
 The user-facing implication is that the data in the Hive metastore and the data
@@ -69,7 +69,7 @@ module with named volumes is deployed––be sure to look out for these warning
 To remove these volumes, run:
 
 ```sh
-minitrino -v remove --volumes --label org.minitrino.module.delta-lake=catalog-delta-lake
+minitrino -v remove --volumes --label org.minitrino.module=catalog-delta-lake
 ```
   
 Or, remove them directly using the Docker CLI:

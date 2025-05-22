@@ -84,7 +84,7 @@ volumes:
   elasticsearch-data:
     labels:
       - org.minitrino=root
-      - org.minitrino.module.elasticsearch=catalog-elasticsearch
+      - org.minitrino.module=catalog-elasticsearch
 ```
 
 The user-facing implication is that ES data is retained even after shutting down
@@ -99,7 +99,7 @@ these warnings:
 To remove these volumes, run:
 
 ```sh
-minitrino -v remove --volumes --label org.minitrino.module.elasticsearch=catalog-elasticsearch
+minitrino -v remove --volumes --label org.minitrino.module=catalog-elasticsearch
 ```
   
 Or, remove them directly using the Docker CLI:

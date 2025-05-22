@@ -6,4 +6,4 @@ services:
       - ./modules/admin/resource-groups/resources/cluster/resource-groups.json:/mnt/etc/resource-groups.json:ro
       - ./modules/admin/resource-groups/resources/cluster/resource-groups.properties:/mnt/etc/resource-groups.properties:ro
     labels:
-      - org.minitrino.module.resource-groups=admin-resource-groups
+      - org.minitrino.module=admin-resource-groups

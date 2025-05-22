@@ -70,11 +70,10 @@ jobs:
           python-version: '3.10'
       - name: Install dependencies
         run: |-
-          pip install wheel twine
+          pip install build twine
       - name: Build and check distribution
         run: |-
-          cd src/cli
-          python setup.py sdist bdist_wheel
+          python -m build
           twine check dist/*
       - name: Publish distribution to PyPi
         env:
@@ -88,7 +87,7 @@ jobs:
             Skipping upload."
           else
             echo "Uploading package version ${GITHUB_HEAD_REF} to PyPI..."
-            twine upload src/cli/dist/*
+            twine upload dist/*
           fi
       - name: Check package
         run: |-

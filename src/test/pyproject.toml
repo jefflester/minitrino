@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "minitrino-tests"
+version = "0.0.0"
+description = "Integration tests for the Minitrino CLI"
+requires-python = ">=3.10"
+
+dependencies = [
+  "minitrino",
+  "jsonschema",
+  "PyYAML",
+  "pytest",
+  "requests>=2.32.2"
+]
+
+[tool.setuptools]
+package-dir = {"" = "."}

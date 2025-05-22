@@ -38,19 +38,19 @@ volumes:
   pinot-zookeeper-data:
     labels:
       - org.minitrino=root
-      - org.minitrino.module.pinot=catalog-pinot
+      - org.minitrino.module=catalog-pinot
   pinot-zookeeper-datalog:
     labels:
       - org.minitrino=root
-      - org.minitrino.module.pinot=catalog-pinot
+      - org.minitrino.module=catalog-pinot
   pinot-controller-data:
     labels:
       - org.minitrino=root
-      - org.minitrino.module.pinot=catalog-pinot
+      - org.minitrino.module=catalog-pinot
   pinot-server-data:
     labels:
       - org.minitrino=root
-      - org.minitrino.module.pinot=catalog-pinot
+      - org.minitrino.module=catalog-pinot
 ```
 
 The user-facing implication is that the data stored in Zookeeper as well as the
@@ -65,7 +65,7 @@ module with named volumes is deployed––be sure to look out for these warning
 To remove these volumes, run:
 
 ```sh
-minitrino -v remove --volumes --label org.minitrino.module.pinot=catalog-pinot
+minitrino -v remove --volumes --label org.minitrino.module=catalog-pinot
 ```
   
 Or, remove them directly using the Docker CLI:

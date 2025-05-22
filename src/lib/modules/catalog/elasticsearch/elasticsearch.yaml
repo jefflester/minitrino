@@ -24,10 +24,10 @@ services:
       - elasticsearch-data:/usr/share/elasticsearch/data
     labels:
       - org.minitrino=root
-      - org.minitrino.module.elasticsearch=catalog-elasticsearch
+      - org.minitrino.module=catalog-elasticsearch
 
 volumes:
   elasticsearch-data:
     labels:
       - org.minitrino=root
-      - org.minitrino.module.elasticsearch=catalog-elasticsearch
+      - org.minitrino.module=catalog-elasticsearch

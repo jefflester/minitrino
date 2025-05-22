@@ -13,4 +13,4 @@ services:
     volumes:
       - ./modules/security/biac/resources/cluster/biac.properties:/mnt/etc/biac.properties:ro
     labels:
-      - org.minitrino.module.biac=security-biac
+      - org.minitrino.module=security-biac

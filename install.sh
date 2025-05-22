@@ -1,13 +1,50 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
+
+# Deactivate any active virtual environment
+if [ -n "${VIRTUAL_ENV:-}" ]; then
+    echo "Deactivating currently active virtual environment: $VIRTUAL_ENV"
+    if declare -f deactivate >/dev/null 2>&1; then
+        deactivate || true
+    else
+        echo "(Skipping deactivate — not defined in this shell)"
+    fi
+    unset VIRTUAL_ENV
+fi
 
 set -eu
 
-NO_VENV=0
+# Determine SCRIPT_PATH and SCRIPT_DIR early for use in all functions
+if command -v realpath >/dev/null 2>&1; then
+    SCRIPT_PATH=$(realpath "$0")
+else
+    SCRIPT_PATH=$(python -c "import os; print(os.path.realpath('$0'))")
+fi
+SCRIPT_DIR=$(dirname "${SCRIPT_PATH}")
+
+VERBOSE=0
+FORCE=0
+
+show_help() {
+    echo "Usage: ./install.sh [options]"
+    echo ""
+    echo "Options:"
+    echo "  -v            Enable verbose output"
+    echo "  -h, --help    Show this help message"
+    exit 0
+}
+
 for arg in "$@"; do
-    if [ "$arg" = "--no-venv" ]; then
-        NO_VENV=1
-        break
-    fi
+    case "$arg" in
+        --force)
+            FORCE=1
+            ;;
+        -h|--help)
+            show_help
+            ;;
+        -v)
+            VERBOSE=1
+            ;;
+    esac
 done
 
 find_python() {
@@ -47,44 +84,36 @@ check_docker() {
     fi
 }
 
-handle_managed_python() {
-    if [ "${NO_VENV}" -eq 1 ]; then
-        echo "Skipping virtual environment setup due to --no-venv flag."
-        return
+handle_venv() {
+    VENV_DIR="${SCRIPT_DIR}/venv"
+    if [ ! -d "${VENV_DIR}" ]; then
+        echo "Creating virtual environment in ./venv..."
+        "${PYTHON}" -m venv "${VENV_DIR}"
+    else
+        echo "Using existing virtual environment in ./venv"
     fi
 
-    if [ -z "${VIRTUAL_ENV:-}" ]; then
-        echo "Checking if pip install is blocked (PEP 668)..."
-        if ! "${PYTHON}" -m pip install --dry-run --upgrade pip >/dev/null 2>&1; then
-            echo "Detected a managed Python environment (PEP 668 or similar)."
-            echo "Creating a virtual environment in ./venv..."
-            "${PYTHON}" -m venv "${SCRIPT_DIR}/venv"
-            echo "Re-running install.sh using the virtual environment..."
-            . "${SCRIPT_DIR}/venv/bin/activate"
-            exec "${SCRIPT_PATH}" "$@"
-        fi
-    fi
+    # shellcheck source=/dev/null
+    . "${VENV_DIR}/bin/activate"
 }
 
 pip_install() {
-    if [ -z "${VIRTUAL_ENV:-}" ] && [ "$(id -u)" -ne 0 ]; then
-        pip_args="--user"
-    else
-        pip_args=""
-    fi
-
     echo "Installing editable CLI and test modules from source..."
-    "${PYTHON}" -m pip install ${pip_args} --disable-pip-version-check --upgrade pip setuptools wheel || {
-        echo "Error: Failed to upgrade pip, setuptools, or wheel"
+    if [ "${FORCE}" -eq 1 ]; then
+        echo "Forcing reinstall of CLI and test modules..."
+        "${PYTHON}" -m pip uninstall -y minitrino || true
+    fi
+    "${PYTHON}" -m pip install --disable-pip-version-check --upgrade pip setuptools wheel black || {
+        echo "Error: Failed to upgrade pip, setuptools, wheel, or black"
         exit 1
     }
 
-    "${PYTHON}" -m pip install ${pip_args} --editable "${SCRIPT_DIR}/src/cli/" --use-pep517 || {
+    "${PYTHON}" -m pip install -e "${SCRIPT_DIR}/.[dev]" --use-pep517 || {
         echo "Error: Failed to install CLI module"
         exit 1
     }
 
-    "${PYTHON}" -m pip install ${pip_args} --editable "${SCRIPT_DIR}/src/test/" --use-pep517 || {
+    "${PYTHON}" -m pip install -e "${SCRIPT_DIR}/src/test/" --use-pep517 || {
         echo "Error: Failed to install test module"
         exit 1
     }
@@ -145,20 +174,15 @@ check_install() {
 }
 
 perform_install() {
-    [ "${1:-}" = "-v" ] && set -eux
-
-    if command -v realpath >/dev/null 2>&1; then
-        SCRIPT_PATH=$(realpath "$0")
-    else
-        SCRIPT_PATH=$(python -c "import os; print(os.path.realpath('$0'))")
+    if [ "${VERBOSE}" -eq 1 ]; then
+        set -x
     fi
-    SCRIPT_DIR=$(dirname "${SCRIPT_PATH}")
 
     find_python
     check_wsl
     check_pip
     check_docker
-    handle_managed_python "$@"
+    handle_venv
     pip_install
     handle_path_and_symlink
     check_install
@@ -171,4 +195,12 @@ Installation complete! Start with the CLI by configuring it with 'minitrino conf
 Alternatively, get started immediately with 'minitrino provision'.
 "
 
-minitrino
+if command -v minitrino >/dev/null 2>&1; then
+    echo "Running minitrino..."
+    minitrino
+else
+    echo "You may now run minitrino by sourcing your venv or using the symlink:"
+    echo "  source ./venv/bin/activate && minitrino"
+    echo "  OR"
+    echo "  ~/.local/bin/minitrino"
+fi

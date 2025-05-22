@@ -30,7 +30,7 @@ services:
       - ./modules/security/oauth2/resources/oauth2/keystore.jks:/app/keystore.jks
     labels:
       - org.minitrino=root
-      - org.minitrino.module.oauth2=security-oauth2
+      - org.minitrino.module=security-oauth2
 
   oauth2-healthcheck:
     image: curlimages/curl:${CURL_VER}
@@ -46,4 +46,4 @@ services:
     command: [tail, -f, /dev/null]
     labels:
       - org.minitrino=root
-      - org.minitrino.module.oauth2=security-oauth2
+      - org.minitrino.module=security-oauth2

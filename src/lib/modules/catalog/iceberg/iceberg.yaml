@@ -24,7 +24,7 @@ services:
       - iceberg-metadata:/home/iceberg
     labels:
       - org.minitrino=root
-      - org.minitrino.module.iceberg=catalog-iceberg
+      - org.minitrino.module=catalog-iceberg
 
   # ---------------------------------------------------------------------------
   # I couldn't get path-style access to work with
@@ -56,7 +56,7 @@ services:
       - minio-iceberg-data:/data
     labels:
       - org.minitrino=root
-      - org.minitrino.module.iceberg=catalog-iceberg
+      - org.minitrino.module=catalog-iceberg
 
   create-minio-iceberg-buckets:
     image: minio/mc:${MINIO_MC_VER}
@@ -77,14 +77,14 @@ services:
       "
     labels:
       - org.minitrino=root
-      - org.minitrino.module.iceberg=catalog-iceberg
+      - org.minitrino.module=catalog-iceberg
 
 volumes:
   iceberg-metadata:
     labels:
       - org.minitrino=root
-      - org.minitrino.module.iceberg=catalog-iceberg
+      - org.minitrino.module=catalog-iceberg
   minio-iceberg-data:
     labels:
       - org.minitrino=root
-      - org.minitrino.module.iceberg=catalog-iceberg
+      - org.minitrino.module=catalog-iceberg

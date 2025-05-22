@@ -2,7 +2,7 @@
 
 set -euxo pipefail
 
-/usr/lib/${CLUSTER_DIST}/bin/copy-config.sh
+sudo -E /usr/lib/${CLUSTER_DIST}/bin/copy-config.sh
 
 launcher_opts=(--etc-dir "/etc/${CLUSTER_DIST}")
 if ! grep -s -q 'node.id' "/etc/${CLUSTER_DIST}/node.properties"; then

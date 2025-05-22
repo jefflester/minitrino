@@ -1,15 +1,16 @@
 """Minitrino CLI entrypoint module."""
 
+import difflib
 import os
 import sys
-import click
-import difflib
-
-from typing import Any
 from importlib import import_module
+from typing import Any
+
+import click
 
 from minitrino import utils
 from minitrino.core.context import MinitrinoContext
+from minitrino.core.logger import LogLevel
 
 
 class CommandLineInterface(click.MultiCommand):
@@ -69,7 +70,16 @@ def version_string() -> str:
     "--verbose",
     is_flag=True,
     default=False,
-    help="Enable verbose logging output.",
+    help="Enable debug logging.",
+)
+@click.option(
+    "--log-level",
+    type=click.Choice(
+        ["ERROR", "WARN", "INFO", "DEBUG"],
+        case_sensitive=False,
+    ),
+    default="INFO",
+    help="Set the minimum log level (ERROR, WARN, INFO, DEBUG).",
 )
 @click.option(
     "-e",
@@ -90,11 +100,19 @@ def version_string() -> str:
 @utils.exception_handler
 @utils.pass_environment()
 def cli(
-    ctx: MinitrinoContext, verbose: bool, env: list[str], cluster_name: str
+    ctx: MinitrinoContext,
+    verbose: bool,
+    log_level: str,
+    env: list[str],
+    cluster_name: str,
 ) -> None:
     """Welcome to the Minitrino command line interface.
 
     To report issues or contribute, please visit:
     https://github.com/jefflester/minitrino
     """
-    ctx.initialize(verbose, env, cluster_name)
+    ctx._user_env = env
+    ctx.cluster_name = cluster_name
+
+    effective_log_level = LogLevel.DEBUG if verbose else LogLevel[log_level.upper()]
+    ctx._log_level = effective_log_level

@@ -1,17 +1,18 @@
 """Resource management commands for Minitrino CLI."""
 
+import itertools
 import sys
+import textwrap
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timezone
+from typing import Any, Optional
+
 import click
 import humanize
-import itertools
-import threading
-import textwrap
-
-from tabulate import tabulate
-from datetime import datetime, timezone
 from dateutil.parser import parse as parse_date
-from typing import Any, Optional
+from tabulate import tabulate
 
 from minitrino import utils
 from minitrino.core.context import MinitrinoContext
@@ -19,13 +20,7 @@ from minitrino.core.context import MinitrinoContext
 
 @click.command(
     "resources",
-    help=(
-        """
-        Display all Docker resources in the Minitrino environment:
-
-        [ Clusters | Containers | Images | Volumes | Networks ]
-        """
-    ),
+    help="Display all Docker resources in the Minitrino environment.",
 )
 @utils.exception_handler
 @utils.pass_environment()
@@ -34,6 +29,7 @@ def cli(ctx: MinitrinoContext):
 
     Show resource usage for the environment.
     """
+    ctx.initialize()
     utils.check_daemon(ctx.docker_client)
 
     resources = ctx.cluster.resource.resources()
@@ -46,11 +42,9 @@ def cli(ctx: MinitrinoContext):
         if img.tags and any(t.strip() for t in img.tags)
     ]
 
-    containers = sorted(containers, key=lambda c: (c.cluster, c.obj.name))
-    volumes = sorted(volumes, key=lambda v: (v.cluster, v.obj.name))
-    networks = sorted(networks, key=lambda n: (n.cluster, n.obj.name))
-
-    from concurrent.futures import ThreadPoolExecutor, as_completed
+    containers = sorted(containers, key=lambda c: (c.cluster_name, c.name))
+    volumes = sorted(volumes, key=lambda v: (v.cluster_name, v.name))
+    networks = sorted(networks, key=lambda n: (n.cluster_name, n.name))
 
     spinner_done = start_spinner("Fetching container stats...")
     container_stats: dict = {}
@@ -72,7 +66,7 @@ def cli(ctx: MinitrinoContext):
 
     container_rows = []
     for c in containers:
-        cluster = c.cluster
+        cluster = c.cluster_name
         created = parse_date(c.attrs["Created"])
         age = humanize.naturaltime(datetime.now(timezone.utc) - created)
         stats = container_stats.get(c.id, {"memory": "N/A", "cpu": "N/A"})
@@ -97,7 +91,7 @@ def cli(ctx: MinitrinoContext):
 
     volume_rows = []
     for v in volumes:
-        cluster = v.cluster
+        cluster = v.cluster_name
         created_str = v.attrs.get("CreatedAt")
         try:
             vol_created: Optional[datetime] = (
@@ -112,7 +106,9 @@ def cli(ctx: MinitrinoContext):
             age = "Unknown"
         volume_rows.append([cluster, v.name, age])
 
-    network_rows = [[n.cluster, n.name, n.attrs.get("Driver", "N/A")] for n in networks]
+    network_rows = [
+        [n.cluster_name, n.name, n.attrs.get("Driver", "N/A")] for n in networks
+    ]
 
     sections = [
         (
@@ -146,7 +142,7 @@ def cli(ctx: MinitrinoContext):
 
 
 @utils.pass_environment()
-def start_spinner(message: str = "Fetching container stats..."):
+def start_spinner(ctx: MinitrinoContext, message: str = "Fetching container stats..."):
     """Start the spinner.
 
     Parameters
@@ -256,7 +252,8 @@ def get_container_stats(container) -> dict:
     Returns
     -------
     dict
-        Dictionary with keys 'memory' and 'cpu' representing usage stats.
+        Dictionary with keys 'memory' and 'cpu' representing usage
+        stats.
     """
     try:
         stats = container.stats(stream=False)

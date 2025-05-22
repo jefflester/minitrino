@@ -3,55 +3,64 @@
 from __future__ import annotations
 
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import TYPE_CHECKING, Optional
+
+from docker.errors import APIError, NotFound
 
 from minitrino import utils
-from minitrino.core.logger import LogLevel
+from minitrino.core.docker.wrappers import (
+    MinitrinoContainer,
+    MinitrinoDockerObject,
+    MinitrinoImage,
+    MinitrinoNetwork,
+)
 from minitrino.core.errors import MinitrinoError, UserError
-from minitrino.core.cluster.resource import ClusterDockerObject
-
+from minitrino.core.logger import LogLevel
 from minitrino.settings import (
-    ETC_DIR,
     CLUSTER_CONFIG,
+    ETC_DIR,
     WORKER_CONFIG_PROPS,
 )
 
-from docker.models.images import Image
-from docker.errors import APIError, NotFound
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import cast, Optional, TYPE_CHECKING
-
 if TYPE_CHECKING:
-    from minitrino.core.context import MinitrinoContext
     from minitrino.core.cluster.cluster import Cluster
+    from minitrino.core.context import MinitrinoContext
 
 
 class ClusterOperations:
-    """Cluster operations manager for the current cluster.
+    """
+    Cluster operations manager for the current cluster.
 
     Parameters
     ----------
     ctx : MinitrinoContext
-        An instantiated MinitrinoContext object with user input and context.
+        An instantiated MinitrinoContext object with user input and
+        context.
     cluster : Cluster
         An instantiated `Cluster` object.
 
     Methods
     -------
     down(sig_kill: bool = False, keep: bool = False)
-        Stops and optionally removes all containers for the current cluster.
-    remove(obj_type: str, force: bool, labels: Optional[list[str]] = None)
-        Removes Docker objects (images, volumes, or networks) associated with the
-        current cluster.
+        Stops and optionally removes all containers for the current
+        cluster.
+    remove(obj_type: str, force: bool, labels: Optional[list[str]] =
+    None)
+        Removes Docker objects (images, volumes, or networks) associated
+        with the current cluster.
     restart()
         Restarts all cluster containers (coordinator and workers).
-    restart_containers(c_restart: Optional[list[str]] = None, log_level: LogLevel =
-    LogLevel.VERBOSE)
-        Restarts all the containers in the provided list. Can apply to any container in
-        the environment, not just the coordinator and workers.
+    restart_containers(c_restart: Optional[list[str]] = None, log_level:
+    LogLevel = LogLevel.DEBUG)
+        Restarts all the containers in the provided list. Can apply to
+        any container in the environment, not just the coordinator and
+        workers.
     rollback()
         Terminates the provision operations and removes the cluster.
     provision_workers(workers: int)
-        Provisions or adjusts worker containers based on the specified number.
+        Provisions or adjusts worker containers based on the specified
+        number.
     """
 
     def __init__(self, ctx: MinitrinoContext, cluster: Cluster):
@@ -59,12 +68,14 @@ class ClusterOperations:
         self._cluster = cluster
 
     def down(self, sig_kill: bool = False, keep: bool = False) -> None:
-        """Stop and optionally remove all containers for the current cluster.
+        """
+        Stop and optionally remove all containers from the cluster.
 
         Parameters
         ----------
         sig_kill : bool, optional
-            If True, containers will be stopped using SIGKILL instead of SIGTERM.
+            If True, containers will be stopped using SIGKILL instead of
+            SIGTERM.
         keep : bool, optional
             If True, containers will be stopped but not removed.
         """
@@ -75,7 +86,7 @@ class ClusterOperations:
             self._ctx.logger.info("No containers to bring down.")
             return
 
-        def stop_container(container):
+        def stop_container(container: MinitrinoContainer):
             identifier = utils.generate_identifier(
                 {"ID": container.short_id, "Name": container.name}
             )
@@ -84,15 +95,15 @@ class ClusterOperations:
                     container.kill()
                 else:
                     container.stop()
-                self._ctx.logger.verbose(f"Stopped container: {identifier}")
+                self._ctx.logger.info(f"Stopped container: {identifier}")
             return container
 
-        def remove_container(container):
+        def remove_container(container: MinitrinoContainer):
             identifier = utils.generate_identifier(
                 {"ID": container.short_id, "Name": container.name}
             )
             container.remove()
-            self._ctx.logger.verbose(f"Removed container: {identifier}")
+            self._ctx.logger.info(f"Removed container: {identifier}")
 
         with ThreadPoolExecutor() as executor:
             stop_futures = {
@@ -134,8 +145,8 @@ class ClusterOperations:
         Parameters
         ----------
         obj_type : str
-            Type of Docker object to remove. Must be one of `"image"`, `"volume"`, or
-            `"network"`.
+            Type of Docker object to remove. Must be an image, volume,
+            or network.
         force : bool
             If True, forces removal even if the resource is in use.
         modules : list[str], optional
@@ -144,27 +155,32 @@ class ClusterOperations:
         Raises
         ------
         UserError
-            If attempting to remove images for a specific cluster or module.
+            If attempting to remove images for a specific cluster or
+            module.
 
         Notes
         -----
-        This method deletes the specified Docker resource type(s) filtered by labels
-        (sourced from provided modules, cluster name, or the project root label).
+        This method deletes the specified Docker resource type(s)
+        filtered by labels (sourced from provided modules, cluster name,
+        or the project root label).
 
-        Because images are global project resources (they are not tied to any one
-        cluster or module), they can only be removed as a global operation (using
-        `--cluster all` and omitting `--module`).
+        Because images are global project resources (they are not tied
+        to any one cluster or module), they can only be removed as a
+        global operation (using `--cluster all` and omitting
+        `--module`).
         """
         modules = modules or []
         if obj_type == "image":
             if modules:
                 self._ctx.logger.warn(
-                    "Cannot remove images for a specific module. Skipping image removal."
+                    "Cannot remove images for a specific module. "
+                    "Skipping image removal."
                 )
                 return
             if not self._ctx.all_clusters:
                 self._ctx.logger.warn(
-                    "Cannot remove images for a specific cluster. Skipping image removal."
+                    "Cannot remove images for a specific cluster. "
+                    "Skipping image removal."
                 )
                 return
 
@@ -176,24 +192,29 @@ class ClusterOperations:
             labels.append(module["label"])
 
         resources = self._cluster.resource.resources(labels)
-        resource_getters = {
-            "image": resources.images,
-            "volume": resources.volumes,
-            "network": resources.networks,
-        }
-        items: list[ClusterDockerObject | Image] = resource_getters[obj_type]()
+        items: list[MinitrinoDockerObject]
+        if obj_type == "image":
+            items = list(resources.images())
+        elif obj_type == "volume":
+            items = list(resources.volumes())
+        elif obj_type == "network":
+            items = list(resources.networks())
+        else:
+            raise ValueError(f"Invalid object type: {obj_type}")
 
         for obj in items:
+            identifier = "<unknown>"
             try:
                 fields = self._get_identifier_fields(obj_type, obj)
                 identifier = utils.generate_identifier(fields)
-                if obj_type == "network":
+                if obj.kind == "network":
                     obj.remove()
                 else:
+                    assert not isinstance(obj, MinitrinoNetwork)
                     obj.remove(force=force)
                 self._ctx.logger.info(f"{obj_type.title()} removed: {identifier}")
             except APIError as e:
-                self._ctx.logger.verbose(
+                self._ctx.logger.debug(
                     f"Cannot remove {obj_type}: {identifier}\n"
                     f"Error from Docker: {e.explanation}"
                 )
@@ -207,13 +228,7 @@ class ClusterOperations:
             self._ctx.logger.info("No cluster containers to restart.")
             return
 
-        cluster_containers = []
-        for c in containers:
-            name = getattr(c, "name", None)
-            if name == f"minitrino-{self._ctx.cluster_name}" or (
-                isinstance(name, str) and name.startswith("minitrino-worker")
-            ):
-                cluster_containers.append(name)
+        cluster_containers = [c.name for c in containers if c.name]
 
         self.restart_containers(cluster_containers, log_level=LogLevel.INFO)
         self._ctx.logger.info(
@@ -223,7 +238,7 @@ class ClusterOperations:
     def restart_containers(
         self,
         c_restart: Optional[list[str]] = None,
-        log_level: LogLevel = LogLevel.VERBOSE,
+        log_level: LogLevel = LogLevel.DEBUG,
     ) -> None:
         """
         Restart all the containers in the provided list.
@@ -231,9 +246,10 @@ class ClusterOperations:
         Parameters
         ----------
         c_restart : Optional[list[str]], optional
-            List of fully-qualified container names to restart, by default None.
+            List of fully-qualified container names to restart, by
+            default None.
         log_level : LogLevel, optional
-            Log level for restart messages, by default LogLevel.VERBOSE.
+            Log level for restart messages, by default LogLevel.DEBUG.
         """
         if c_restart is None:
             return
@@ -241,7 +257,8 @@ class ClusterOperations:
         c_restart = list(set(c_restart))
 
         def _restart_container(container_name: str) -> None:
-            """Restart a single container by name.
+            """
+            Restart a single container by name.
 
             Parameters
             ----------
@@ -265,7 +282,8 @@ class ClusterOperations:
                 )
             except NotFound:
                 raise MinitrinoError(
-                    f"Attempting to restart container '{container_name}', but the container was not found."
+                    f"Attempting to restart container '{container_name}', "
+                    f"but the container was not found."
                 )
 
         with ThreadPoolExecutor() as executor:
@@ -291,34 +309,38 @@ class ClusterOperations:
         resources = self._cluster.resource.resources()
         containers = resources.containers()
         for c in containers:
-            for action in (c.kill, c.remove):
-                try:
-                    action()
-                except:
-                    pass
+            try:
+                c.kill()
+                self._ctx.logger.debug(f"Rolled back {repr(c)}")
+            except Exception:
+                pass
+            try:
+                c.remove()
+                self._ctx.logger.debug(f"Rolled back {repr(c)}")
+            except Exception:
+                pass
 
     def provision_workers(self, workers: int = 0) -> None:
-        """Provision or adjust worker containers based on the specified number."""
+        """Reconcile number of workers with the specified number."""
         # Handles five scenarios:
-        #  1. No `workers` value is provided and no workers are currently running — does
-        #     nothing.
-        #  2. A positive `workers` value is provided and no workers exist — provisions
-        #     new workers.
-        #  3. No `workers` value is provided but some are already running — uses current
-        #     count.
-        #  4. Provided `workers` value is greater than running workers — provisions more
-        #     workers.
-        #  5. Provided `workers` value is less than running workers — removes excess
-        #     workers.
+        #  1. No `workers` value is provided and no workers are
+        #     currently running — does nothing.
+        #  2. A positive `workers` value is provided and no workers
+        #     exist — provisions new workers.
+        #  3. No `workers` value is provided but some are already
+        #     running — uses current count.
+        #  4. Provided `workers` value is greater than running workers —
+        #     provisions more workers.
+        #  5. Provided `workers` value is less than running workers —
+        #     removes excess workers.
 
-        # Check for running worker containers
-        containers = self._ctx.docker_client.containers.list()
         pattern = rf"minitrino-worker-\d+-{self._ctx.cluster_name}"
         worker_containers = [
             c.name
-            for c in containers
-            if re.match(pattern, c.name)
-            if c.name.startswith("minitrino-worker-")
+            for c in self._cluster.resource.resources().containers()
+            if c.name
+            and re.match(pattern, c.name)
+            and c.name.startswith("minitrino-worker-")
             and c.labels.get("org.minitrino") == "root"
         ]
         running_workers = len(worker_containers)
@@ -331,21 +353,27 @@ class ClusterOperations:
         if workers == 0 and running_workers > 0:
             workers = running_workers
 
+        # Scenario 4
+        if workers > running_workers:
+            self._ctx.logger.info(f"Adding {workers} workers...")
+
         # Scenario 5
         if workers < running_workers:
             worker_containers.sort(reverse=True)
             excess = running_workers - workers
-            remove = worker_containers[:excess]
-            for c in remove:
-                c = self._cluster.resource.container(c)
-                c.kill()
-                c.remove()
+            remove = [name for name in worker_containers[:excess] if name]
+            for name in remove:
+                container_obj = self._cluster.resource.container(name)
+                container_obj.kill()
+                container_obj.remove()
                 identifier = utils.generate_identifier(
-                    {"ID": c.short_id, "Name": c.name}
+                    {"ID": container_obj.short_id, "Name": container_obj.name}
                 )
                 self._ctx.logger.warn(f"Removed excess worker: {identifier}")
 
-        worker_img = f"minitrino/cluster:{self._ctx.env.get('CLUSTER_VER')}-{self._ctx.env.get('CLUSTER_DIST')}"
+        ver = self._ctx.env.get("CLUSTER_VER")
+        dist = self._ctx.env.get("CLUSTER_DIST")
+        worker_img = f"minitrino/cluster:{ver}-{dist}"
 
         compose_project_name = self._cluster.resource.compose_project_name()
         network_name = f"minitrino_{self._ctx.cluster_name}"
@@ -360,7 +388,7 @@ class ClusterOperations:
             try:
                 worker = self._cluster.resource.container(fq_worker_name)
             except NotFound:
-                worker = self._ctx.docker_client.containers.run(
+                worker_base = self._ctx.docker_client.containers.run(
                     worker_img,
                     name=fq_worker_name,
                     detach=True,
@@ -372,14 +400,17 @@ class ClusterOperations:
                         "com.docker.compose.service": "minitrino-worker",
                     },
                 )
-                self._ctx.logger.verbose(
-                    f"Created and started worker container: '{fq_worker_name}' in network '{network_name}'"
+                worker = MinitrinoContainer(worker_base, self._ctx.cluster_name)
+                self._ctx.logger.debug(
+                    f"Created and started worker container: '{fq_worker_name}' "
+                    f"in network '{network_name}'"
                 )
 
             user = self._ctx.env.get("BUILD_USER")
             tar_path = "/tmp/${CLUSTER_DIST}.tar.gz"
 
-            # Copy the source directory from the coordinator to the worker container
+            # Copy the source directory from the coordinator to the
+            # worker container
             self._ctx.cmd_executor.execute(
                 f"bash -c 'tar czf {tar_path} -C /etc ${{CLUSTER_DIST}}'",
                 container=coordinator,
@@ -403,18 +434,19 @@ class ClusterOperations:
 
             # Overwrite worker config.properties
             self._ctx.cmd_executor.execute(
-                f"bash -c \"echo '{WORKER_CONFIG_PROPS}' > {ETC_DIR}/{CLUSTER_CONFIG}\"",
+                f"bash -c \"echo '{WORKER_CONFIG_PROPS}' "
+                f'> {ETC_DIR}/{CLUSTER_CONFIG}"',
                 container=worker,
                 docker_user=user,
             )
 
             restart.append(fq_worker_name)
-            self._ctx.logger.verbose(f"Copied {ETC_DIR} to '{fq_worker_name}'")
+            self._ctx.logger.debug(f"Copied {ETC_DIR} to '{fq_worker_name}'")
 
         self.restart_containers(restart)
 
     def _get_identifier_fields(
-        self, obj_type: str, item: ClusterDockerObject | Image
+        self, obj_type: str, item: MinitrinoDockerObject
     ) -> dict[str, str]:
         """
         Return a dictionary of identifying fields for Docker resources.
@@ -432,18 +464,22 @@ class ClusterOperations:
             Mapping of human-readable keys and values.
         """
         if obj_type == "image":
-            if not isinstance(item, Image):
-                raise TypeError("Expected Image object")
             id_val = item.short_id
-            tag_val = self._try_get_image_tag(item)
-            tag_val = "<none>" if not tag_val else tag_val
+            tag_val = "<none>"
+            # Narrow item to MinitrinoImage before calling
+            # _try_get_image_tag
+            if isinstance(item, MinitrinoImage):
+                tag_val = self._try_get_image_tag(item)
+                tag_val = "<none>" if not tag_val else tag_val
             return {"ID": id_val, "Image:Tag": tag_val}
         else:
-            item = cast(ClusterDockerObject, item)
-            id_val = item.name or "unknown"
+            id_val = (
+                getattr(item, "name", None)
+                or f"<unnamed-{item.kind}-{item.cluster_name}>"
+            )
             return {"ID": id_val}
 
-    def _try_get_image_tag(self, image: Image) -> str:
+    def _try_get_image_tag(self, image: MinitrinoImage) -> str:
         """Safely fetch the first tag from an image."""
         try:
             return image.tags[0]

@@ -1,46 +1,53 @@
 """Pytest configuration and fixtures for Minitrino CLI tests."""
 
-import os
 import io
-import sys
 import json
+import logging
+import os
+import sys
+
 import docker
 import pytest
-import logging
 
+from minitrino.core.docker.socket import resolve_docker_socket
 from test import common
 from test.cli import utils
 from test.cli.constants import CLUSTER_NAME
-
+from test.cli.utils import logger
 from test.common import (
-    MINITRINO_USER_DIR,
     CONFIG_FILE,
-    SNAPSHOT_FILE,
+    MINITRINO_USER_DIR,
     MINITRINO_USER_SNAPSHOTS_DIR,
+    SNAPSHOT_FILE,
 )
 
 
 @pytest.fixture
 def docker_client() -> docker.DockerClient:
     """Return a Docker client for test use."""
-    return docker.from_env()
+    socket = resolve_docker_socket()
+    logger.debug(f"Docker socket path: {socket}")
+    return docker.DockerClient(base_url=socket)
 
 
 @pytest.fixture(scope="session")
-def logger() -> logging.Logger:
+def _logger() -> logging.Logger:
     """Session-scoped logger for test output."""
     logger = logging.getLogger("minitrino.test")
     logger.setLevel(logging.DEBUG)
-
-    # Avoid duplicate handlers if reloaded
     if not logger.handlers:
         handler = logging.StreamHandler(sys.stdout)
         formatter = logging.Formatter(
-            "[%(asctime)s] %(levelname)s [%(name)s] %(message)s", datefmt="%H:%M:%S"
+            "%(levelname)-8s %(name)s:%(filename)s:%(lineno)d %(message)s"
         )
         handler.setFormatter(formatter)
         logger.addHandler(handler)
     return logger
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _setup_logger(_logger):
+    pass
 
 
 @pytest.fixture
@@ -58,11 +65,11 @@ def log_msg(request: pytest.FixtureRequest) -> str:
     str
         The log message for the test.
     """
-    return str(request.param)
+    return str(getattr(request, "param", ""))
 
 
 @pytest.fixture
-def log_test(log_msg: str, logger: logging.Logger) -> None:
+def log_test(log_msg: str) -> None:
     """
     Log a test start and end message.
 
@@ -70,8 +77,6 @@ def log_test(log_msg: str, logger: logging.Logger) -> None:
     ----------
     log_msg : str
         The log message for the test.
-    logger : logging.Logger
-        The logger instance.
     """
     logger.info(f"START: {log_msg}")
     yield
@@ -101,8 +106,13 @@ def remove() -> None:
     Runs after the test.
     """
     yield
+    msg = "Removing all volumes and networks."
     utils.shut_down()
-    utils.cli_cmd(utils.build_cmd("remove", "all", append=["--volume", "--network"]))
+    logger.debug(msg)
+    utils.cli_cmd(
+        utils.build_cmd("remove", "all", append=["--volume", "--network"]),
+        log_output=False,
+    )
 
 
 @pytest.fixture
@@ -114,7 +124,8 @@ def start_docker() -> None:
     -----
     Runs before the test.
     """
-    common.start_docker_daemon()
+    logger.debug("Starting Docker daemon.")
+    common.start_docker_daemon(logger)
     yield
 
 
@@ -127,19 +138,15 @@ def stop_docker() -> None:
     -----
     Runs before the test.
     """
+    logger.debug("Stopping Docker daemon.")
     common.stop_docker_daemon()
     yield
 
 
 @pytest.fixture
-def cleanup_config(logger: logging.Logger) -> None:
+def cleanup_config() -> None:
     """
     Ensure a sample config file and directory exist.
-
-    Parameters
-    ----------
-    logger : logging.Logger
-        The logger instance.
 
     Notes
     -----
@@ -171,7 +178,7 @@ def cleanup_config(logger: logging.Logger) -> None:
 
 
 @pytest.fixture
-def cleanup_snapshot(request: pytest.FixtureRequest, logger: logging.Logger) -> None:
+def cleanup_snapshot(request: pytest.FixtureRequest) -> None:
     """
     Remove test snapshot tarball.
 
@@ -179,8 +186,6 @@ def cleanup_snapshot(request: pytest.FixtureRequest, logger: logging.Logger) -> 
     ----------
     request : pytest.FixtureRequest
         The pytest fixture request.
-    logger : logging.Logger
-        The logger instance.
 
     Notes
     -----
@@ -205,7 +210,7 @@ def cleanup_snapshot(request: pytest.FixtureRequest, logger: logging.Logger) -> 
                     os.remove(SNAPSHOT_FILE)
                 else:
                     logger.debug(
-                        f"Default snapshot file does not exist: {SNAPSHOT_FILE}"
+                        f"Default snapshot file does not exist: {SNAPSHOT_FILE}",
                     )
         except Exception as e:
             logger.error(f"Error cleaning up snapshot file: {e}")
@@ -230,20 +235,27 @@ def reset_metadata(request: pytest.FixtureRequest) -> None:
 
     Notes
     -----
-    Module defaults to `test` if not specified. Runs after the test.
+    Module defaults to `test` if not specified. Runs before and after
+    the test.
     """
+
+    def _helper():
+        module = getattr(request, "param", "test")
+        default = {
+            "description": "Test module.",
+            "incompatibleModules": ["ldap"],
+            "dependentModules": ["file-access-control"],
+            "versions": [],
+            "enterprise": False,
+            "dependentClusters": [],
+        }
+        path = utils.get_metadata_json_path(module)
+        logger.debug(f"Resetting metadata for module: {module}")
+        utils.write_file(path, json.dumps(default, indent=2))
+
+    _helper()
     yield
-    module = getattr(request, "param", "test")
-    default = {
-        "description": "Test module.",
-        "incompatibleModules": ["ldap"],
-        "dependentModules": ["file-access-control"],
-        "versions": [],
-        "enterprise": False,
-        "dependentClusters": [],
-    }
-    path = utils.get_metadata_json_path(module)
-    utils.write_file(path, json.dumps(default, indent=2))
+    _helper()
 
 
 @pytest.fixture
@@ -258,9 +270,11 @@ def provision_clusters(request: pytest.FixtureRequest) -> None:
 
     Notes
     -----
-    Shuts down the clusters after creation unless `keepalive` is set to `True`.
+    Shuts down the clusters after creation unless `keepalive` is set to
+    `True`.
     """
-    common.start_docker_daemon()
+    logger.debug("Starting Docker daemon for cluster provisioning.")
+    common.start_docker_daemon(logger)
     param = getattr(request, "param", {})
     cluster_names = param.get("cluster_names", [CLUSTER_NAME])
     modules = param.get("modules", ["test"])
@@ -278,23 +292,25 @@ def provision_clusters(request: pytest.FixtureRequest) -> None:
             module_flags.extend(["--module", module])
 
     for cluster in cluster_names:
-        utils.cli_cmd(utils.build_cmd("provision", cluster, append=module_flags))
+        logger.debug(f"Provisioning cluster: {cluster}")
+        utils.cli_cmd(
+            utils.build_cmd("provision", cluster, append=module_flags), log_output=False
+        )
 
     if not keepalive:
         down_cluster = "all" if len(cluster_names) > 1 else cluster_names[0]
-        utils.cli_cmd(utils.build_cmd("down", down_cluster, append=["--sig-kill"]))
+        logger.debug(f"Bringing down cluster: {down_cluster}")
+        utils.cli_cmd(
+            utils.build_cmd("down", down_cluster, append=["--sig-kill"]),
+            log_output=False,
+        )
     yield
 
 
 @pytest.fixture(scope="session")
-def dummy_resources(logger: logging.Logger) -> dict:
+def dummy_resources() -> dict:
     """
     Spin up dummy Docker resources for testing.
-
-    Parameters
-    ----------
-    logger : logging.Logger
-        The logger instance.
 
     Returns
     -------
@@ -305,8 +321,8 @@ def dummy_resources(logger: logging.Logger) -> dict:
     -----
     Fails if resource cleanup fails. Logs resource creation and cleanup.
     """
-    logger.info("Starting Docker daemon for dummy resources")
-    common.start_docker_daemon()
+    logger.debug("Starting Docker daemon for dummy resources")
+    common.start_docker_daemon(logger)
     client = docker.from_env()
     resources = {}
     volume = "minitrino_dummy_volume"
@@ -315,19 +331,19 @@ def dummy_resources(logger: logging.Logger) -> dict:
     container = "minitrino_dummy_container"
     labels = {"org.minitrino": "test"}
 
-    logger.info(f"Creating dummy volume: {volume}")
+    logger.debug(f"Creating dummy volume: {volume}")
     resources["volume"] = client.volumes.create(name=volume, labels=labels)
-    logger.info("Pulling busybox:latest image")
+    logger.debug("Pulling busybox:latest image")
     client.images.pull("busybox:latest")
     dockerfile = "FROM busybox:latest\n\nLABEL org.minitrino=test"
-    logger.info(f"Building dummy image: {image}")
+    logger.debug(f"Building dummy image: {image}")
     image_obj, _ = client.images.build(
         fileobj=io.BytesIO(dockerfile.encode()), tag=image, rm=True
     )
     resources["image"] = image_obj
-    logger.info(f"Creating dummy network: {network}")
+    logger.debug(f"Creating dummy network: {network}")
     resources["network"] = client.networks.create(network, labels=labels)
-    logger.info(f"Creating dummy container: {container}")
+    logger.debug(f"Creating dummy container: {container}")
     resources["container"] = client.containers.create(
         image=image,
         name=container,
@@ -350,9 +366,23 @@ def dummy_resources(logger: logging.Logger) -> dict:
     for resource_type, name, action in remove:
         try:
             action()
-            logger.info(f"Removed {resource_type}: {name}")
+            logger.debug(f"Removed {resource_type}: {name}")
         except Exception as e:
             logger.error(f"Failed to remove {resource_type} {name}: {e}")
             errors.append(f"Failed to remove {resource_type} {name}: {e}")
     if errors:
         raise RuntimeError("\n".join(errors))
+
+
+def pytest_runtest_logreport(report: pytest.TestReport):
+    """Force pytest "PASS"/"FAIL" to log on its own line."""
+    if report.when == "call":
+        if report.passed:
+            print("\n")
+        elif report.failed:
+            print("\n")
+
+
+def pytest_runtest_logstart():
+    """Force pytest to log a newline after test start."""
+    print("\n")

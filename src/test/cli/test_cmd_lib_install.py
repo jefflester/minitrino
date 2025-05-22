@@ -1,9 +1,8 @@
 import os
-
-from logging import Logger
 from dataclasses import dataclass
-from typing import Optional, Any
-from pytest.mark import parametrize, usefixtures
+from typing import Any, Optional
+
+import pytest
 
 from test.cli import utils
 from test.common import MINITRINO_USER_DIR
@@ -68,17 +67,19 @@ lib_install_scenarios = [
 ]
 
 
-@parametrize(
-    "scenario", lib_install_scenarios, ids=utils.get_scenario_ids(lib_install_scenarios)
+@pytest.mark.parametrize(
+    "scenario,log_msg",
+    utils.get_scenario_and_log_msg(lib_install_scenarios),
+    ids=utils.get_scenario_ids(lib_install_scenarios),
+    indirect=["log_msg"],
 )
-@usefixtures("log_test")
+@pytest.mark.usefixtures("log_test")
 def test_lib_install_scenarios(
     scenario: LibInstallScenario,
-    logger: Logger,
 ) -> None:
     """Run each LibInstallScenario."""
     cli_cmd = utils.build_cmd(**scenario.cmd)
-    result = utils.cli_cmd(cli_cmd, logger, scenario.input_val)
+    result = utils.cli_cmd(cli_cmd, scenario.input_val)
     utils.assert_exit_code(result, expected=scenario.expected_exit_code)
     utils.assert_is_dir(os.path.join(MINITRINO_USER_DIR, "lib"))
     if scenario.expected_output:

@@ -5,16 +5,19 @@ from __future__ import annotations
 import os
 import sys
 import traceback
-import pkg_resources
-
-from minitrino.core.logger import MinitrinoLogger
-from minitrino.core.errors import UserError, MinitrinoError
-
 from functools import wraps
+from importlib.metadata import version
 from inspect import signature
-from click import echo, make_pass_decorator
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
-from typing import TYPE_CHECKING, Optional, Dict, Any
+import docker
+from click import echo, make_pass_decorator
+from docker.models.containers import Container
+
+from minitrino.core.docker.socket import resolve_docker_socket
+from minitrino.core.docker.wrappers import MinitrinoContainer
+from minitrino.core.errors import MinitrinoError, UserError
+from minitrino.core.logger import LogLevel, MinitrinoLogger
 
 if TYPE_CHECKING:
     from minitrino.core.context import MinitrinoContext
@@ -41,7 +44,7 @@ def handle_exception(
     skip_traceback: bool = False,
 ) -> None:
     """
-    Handle a single exception, wrapped by `@exception_handler` decorator.
+    Handle a single exception.
 
     Parameters
     ----------
@@ -52,7 +55,8 @@ def handle_exception(
     additional_msg : str
         Additional message to log, if any.
     skip_traceback : bool
-        If True, suppresses traceback output unless overridden by error type.
+        If True, suppresses traceback output unless overridden by error
+        type.
 
     Raises
     ------
@@ -82,7 +86,7 @@ def handle_exception(
 
 def exception_handler(func: Any) -> Any:
     """
-    Handle unhandled exceptions with optional context access.
+    Handle unhandled exceptions.
 
     Parameters
     ----------
@@ -128,15 +132,15 @@ def check_daemon(docker_client: Any) -> None:
         If the Docker daemon is not running or cannot be pinged.
     """
     try:
-        docker_client.ping()
+        docker.DockerClient(base_url=resolve_docker_socket()).ping()
     except Exception as e:
         raise UserError(
             f"Error when pinging the Docker server. Is the Docker daemon running?\n"
             f"Error from Docker: {str(e)}",
-            f"You may need to initialize your Docker daemon. If Docker is already running, "
-            f"check whether you are using the intended Docker context (e.g. Colima or OrbStack). "
-            f"You can view existing contexts with `docker context ls` and switch with `docker "
-            f"context use <context>`.",
+            "You may need to initialize your Docker daemon. If Docker is already "
+            "running, check whether you are using the intended Docker context "
+            "(e.g. Colima or OrbStack). You can view existing contexts with `docker "
+            "context ls` and switch with `docker context use <context>`.",
         )
 
 
@@ -152,6 +156,66 @@ def check_lib(ctx: MinitrinoContext) -> None:
     ctx.lib_dir
 
 
+def container_user_and_id(
+    ctx: Optional[MinitrinoContext] = None,
+    container: Container | MinitrinoContainer | str = "",
+) -> tuple[str, str]:
+    """
+    Return the build user and build user ID for a cluster container.
+
+    Parameters
+    ----------
+    ctx : MinitrinoContext
+        Context object containing cluster information.
+    container : Container | MinitrinoContainer | str
+        Container object or container name.
+
+    Returns
+    -------
+    tuple[str, str]
+        Tuple of build user and build user ID.
+
+    Raises
+    ------
+    ValueError
+        If container is not provided.
+
+    Notes
+    -----
+    Commands executed in coordinator/worker containers tend to rely on
+    environment variables set during the build process. This function
+    returns the build user and build user ID for a cluster container,
+    which can then be used to execute commands in the container with the
+    correct UID to ensure environment variables resolve correctly.
+
+    Examples
+    --------
+    >>> _, uid = container_user_and_id("minintrino-default")
+    >>> cmd = "cat /etc/${CLUSTER_DIST}/config.properties"
+    >>> cmd_executor.execute(
+        f"bash -c '{cmd}'",
+        container="minintrino-default",
+        docker_user=uid,
+    )
+    """
+    if not ctx:  # External call site, e.g. pytest
+        from minitrino.core.context import MinitrinoContext
+
+        ctx = MinitrinoContext()
+        ctx.initialize(log_level=LogLevel.DEBUG)
+    if not container:
+        raise MinitrinoError("Container object or container name must be provided")
+    if isinstance(container, str):
+        container = ctx.cluster.resource.container(container)
+    usr = ctx.cmd_executor.execute("bash -c 'echo $BUILD_USER'", container=container)[
+        0
+    ].output.strip()
+    uid = ctx.cmd_executor.execute(f"bash -c 'id -u {usr}'", container=container)[
+        0
+    ].output.strip()
+    return usr, uid
+
+
 def generate_identifier(identifiers: Optional[Dict[str, Any]] = None) -> str:
     """
     Return an object identifier string used for creating log messages.
@@ -159,7 +223,8 @@ def generate_identifier(identifiers: Optional[Dict[str, Any]] = None) -> str:
     Parameters
     ----------
     identifiers : Optional[Dict[str, Any]], optional
-        Dictionary of "identifier_key": "identifier_value" pairs, by default None.
+        Dictionary of "identifier_key": "identifier_value" pairs, by
+        default None.
 
     Returns
     -------
@@ -179,7 +244,7 @@ def generate_identifier(identifiers: Optional[Dict[str, Any]] = None) -> str:
     return " ".join(identifier)
 
 
-def parse_key_value_pair(pair: str) -> tuple[str, str]:
+def parse_key_value_pair(ctx: MinitrinoContext, pair: str) -> tuple[str, str]:
     """
     Parse a key-value pair from a string.
 
@@ -193,6 +258,10 @@ def parse_key_value_pair(pair: str) -> tuple[str, str]:
     tuple[str, str]
         Tuple of key and value.
     """
+    pair = pair.strip()
+    if "=" not in pair:
+        ctx.logger.warn(f"Invalid key-value pair: {pair}")
+        return "", ""
     key, value = pair.split("=", 1)
     return key, value
 
@@ -206,7 +275,7 @@ def cli_ver() -> str:
     str
         CLI version.
     """
-    return pkg_resources.require("Minitrino")[0].version
+    return version("Minitrino")
 
 
 def lib_ver(ctx: Optional[MinitrinoContext] = None, lib_path: str = "") -> str:
@@ -244,7 +313,8 @@ def validate_yes(value: str) -> bool:
     Returns
     -------
     bool
-        `True` if the input is 'y' or 'yes' (case-insensitive), `False` otherwise.
+        `True` if the input is 'y' or 'yes' (case-insensitive), `False`
+        otherwise.
     """
     response = value.replace(" ", "")
     if response.lower() == "y" or response.lower() == "yes":

@@ -1,44 +1,46 @@
 """Configuration management for Minitrino clusters.
 
-This module provides classes and functions to manage cluster configuration files and
-settings for Minitrino, including writing config files, setting ports, and handling user
-overrides.
+This module provides classes and functions to manage cluster
+configuration files and settings for Minitrino, including writing config
+files, setting ports, and handling user overrides.
 """
 
 from __future__ import annotations
 
 import os
 import re
-import time
-import yaml
 import socket
+import time
+from typing import TYPE_CHECKING, Optional
 
+import yaml
+
+from minitrino import utils
 from minitrino.core.errors import MinitrinoError, UserError
-
 from minitrino.settings import (
     CLUSTER_CONFIG,
     CLUSTER_JVM_CONFIG,
     ETC_DIR,
 )
 
-from typing import Optional, TYPE_CHECKING
-
 if TYPE_CHECKING:
-    from minitrino.core.context import MinitrinoContext
     from minitrino.core.cluster.cluster import Cluster
+    from minitrino.core.context import MinitrinoContext
 
 
 class ClusterConfigManager:
     """
     Manage cluster configuration for the current cluster.
 
-    This class handles reading, writing, and updating configuration files for Minitrino
-    clusters, including dynamic port assignment and user overrides.
+    This class handles reading, writing, and updating configuration
+    files for Minitrino clusters, including dynamic port assignment and
+    user overrides.
 
     Parameters
     ----------
     ctx : MinitrinoContext
-        An instantiated MinitrinoContext object with user input and context.
+        An instantiated MinitrinoContext object with user input and
+        context.
     cluster : Cluster
         An instantiated `Cluster` object.
     """
@@ -54,41 +56,40 @@ class ClusterConfigManager:
         Parameters
         ----------
         modules : list[str], optional
-            A list of module names to include when collecting configuration overrides.
+            A list of module names to include when collecting
+            configuration overrides.
         """
 
         def handle_password_authenticators(cfgs):
             merge = []
             for i, cfg in enumerate(cfgs):
-                if cfg[0] == "http-server.authentication.type":
+                if (
+                    cfg[0] == "key_value"
+                    and cfg[1] == "http-server.authentication.type"
+                ):
                     merge.append(i)
 
             if not merge:
                 return cfgs
 
-            auth_property = "http-server.authentication.type="
-            for i, cfg in enumerate(merge):
-                if i + 1 == len(merge):
-                    auth_property += cfgs[cfg][1].upper()
-                else:
-                    auth_property += f"{cfgs[cfg][1].upper()},"
+            values = [cfgs[i][2].upper() for i in merge]
+            auth_property = (
+                "key_value",
+                "http-server.authentication.type",
+                ",".join(values),
+            )
 
-            cfgs = [x for i, x in enumerate(cfgs) if i not in merge]
-            parts = auth_property.split("=", 1)
-            if len(parts) == 2:
-                key, val = parts
-                cfgs.append([key, val])
-            else:
-                raise UserError(f"Invalid auth property: {auth_property}")
-            return cfgs
+            new_cfgs = [x for i, x in enumerate(cfgs) if i not in merge]
+            new_cfgs.append(auth_property)
+            return new_cfgs
 
         fq_container_name = self._cluster.resource.fq_container_name("minitrino")
         coordinator = self._cluster.resource.container(fq_container_name)
 
         if not coordinator:
             raise MinitrinoError(
-                f"Attempting to append cluster config in Minitrino container, "
-                f"but no running container was found."
+                "Attempting to append cluster config in Minitrino container, "
+                "but no running container was found."
             )
 
         cfgs = []
@@ -112,30 +113,30 @@ class ClusterConfigManager:
                     yaml_file = yaml.load(f, Loader=yaml.FullLoader)
             else:
                 yaml_file = self._ctx.modules.data.get(module, {}).get("yaml_dict")
-            usr_cfgs = (
+            yaml_cfgs = (
                 yaml_file.get("services", {})
                 .get("minitrino", {})
                 .get("environment", {})
                 .get("CONFIG_PROPERTIES", [])
             )
-            user_jvm_cfg = (
+            yaml_jvm_cfg = (
                 yaml_file.get("services", {})
                 .get("minitrino", {})
                 .get("environment", {})
                 .get("JVM_CONFIG", [])
             )
 
-            if usr_cfgs:
-                cfgs.extend(self._split_config(usr_cfgs))
-            if user_jvm_cfg:
-                jvm_cfg.extend(self._split_config(user_jvm_cfg))
+            if yaml_cfgs:
+                cfgs.extend(self._split_config(yaml_cfgs))
+            if yaml_jvm_cfg:
+                jvm_cfg.extend(self._split_config(yaml_jvm_cfg))
 
         if not cfgs and not jvm_cfg:
             return
 
         cfgs = handle_password_authenticators(cfgs)
 
-        self._ctx.logger.verbose(
+        self._ctx.logger.debug(
             "Checking coordinator server status before updating configs...",
         )
 
@@ -143,61 +144,94 @@ class ClusterConfigManager:
         while retry <= 30:
             logs = coordinator.logs().decode()
             if "======== SERVER STARTED ========" in logs:
-                self._ctx.logger.verbose(
+                self._ctx.logger.debug(
                     "Coordinator started.",
                 )
                 break
             elif coordinator.status != "running":
                 raise MinitrinoError(
-                    f"The coordinator stopped running. Inspect the container logs if the "
-                    f"container is still available. If the container was rolled back, rerun "
-                    f"the command with the '--no-rollback' option, then inspect the logs."
+                    "The coordinator stopped running. Inspect the "
+                    "container logs if the container is still available. "
+                    "If the container was rolled back, rerun the command with "
+                    "the '--no-rollback' option, then inspect the logs."
                 )
             else:
-                self._ctx.logger.verbose(
+                self._ctx.logger.debug(
                     "Waiting for coordinator to start...",
                 )
                 time.sleep(1)
                 retry += 1
 
         def append_config(coordinator, usr_cfgs, current_cfgs, filename):
-            """Replace overlapping config keys with the user config.
+            """Replace overlapping config keys.
 
-            If there is an overlapping config key, replace it with the user config.
+            Configs are sourced from user input (env variables or module
+            docker compose YAML).
             """
             if not usr_cfgs:
                 return
 
-            current_cfgs = [
-                cfg
-                for cfg in current_cfgs
-                if not any(cfg[0] == usr_cfg[0] for usr_cfg in usr_cfgs)
-            ]
+            user_kv = {}
+            for entry in usr_cfgs:
+                if entry[0] == "key_value":
+                    k, v = entry[1], entry[2]
+                    user_kv[k] = v
 
-            current_cfgs.extend(usr_cfgs)
-            current_cfgs = ["=".join(x) for x in current_cfgs]
+            used_keys = set()
 
-            self._ctx.logger.verbose(
+            merged = []
+            for entry in current_cfgs:
+                if entry[0] == "key_value":
+                    key, _ = entry[1], entry[2]
+                    if key in user_kv:
+                        merged.append(("key_value", key, user_kv[key]))
+                        used_keys.add(key)
+                    else:
+                        merged.append(entry)
+                else:
+                    merged.append(entry)
+
+            for entry in usr_cfgs:
+                if entry[0] == "key_value":
+                    k, v = entry[1], entry[2]
+                    if k not in used_keys:
+                        merged.append(("key_value", k, v))
+
+            for entry in usr_cfgs:
+                if entry[0] == "unified":
+                    line = entry[1]
+                    if line not in [e[1] for e in merged if e[0] == "unified"]:
+                        merged.append(("unified", line))
+
+            config_lines = []
+            for entry in merged:
+                if entry[0] == "key_value":
+                    _, k, v = entry
+                    config_lines.append(f"{k}={v}")
+                elif entry[0] == "unified":
+                    _, line = entry
+                    config_lines.append(line)
+
+            self._ctx.logger.debug(
                 f"Removing existing {filename} file...",
             )
             self._ctx.cmd_executor.execute(
                 f"bash -c 'rm {ETC_DIR}/{filename}'", container=coordinator
             )
 
-            self._ctx.logger.verbose(
-                f"Writing new config to {filename}...",
+            self._ctx.logger.debug(
+                f"Writing new config to {filename}...\n",
+                "Appending user-defined config to cluster container config...",
             )
-            for current_cfg in current_cfgs:
-                append_cfg = (
-                    f'bash -c "cat <<EOT >> {ETC_DIR}/{filename}\n{current_cfg}\nEOT"'
-                )
+            _, uid = utils.container_user_and_id(self._ctx, coordinator)
+            for line in config_lines:
+                append_cfg = f'bash -c "cat <<EOT >> {ETC_DIR}/{filename}\n{line}\nEOT"'
                 self._ctx.cmd_executor.execute(
-                    append_cfg, container=coordinator, suppress_output=True
+                    append_cfg,
+                    container=coordinator,
+                    suppress_output=True,
+                    docker_user=uid,
                 )
-
-        self._ctx.logger.verbose(
-            "Appending user-defined config to cluster container config...",
-        )
 
         current_cluster_cfgs, current_jvm_cfg = self._current_config()
         append_config(coordinator, cfgs, current_cluster_cfgs, CLUSTER_CONFIG)
@@ -237,8 +271,9 @@ class ClusterConfigManager:
             while is_port_in_use(candidate_port) or is_docker_port_in_use(
                 candidate_port
             ):
-                self._ctx.logger.verbose(
-                    f"Port {candidate_port} is already in use. Finding the next available port..."
+                self._ctx.logger.debug(
+                    f"Port {candidate_port} is already in use. "
+                    "Finding the next available port..."
                 )
                 candidate_port += 1
             return candidate_port
@@ -247,11 +282,12 @@ class ClusterConfigManager:
             candidate_port = find_next_available_port(default_port)
             fq_container_name = self._cluster.resource.fq_container_name(container_name)
             self._ctx.logger.info(
-                f"Found available port {candidate_port} for container '{fq_container_name}'. "
-                f"The service can be reached at localhost:{candidate_port}."
+                f"Found available port {candidate_port} for container "
+                f"'{fq_container_name}'. The service can be reached at "
+                f"localhost:{candidate_port}."
             )
-            self._ctx.logger.verbose(
-                f"Setting environment variable {host_port_var} to {candidate_port}"
+            self._ctx.logger.debug(
+                f"Setting environment variable {host_port_var} to " f"{candidate_port}"
             )
             self._ctx.env.update({host_port_var: str(candidate_port)})
 
@@ -266,7 +302,7 @@ class ClusterConfigManager:
             container_name = service[1].get("container_name", "undefined")
 
             for port_mapping in port_mappings:
-                if not "__PORT" in port_mapping:
+                if "__PORT" not in port_mapping:
                     continue
 
                 host_port_var, default_port = port_mapping.split(":")
@@ -286,45 +322,41 @@ class ClusterConfigManager:
 
                 assign_port(container_name, host_port_var_name, int(default_port))
 
-    def _split_config(self, cfgs: str = "") -> list[list[str]]:
+    def _split_config(self, cfgs: str = "") -> list[tuple]:
         """
-        Split raw config strings into key-value pairs.
+        Split raw config strings into an ordered list of tuples.
 
-        Parameters
-        ----------
-        cfgs : str
-            Multi-line string of key=value pairs.
-
-        Returns
-        -------
-        list[list[str]]
-            List of [key, value] pairs.
+        Each tuple is either ('key_value', key, value) or ('unified',
+        line). Preserves the original ordering and comments.
         """
         cfgs_list = cfgs.strip().split("\n")
-        parsed_cfgs = []
+        parsed = []
         for cfg in cfgs_list:
             cfg = re.sub(r"\s*=\s*", "=", cfg)
             parts = cfg.split("=", 1)
             if len(parts) == 2:
-                key, val = parts
-                parsed_cfgs.append([key, val])
-        return parsed_cfgs
+                parsed.append(("key_value", parts[0], parts[1]))
+            else:
+                parsed.append(("unified", cfg))
+        return parsed
 
-    def _current_config(self) -> tuple[list[list[str]], list[list[str]]]:
+    def _current_config(self) -> tuple[list[tuple], list[tuple]]:
         """
         Fetch current cluster configs from the coordinator container.
 
         Returns
         -------
-        tuple[list[list[str]], list[list[str]]]
-            A tuple of parsed key-value config lists for both files.
+        tuple[list[tuple], list[tuple]]
+            A tuple of parsed config tuples for both files.
         """
         fq_container_name = self._cluster.resource.fq_container_name("minitrino")
+        _, uid = utils.container_user_and_id(self._ctx, fq_container_name)
         current_cfgs = self._ctx.cmd_executor.execute(
             f"bash -c 'cat {ETC_DIR}/{CLUSTER_CONFIG}'",
             f"bash -c 'cat {ETC_DIR}/{CLUSTER_JVM_CONFIG}'",
             container=self._cluster.resource.container(fq_container_name),
             suppress_output=True,
+            docker_user=uid,
         )
 
         current_cluster_cfgs = self._split_config(current_cfgs[0].output)

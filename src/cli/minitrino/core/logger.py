@@ -1,10 +1,12 @@
 """Logging utilities for Minitrino clusters."""
 
-from click import echo, style, prompt
-from textwrap import fill
-from shutil import get_terminal_size
-from enum import Enum
 from dataclasses import dataclass
+from enum import Enum
+from shutil import get_terminal_size
+from textwrap import fill
+from typing import Callable, Optional
+
+from click import echo, prompt, style
 
 
 @dataclass(frozen=True)
@@ -13,7 +15,7 @@ class LogMeta:
 
     prefix: str
     color: str
-    verbose: bool = False
+    debug: bool = False
 
 
 class LogLevel(Enum):
@@ -28,14 +30,14 @@ class LogLevel(Enum):
         Warning level configuration.
     ERROR : LogMeta
         Error level configuration.
-    VERBOSE : LogMeta
-        Verbose level configuration.
+    DEBUG : LogMeta
+        Debug level configuration.
     """
 
     INFO = LogMeta("[i]  ", "cyan")
     WARN = LogMeta("[w]  ", "yellow")
     ERROR = LogMeta("[e]  ", "red")
-    VERBOSE = LogMeta("[v]  ", "magenta", True)
+    DEBUG = LogMeta("[v]  ", "magenta", True)
 
 
 class MinitrinoLogger:
@@ -44,8 +46,8 @@ class MinitrinoLogger:
 
     Parameters
     ----------
-    log_verbose : bool, optional
-        If `True`, verbose messages will be shown; otherwise, they are suppressed.
+    log_level : LogLevel, optional
+        Minimum log level to emit (default: INFO)
 
     Attributes
     ----------
@@ -62,45 +64,67 @@ class MinitrinoLogger:
         Log a message at the warning level.
     error(*args, stream=False) :
         Log a message at the error level.
-    verbose(*args, stream=False) :
-        Log a message at the verbose level, if verbosity is enabled.
+    debug(*args, stream=False) :
+        Log a message at the debug level.
     prompt_msg(msg="") :
         Prompt the user with a message and capture input.
+    set_log_sink(sink: Callable[[str], None] | list[str]) :
+        Set a log sink (e.g., list or callback) for capturing log
+        output. Useful for testing.
     styled_prefix(level=LogLevel.INFO) :
         Return the ANSI-styled log prefix.
 
     Notes
     -----
-    This class provides standardized logging methods (`info`, `warn`, `error`,
-    `verbose`) that emit formatted messages to the console using `click.echo()`. It also
-    supports interactive prompting and message styling with configurable verbosity.
+    This class provides standardized logging methods (`info`, `warn`,
+    `error`, `debug`) that emit formatted messages to the console using
+    `click.echo()`. It also supports interactive prompting and message
+    styling with configurable verbosity.
     """
 
     DEFAULT_INDENT = " " * 5
 
-    def __init__(self, log_verbose: bool = False) -> None:
-        self._log_verbose = log_verbose
+    def __init__(self, log_level: Optional[LogLevel] = None) -> None:
+        self._log_level = log_level if log_level is not None else LogLevel.INFO
+        self._log_sink = None
+
+    def should_log(self, level: LogLevel) -> bool:
+        """Return True if the log should be emitted based on level."""
+        order = [LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR]
+        min_level_idx = order.index(self._log_level)
+        msg_level_idx = order.index(level)
+        return msg_level_idx >= min_level_idx
+
+    def set_level(self, level: LogLevel) -> None:
+        """Set the minimum log level."""
+        self._log_level = level
 
     def log(
         self, *args: str, level: LogLevel = LogLevel.INFO, stream: bool = False
     ) -> None:
         """Log messages to the terminal using color-coded levels."""
-        if level == LogLevel.VERBOSE and not self._log_verbose:
-            return  # Suppress verbose messages if not enabled
+        if not self.should_log(level):
+            return
 
         for msg in args:
-            msgs = str(msg).replace("\r", "\n").split("\n")
-
-            for i, msg in enumerate(msgs):
-                msg = self._format(msg)
-                if not msg:
+            lines = str(msg).replace("\r", "\n").split("\n")
+            for i, line in enumerate(lines):
+                formatted = self._format(line, level.value)
+                if not formatted:
                     continue
-                msg_prefix = (
+                prefix = (
                     self.DEFAULT_INDENT
                     if stream or i > 0
-                    else style(level.value.prefix, fg=level.value.color, bold=True)
+                    else self.styled_prefix(level)
                 )
-                echo(f"{msg_prefix}{msg}")
+                output = f"{prefix}{formatted}"
+                # Write to sink if set
+                if self._log_sink is not None:
+                    if callable(self._log_sink):
+                        self._log_sink(output)
+                    elif isinstance(self._log_sink, list):
+                        self._log_sink.append(output)
+                echo(output)
 
     def info(self, *args: str, stream: bool = False) -> None:
         """Log an info-level message."""
@@ -114,10 +138,9 @@ class MinitrinoLogger:
         """Log an error message."""
         self.log(*args, level=LogLevel.ERROR, stream=stream)
 
-    def verbose(self, *args: str, stream: bool = False) -> None:
-        """Log a verbose message if verbosity is enabled."""
-        if self._log_verbose:
-            self.log(*args, level=LogLevel.VERBOSE, stream=stream)
+    def debug(self, *args: str, stream: bool = False) -> None:
+        """Log a debug message."""
+        self.log(*args, level=LogLevel.DEBUG, stream=stream)
 
     def prompt_msg(self, msg: str = "") -> str:
         """Prompt the user with a styled message and return input."""
@@ -135,7 +158,15 @@ class MinitrinoLogger:
         """Return the ANSI-styled log prefix."""
         return style(level.value.prefix, fg=level.value.color, bold=True)
 
-    def _format(self, msg: str, meta: LogMeta) -> str:
+    def set_log_sink(self, sink: Callable[[str], None] | list[str]) -> None:
+        """Set a log sink (callback or list)."""
+        self._log_sink = sink
+
+    def get_log_sink(self) -> Callable[[str], None] | list[str]:
+        """Get the current log sink."""
+        return self._log_sink
+
+    def _format(self, msg: str, meta: LogMeta = LogLevel.INFO.value) -> str:
         """
         Format a log message with the given metadata.
 
@@ -153,5 +184,4 @@ class MinitrinoLogger:
         """
         indent = self.DEFAULT_INDENT
         msg = fill(msg, width=get_terminal_size().columns - len(indent))
-        msg = msg.replace("\n", "\n" + indent)
-        return style(f"{meta.prefix}{msg}", fg=meta.color)
+        return msg.replace("\n", "\n" + indent)

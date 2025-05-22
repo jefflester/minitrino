@@ -1,19 +1,20 @@
 """Commands for displaying and filtering Minitrino module metadata."""
 
 import json
-import click
-
 from typing import Optional
+
+import click
 
 from minitrino import utils
 from minitrino.core.context import MinitrinoContext
 from minitrino.core.errors import UserError
+from minitrino.core.logger import LogLevel
 from minitrino.settings import MODULE_ADMIN, MODULE_CATALOG, MODULE_SECURITY
 
 
 @click.command(
     "modules",
-    help="Display module metadata.",
+    help="Get module metadata.",
 )
 @click.option(
     "-m",
@@ -38,23 +39,14 @@ from minitrino.settings import MODULE_ADMIN, MODULE_CATALOG, MODULE_SECURITY
     "json_format",
     is_flag=True,
     default=False,
-    help="Output verbose metadata in raw JSON format.",
+    help="Output module metadata in JSON.",
 )
 @click.option(
     "-r",
     "--running",
     is_flag=True,
     default=False,
-    help=(
-        """
-        Get metadata for all running modules. By default, applies to 'default' cluster.
-
-        Return a list of running modules in specific cluster by using the `CLUSTER_NAME`
-        environment variable or the `--cluster` / `-c` option, e.g.: 
-
-        `minitrino -c my-cluster modules --running`, or get all running modules:\n
-        `minitrino -c all modules --running`"""
-    ),
+    help="Get metadata for all running modules.",
 )
 @utils.exception_handler
 @utils.pass_environment()
@@ -67,8 +59,8 @@ def cli(
 ) -> None:
     """Display Minitrino module metadata.
 
-    Supports filtering by module name, type, or running state. Output can be formatted
-    as human-readable logs or raw JSON.
+    Supports filtering by module name, type, or running state. Output
+    can be formatted as human-readable logs or JSON.
 
     Parameters
     ----------
@@ -77,13 +69,16 @@ def cli(
     module_type : str
         Filter results by module type (e.g., admin, catalog, security).
     json_format : bool
-        If True, displays metadata in raw JSON format.
+        If True, displays metadata in JSON format.
     running : bool
         If True, displays metadata for only running modules.
     """
-    utils.check_lib(ctx)
-    ctx.logger.verbose("Printing module metadata...")
+    if json_format:
+        ctx.initialize(log_level=LogLevel.ERROR)
+    else:
+        ctx.initialize()
 
+    utils.check_lib(ctx)
     valid_types = {MODULE_ADMIN, MODULE_CATALOG, MODULE_SECURITY}
     if module_type and module_type not in valid_types:
         raise UserError(
@@ -146,9 +141,6 @@ def log_info(
 ) -> None:
     """Log module metadata to the terminal.
 
-    If `json_format` is enabled, outputs raw JSON. Otherwise, prints human-readable key
-    information.
-
     Parameters
     ----------
     ctx : MinitrinoContext
@@ -159,6 +151,11 @@ def log_info(
         Metadata associated with the module.
     json_format : bool
         If True, displays the output as formatted JSON.
+
+    Notes
+    -----
+    If `json_format` is enabled, outputs raw JSON. Otherwise, prints
+    human-readable key information.
     """
     if json_format:
         print(json.dumps({module_name: module_metadata}, indent=2))

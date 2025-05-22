@@ -4,6 +4,7 @@ Handle configuration-related CLI commands.
 """
 
 import os
+
 import click
 
 from minitrino import utils
@@ -33,25 +34,26 @@ def cli(ctx: MinitrinoContext, reset: bool) -> None:
     reset : bool
         If True, resets the config file with default values.
     """
+    ctx.initialize()
     if os.path.isfile(ctx.config_file) and not reset:
-        ctx.logger.verbose(
+        ctx.logger.debug(
             f"Opening existing config file at path: {ctx.config_file}",
         )
-        edit_file(ctx)
+        edit_file()
     elif os.path.isfile(ctx.config_file) and reset:
-        response = ctx.logger.prompt_msg(f"Configuration file exists. Overwrite? [Y/N]")
+        response = ctx.logger.prompt_msg("Configuration file exists. Overwrite? [Y/N]")
         if utils.validate_yes(response):
-            write_template(ctx)
-            edit_file(ctx)
+            write_template()
+            edit_file()
         else:
             ctx.logger.info(f"Opted out of recreating {ctx.minitrino_user_dir} file.")
     else:
-        ctx.logger.verbose(
+        ctx.logger.debug(
             f"No config file found at path: {ctx.config_file}. "
             f"Creating template config file and opening for edits...",
         )
-        write_template(ctx)
-        edit_file(ctx)
+        write_template()
+        edit_file()
 
 
 @utils.pass_environment()

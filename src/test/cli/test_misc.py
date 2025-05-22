@@ -1,12 +1,11 @@
 import os
-
-from typing import Optional
-from logging import Logger
 from dataclasses import dataclass
-from pytest.mark import parametrize, usefixtures
+from typing import Optional
 
-from test.common import CONFIG_FILE
+import pytest
+
 from test.cli import utils
+from test.common import CONFIG_FILE
 
 
 @dataclass
@@ -82,19 +81,16 @@ daemon_off_scenarios = [
 ]
 
 
-@parametrize(
+@pytest.mark.parametrize(
     "scenario",
     daemon_off_scenarios,
     ids=utils.get_scenario_ids(daemon_off_scenarios),
     indirect=False,
 )
-@usefixtures("log_test", "stop_docker")
-def test_daemon_off_scenarios(
-    scenario: DaemonOffScenario,
-    logger: Logger,
-) -> None:
+@pytest.mark.usefixtures("log_test", "stop_docker")
+def test_daemon_off_scenarios(scenario: DaemonOffScenario) -> None:
     """Run each DaemonOffScenario."""
-    result = utils.cli_cmd(utils.build_cmd(**scenario.cmd), logger, scenario.input_val)
+    result = utils.cli_cmd(utils.build_cmd(**scenario.cmd), scenario.input_val)
     utils.assert_exit_code(result, expected=scenario.expected_exit_code)
     utils.assert_in_output(scenario.expected_in_output, result=result)
 
@@ -164,37 +160,32 @@ env_scenarios = [
 ]
 
 
-@parametrize(
-    "scenario",
-    env_scenarios,
+@pytest.mark.parametrize(
+    "scenario,log_msg",
+    utils.get_scenario_and_log_msg(env_scenarios),
     ids=utils.get_scenario_ids(env_scenarios),
-    indirect=False,
+    indirect=["log_msg"],
 )
-@usefixtures("log_test", "cleanup_config")
-def test_env_scenarios(
-    scenario: EnvScenario,
-    logger: Logger,
-) -> None:
+@pytest.mark.usefixtures("log_test", "cleanup_config")
+def test_env_scenarios(scenario: EnvScenario) -> None:
     """Run each EnvScenario."""
     if scenario.source == "cli":
         result = utils.cli_cmd(
             utils.build_cmd(
                 "version", prepend=["--env", f"{scenario.envvar}={scenario.envval}"]
             ),
-            logger,
         )
     elif scenario.source == "shell":
         result = utils.cli_cmd(
             utils.build_cmd("version"),
-            logger,
             env={scenario.envvar: scenario.envval},
         )
     elif scenario.source == "config":
         utils.write_file(CONFIG_FILE, f"{scenario.envvar}={scenario.envval}", mode="a")
-        result = utils.cli_cmd(utils.build_cmd("version"), logger)
+        result = utils.cli_cmd(utils.build_cmd("version"))
         os.remove(CONFIG_FILE)
     else:  # unset
-        result = utils.cli_cmd(utils.build_cmd("version"), logger)
+        result = utils.cli_cmd(utils.build_cmd("version"))
     utils.assert_exit_code(result)
     if scenario.expected_present:
         utils.assert_in_output(scenario.envvar, scenario.envval, result=result)
@@ -236,17 +227,17 @@ invalid_env_scenarios = [
 ]
 
 
-@parametrize(
-    "scenario",
-    invalid_env_scenarios,
+@pytest.mark.parametrize(
+    "scenario,log_msg",
+    utils.get_scenario_and_log_msg(invalid_env_scenarios),
     ids=utils.get_scenario_ids(invalid_env_scenarios),
-    indirect=False,
+    indirect=["log_msg"],
 )
-@usefixtures("log_test", "cleanup_config")
-def test_invalid_env_scenarios(scenario: InvalidEnvScenario, logger: Logger) -> None:
+@pytest.mark.usefixtures("log_test", "cleanup_config")
+def test_invalid_env_scenarios(scenario: InvalidEnvScenario) -> None:
     """Run each InvalidEnvScenario."""
     result = utils.cli_cmd(
-        utils.build_cmd("version", prepend=["--env", scenario.envflag]), logger
+        utils.build_cmd("version", prepend=["--env", scenario.envflag])
     )
     utils.assert_exit_code(result, expected=2)
     utils.assert_in_output("Invalid key-value pair", result=result)
@@ -286,18 +277,17 @@ invalid_lib_scenarios = [
 ]
 
 
-@parametrize(
-    "scenario",
-    invalid_lib_scenarios,
+@pytest.mark.parametrize(
+    "scenario,log_msg",
+    utils.get_scenario_and_log_msg(invalid_lib_scenarios),
     ids=utils.get_scenario_ids(invalid_lib_scenarios),
-    indirect=False,
+    indirect=["log_msg"],
 )
-@usefixtures("log_test", "cleanup_config")
-def test_invalid_lib_scenarios(scenario: InvalidLibScenario, logger: Logger) -> None:
+@pytest.mark.usefixtures("log_test", "cleanup_config")
+def test_invalid_lib_scenarios(scenario: InvalidLibScenario) -> None:
     """Run each InvalidLibScenario."""
     result = utils.cli_cmd(
         utils.build_cmd("modules", prepend=["--env", f"LIB_PATH={scenario.lib_path}"]),
-        logger,
     )
     utils.assert_exit_code(result, expected=2)
     utils.assert_in_output(
@@ -305,16 +295,15 @@ def test_invalid_lib_scenarios(scenario: InvalidLibScenario, logger: Logger) -> 
     )
 
 
-@usefixtures("log_test", "cleanup_config")
-@parametrize("log_msg", ["Pass in multiple environment variables"], indirect=True)
-def test_multiple_env(logger: Logger) -> None:
-    """
-    Verify that multiple environment variables can be successfully passed in.
+TEST_MULTI_ENV_MSG = "Pass in multiple environment variables"
 
-    Parameters
-    ----------
-    logger : Logger
-        Logger to use for logging.
+
+@pytest.mark.usefixtures("log_test", "cleanup_config")
+@pytest.mark.parametrize("log_msg", [TEST_MULTI_ENV_MSG], indirect=True)
+def test_multiple_env() -> None:
+    """
+    Verify that multiple environment variables can be successfully
+    passed in.
     """
     result = utils.cli_cmd(
         utils.build_cmd(
@@ -328,7 +317,6 @@ def test_multiple_env(logger: Logger) -> None:
                 "TRINO=is=awesome",
             ],
         ),
-        logger,
     )
     utils.assert_exit_code(result)
     utils.assert_in_output(

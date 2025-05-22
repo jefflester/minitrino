@@ -1,13 +1,15 @@
-import pkg_resources
-from logging import Logger
+from importlib.metadata import version
+
+import pytest
+
 from test.cli import utils
 
 
 @pytest.mark.usefixtures("log_test")
 @pytest.mark.parametrize("log_msg", ["Testing version"], id="version")
-def test_version(logger: Logger) -> None:
+def test_version() -> None:
     """Test for correct version output."""
-    result = utils.cli_cmd(utils.build_cmd("version"), logger)
-    version = pkg_resources.require("Minitrino")[0].version
+    result = utils.cli_cmd(utils.build_cmd("version"))
+    cli_version = version("Minitrino")
     utils.assert_exit_code(result)
-    utils.assert_in_output(version, result=result)
+    utils.assert_in_output(cli_version, result=result)

@@ -55,3 +55,4 @@ yarn-error.log*
 *minio.sys*
 *.tar.gz
 .mypy_cache
+.local

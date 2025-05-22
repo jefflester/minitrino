@@ -1,22 +1,25 @@
 """Utility functions for Minitrino CLI tests."""
 
-import os
 import json
+import logging
+import os
+import re
+from typing import Dict, Optional
 
-from logging import Logger
-from typing import Optional, Dict
 from click.testing import CliRunner, Result
 
 from minitrino.cli import cli
-from test.common import CommandResult, get_containers
 from test.cli.constants import CLUSTER_NAME
+from test.common import CommandResult, get_containers
+
+logger = logging.getLogger("minitrino.test")
 
 
 def cli_cmd(
     cmd: list[str],
-    logger: Logger = None,
     input: str | None = None,
     env: Optional[Dict[str, str]] = None,
+    log_output: bool = True,
 ) -> Result:
     """
     Log and execute a CLI command.
@@ -25,25 +28,27 @@ def cli_cmd(
     ----------
     cmd : list[str]
         The command and arguments to invoke.
-    logger : Logger
-        Logger to use for logging the invocation. If None, no log is produced.
     input : str | None
-        Input string to pass to the command (for prompts, etc.). Defaults to None.
+        Input string to pass to the command (for prompts, etc.).
+        Defaults to None.
     env : Optional[Dict[str, str]]
-        Environment variables to set for the command. Defaults to an empty dict.
+        Environment variables to set for the command. Defaults to an
+        empty dict.
+    log_output : bool
+        Whether to log the output of the command. Defaults to `True`.
 
     Returns
     -------
     Result
         The Click testing Result object.
     """
-    if logger:
-        msg = "Invoking CLI command '%s' %s"
-        logger.info(msg % (cmd, " with input: %s" % input if input else ""))
+    msg = "Invoking CLI command '%s' %s"
+    logger.info(msg % (cmd, " with input: %s" % input if input else ""))
     runner = CliRunner()
     env = env or {}
     result = runner.invoke(cli, cmd, input=input, env=env)
-    logger.debug(f"Result output: {result.output}")
+    if log_output:
+        logger.info(f"Result output:\n{result.output}")
     return result
 
 
@@ -61,7 +66,8 @@ def update_metadata_json(module: str, updates: Optional[list[dict]] = None) -> N
     module : str
         The name of the module to update.
     updates : Optional[list[dict]]
-        The list of dicts to update the module's metadata.json file with.
+        The list of dicts to update the module's metadata.json file
+        with.
     """
     updates = updates or []
     path = get_metadata_json_path(module)
@@ -71,6 +77,7 @@ def update_metadata_json(module: str, updates: Optional[list[dict]] = None) -> N
         for k, v in update.items():
             data[k] = v
     with open(path, "w") as f:
+        logger.debug(f"Updating {path} with {json.dumps(data)}")
         json.dump(data, f, indent=4)
 
 
@@ -89,8 +96,9 @@ def get_metadata_json_path(module: str) -> str:
 
 def get_module_metadata(module: str) -> dict:
     """Fetch metadata for a given module."""
-    result = cli_cmd(build_cmd("modules", append=["--module", module, "--json"]))
-    return json.loads(clean_str(result.output))
+    cmd = build_cmd("modules", append=["--module", module, "--json"], verbose=False)
+    result = cli_cmd(cmd, log_output=False)
+    return json.loads(normalize(result.output))
 
 
 def get_module_yaml_path(module: str) -> str:
@@ -143,7 +151,7 @@ def assert_exit_code(result: Result | CommandResult, expected: int = 0) -> None:
     expected : int
         The expected exit code. Defaults to 0.
     """
-    msg = "Unexpected exit code: %s (expected: %s)\nOutput: %s" % (
+    msg = "Unexpected exit code: %s (expected: %s). Output:\n%s" % (
         result.exit_code,
         expected,
         result.output,
@@ -160,12 +168,15 @@ def assert_num_containers(expected: int = 0, all: bool = False) -> None:
     expected : int
         The expected number of containers. Defaults to 0.
     all : bool
-        Whether to count all containers or only running containers. Defaults to `False`.
+        Whether to count all containers or only running containers.
+        Defaults to `False`.
     """
     containers = get_containers(all=all)
-    msg = "Unexpected number of containers: %s (expected: %s)" % (
+    container_names = [c.name for c in containers]
+    msg = "Unexpected number of containers: %s (expected: %s) (containers: %s)" % (
         len(containers),
         expected,
+        container_names,
     )
     assert len(containers) == expected, msg
 
@@ -179,11 +190,14 @@ def assert_containers_exist(*args: str, all: bool = False) -> None:
     args : tuple of str
         The names of the containers to assert exist.
     all : bool
-        Whether to count all containers or only running containers. Defaults to `False`.
+        Whether to count all containers or only running containers.
+        Defaults to `False`.
     """
-    msg = "Container %s does not exist."
+    msg = "Expected container '%s' to exist but it does not."
+    containers = get_containers(all=all)
+    container_names = [c.name for c in containers]
     for name in args:
-        assert name in get_containers(name, all=all), msg % name
+        assert name in container_names, msg % name
 
 
 def assert_containers_not_exist(*args: str, all: bool = False) -> None:
@@ -195,11 +209,14 @@ def assert_containers_not_exist(*args: str, all: bool = False) -> None:
     args : tuple of str
         The names of the containers to assert do not exist.
     all : bool
-        Whether to count all containers or only running containers. Defaults to `False`.
+        Whether to count all containers or only running containers.
+        Defaults to `False`.
     """
-    msg = "Container %s exists."
+    msg = "Expected container '%s' to NOT exist but it does."
+    containers = get_containers(all=all)
+    container_names = [c.name for c in containers]
     for name in args:
-        assert name not in get_containers(name, all=all), msg % name
+        assert name not in container_names, msg % name
 
 
 def assert_is_dir(path: str) -> None:
@@ -226,8 +243,9 @@ def assert_in_file(*args: str, path: str) -> None:
         The path to the file to check.
     """
     content = read_file(path)
+    msg = "Expected string '%s' not found in file %s\nActual content:\n%s"
     for expected in args:
-        assert expected in content, f"Expected string not found in file: {expected}"
+        assert expected in content, msg % (expected, path, content)
 
 
 def assert_not_in_file(*args: str, path: str) -> None:
@@ -242,12 +260,12 @@ def assert_not_in_file(*args: str, path: str) -> None:
         The path to the file to check.
     """
     content = read_file(path)
-    msg = "Unexpected string %s found in file."
+    msg = "Unexpected string '%s' found in file %s\nActual content:\n%s"
     for unexpected in args:
-        assert unexpected not in content, msg % unexpected
+        assert unexpected not in content, msg % (unexpected, path, content)
 
 
-def assert_in_output(*args: str, result: Result | CommandResult) -> None:
+def assert_in_output(*args: str, result: Result | CommandResult | list[str]) -> None:
     """
     Assert the given strings are in the result output.
 
@@ -255,12 +273,18 @@ def assert_in_output(*args: str, result: Result | CommandResult) -> None:
     ----------
     args : tuple of str
         The strings to assert are in the result output.
-    result : Result or CommandResult
-        The result to check.
+    result : Result or CommandResult or list
+        The result to check. Supports list[str] for testing log sinks.
     """
-    msg = "Expected string %s not found in output."
+    msg = "Expected string '%s' not found in output:\n%s."
+    if isinstance(result, list):
+        joined = "\n".join(normalize(s) for s in result)
+        for expected in args:
+            assert expected in joined, msg % (expected, joined)
+        return
     for expected in args:
-        assert expected in clean_str(result.output), msg % expected
+        normalized = normalize(result.output)
+        assert expected in normalized, msg % (expected, normalized)
 
 
 def assert_not_in_output(*args: str, result: Result | CommandResult) -> None:
@@ -274,9 +298,10 @@ def assert_not_in_output(*args: str, result: Result | CommandResult) -> None:
     result : Result or CommandResult
         The result to check.
     """
-    msg = "Unexpected string %s found in output."
+    msg = "Unexpected string '%s' found in output:\n%s."
     for unexpected in args:
-        assert unexpected not in clean_str(result.output), msg % unexpected
+        normalized = normalize(result.output)
+        assert unexpected not in normalized, msg % (unexpected, normalized)
 
 
 # ------------------------
@@ -286,7 +311,8 @@ def assert_not_in_output(*args: str, result: Result | CommandResult) -> None:
 
 def shut_down() -> None:
     """Bring down all containers."""
-    cli_cmd(build_cmd("down", "all", append=["--sig-kill"]))
+    logger.debug("Bringing down all containers.")
+    cli_cmd(build_cmd("down", "all", append=["--sig-kill"], verbose=False))
 
 
 # ------------------------
@@ -299,14 +325,19 @@ def get_scenario_ids(scenarios: list) -> list[str]:
     return [getattr(sc, "id", str(sc)) for sc in scenarios]
 
 
+def get_scenario_and_log_msg(scenarios: list) -> list[tuple]:
+    """Return list of (scenario, log_msg) for parameterization."""
+    return [(sc, getattr(sc, "log_msg", "")) for sc in scenarios]
+
+
 # ------------------------
 # String Helpers
 # ------------------------
 
 
-def clean_str(s: str) -> str:
-    """Remove unwanted characters from a string."""
-    return s.replace("\n", "").replace(" ", "")
+def normalize(s: str) -> str:
+    """Normalize a string for assertions."""
+    return re.sub(r"\s+", " ", s).strip()
 
 
 def build_cmd(
@@ -314,11 +345,13 @@ def build_cmd(
     cluster: Optional[str] = CLUSTER_NAME,
     append: Optional[list[str]] = None,
     prepend: Optional[list[str]] = None,
+    verbose: bool = True,
 ) -> list[str]:
     """
     Build a CLI command for CliRunner.
 
-        [minitrino (<impl>)] [-v] [--cluster <cluster>] <prepend> <base> <append>
+        [minitrino (<impl>)] [-v] [--cluster <cluster>] <prepend> <base>
+        <append>
 
     Parameters
     ----------
@@ -330,6 +363,8 @@ def build_cmd(
         Extra arguments to add to the command after the base command.
     prepend : Optional[list[str]]
         Extra arguments to add to the command before the base command.
+    verbose : bool
+        Whether to add the '-v' flag to the command. Defaults to `True`.
 
     Returns
     -------
@@ -347,5 +382,7 @@ def build_cmd(
     """
     append = append or []
     prepend = prepend or []
-    cmd = ["-v", "--cluster", cluster, *prepend, base, *append]
+    cmd = ["--cluster", cluster, *prepend, base, *append]
+    if verbose:
+        cmd.insert(0, "-v")
     return cmd

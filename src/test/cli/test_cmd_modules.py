@@ -1,10 +1,13 @@
-from logging import Logger
-from typing import Optional
 from dataclasses import dataclass
-from pytest.mark import parametrize, usefixtures
+from typing import Optional
 
-from minitrino.settings import MODULE_ADMIN, MODULE_CATALOG, MODULE_SECURITY
+import pytest
 
+from minitrino.settings import (
+    MODULE_ADMIN,
+    MODULE_CATALOG,
+    MODULE_SECURITY,
+)
 from test.cli import utils
 
 CMD_MODULES = {"base": "modules"}
@@ -69,21 +72,18 @@ module_name_scenarios = [
 ]
 
 
-@parametrize(
+@pytest.mark.parametrize(
     "scenario",
     module_name_scenarios,
     ids=utils.get_scenario_ids(module_name_scenarios),
 )
-@usefixtures("log_test")
-def test_module_name_scenarios(
-    scenario: ModuleNameScenario,
-    logger: Logger,
-) -> None:
+@pytest.mark.usefixtures("log_test")
+def test_module_name_scenarios(scenario: ModuleNameScenario) -> None:
     """Run each ModuleNameScenario."""
     append = ["--module", scenario.module_name]
     if scenario.type_flag:
         append.extend(["--type", scenario.type_flag])
-    result = utils.cli_cmd(utils.build_cmd(**CMD_MODULES, append=append), logger)
+    result = utils.cli_cmd(utils.build_cmd(**CMD_MODULES, append=append))
     utils.assert_exit_code(result, expected=scenario.expected_exit_code)
     utils.assert_in_output(
         scenario.expected_output % scenario.module_name, result=result
@@ -135,12 +135,17 @@ type_scenarios = [
 ]
 
 
-@usefixtures("log_test")
-@parametrize("scenario", type_scenarios, ids=utils.get_scenario_ids(type_scenarios))
-def test_type_scenarios(scenario: TypeScenario, logger: Logger) -> None:
+@pytest.mark.parametrize(
+    "scenario,log_msg",
+    utils.get_scenario_and_log_msg(type_scenarios),
+    ids=utils.get_scenario_ids(type_scenarios),
+    indirect=["log_msg"],
+)
+@pytest.mark.usefixtures("log_test")
+def test_type_scenarios(scenario: TypeScenario) -> None:
     """Run each TypeScenario."""
     append = ["--type", scenario.type_flag, "--json"]
-    result = utils.cli_cmd(utils.build_cmd(**CMD_MODULES, append=append), logger)
+    result = utils.cli_cmd(utils.build_cmd(**CMD_MODULES, append=append))
     utils.assert_exit_code(result)
     types = [MODULE_ADMIN, MODULE_CATALOG, MODULE_SECURITY]
     types.remove(scenario.validate_type)
@@ -155,13 +160,14 @@ def test_type_scenarios(scenario: TypeScenario, logger: Logger) -> None:
 ALL_MODULES_MSG = "Print all module metadata if no module name is passed"
 
 
-@usefixtures("log_test")
-@parametrize("log_msg", [ALL_MODULES_MSG], indirect=True)
-def test_all_modules(logger: Logger) -> None:
+@pytest.mark.usefixtures("log_test")
+@pytest.mark.parametrize("log_msg", [ALL_MODULES_MSG], indirect=True)
+def test_all_modules() -> None:
     """
-    Ensure all module metadata is printed to the console if no module name is passed.
+    Ensure all module metadata is printed to the console if no module
+    name is passed.
     """
-    result = utils.cli_cmd(utils.build_cmd(**CMD_MODULES), logger)
+    result = utils.cli_cmd(utils.build_cmd(**CMD_MODULES))
     utils.assert_exit_code(result)
     expected_fields = [
         "Description:",
@@ -177,12 +183,12 @@ def test_all_modules(logger: Logger) -> None:
 JSON_OUTPUT_MSG = "Output module metadata in JSON format"
 
 
-@usefixtures("log_test")
-@parametrize("log_msg", [JSON_OUTPUT_MSG], indirect=True)
-def test_json(logger: Logger) -> None:
+@pytest.mark.usefixtures("log_test")
+@pytest.mark.parametrize("log_msg", [JSON_OUTPUT_MSG], indirect=True)
+def test_json() -> None:
     """Ensure module metadata is outputted in JSON format."""
     append = ["--module", "test", "--json"]
-    result = utils.cli_cmd(utils.build_cmd(**CMD_MODULES, append=append), logger)
+    result = utils.cli_cmd(utils.build_cmd(**CMD_MODULES, append=append))
     utils.assert_exit_code(result)
     utils.assert_in_output(f'"type": "{MODULE_CATALOG}"', result=result)
     utils.assert_in_output('"test":', result=result)
@@ -191,27 +197,28 @@ def test_json(logger: Logger) -> None:
 TYPE_MODULE_MISMATCH_MSG = "Type + module mismatch returns no modules found"
 
 
-@usefixtures("log_test")
-@parametrize("log_msg", [TYPE_MODULE_MISMATCH_MSG], indirect=True)
-def test_type_module_mismatch(logger: Logger) -> None:
+@pytest.mark.usefixtures("log_test")
+@pytest.mark.parametrize("log_msg", [TYPE_MODULE_MISMATCH_MSG], indirect=True)
+def test_type_module_mismatch() -> None:
     """Ensure type + module mismatch returns no modules found."""
     append = ["--module", "postgres", "--type", MODULE_SECURITY]
     cmd = utils.build_cmd(**CMD_MODULES, append=append)
-    result = utils.cli_cmd(cmd, logger)
+    result = utils.cli_cmd(cmd)
     utils.assert_exit_code(result)
     utils.assert_in_output("No modules match the specified criteria", result=result)
 
 
-@parametrize(
+@pytest.mark.parametrize(
     ("log_msg", "provision_clusters"),
     [("Output metadata for running modules", {"keepalive": True})],
     indirect=True,
 )
-@usefixtures("log_test", "provision_clusters", "down")
-def test_running(logger: Logger) -> None:
-    """Ensure the `module` command can output metadata for running modules."""
+@pytest.mark.usefixtures("log_test", "provision_clusters", "down")
+def test_running() -> None:
+    """Ensure the `module` command can output metadata for running
+    modules."""
     result = utils.cli_cmd(
-        utils.build_cmd(**CMD_MODULES, append=["--json", "--running"]), logger
+        utils.build_cmd(**CMD_MODULES, append=["--json", "--running"])
     )
     utils.assert_exit_code(result)
     utils.assert_in_output(
@@ -225,18 +232,19 @@ def test_running(logger: Logger) -> None:
 RUNNING_CLUSTER_MSG = "Output metadata for running modules in a specific cluster"
 
 
-@parametrize(
+@pytest.mark.parametrize(
     ("log_msg", "provision_clusters"),
     [(RUNNING_CLUSTER_MSG, {"keepalive": True})],
     indirect=True,
 )
-@usefixtures("log_test", "provision_clusters", "down")
-def test_running_cluster(logger: Logger) -> None:
+@pytest.mark.usefixtures("log_test", "provision_clusters", "down")
+def test_running_cluster() -> None:
     """
-    Ensure module metadata is outputted for running modules tied to a specific cluster.
+    Ensure module metadata is outputted for running modules tied to a
+    specific cluster.
     """
     cmd = utils.build_cmd(**CMD_MODULES, append=["--json", "--running"])
-    result = utils.cli_cmd(cmd, logger)
+    result = utils.cli_cmd(cmd)
     utils.assert_exit_code(result)
     utils.assert_in_output(
         f'"type": "{MODULE_CATALOG}"',

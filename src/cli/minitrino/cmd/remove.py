@@ -3,20 +3,19 @@
 import click
 
 from minitrino import utils
-from minitrino.core.errors import UserError
 from minitrino.core.context import MinitrinoContext
+from minitrino.core.errors import UserError
 
 
 @click.command(
     "remove",
     help=(
-        """Remove Minitrino resources. By default, applies to 'default' cluster.
-        
-        Remove resources for a specific cluster by using the `CLUSTER_NAME` environment
-        variable or the `--cluster` / `-c` option, e.g.: 
-        
-        `minitrino -c my-cluster remove`, or specify all clusters via:\n`minitrino -c
-        all remove`"""
+        "Remove Minitrino resources. By default, applies to 'default' cluster.\n\n"
+        "Remove resources for a specific cluster by using the CLUSTER_NAME "
+        "environment variable or the --cluster / -c option, e.g.:\n\n"
+        "minitrino -c my-cluster remove\n\n"
+        "Or specify all clusters via:\n\n"
+        "minitrino -c all remove"
     ),
 )
 @click.option(
@@ -66,9 +65,8 @@ def cli(
     modules: list[str],
     force: bool,
 ):
-    """Handle removal of containers, networks, and volumes.
-
-    Handles removal of containers, networks, and volumes for the current environment.
+    """
+    Handle removal of containers, networks, and volumes.
 
     Parameters
     ----------
@@ -77,14 +75,17 @@ def cli(
     images : bool
         If True, removes Docker images tagged with Minitrino labels.
     volumes : bool
-        If True, removes Docker volumes associated with Minitrino containers.
+        If True, removes Docker volumes associated with Minitrino
+        containers.
     networks : bool
-        If True, removes Docker networks associated with the Minitrino cluster.
+        If True, removes Docker networks associated with the Minitrino
+        cluster.
     modules : list[str]
         List of modules to filter removal by.
     force : bool
         If True, forces removal even if the resource is in use.
     """
+    ctx.initialize()
     utils.check_daemon(ctx.docker_client)
 
     if images and modules:

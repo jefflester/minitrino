@@ -31,7 +31,7 @@ class MinitrinoError(Exception):
 
 class UserError(MinitrinoError):
     """
-    Exception for user-facing errors that Minitrino can safely log and display.
+    User errors that Minitrino can safely log and display.
 
     Attributes
     ----------

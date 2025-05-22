@@ -13,10 +13,11 @@ MODULE_CATALOG = "catalog"
 MODULE_SECURITY = "security"
 MODULE_RESOURCES = "resources"
 MIN_CLUSTER_VER = 443
+DEFAULT_CLUSTER_VER = 468
 ETC_DIR = "/etc/${CLUSTER_DIST}"
 LIC_VOLUME_MOUNT = "${LIC_PATH}:${LIC_MOUNT_PATH}"
-LIC_MOUNT_PATH = f"/mnt/etc/starburstdata.license:ro"
-DUMMY_LIC_MOUNT_PATH = f"/etc/starburst/dummy.license:ro"
+LIC_MOUNT_PATH = "/mnt/license/starburstdata.license:ro"
+DUMMY_LIC_MOUNT_PATH = "/mnt/license/dummy.license:ro"
 CLUSTER_CONFIG = "config.properties"
 CLUSTER_JVM_CONFIG = "jvm.config"
 
@@ -70,12 +71,12 @@ PROVISION_SNAPSHOT_TEMPLATE = """
 #!/usr/bin/env bash
 
 # ------------------------------------------------------------------------------------
-# Below is the exact command used to provision the snapshotted environment. Run this 
+# Below is the exact command used to provision the snapshotted environment. Run this
 # command in your terminal to reproduce the exact state of the environment.
 #
-# If you need config data from the snapshot's 'minitrino.cfg' file, you will either 
-# need to copy it from the snapshot directory to '~./minitrino/minitrino.cfg' or 
-# individually copy the needed configs to your existing 'minitrino.cfg' file. 
+# If you need config data from the snapshot's 'minitrino.cfg' file, you will either
+# need to copy it from the snapshot directory to '~./minitrino/minitrino.cfg' or
+# individually copy the needed configs to your existing 'minitrino.cfg' file.
 # ------------------------------------------------------------------------------------
 
 

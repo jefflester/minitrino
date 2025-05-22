@@ -1,9 +1,9 @@
-from logging import Logger
 from dataclasses import dataclass
-from pytest.mark import parametrize, usefixtures
+
+import pytest
 
 from test.cli import utils
-from test.cli.constants import CLUSTER_NAME, MINITRINO_CONTAINER
+from test.cli.constants import MINITRINO_CONTAINER
 
 CMD_RESTART = {"base": "restart"}
 CMD_PROVISION = {"base": "provision"}
@@ -51,21 +51,19 @@ restart_scenarios = [
 ]
 
 
-@parametrize(
-    "scenario",
-    restart_scenarios,
+@pytest.mark.parametrize(
+    "scenario,log_msg",
+    utils.get_scenario_and_log_msg(restart_scenarios),
     ids=utils.get_scenario_ids(restart_scenarios),
+    indirect=["log_msg"],
 )
-@usefixtures("log_test", "cleanup_config", "down")
-def test_restart_scenarios(
-    logger: Logger,
-    scenario: RestartScenario,
-) -> None:
+@pytest.mark.usefixtures("log_test", "cleanup_config", "down")
+def test_restart_scenarios(scenario: RestartScenario) -> None:
     """Run each RestartScenario."""
     cmd = utils.build_cmd(**CMD_PROVISION, append=scenario.provision_args)
-    result = utils.cli_cmd(cmd, logger)
+    result = utils.cli_cmd(cmd)
     utils.assert_exit_code(result)
-    result = utils.cli_cmd(utils.build_cmd(**CMD_RESTART), logger)
+    result = utils.cli_cmd(utils.build_cmd(**CMD_RESTART))
     utils.assert_exit_code(result)
     for expected in scenario.expected_outputs:
         utils.assert_in_output(expected, result=result)

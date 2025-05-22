@@ -1,8 +1,9 @@
 """Utility functions for Minitrino test library."""
 
+from time import gmtime, strftime
+
 import click
 
-from time import gmtime, strftime
 from test import common
 
 

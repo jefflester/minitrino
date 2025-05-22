@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from minitrino.core.cluster.validator import ClusterValidator
-from minitrino.core.cluster.ops import ClusterOperations
-from minitrino.core.cluster.config import ClusterConfigManager
-from minitrino.core.cluster.resource import ClusterResourceManager
-
 from typing import TYPE_CHECKING
+
+from minitrino.core.cluster.config import ClusterConfigManager
+from minitrino.core.cluster.ops import ClusterOperations
+from minitrino.core.cluster.resource import ClusterResourceManager
+from minitrino.core.cluster.validator import ClusterValidator
 
 if TYPE_CHECKING:
     from minitrino.core.context import MinitrinoContext
@@ -20,7 +20,8 @@ class Cluster:
     Parameters
     ----------
     ctx : MinitrinoContext
-        An instantiated MinitrinoContext object with user input and context.
+        An instantiated MinitrinoContext object with user input and
+        context.
 
     Attributes
     ----------

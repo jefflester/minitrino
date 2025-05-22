@@ -1,13 +1,16 @@
 import os
 import shutil
-
-from logging import Logger
 from dataclasses import dataclass
 from typing import Callable, Optional
-from pytest.mark import parametrize, usefixtures
+
+import pytest
 
 from test.cli import utils
-from test.common import MINITRINO_USER_DIR, CONFIG_FILE
+from test.cli.utils import logger
+from test.common import (
+    CONFIG_FILE,
+    MINITRINO_USER_DIR,
+)
 
 CMD = {"base": "config", "prepend": ["-v", "-e", "TEXT_EDITOR=cat"]}
 
@@ -105,22 +108,22 @@ config_scenarios = [
 ]
 
 
-@parametrize(
-    "scenario",
-    config_scenarios,
+@pytest.mark.parametrize(
+    "scenario,log_msg",
+    utils.get_scenario_and_log_msg(config_scenarios),
     ids=utils.get_scenario_ids(config_scenarios),
+    indirect=["log_msg"],
 )
-@usefixtures("log_test", "cleanup_config")
+@pytest.mark.usefixtures("log_test", "cleanup_config")
 def test_config_scenarios(
     scenario: ConfigScenario,
-    logger: Logger,
 ) -> None:
     """Run each ConfigScenario."""
     if scenario.setup:
         logger.debug("Running setup function for scenario.")
         scenario.setup()
     cmd = utils.build_cmd(**CMD, append=scenario.cmd_args)
-    result = utils.cli_cmd(cmd, logger, scenario.input_val)
+    result = utils.cli_cmd(cmd, scenario.input_val)
     utils.assert_exit_code(result, expected=scenario.expected_exit_code)
     if scenario.expected_dir:
         utils.assert_is_dir(MINITRINO_USER_DIR)
@@ -132,9 +135,9 @@ def test_config_scenarios(
         utils.assert_not_in_file(scenario.expected_not_in_file, CONFIG_FILE)
 
 
-@usefixtures("log_test", "cleanup_config")
-@parametrize("log_msg", ["Testing edit valid config"], indirect=True)
-def test_edit_valid_config(logger: Logger) -> None:
+@pytest.mark.usefixtures("log_test", "cleanup_config")
+@pytest.mark.parametrize("log_msg", ["Testing edit valid config"], indirect=True)
+def test_edit_valid_config() -> None:
     """Verify the user can edit an existing configuration file."""
-    result = utils.cli_cmd(utils.build_cmd(**CMD), logger)
+    result = utils.cli_cmd(utils.build_cmd(**CMD))
     utils.assert_exit_code(result)

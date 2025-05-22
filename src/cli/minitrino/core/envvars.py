@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
-import os
 import json
+import os
+from configparser import ConfigParser
+from typing import TYPE_CHECKING, Any
 
 from minitrino import utils
 from minitrino.core.errors import UserError
 from minitrino.settings import CONFIG_TEMPLATE
-
-from configparser import ConfigParser
-from typing import Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from minitrino.core.context import MinitrinoContext
@@ -23,7 +22,8 @@ class EnvironmentVariables(dict):
     Parameters
     ----------
     ctx : MinitrinoContext
-        An instantiated MinitrinoContext object containing user input and context.
+        An instantiated MinitrinoContext object containing user input
+        and context.
 
     Methods
     -------
@@ -36,9 +36,9 @@ class EnvironmentVariables(dict):
 
     Notes
     -----
-    This class bundles all environment variables used by Minitrino, combining
-    user-provided input, OS environment variables, and values from the minitrino.cfg
-    file.
+    This class bundles all environment variables used by Minitrino,
+    combining user-provided input, OS environment variables, and values
+    from the minitrino.cfg file.
     """
 
     def __init__(self, ctx: MinitrinoContext) -> None:
@@ -57,7 +57,8 @@ class EnvironmentVariables(dict):
         key : Any
             The environment variable key.
         default : Any, optional
-            The default value to return if the key is not found. Defaults to None.
+            The default value to return if the key is not found.
+            Defaults to None.
 
         Returns
         -------
@@ -73,15 +74,15 @@ class EnvironmentVariables(dict):
 
         Notes
         -----
-        This is the highest-precedence source for setting variables in the
-        EnvironmentVariables mapping.
+        This is the highest-precedence source for setting variables in
+        the EnvironmentVariables mapping.
         """
         if not self._ctx._user_env:
             return
 
         for env_var in self._ctx._user_env:
-            k, v = utils.parse_key_value_pair(env_var, err_type=UserError)
-            self[k] = v
+            k, v = utils.parse_key_value_pair(self._ctx, env_var)
+            self[k.upper()] = v
 
     def _parse_os_env(self) -> None:
         """
@@ -89,13 +90,14 @@ class EnvironmentVariables(dict):
 
         Notes
         -----
-        These variables take second precedence, falling back only if no user-provided
-        values exist.
+        These variables take second precedence, falling back only if no
+        user-provided values exist.
 
-        Environment variables parsed include common Minitrino-specific variables such as
-        `CLUSTER_NAME`, `IMAGE`, and any library environment variable prefixed with
-        `__PORT`. If a variable has already been set by `_parse_user_env`, it will not
-        be overridden here.
+        Environment variables parsed include common Minitrino-specific
+        variables such as `CLUSTER_NAME`, `IMAGE`, and any library
+        environment variable prefixed with `__PORT`. If a variable has
+        already been set by `_parse_user_env`, it will not be overridden
+        here.
         """
         shell_source = [
             "CLUSTER_NAME",
@@ -113,7 +115,7 @@ class EnvironmentVariables(dict):
             for k, v in lib_env.items():
                 if k.startswith("__PORT"):
                     shell_source.append(k)
-        except:
+        except Exception:
             pass
         for k, v in os.environ.items():
             k = k.upper()
@@ -122,16 +124,18 @@ class EnvironmentVariables(dict):
 
     def _parse_minitrino_config(self) -> None:
         """
-        Parse the user's `minitrino.cfg` file and add its values to the environment.
+        Parse the user's `minitrino.cfg` file.
 
         Notes
         -----
-        These values take third precedence, after `_parse_user_env` and `_parse_os_env`.
+        These values take third precedence, after `_parse_user_env` and
+        `_parse_os_env`.
 
-        Only variables from the `[config]` section of the config file are parsed. Keys
-        are converted to uppercase before being added. Existing values are not
-        overridden. If the config file is missing or malformed, a warning is logged and
-        the method exits gracefully.
+        Only variables from the `[config]` section of the config file
+        are parsed. Keys are converted to uppercase before being added.
+        Existing values are not overridden. If the config file is
+        missing or malformed, a warning is logged and the method exits
+        gracefully.
         """
         if not os.path.isfile(self._ctx.config_file):
             return
@@ -145,10 +149,12 @@ class EnvironmentVariables(dict):
                     self[k.upper()] = v
         except Exception as e:
             self._ctx.logger.warn(
-                f"Failed to parse config file {self._ctx.config_file} with error:\n{str(e)}\n"
-                f"Variables set in the config file will not be loaded. "
-                f"You can reset your configuration file with `minitrino config --reset` or "
-                f"edit it manually with `minitrino config`. The valid config file structure is: \n"
+                f"Failed to parse config file {self._ctx.config_file} with error:"
+                f"\n{str(e)}\n"
+                f"Variables set in the config file will not be loaded. You can "
+                f"reset your configuration file with minitrino config --reset or "
+                f"edit it manually with minitrino config. The valid config file "
+                f"structure is:\n"
                 f"{CONFIG_TEMPLATE}"
             )
             return
@@ -160,8 +166,8 @@ class EnvironmentVariables(dict):
         Parameters
         ----------
         dry_run : bool, optional
-            If `True`, environment variables will not be added to the current mapping.
-            Defaults to `False`.
+            If `True`, environment variables will not be added to the
+            current mapping. Defaults to `False`.
 
         Returns
         -------
@@ -171,26 +177,31 @@ class EnvironmentVariables(dict):
         Raises
         ------
         UserError
-            If the `minitrino.env` file does not exist at the expected path.
+            If the `minitrino.env` file does not exist at the expected
+            path.
 
         Notes
         -----
-        These variables have the lowest precedence and are typically loaded during
-        `initialize()`. The method loads environment variables from the `minitrino.env`
-        file found in the active Minitrino library directory.
+        These variables have the lowest precedence and are typically
+        loaded during `initialize()`. The method loads environment
+        variables from the `minitrino.env` file found in the active
+        Minitrino library directory.
         """
         env_file = os.path.join(self._ctx.lib_dir, "minitrino.env")
         if not os.path.isfile(env_file):
             raise UserError(
                 f"Library 'minitrino.env' file does not exist at path: {env_file}",
-                f"Are you pointing to a valid library, and is the minitrino.env file "
-                f"present in that library?",
+                "Are you pointing to a valid library, and is the minitrino.env file "
+                "present in that library?",
             )
 
         lib_env = {}
         with open(env_file, "r") as f:
             for env_var in f:
-                k, v = utils.parse_key_value_pair(env_var, err_type=UserError)
+                if not env_var.strip():
+                    continue
+                k, v = utils.parse_key_value_pair(self._ctx, env_var)
+                k = k.upper()
                 if not self.get(k):
                     if not dry_run:
                         self[k] = v
@@ -204,10 +215,12 @@ class EnvironmentVariables(dict):
 
         Notes
         -----
-        If the `EnvironmentVariables` mapping contains any values, this method logs them
-        in a pretty-printed JSON format using the `verbose` logger.
+        If the `EnvironmentVariables` mapping contains any values, this
+        method logs them in a pretty-printed JSON format using the
+        `debug` logger.
         """
         if self:
-            self._ctx.logger.verbose(
-                f"Registered environment variables:\n{json.dumps(self, indent=2)}",
+            self._ctx.logger.debug(
+                f"Registered environment variables:\n"
+                f"{json.dumps(self, indent=2, sort_keys=True)}",
             )

@@ -1,16 +1,16 @@
-from logging import Logger
-from typing import Optional
 from dataclasses import dataclass
-from pytest.mark import parametrize, usefixtures
+from typing import Optional
+
+import pytest
 
 from test.cli import utils
 from test.cli.constants import (
     CLUSTER_NAME,
     CLUSTER_NAME_2,
     MINITRINO_CONTAINER,
-    TEST_CONTAINER,
-    STOPPED_CONTAINER_MSG,
     REMOVED_CONTAINER_MSG,
+    STOPPED_CONTAINER_MSG,
+    TEST_CONTAINER,
 )
 
 CMD_DOWN = {"base": "down"}
@@ -27,7 +27,8 @@ class DownScenario:
     id : str
         Identifier for scenario, used in pytest parametrize ids.
     provision : bool
-        Whether to provision the environment before running the down command.
+        Whether to provision the environment before running the down
+        command.
     down_args : list[str]
         Command line arguments to pass to the down command.
     expected_exit_code : int
@@ -114,21 +115,19 @@ down_scenarios = [
 ]
 
 
-@parametrize(
-    "scenario",
-    down_scenarios,
+@pytest.mark.parametrize(
+    "scenario,log_msg",
+    utils.get_scenario_and_log_msg(down_scenarios),
     ids=utils.get_scenario_ids(down_scenarios),
+    indirect=["log_msg"],
 )
-@usefixtures("log_test", "down")
-def test_down_scenarios(
-    scenario: DownScenario,
-    logger: Logger,
-) -> None:
+@pytest.mark.usefixtures("log_test", "down")
+def test_down_scenarios(scenario: DownScenario) -> None:
     """Run each DownScenario."""
     if scenario.provision:
-        utils.cli_cmd(utils.build_cmd(**CMD_PROVISION), logger)
+        utils.cli_cmd(utils.build_cmd(**CMD_PROVISION))
     cmd = utils.build_cmd(**CMD_DOWN, append=scenario.down_args)
-    result = utils.cli_cmd(cmd, logger)
+    result = utils.cli_cmd(cmd)
     utils.assert_exit_code(result, expected=scenario.expected_exit_code)
     if scenario.expected_in_output:
         if isinstance(scenario.expected_in_output, list):
@@ -144,23 +143,23 @@ def test_down_scenarios(
 CLUSTER_NAME_MSG = "Testing --cluster flag with cluster name 'test'"
 
 
-@parametrize(
+@pytest.mark.parametrize(
     ("log_msg", "provision_clusters"),
     [(CLUSTER_NAME_MSG, {"cluster_names": [CLUSTER_NAME_2], "keepalive": True})],
     indirect=True,
 )
-@usefixtures("log_test", "provision_clusters", "down")
-def test_cluster(logger: Logger) -> None:
+@pytest.mark.usefixtures("log_test", "provision_clusters", "down")
+def test_cluster() -> None:
     """Verify `--cluster ${name}` works as expected."""
     cmd = utils.build_cmd(**CMD_DOWN, cluster=CLUSTER_NAME, append=["--sig-kill"])
-    result = utils.cli_cmd(cmd, logger)
+    result = utils.cli_cmd(cmd)
     utils.assert_exit_code(result)
     utils.assert_in_output(STOPPED_CONTAINER_MSG, REMOVED_CONTAINER_MSG, result=result)
     utils.assert_num_containers(2, all=True)
     utils.assert_containers_exist(MINITRINO_CONTAINER, TEST_CONTAINER)
 
     cmd2 = utils.build_cmd(**CMD_DOWN, cluster=CLUSTER_NAME_2, append=["--sig-kill"])
-    result = utils.cli_cmd(cmd2, logger)
+    result = utils.cli_cmd(cmd2)
     utils.assert_exit_code(result)
     utils.assert_in_output(STOPPED_CONTAINER_MSG, REMOVED_CONTAINER_MSG, result=result)
     utils.assert_num_containers(0, all=True)
@@ -169,17 +168,18 @@ def test_cluster(logger: Logger) -> None:
 CLUSTER_KEEP_MSG = "Testing --cluster flag with --keep and --sig-kill flags"
 
 
-@parametrize(
+@pytest.mark.parametrize(
     ("log_msg", "provision_clusters"),
     [(CLUSTER_KEEP_MSG, {"cluster_names": [CLUSTER_NAME_2], "keepalive": True})],
     indirect=True,
 )
-@usefixtures("log_test", "provision_clusters", "down")
-def test_cluster_keep(logger: Logger) -> None:
-    """Verify `--cluster ${name}` works as expected with the `--keep` flag."""
+@pytest.mark.usefixtures("log_test", "provision_clusters", "down")
+def test_cluster_keep() -> None:
+    """Verify `--cluster ${name}` works as expected with the `--keep`
+    flag."""
     append = ["--sig-kill", "--keep"]
     cmd = utils.build_cmd(**CMD_DOWN, cluster=CLUSTER_NAME, append=append)
-    result = utils.cli_cmd(cmd, logger)
+    result = utils.cli_cmd(cmd)
     utils.assert_exit_code(result)
     utils.assert_in_output(STOPPED_CONTAINER_MSG, result=result)
     utils.assert_not_in_output(REMOVED_CONTAINER_MSG, result=result)
@@ -187,7 +187,7 @@ def test_cluster_keep(logger: Logger) -> None:
     utils.assert_containers_exist(MINITRINO_CONTAINER, TEST_CONTAINER, all=True)
 
     cmd2 = utils.build_cmd(**CMD_DOWN, cluster=CLUSTER_NAME_2, append=append)
-    result = utils.cli_cmd(cmd2, logger)
+    result = utils.cli_cmd(cmd2)
     utils.assert_exit_code(result)
     utils.assert_in_output(STOPPED_CONTAINER_MSG, result=result)
     utils.assert_not_in_output(REMOVED_CONTAINER_MSG, result=result)

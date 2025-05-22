@@ -1,17 +1,17 @@
 """Test runner for Minitrino module tests."""
 
+import argparse
+import json
 import os
 import re
-import json
 import time
-import argparse
+
 import jsonschema
 
+from minitrino.settings import MIN_CLUSTER_VER
 from test import common
 from test.lib.specs import SPECS
-from test.lib.utils import cleanup, log_status, log_success, dump_container_logs
-
-from minitrino.settings import MIN_CLUSTER_VER
+from test.lib.utils import cleanup, dump_container_logs, log_status, log_success
 
 
 class ModuleTest:
@@ -59,7 +59,8 @@ class ModuleTest:
 
         Notes
         -----
-        Skips tests if the module is enterprise and the image is 'trino'.
+        Skips tests if the module is enterprise and the image is
+        'trino'.
         """
         cmd_result = common.execute_cmd(
             f"minitrino modules -m {self.module} -j | jq --arg module {self.module} '.[$module].enterprise'"
@@ -233,7 +234,7 @@ class ModuleTest:
                 for c in json_data.get("contains", []):
                     assert c in logs, f"'{c}' not found in container log output"
                 break
-            except:
+            except Exception:
                 if i <= timeout:
                     print("Log text match not found. Retrying...")
                     time.sleep(1)
@@ -285,7 +286,6 @@ class ModuleTest:
                     assert (
                         exit_code == cmd_result.exit_code
                     ), f"Unexpected exit code: {cmd_result.exit_code} expected: {exit_code}"
-                return cmd_result
             except AssertionError as e:
                 if i < retry:
                     print(f"{cmd_type.title()} did not succeed. Retrying...")

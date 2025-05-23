@@ -536,6 +536,8 @@ class ModuleAddScenario:
     log_msg: str
 
 
+# TODO: Re-enable when module-add is properly implemented
+
 module_add_scenarios = [
     ModuleAddScenario(
         id="single_module_add",

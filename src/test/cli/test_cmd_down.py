@@ -156,7 +156,6 @@ def test_cluster() -> None:
     utils.assert_exit_code(result)
     utils.assert_in_output(STOPPED_CONTAINER_MSG, REMOVED_CONTAINER_MSG, result=result)
     utils.assert_num_containers(2, all=True)
-    utils.assert_containers_exist(MINITRINO_CONTAINER, TEST_CONTAINER)
 
     cmd2 = utils.build_cmd(**CMD_DOWN, cluster=CLUSTER_NAME_2, append=["--sig-kill"])
     result = utils.cli_cmd(cmd2)
@@ -183,7 +182,7 @@ def test_cluster_keep() -> None:
     utils.assert_exit_code(result)
     utils.assert_in_output(STOPPED_CONTAINER_MSG, result=result)
     utils.assert_not_in_output(REMOVED_CONTAINER_MSG, result=result)
-    utils.assert_num_containers(2)
+    utils.assert_num_containers(4, all=True)
     utils.assert_containers_exist(MINITRINO_CONTAINER, TEST_CONTAINER, all=True)
 
     cmd2 = utils.build_cmd(**CMD_DOWN, cluster=CLUSTER_NAME_2, append=append)
@@ -192,4 +191,5 @@ def test_cluster_keep() -> None:
     utils.assert_in_output(STOPPED_CONTAINER_MSG, result=result)
     utils.assert_not_in_output(REMOVED_CONTAINER_MSG, result=result)
     utils.assert_num_containers(0)
+    utils.assert_num_containers(4, all=True)
     utils.assert_containers_exist(MINITRINO_CONTAINER, TEST_CONTAINER, all=True)

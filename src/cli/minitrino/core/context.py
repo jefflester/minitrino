@@ -137,7 +137,7 @@ class MinitrinoContext:
         if version_only:
             return
         self._logged_config_file_missing = False
-        self.config_file = self._validate_config_file()
+        self._validate_config_file()
         self._try_parse_library_env()
         self._compare_versions()
         self.modules = Modules(self)

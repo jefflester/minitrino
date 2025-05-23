@@ -132,7 +132,7 @@ def test_config_scenarios(
     if scenario.expected_in_output:
         utils.assert_in_output(scenario.expected_in_output, result=result)
     if scenario.expected_not_in_file:
-        utils.assert_not_in_file(scenario.expected_not_in_file, CONFIG_FILE)
+        utils.assert_not_in_file(scenario.expected_not_in_file, path=CONFIG_FILE)
 
 
 @pytest.mark.usefixtures("log_test", "cleanup_config")

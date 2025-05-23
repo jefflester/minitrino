@@ -164,24 +164,24 @@ def test_snapshot_scenarios(scenario: SnapshotScenario) -> None:
         if isinstance(scenario.expected_in_file, list):
             for item in scenario.expected_in_file:
                 utils.assert_in_file(
-                    item, snapshot_provision_file(scenario.snapshot_name)
+                    item, path=snapshot_provision_file(scenario.snapshot_name)
                 )
         else:
             utils.assert_in_file(
                 scenario.expected_in_file,
-                snapshot_provision_file(scenario.snapshot_name),
+                path=snapshot_provision_file(scenario.snapshot_name),
             )
     if scenario.expected_not_in_file:
         logger.debug(f"Checking content NOT in file: {scenario.expected_not_in_file}")
         if isinstance(scenario.expected_not_in_file, list):
             for item in scenario.expected_not_in_file:
                 utils.assert_not_in_file(
-                    item, snapshot_config_file(scenario.snapshot_name)
+                    item, path=snapshot_config_file(scenario.snapshot_name)
                 )
         else:
             utils.assert_not_in_file(
                 scenario.expected_not_in_file,
-                snapshot_config_file(scenario.snapshot_name),
+                path=snapshot_config_file(scenario.snapshot_name),
             )
     if os.path.isfile(os.path.join(MINITRINO_USER_DIR, "minitrino.cfg")):
         logger.debug(
@@ -193,7 +193,7 @@ def test_snapshot_scenarios(scenario: SnapshotScenario) -> None:
     utils.assert_is_file(
         os.path.join(scenario.check_path, f"{scenario.snapshot_name}.tar.gz")
     )
-    utils.assert_in_file("minitrino -v --env LIB_PATH=", provision_file)
+    utils.assert_in_file("minitrino -v --env LIB_PATH=", path=provision_file)
 
 
 @pytest.mark.parametrize(
@@ -306,7 +306,7 @@ def test_no_scrub() -> None:
     cmd = utils.build_cmd(**CMD_SNAPSHOT_TEST, append=["--no-scrub"])
     result = utils.cli_cmd(cmd, "y\n")
     run_assertions(result)
-    utils.assert_not_in_file("*" * 20, snapshot_config_file())
+    utils.assert_not_in_file("*" * 20, path=snapshot_config_file())
 
 
 TEST_SCRUB_MSG = "Testing scrubbing enabled for snapshot command"
@@ -319,7 +319,7 @@ def test_scrub() -> None:
     cmd = utils.build_cmd(**CMD_SNAPSHOT_TEST)
     result = utils.cli_cmd(cmd, "y\n")
     run_assertions(result)
-    utils.assert_in_file("*" * 20, snapshot_config_file())
+    utils.assert_in_file("*" * 20, path=snapshot_config_file())
 
 
 def snapshot_test_yaml_file(snapshot_name: str = "test") -> str:
@@ -367,5 +367,5 @@ def run_assertions(
     provision_file = snapshot_provision_file(snapshot_name)
     utils.assert_is_file(provision_file)
     utils.assert_is_file(os.path.join(check_path, f"{snapshot_name}.tar.gz"))
-    utils.assert_in_file("minitrino -v --env LIB_PATH=", provision_file)
+    utils.assert_in_file("minitrino -v --env LIB_PATH=", path=provision_file)
     logger.debug(f"Snapshot assertions passed for: {snapshot_name}")

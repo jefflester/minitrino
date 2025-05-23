@@ -13,8 +13,24 @@ dependencies = [
   "jsonschema",
   "PyYAML",
   "pytest",
+  "pytest-cov",
   "requests>=2.32.2"
 ]
 
 [tool.setuptools]
 package-dir = {"" = "."}
+
+[tool.coverage.run]
+branch = true
+source = ["minitrino"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+[tool.pytest.ini_options]
+addopts = "--cov=minitrino --cov-report=term-missing --cov-report=html"
+testpaths = ["src/test"]

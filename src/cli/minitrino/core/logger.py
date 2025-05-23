@@ -86,7 +86,7 @@ class MinitrinoLogger:
 
     def __init__(self, log_level: Optional[LogLevel] = None) -> None:
         self._log_level = log_level if log_level is not None else LogLevel.INFO
-        self._log_sink = None
+        self._log_sink: Optional[Callable[[str], None] | list[str]] = None
 
     def should_log(self, level: LogLevel) -> bool:
         """Return True if the log should be emitted based on level."""
@@ -162,8 +162,8 @@ class MinitrinoLogger:
         """Set a log sink (callback or list)."""
         self._log_sink = sink
 
-    def get_log_sink(self) -> Callable[[str], None] | list[str]:
-        """Get the current log sink."""
+    def get_log_sink(self) -> Optional[Callable[[str], None] | list[str]]:
+        """Get the current log sink, or None if unset."""
         return self._log_sink
 
     def _format(self, msg: str, meta: LogMeta = LogLevel.INFO.value) -> str:

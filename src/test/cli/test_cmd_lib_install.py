@@ -14,11 +14,16 @@ LIB_DIR = os.path.join(MINITRINO_USER_DIR, "lib")
 
 @pytest.fixture(autouse=True, scope="module")
 def clean_before_test():
-    """Clean up the lib directory before running tests."""
-    if os.path.isdir(LIB_DIR):
-        utils.logger.debug(f"Removing existing library directory: {LIB_DIR}")
-        shutil.rmtree(LIB_DIR)
+    """Clean up the lib directory before and after tests."""
+
+    def _uninstall():
+        if os.path.isdir(LIB_DIR):
+            utils.logger.debug(f"Removing existing library directory: {LIB_DIR}")
+            shutil.rmtree(LIB_DIR)
+
+    _uninstall()
     yield
+    _uninstall()
 
 
 @dataclass

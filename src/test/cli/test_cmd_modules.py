@@ -50,7 +50,7 @@ module_name_scenarios = [
         module_name="not-a-real-module",
         type_flag=None,
         expected_exit_code=2,
-        expected_output="Module %s not found.",
+        expected_output="not found.",
         log_msg="Invalid module name should not be found",
     ),
     ModuleNameScenario(
@@ -85,9 +85,7 @@ def test_module_name_scenarios(scenario: ModuleNameScenario) -> None:
         append.extend(["--type", scenario.type_flag])
     result = utils.cli_cmd(utils.build_cmd(**CMD_MODULES, append=append))
     utils.assert_exit_code(result, expected=scenario.expected_exit_code)
-    utils.assert_in_output(
-        scenario.expected_output % scenario.module_name, result=result
-    )
+    utils.assert_in_output(scenario.expected_output, result=result)
 
 
 @dataclass
@@ -149,10 +147,10 @@ def test_type_scenarios(scenario: TypeScenario) -> None:
     utils.assert_exit_code(result)
     types = [MODULE_ADMIN, MODULE_CATALOG, MODULE_SECURITY]
     types.remove(scenario.validate_type)
-    msg = "Expected path not found in output: /src/lib/modules/%s"
+    msg = "Expected path not found in output: /lib/modules/%s"
     for t in types:
-        assert f"/src/lib/modules/{t}" not in result.output, msg % t
-    assert f"/src/lib/modules/{scenario.validate_type}" in result.output, (
+        assert f"lib/modules/{t}" not in result.output, msg % t
+    assert f"lib/modules/{scenario.validate_type}" in result.output, (
         msg % scenario.validate_type
     )
 

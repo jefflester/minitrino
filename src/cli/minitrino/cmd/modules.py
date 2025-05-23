@@ -167,6 +167,7 @@ def log_info(
             "dependentModules",
             "versions",
             "enterprise",
+            "dependentClusters",
         ]
         for key in keys:
             val = module_metadata.get(key, None)

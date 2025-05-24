@@ -25,9 +25,7 @@ from test.common import (
 @pytest.fixture
 def docker_client() -> docker.DockerClient:
     """Return a Docker client for test use."""
-    socket = resolve_docker_socket()
-    logger.debug(f"Docker socket path: {socket}")
-    return docker.DockerClient(base_url=socket)
+    return utils.docker_client()[0]
 
 
 @pytest.fixture(scope="session")
@@ -305,73 +303,6 @@ def provision_clusters(request: pytest.FixtureRequest) -> None:
             log_output=False,
         )
     yield
-
-
-@pytest.fixture(scope="session")
-def dummy_resources() -> dict:
-    """
-    Spin up dummy Docker resources for testing.
-
-    Returns
-    -------
-    dict
-        Dictionary of created resource objects.
-
-    Notes
-    -----
-    Fails if resource cleanup fails. Logs resource creation and cleanup.
-    """
-    logger.debug("Starting Docker daemon for dummy resources")
-    common.start_docker_daemon(logger)
-    client = docker.from_env()
-    resources = {}
-    volume = "minitrino_dummy_volume"
-    image = "minitrino_dummy_image"
-    network = "minitrino_dummy_network"
-    container = "minitrino_dummy_container"
-    labels = {"org.minitrino": "test"}
-
-    logger.debug(f"Creating dummy volume: {volume}")
-    resources["volume"] = client.volumes.create(name=volume, labels=labels)
-    logger.debug("Pulling busybox:latest image")
-    client.images.pull("busybox:latest")
-    dockerfile = "FROM busybox:latest\n\nLABEL org.minitrino=test"
-    logger.debug(f"Building dummy image: {image}")
-    image_obj, _ = client.images.build(
-        fileobj=io.BytesIO(dockerfile.encode()), tag=image, rm=True
-    )
-    resources["image"] = image_obj
-    logger.debug(f"Creating dummy network: {network}")
-    resources["network"] = client.networks.create(network, labels=labels)
-    logger.debug(f"Creating dummy container: {container}")
-    resources["container"] = client.containers.create(
-        image=image,
-        name=container,
-        command="sleep 60000",
-        detach=True,
-        network=network,
-        labels=labels,
-    )
-
-    yield resources
-
-    errors = []
-    c = client.containers
-    remove = [
-        ("container", container, lambda: c.get(container).remove(force=True)),
-        ("volume", volume, lambda: client.volumes.get(volume).remove(force=True)),
-        ("network", network, lambda: client.networks.get(network).remove()),
-        ("image", image, lambda: client.images.remove(image, force=True)),
-    ]
-    for resource_type, name, action in remove:
-        try:
-            action()
-            logger.debug(f"Removed {resource_type}: {name}")
-        except Exception as e:
-            logger.error(f"Failed to remove {resource_type} {name}: {e}")
-            errors.append(f"Failed to remove {resource_type} {name}: {e}")
-    if errors:
-        raise RuntimeError("\n".join(errors))
 
 
 def pytest_runtest_logreport(report: pytest.TestReport):

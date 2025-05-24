@@ -2,8 +2,8 @@
 
 import json
 import logging
+import docker
 import os
-import re
 from typing import Dict, Optional
 
 from click.testing import CliRunner, Result
@@ -50,6 +50,15 @@ def cli_cmd(
     if log_output:
         logger.info(f"Result output:\n{result.output}")
     return result
+
+
+def docker_client() -> tuple[docker.DockerClient, docker.APIClient]:
+    """Return a Docker client for test use."""
+    from minitrino.core.docker.socket import resolve_docker_socket
+
+    socket = resolve_docker_socket()
+    logger.debug(f"Docker socket path: {socket}")
+    return docker.DockerClient(base_url=socket), docker.APIClient(base_url=socket)
 
 
 # ------------------------
@@ -108,7 +117,7 @@ def get_module_yaml_path(module: str) -> str:
 
 
 # ------------------------
-# File Helpers
+# I/O Helpers
 # ------------------------
 
 
@@ -337,6 +346,8 @@ def get_scenario_and_log_msg(scenarios: list) -> list[tuple]:
 
 def normalize(s: str) -> str:
     """Normalize a string for assertions."""
+    import re
+
     return re.sub(r"\s+", " ", s).strip()
 
 

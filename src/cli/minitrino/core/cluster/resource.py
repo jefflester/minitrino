@@ -53,6 +53,7 @@ class ClusterResourceManager:
 
     def __init__(self, ctx: MinitrinoContext):
         self._ctx = ctx
+        self._logged_cluster_resource_msg = False
 
     def resources(
         self, addl_labels: Optional[list[str]] = None
@@ -259,10 +260,12 @@ class ClusterResourceManager:
                     cluster_names.append(project.split("minitrino-")[1])
 
         cluster_names = sorted(list(set(cluster_names)))
-        self._ctx.logger.debug(
-            f"Identified the following clusters with existing "
-            f"Docker resources: {cluster_names}"
-        )
+        if not self._logged_cluster_resource_msg:
+            self._ctx.logger.debug(
+                f"Identified the following clusters with existing "
+                f"Docker resources: {cluster_names}"
+            )
+            self._logged_cluster_resource_msg = True
         return cluster_names
 
     def _deduplicate_objects(

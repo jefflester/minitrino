@@ -242,7 +242,7 @@ def get_containers(container_name: str = "", all: bool = False) -> list[Containe
     RuntimeError
         If the container is not found.
     """
-    time.sleep(2)  # Avoid race condition
+    time.sleep(1)  # Avoid race condition
     docker_client = docker.DockerClient(base_url=resolve_docker_socket())
 
     containers: list[Container] = docker_client.containers.list(

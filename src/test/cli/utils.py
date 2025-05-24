@@ -352,7 +352,7 @@ def normalize(s: str) -> str:
 
 
 def build_cmd(
-    base: str,
+    base: Optional[str] = None,
     cluster: Optional[str] = CLUSTER_NAME,
     append: Optional[list[str]] = None,
     prepend: Optional[list[str]] = None,
@@ -366,7 +366,7 @@ def build_cmd(
 
     Parameters
     ----------
-    base : str
+    base : Optional[str]
         The base command (e.g. 'down', 'remove').
     cluster : Optional[str]
         The cluster to use. Defaults to 'cli-test'.
@@ -391,9 +391,11 @@ def build_cmd(
     >>> build_cmd("down", append=["--sig-kill"], prepend=["--env", "FOO=bar"])
     ["-v", "--cluster", "cli-test", "--env", "FOO=bar", "down", "--sig-kill"]
     """
+    base = base or None
     append = append or []
     prepend = prepend or []
     cmd = ["--cluster", cluster, *prepend, base, *append]
+    cmd.remove(None)  # Remove empty base command
     if verbose:
         cmd.insert(0, "-v")
     return cmd

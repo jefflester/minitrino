@@ -395,7 +395,8 @@ def build_cmd(
     append = append or []
     prepend = prepend or []
     cmd = ["--cluster", cluster, *prepend, base, *append]
-    cmd.remove(None)  # Remove empty base command
+    if None in cmd:
+        cmd.remove(None)
     if verbose:
         cmd.insert(0, "-v")
     return cmd

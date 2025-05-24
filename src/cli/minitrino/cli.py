@@ -1,4 +1,4 @@
-"""Minitrino CLI entrypoint module."""
+"""Minitrino CLI entrypoint."""
 
 import difflib
 import os
@@ -47,23 +47,14 @@ class CommandLineInterface(click.MultiCommand):
         return cmd
 
 
-def version_string() -> str:
-    """Return the version of the CLI and the library as a string."""
-    cli_version = utils.cli_ver()
-    try:
-        ctx = MinitrinoContext()
-        ctx.initialize(version_only=True)
-        lib_version = utils.lib_ver(ctx=ctx)
-    except Exception:
-        lib_version = "NOT INSTALLED"
-    return f"{cli_version} (library: {lib_version})"
-
-
 @click.command(cls=CommandLineInterface)
-@click.version_option(
-    version=version_string(),  # type: ignore[arg-type]
-    prog_name="minitrino",
-    message="%(prog)s version %(version)s",
+@click.option(
+    "--version",
+    is_flag=True,
+    help="Show the version and exit.",
+    expose_value=False,
+    is_eager=True,
+    callback=lambda ctx, param, value: display_version(ctx) if value else None,
 )
 @click.option(
     "-v",
@@ -116,3 +107,27 @@ def cli(
 
     effective_log_level = LogLevel.DEBUG if verbose else LogLevel[log_level.upper()]
     ctx._log_level = effective_log_level
+
+
+def display_version(ctx: click.Context) -> None:
+    """Return the version of the CLI and the library as a string."""
+    env = []
+    args = sys.argv
+    i = 0
+    while i < len(args):
+        if args[i] == "--env" or args[i] == "-e":
+            if i + 1 < len(args):
+                env.append(args[i + 1])
+            i += 2
+        else:
+            i += 1
+    minitrino_ctx: MinitrinoContext = ctx.ensure_object(MinitrinoContext)
+    minitrino_ctx._user_env = env
+    minitrino_ctx.initialize(version_only=True)
+    cli_version = utils.cli_ver()
+    try:
+        lib_version = utils.lib_ver(ctx=minitrino_ctx)
+    except Exception:
+        lib_version = "NOT INSTALLED"
+    minitrino_ctx.logger.info(f"{cli_version} (library: {lib_version})")
+    sys.exit()

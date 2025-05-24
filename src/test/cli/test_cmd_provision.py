@@ -17,7 +17,7 @@ from test.cli.constants import (
 CMD_PROVISION = {"base": "provision"}
 CMD_PROVISION_MOD = {"base": "provision", "append": ["--module", "test"]}
 
-pytestmark = pytest.mark.usefixtures("reset_metadata")
+pytestmark = pytest.mark.usefixtures("start_docker", "reset_metadata")
 
 
 @pytest.fixture(autouse=True, scope="module")

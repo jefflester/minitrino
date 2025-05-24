@@ -14,6 +14,8 @@ CMD_MODULES = {"base": "modules"}
 CMD_PROVISION = {"base": "provision", "append": ["--module", "test"]}
 CMD_DOWN = {"base": "down", "append": ["--sig-kill"]}
 
+pytestmark = pytest.mark.usefixtures("start_docker")
+
 
 @dataclass
 class ModuleNameScenario:

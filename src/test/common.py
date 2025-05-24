@@ -350,6 +350,7 @@ def _execute_in_shell(
         for line in p:
             output += line
             print(line, end="")  # process line here
+    process.wait()
     return CommandResult(cmd, output, process.returncode)
 
 

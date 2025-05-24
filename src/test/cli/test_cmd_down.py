@@ -16,6 +16,8 @@ from test.cli.constants import (
 CMD_DOWN = {"base": "down"}
 CMD_PROVISION = {"base": "provision", "append": ["--module", "test"]}
 
+pytestmark = pytest.mark.usefixtures("start_docker")
+
 
 @dataclass
 class DownScenario:

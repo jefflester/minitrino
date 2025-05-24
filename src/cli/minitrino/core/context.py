@@ -54,6 +54,14 @@ class MinitrinoContext:
     -------
     initialize()
         Hydrate the context with user-provided inputs.
+
+    Notes
+    -----
+    The `lib_dir` property cannot be accessed prior to `_lib_safe` being
+    set to `True`, which occurs early during `initialize()`. The idea is
+    to force any user-provided env vars (since one of them may be
+    `LIB_PATH`) to load before we attempt to do anything with the
+    library.
     """
 
     cluster: Cluster
@@ -96,13 +104,15 @@ class MinitrinoContext:
         self.snapshot_dir = os.path.join(self.minitrino_user_dir, "snapshots")
         self._lib_dir = None
 
+        # State
         self._initialized = False
+        self._lib_safe = False
+        self._logged_config_file_missing = False
 
     @utils.exception_handler
     def initialize(
         self,
         log_level: Optional[LogLevel] = None,
-        user_env: Optional[list[str]] = None,
         cluster_name: str = "",
         version_only: bool = False,
     ) -> None:
@@ -118,8 +128,6 @@ class MinitrinoContext:
         ----------
         log_level : LogLevel, optional
             Minimum log level to emit (default: INFO)
-        user_env : list[str], optional
-            A list of user-provided environment variables.
         cluster_name : str, optional
             The cluster name to scope operations to. Defaults to
             "default".
@@ -128,15 +136,15 @@ class MinitrinoContext:
             version fetching (e.g. `minitrino --version`).
         """
         if self._initialized:
-            raise MinitrinoError("Context has already been initialized.")
+            raise RuntimeError("Context has already been initialized.")
 
         if isinstance(log_level, LogLevel):
             self._log_level = log_level
         self.logger = MinitrinoLogger(self._log_level)
         self.env = EnvironmentVariables(self)
+        self._lib_safe = True
         if version_only:
             return
-        self._logged_config_file_missing = False
         self._validate_config_file()
         self._try_parse_library_env()
         self._compare_versions()
@@ -148,6 +156,7 @@ class MinitrinoContext:
             self._set_cluster_attrs(self.cluster_name)
         self._set_docker_clients(env=self.env.copy())
         self.env._log_env_vars()
+
         self._initialized = True
 
     @property
@@ -170,6 +179,8 @@ class MinitrinoContext:
            file,
         assuming the project is running in a repository context.
         """
+        if not self._lib_safe:
+            raise RuntimeError("lib_dir accessed before initialization")
         if not self._lib_dir:
             self._lib_dir = self._get_lib_dir()
         return self._lib_dir

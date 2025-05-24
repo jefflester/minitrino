@@ -40,6 +40,8 @@ REMOVED_IMAGE = "Image removed:"
 FAILURE_VOLUME = "Cannot remove volume"
 FAILURE_NETWORK = "Cannot remove network"
 
+pytestmark = pytest.mark.usefixtures("start_docker")
+
 
 @pytest.fixture(scope="session")
 def dummy_resources() -> dict:

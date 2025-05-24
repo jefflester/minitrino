@@ -8,6 +8,8 @@ from test.cli.constants import CLUSTER_NAME
 CMD_RESTART = {"base": "restart"}
 CMD_PROVISION = {"base": "provision"}
 
+pytestmark = pytest.mark.usefixtures("start_docker")
+
 
 @dataclass
 class RestartScenario:

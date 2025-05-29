@@ -317,11 +317,12 @@ class Modules:
                     f"You must provide a path to a Starburst license via the "
                     f"LIC_PATH environment variable."
                 )
-            if not os.path.isfile(self._ctx.env.get("LIC_PATH", "")):
+            lic_path = os.path.expanduser(self._ctx.env.get("LIC_PATH", ""))
+            if not os.path.isfile(lic_path):
                 raise UserError(
                     f"Module(s) {enterprise_modules} requires a Starburst license. "
                     f"The path provided via the LIC_PATH environment variable does "
-                    f"not exist or is not a file: {self._ctx.env.get('LIC_PATH', '')}."
+                    f"not exist or is not a file: {lic_path}."
                 )
             self._ctx.env.update({"LIC_MOUNT_PATH": LIC_MOUNT_PATH})
         elif self._ctx.env.get("LIC_PATH", ""):

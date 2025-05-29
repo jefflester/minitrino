@@ -116,11 +116,11 @@ class CommandExecutor:
         )
 
         if not kwargs.get("suppress_output", False):
-            # Stream the output of the executed command line-by-line.
-            # `universal_newlines=True` ensures output is generated as a
-            # string, so there is no need to decode bytes. The only
-            # cleansing we need to do is to run the string through the
-            # `_strip_ansi()` function.
+                # Stream the output of the executed command
+                # line-by-line. `universal_newlines=True` ensures output
+                # is generated as a string, so there is no need to
+                # decode bytes. The only cleansing we need to do is to
+                # run the string through the `_strip_ansi()` function.
 
             started_stream = False
             output = ""
@@ -133,7 +133,7 @@ class CommandExecutor:
                     if not started_stream:
                         self._ctx.logger.debug("Command Output:")
                         started_stream = True
-                    self._ctx.logger.debug(output_line, stream=True)
+                        self._ctx.logger.debug(output_line)
                     output += output_line
         else:
             output, _ = process.communicate()
@@ -214,7 +214,7 @@ class CommandExecutor:
                     if not started_stream:
                         self._ctx.logger.debug("Command Output:")
                         started_stream = True
-                    self._ctx.logger.debug(full_line, stream=True)
+                    self._ctx.logger.debug(full_line)
                     full_line = ""
                 if chunk[1]:
                     full_line = chunk[1]
@@ -223,7 +223,7 @@ class CommandExecutor:
 
         # Catch lingering full line post-loop
         if not kwargs.get("suppress_output", False) and full_line:
-            self._ctx.logger.debug(full_line, stream=True)
+            self._ctx.logger.debug(full_line)
 
         # Get the exit code
         exit_code = self._ctx.api_client.exec_inspect(exec_handler["Id"]).get(

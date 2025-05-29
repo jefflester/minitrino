@@ -337,7 +337,7 @@ class ClusterConfigManager:
         candidate_port = self._find_next_available_port(default_port)
         fq_container_name = self._cluster.resource.fq_container_name(container_name)
         self._ctx.logger.info(
-            f"Found available port {candidate_port} for container '",
+            f"Found available port {candidate_port} for container '"
             f"{fq_container_name}'. The service can be reached at "
             f"localhost:{candidate_port}.",
         )

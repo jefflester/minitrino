@@ -12,7 +12,7 @@ from minitrino.core.cluster.cluster import Cluster
 from minitrino.core.cmd_exec import CommandExecutor
 from minitrino.core.docker.socket import resolve_docker_socket
 from minitrino.core.envvars import EnvironmentVariables
-from minitrino.core.errors import MinitrinoError, UserError
+from minitrino.core.errors import UserError
 from minitrino.core.logger import LogLevel, MinitrinoLogger
 from minitrino.core.modules import Modules
 
@@ -90,7 +90,7 @@ class MinitrinoContext:
         self.all_clusters = False
         self.provisioned_clusters = []
 
-        self.logger = MinitrinoLogger()
+        self.logger = MinitrinoLogger(self._log_level)
         self.cluster: Optional[Cluster] = None
         self.env: Optional[EnvironmentVariables] = None
         self.modules: Optional[Modules] = None

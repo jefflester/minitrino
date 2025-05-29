@@ -9,8 +9,9 @@ from typing import Any
 import click
 
 from minitrino import utils
+from minitrino.core import logger as minitrino_logger
 from minitrino.core.context import MinitrinoContext
-from minitrino.core.logger import LogLevel
+from minitrino.core.logger import LogLevel, MinitrinoLogger
 
 
 class CommandLineInterface(click.MultiCommand):
@@ -28,8 +29,6 @@ class CommandLineInterface(click.MultiCommand):
 
     def get_command(self, ctx, name) -> Any:
         """Load and return the command module."""
-        from minitrino.core.logger import MinitrinoLogger
-
         logger = MinitrinoLogger()
         mod_name = name.replace("-", "_")
         try:
@@ -73,6 +72,12 @@ class CommandLineInterface(click.MultiCommand):
     help="Set the minimum log level (ERROR, WARN, INFO, DEBUG).",
 )
 @click.option(
+    "--global-logging",
+    is_flag=True,
+    default=False,
+    help="Enable logging for all dependencies.",
+)
+@click.option(
     "-e",
     "--env",
     default=[],
@@ -94,6 +99,7 @@ def cli(
     ctx: MinitrinoContext,
     verbose: bool,
     log_level: str,
+    global_logging: bool,
     env: list[str],
     cluster_name: str,
 ) -> None:
@@ -107,6 +113,9 @@ def cli(
 
     effective_log_level = LogLevel.DEBUG if verbose else LogLevel[log_level.upper()]
     ctx._log_level = effective_log_level
+    minitrino_logger.configure_logging(
+        effective_log_level, global_logging=global_logging
+    )
 
 
 def display_version(ctx: click.Context) -> None:

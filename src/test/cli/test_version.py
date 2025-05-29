@@ -1,6 +1,7 @@
 from dataclasses import dataclass
-from typing import List
 from importlib.metadata import version
+from typing import List
+
 import pytest
 
 from test import common

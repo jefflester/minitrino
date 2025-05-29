@@ -3,20 +3,18 @@ import time
 from dataclasses import dataclass
 from typing import Any, Optional
 
-from cli.test_cmd_down import CMD_DOWN
 import pytest
 from click.testing import Result
 from docker import DockerClient
 from docker.models.images import ImageCollection
-from docker.models.volumes import VolumeCollection
 from docker.models.networks import NetworkCollection
+from docker.models.volumes import VolumeCollection
 
 from minitrino.settings import (
     COMPOSE_LABEL_KEY,
     MODULE_LABEL_KEY,
     ROOT_LABEL,
 )
-
 from test import common
 from test.cli import utils
 from test.cli.constants import (

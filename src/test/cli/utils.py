@@ -2,10 +2,10 @@
 
 import json
 import logging
-import docker
 import os
 from typing import Dict, Optional
 
+import docker
 from click.testing import CliRunner, Result
 
 from minitrino.cli import cli

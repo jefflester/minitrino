@@ -1,12 +1,12 @@
 """Commands for installing Minitrino libraries."""
 
 import os
+import re
 import shutil
 import tarfile
 
 import click
 import requests
-import re
 
 from minitrino import utils
 from minitrino.core.context import MinitrinoContext

@@ -260,9 +260,10 @@ def parse_key_value_pair(ctx: MinitrinoContext, pair: str) -> tuple[str, str]:
     """
     pair = pair.strip()
     if "=" not in pair:
-        ctx.logger.warn(f"Invalid key-value pair: {pair}")
-        return "", ""
+        raise UserError(f"Invalid key-value pair: {pair}")
     key, value = pair.split("=", 1)
+    if not key or not value:
+        raise UserError(f"Invalid key-value pair: {pair}")
     return key, value
 
 

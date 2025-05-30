@@ -258,11 +258,11 @@ def pytest_runtest_logreport(report: pytest.TestReport):
     """Force pytest "PASS"/"FAIL" to log on its own line."""
     if report.when == "call":
         if report.passed:
-            print("\n")
+            sys.stdout.write("\n")
         elif report.failed:
-            print("\n")
+            sys.stdout.write("\n")
 
 
 def pytest_runtest_logstart():
     """Force pytest to log a newline after test start."""
-    print("\n")
+    sys.stdout.write("\n")

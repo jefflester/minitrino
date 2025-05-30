@@ -1,6 +1,7 @@
 """Commands for displaying and filtering Minitrino module metadata."""
 
 import json
+import sys
 from typing import Optional
 
 import click
@@ -158,7 +159,7 @@ def log_info(
     human-readable key information.
     """
     if json_format:
-        print(json.dumps({module_name: module_metadata}, indent=2))
+        sys.stdout.write(json.dumps({module_name: module_metadata}, indent=2))
     else:
         log_msg = [f"Module: {module_name}\n"]
         keys = [

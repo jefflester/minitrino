@@ -138,7 +138,7 @@ def cli(ctx: MinitrinoContext):
                 "-" * max_divider_len,
             ]
         )
-        ctx.logger.info(full_output)
+        sys.stdout.write(full_output + "\n")
 
 
 @utils.pass_environment()

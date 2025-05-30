@@ -14,6 +14,8 @@ from test.common import (
 
 CMD = {"base": "config", "prepend": ["-v", "-e", "TEXT_EDITOR=cat"]}
 
+pytestmark = pytest.mark.usefixtures("log_test", "cleanup_config")
+
 
 @dataclass
 class ConfigScenario:
@@ -114,7 +116,6 @@ config_scenarios = [
     ids=utils.get_scenario_ids(config_scenarios),
     indirect=["log_msg"],
 )
-@pytest.mark.usefixtures("log_test", "cleanup_config")
 def test_config_scenarios(
     scenario: ConfigScenario,
 ) -> None:
@@ -135,7 +136,6 @@ def test_config_scenarios(
         utils.assert_not_in_file(scenario.expected_not_in_file, path=CONFIG_FILE)
 
 
-@pytest.mark.usefixtures("log_test", "cleanup_config")
 @pytest.mark.parametrize("log_msg", ["Testing edit valid config"], indirect=True)
 def test_edit_valid_config() -> None:
     """Verify the user can edit an existing configuration file."""

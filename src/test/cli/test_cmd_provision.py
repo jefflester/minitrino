@@ -17,7 +17,9 @@ from test.cli.constants import (
 CMD_PROVISION = {"base": "provision"}
 CMD_PROVISION_MOD = {"base": "provision", "append": ["--module", "test"]}
 
-pytestmark = pytest.mark.usefixtures("start_docker", "reset_metadata")
+pytestmark = pytest.mark.usefixtures(
+    "log_test", "start_docker", "down", "reset_metadata"
+)
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -94,7 +96,6 @@ version_scenarios = [
     ids=utils.get_scenario_ids(version_scenarios),
     indirect=["log_msg"],
 )
-@pytest.mark.usefixtures("log_test", "down")
 def test_version_scenarios(scenario: VersionScenario) -> None:
     """Run each VersionScenario."""
     append = []
@@ -171,7 +172,6 @@ module_requirements_scenarios = [
     ids=utils.get_scenario_ids(module_requirements_scenarios),
     indirect=["log_msg"],
 )
-@pytest.mark.usefixtures("log_test", "down")
 def test_module_requirements_scenarios(scenario: ModuleRequirementsScenario) -> None:
     """Run each ModuleRequirementsScenario."""
     append = [item for module in scenario.module_names for item in ("--module", module)]
@@ -244,7 +244,7 @@ enterprise_scenarios = [
     ids=utils.get_scenario_ids(enterprise_scenarios),
     indirect=["log_msg"],
 )
-@pytest.mark.usefixtures("log_test", "cleanup_config", "down", "reset_metadata")
+@pytest.mark.usefixtures("cleanup_config", "reset_metadata")
 def test_enterprise_scenarios(scenario: EnterpriseScenario) -> None:
     """Run each EnterpriseScenario."""
     data = [{"enterprise": scenario.enterprise}]
@@ -332,7 +332,7 @@ cluster_dependency_scenarios = [
     ids=utils.get_scenario_ids(cluster_dependency_scenarios),
     indirect=["log_msg"],
 )
-@pytest.mark.usefixtures("log_test", "down", "reset_metadata")
+@pytest.mark.usefixtures("reset_metadata")
 def test_cluster_dependency_scenarios(scenario: ClusterDependencyScenario) -> None:
     """Run each ClusterDependencyScenario."""
     if scenario.id == "circular_dependency":
@@ -416,7 +416,6 @@ config_scenarios = [
     ids=utils.get_scenario_ids(config_scenarios),
     indirect=["log_msg"],
 )
-@pytest.mark.usefixtures("log_test", "down")
 def test_append_config_scenarios(scenario: AppendConfigScenario) -> None:
     """Run each AppendConfigScenario."""
     prepend = ["--env", f"{scenario.config_type}={scenario.config_value}"]
@@ -491,7 +490,6 @@ docker_native_scenarios = [
     ids=utils.get_scenario_ids(docker_native_scenarios),
     indirect=["log_msg"],
 )
-@pytest.mark.usefixtures("log_test", "down")
 def test_docker_native_scenarios(scenario: DockerNativeScenario) -> None:
     """Run each DockerNativeScenario."""
     if not GH_WORKFLOW_RUNNING and scenario.id == "valid_docker_native_build":
@@ -577,7 +575,7 @@ module_add_scenarios = [
     [{"keepalive": True}, {"no_modules": True}],
     indirect=True,
 )
-@pytest.mark.usefixtures("log_test", "provision_clusters", "down")
+@pytest.mark.usefixtures("provision_clusters")
 def test_module_add_scenarios(scenario: ModuleAddScenario) -> None:
     """Run each ModuleAddScenario."""
     utils.cli_cmd(utils.build_cmd(base="down", cluster="all", append=["--sig-kill"]))
@@ -692,7 +690,6 @@ worker_scenarios = [
     ids=utils.get_scenario_ids(worker_scenarios),
     indirect=["log_msg"],
 )
-@pytest.mark.usefixtures("log_test", "down")
 def test_worker_scenarios(
     scenario: WorkerScenario,
 ) -> None:
@@ -724,7 +721,6 @@ def test_worker_scenarios(
 TEST_BOOTSTRAP_MSG = "Test bootstrap script execution in containers"
 
 
-@pytest.mark.usefixtures("log_test", "down")
 @pytest.mark.parametrize("log_msg", [TEST_BOOTSTRAP_MSG], indirect=True)
 def test_bootstrap() -> None:
     """Ensure bootstrap scripts execute in containers."""
@@ -769,7 +765,6 @@ def test_bootstrap() -> None:
 TEST_VALID_USER_CONFIG_MSG = "Test valid user-defined cluster and JVM config"
 
 
-@pytest.mark.usefixtures("log_test", "down")
 @pytest.mark.parametrize("log_msg", [TEST_VALID_USER_CONFIG_MSG], indirect=True)
 def test_valid_user_config() -> None:
     """Ensure valid configs can be appended to cluster config files."""
@@ -799,7 +794,6 @@ def test_valid_user_config() -> None:
 TEST_DUPLICATE_CONFIG_PROPS_MSG = "Test duplicate configuration properties warning"
 
 
-@pytest.mark.usefixtures("log_test", "down")
 @pytest.mark.parametrize("log_msg", [TEST_DUPLICATE_CONFIG_PROPS_MSG], indirect=True)
 def test_duplicate_config_props() -> None:
     """Ensure that duplicate config properties are logged as a warning

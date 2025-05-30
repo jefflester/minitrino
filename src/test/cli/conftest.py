@@ -122,7 +122,7 @@ def start_docker() -> None:
     yield
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def stop_docker() -> None:
     """
     Stop the Docker daemon.

@@ -38,7 +38,9 @@ def cleanup_snapshot(request: pytest.FixtureRequest) -> None:
         _rm()
 
 
-pytestmark = pytest.mark.usefixtures("start_docker", "remove", "cleanup_snapshot")
+pytestmark = pytest.mark.usefixtures(
+    "log_test", "start_docker", "remove", "cleanup_snapshot"
+)
 
 
 @dataclass
@@ -129,7 +131,7 @@ snapshot_scenarios = [
     ids=utils.get_scenario_ids(snapshot_scenarios),
     indirect=["log_msg", "provision_clusters"],
 )
-@pytest.mark.usefixtures("log_test", "provision_clusters")
+@pytest.mark.usefixtures("provision_clusters")
 def test_snapshot_scenarios(scenario: SnapshotScenario) -> None:
     """Run each SnapshotScenario."""
     if not scenario.append_flags:
@@ -173,7 +175,6 @@ def test_snapshot_scenarios(scenario: SnapshotScenario) -> None:
 SNAPSHOT_INVALID_NAME_MSG = "Testing invalid snapshot name: ##.my-test?"
 
 
-@pytest.mark.usefixtures("log_test")
 @pytest.mark.parametrize("log_msg", [SNAPSHOT_INVALID_NAME_MSG], indirect=True)
 def test_invalid_name() -> None:
     """Test invalid snapshot name."""
@@ -186,7 +187,6 @@ def test_invalid_name() -> None:
 TEST_DIRECTORY_MSG = "Testing snapshot to user-specified directory: /tmp/"
 
 
-@pytest.mark.usefixtures("log_test")
 @pytest.mark.parametrize("log_msg", [TEST_DIRECTORY_MSG], indirect=True)
 def test_directory() -> None:
     """
@@ -205,7 +205,6 @@ def test_directory() -> None:
 TEST_DIRECTORY_INVALID_MSG = "Testing snapshot to invalid directory: /foo/"
 
 
-@pytest.mark.usefixtures("log_test")
 @pytest.mark.parametrize("log_msg", [TEST_DIRECTORY_INVALID_MSG], indirect=True)
 def test_directory_invalid() -> None:
     """
@@ -222,7 +221,6 @@ def test_directory_invalid() -> None:
 SNAPSHOT_PROVISION_FILE_MSG = "Testing snapshot provision file execution"
 
 
-@pytest.mark.usefixtures("log_test")
 @pytest.mark.parametrize("log_msg", [SNAPSHOT_PROVISION_FILE_MSG], indirect=True)
 def test_provision_file() -> None:
     """Test snapshot `provision-snapshot.sh` execution."""
@@ -239,7 +237,6 @@ def test_provision_file() -> None:
 SNAPSHOT_FORCE_MSG = "Testing --force option for snapshot command"
 
 
-@pytest.mark.usefixtures("log_test")
 @pytest.mark.parametrize("log_msg", [SNAPSHOT_FORCE_MSG], indirect=True)
 def test_force() -> None:
     """Verify overwrite of existing snapshot."""
@@ -253,7 +250,7 @@ TEST_NO_SCRUB_MSG = "Testing --no-scrub option for snapshot command"
 
 
 @pytest.mark.parametrize("log_msg", [TEST_NO_SCRUB_MSG], indirect=True)
-@pytest.mark.usefixtures("log_test", "cleanup_config")
+@pytest.mark.usefixtures("cleanup_config")
 def test_no_scrub() -> None:
     """
     Verify that the user config file is retained in full when scrubbing
@@ -267,7 +264,7 @@ def test_no_scrub() -> None:
 TEST_SCRUB_MSG = "Testing scrubbing enabled for snapshot command"
 
 
-@pytest.mark.usefixtures("log_test", "cleanup_config")
+@pytest.mark.usefixtures("cleanup_config")
 @pytest.mark.parametrize("log_msg", [TEST_SCRUB_MSG], indirect=True)
 def test_scrub() -> None:
     """Verify that sensitive data in user config file is scrubbed."""

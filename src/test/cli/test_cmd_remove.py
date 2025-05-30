@@ -112,7 +112,9 @@ def dummy_resources() -> dict:
     _cleanup_resources(client)
 
 
-pytestmark = pytest.mark.usefixtures("dummy_resources", "start_docker")
+pytestmark = pytest.mark.usefixtures(
+    "log_test", "dummy_resources", "start_docker", "provision_clusters", "remove"
+)
 
 
 @dataclass
@@ -194,7 +196,6 @@ remove_all_scenarios = [
     ids=utils.get_scenario_ids(remove_all_scenarios),
     indirect=["log_msg"],
 )
-@pytest.mark.usefixtures("log_test", "provision_clusters", "remove")
 def test_remove_all_scenarios(
     docker_client: DockerClient, scenario: RemoveAllScenario
 ) -> None:
@@ -290,7 +291,6 @@ remove_module_scenarios = [
     ids=utils.get_scenario_ids(remove_module_scenarios),
     indirect=["log_msg"],
 )
-@pytest.mark.usefixtures("log_test", "provision_clusters", "remove")
 def test_remove_module_scenarios(
     docker_client: DockerClient,
     scenario: RemoveModuleScenario,
@@ -383,7 +383,6 @@ remove_cluster_resource_scenarios = [
     [{"cluster_names": [CLUSTER_NAME_2]}],
     indirect=True,
 )
-@pytest.mark.usefixtures("log_test", "provision_clusters", "remove")
 def test_remove_cluster_resource_scenarios(
     docker_client: DockerClient,
     scenario: RemoveClusterResourceScenario,
@@ -482,7 +481,6 @@ remove_force_scenarios = [
     ids=utils.get_scenario_ids(remove_force_scenarios),
     indirect=["log_msg", "provision_clusters"],
 )
-@pytest.mark.usefixtures("log_test", "provision_clusters", "remove")
 def test_remove_force_scenarios(
     docker_client: DockerClient,
     scenario: RemoveForceScenario,
@@ -562,7 +560,6 @@ images_negative_scenarios = [
     ids=utils.get_scenario_ids(images_negative_scenarios),
     indirect=["log_msg"],
 )
-@pytest.mark.usefixtures("log_test", "provision_clusters", "remove")
 def test_remove_images_negative_scenarios(
     docker_client: DockerClient,
     scenario: RemoveImagesNegativeScenario,
@@ -593,7 +590,6 @@ TEST_MULTI_MOD_ALL_MSG = "Testing removing multiple modules from all clusters"
     [(TEST_MULTI_MOD_ALL_MSG, {"modules": ["postgres"], "keepalive": True})],
     indirect=True,
 )
-@pytest.mark.usefixtures("log_test", "provision_clusters", "remove")
 def test_remove_multiple_module_all(
     docker_client: DockerClient,
 ) -> None:
@@ -633,7 +629,6 @@ def test_remove_multiple_module_all(
     ],
     indirect=True,
 )
-@pytest.mark.usefixtures("log_test", "provision_clusters", "remove")
 def test_remove_module_invalid() -> None:
     """Try to remove an invalid module."""
     result = utils.cli_cmd(

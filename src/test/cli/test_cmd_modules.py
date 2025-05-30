@@ -14,7 +14,7 @@ CMD_MODULES = {"base": "modules"}
 CMD_PROVISION = {"base": "provision", "append": ["--module", "test"]}
 CMD_DOWN = {"base": "down", "append": ["--sig-kill"]}
 
-pytestmark = pytest.mark.usefixtures("start_docker")
+pytestmark = pytest.mark.usefixtures("log_test", "start_docker")
 
 
 @dataclass
@@ -79,7 +79,6 @@ module_name_scenarios = [
     module_name_scenarios,
     ids=utils.get_scenario_ids(module_name_scenarios),
 )
-@pytest.mark.usefixtures("log_test")
 def test_module_name_scenarios(scenario: ModuleNameScenario) -> None:
     """Run each ModuleNameScenario."""
     append = ["--module", scenario.module_name]
@@ -141,7 +140,6 @@ type_scenarios = [
     ids=utils.get_scenario_ids(type_scenarios),
     indirect=["log_msg"],
 )
-@pytest.mark.usefixtures("log_test")
 def test_type_scenarios(scenario: TypeScenario) -> None:
     """Run each TypeScenario."""
     append = ["--type", scenario.type_flag, "--json"]
@@ -160,7 +158,6 @@ def test_type_scenarios(scenario: TypeScenario) -> None:
 ALL_MODULES_MSG = "Print all module metadata if no module name is passed"
 
 
-@pytest.mark.usefixtures("log_test")
 @pytest.mark.parametrize("log_msg", [ALL_MODULES_MSG], indirect=True)
 def test_all_modules() -> None:
     """
@@ -183,7 +180,6 @@ def test_all_modules() -> None:
 JSON_OUTPUT_MSG = "Output module metadata in JSON format"
 
 
-@pytest.mark.usefixtures("log_test")
 @pytest.mark.parametrize("log_msg", [JSON_OUTPUT_MSG], indirect=True)
 def test_json() -> None:
     """Ensure module metadata is outputted in JSON format."""
@@ -197,7 +193,6 @@ def test_json() -> None:
 TYPE_MODULE_MISMATCH_MSG = "Type + module mismatch returns no modules found"
 
 
-@pytest.mark.usefixtures("log_test")
 @pytest.mark.parametrize("log_msg", [TYPE_MODULE_MISMATCH_MSG], indirect=True)
 def test_type_module_mismatch() -> None:
     """Ensure type + module mismatch returns no modules found."""
@@ -213,7 +208,7 @@ def test_type_module_mismatch() -> None:
     [("Output metadata for running modules", {"keepalive": True})],
     indirect=True,
 )
-@pytest.mark.usefixtures("log_test", "provision_clusters", "down")
+@pytest.mark.usefixtures("provision_clusters", "down")
 def test_running() -> None:
     """Ensure the `module` command can output metadata for running
     modules."""
@@ -237,7 +232,7 @@ RUNNING_CLUSTER_MSG = "Output metadata for running modules in a specific cluster
     [(RUNNING_CLUSTER_MSG, {"keepalive": True})],
     indirect=True,
 )
-@pytest.mark.usefixtures("log_test", "provision_clusters", "down")
+@pytest.mark.usefixtures("provision_clusters", "down")
 def test_running_cluster() -> None:
     """
     Ensure module metadata is outputted for running modules tied to a

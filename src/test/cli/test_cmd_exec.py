@@ -7,7 +7,7 @@ from test.cli.constants import CLUSTER_NAME
 
 CMD_EXEC = {"base": "exec"}
 
-pytestmark = pytest.mark.usefixtures("start_docker")
+pytestmark = pytest.mark.usefixtures("log_test", "start_docker")
 
 
 @dataclass
@@ -102,7 +102,7 @@ exec_scenarios = [
     [{"keepalive": True}],
     indirect=True,
 )
-@pytest.mark.usefixtures("log_test", "provision_clusters", "remove")
+@pytest.mark.usefixtures("provision_clusters", "remove")
 def test_exec_scenarios(scenario: ExecScenario) -> None:
     """Run each ExecScenario."""
     append_flags = []

@@ -56,7 +56,8 @@ version_scenarios = [
         append=["--version"],
         expected_in_output=["Invalid key-value pair", CLI_VERSION],
         expected_not_in_output=[NOT_INSTALLED],
-        log_msg="Warns on invalid env, still prints version",
+        expected_exit_code=2,
+        log_msg="Fails on invalid env",
     ),
     VersionScenario(
         id="multiple_envs",

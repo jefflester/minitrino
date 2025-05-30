@@ -14,12 +14,7 @@ from test import common
 from test.cli import utils
 from test.cli.constants import CLUSTER_NAME
 from test.cli.utils import logger
-from test.common import (
-    CONFIG_FILE,
-    MINITRINO_USER_DIR,
-    MINITRINO_USER_SNAPSHOTS_DIR,
-    SNAPSHOT_FILE,
-)
+from test.common import CONFIG_FILE, MINITRINO_USER_DIR
 
 
 @pytest.fixture
@@ -173,52 +168,6 @@ def cleanup_config() -> None:
     yield
     logger.debug("Running config cleanup (after test)")
     cleanup()
-
-
-@pytest.fixture
-def cleanup_snapshot(request: pytest.FixtureRequest) -> None:
-    """
-    Remove test snapshot tarball.
-
-    Parameters
-    ----------
-    request : pytest.FixtureRequest
-        The pytest fixture request.
-
-    Notes
-    -----
-    Runs before and after the test.
-    """
-    snapshot_name = getattr(request, "param", "test")
-
-    def rm_snapshot():
-        try:
-            if snapshot_name != "test":
-                path = os.path.join(
-                    MINITRINO_USER_SNAPSHOTS_DIR, snapshot_name + ".tar.gz"
-                )
-                if os.path.isfile(path):
-                    logger.debug(f"Removing snapshot file: {path}")
-                    os.remove(path)
-                else:
-                    logger.debug(f"Snapshot file does not exist: {path}")
-            else:
-                if os.path.isfile(SNAPSHOT_FILE):
-                    logger.debug(f"Removing default snapshot file: {SNAPSHOT_FILE}")
-                    os.remove(SNAPSHOT_FILE)
-                else:
-                    logger.debug(
-                        f"Default snapshot file does not exist: {SNAPSHOT_FILE}",
-                    )
-        except Exception as e:
-            logger.error(f"Error cleaning up snapshot file: {e}")
-            raise RuntimeError(f"Error cleaning up snapshot file: {e}")
-
-    logger.debug("Running snapshot cleanup (before test)")
-    rm_snapshot()
-    yield
-    logger.debug("Running snapshot cleanup (after test)")
-    rm_snapshot()
 
 
 @pytest.fixture

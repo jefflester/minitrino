@@ -29,7 +29,8 @@ SNAPSHOT_ROOT_FILES = [
     "image",
 ]
 
-# Scrub Keys
+# Scrubbing
+SCRUBBED = "*" * 8
 SCRUB_KEYS = [
     "key",
     "-key",

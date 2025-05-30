@@ -61,7 +61,6 @@ def dummy_resources() -> dict:
     labels = {"org.minitrino": "test"}
 
     def _cleanup_resources(client: DockerClient):
-        errors = []
         c = client.containers
         remove = [
             ("container", container, lambda: c.get(container).remove(force=True)),

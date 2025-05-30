@@ -16,7 +16,9 @@ from test.cli.constants import (
 CMD_DOWN = {"base": "down"}
 CMD_PROVISION = {"base": "provision", "append": ["--module", "test"]}
 
-pytestmark = pytest.mark.usefixtures("log_test", "start_docker", "down")
+pytestmark = pytest.mark.usefixtures(
+    "log_test", "start_docker", "provision_clusters", "down"
+)
 
 
 @dataclass
@@ -149,7 +151,6 @@ CLUSTER_NAME_MSG = "Testing --cluster flag with cluster name 'test'"
     [(CLUSTER_NAME_MSG, {"cluster_names": [CLUSTER_NAME_2], "keepalive": True})],
     indirect=True,
 )
-@pytest.mark.usefixtures("provision_clusters")
 def test_cluster() -> None:
     """Verify `--cluster ${name}` works as expected."""
     cmd = utils.build_cmd(**CMD_DOWN, cluster=CLUSTER_NAME, append=["--sig-kill"])
@@ -173,7 +174,6 @@ CLUSTER_KEEP_MSG = "Testing --cluster flag with --keep and --sig-kill flags"
     [(CLUSTER_KEEP_MSG, {"cluster_names": [CLUSTER_NAME_2], "keepalive": True})],
     indirect=True,
 )
-@pytest.mark.usefixtures("provision_clusters")
 def test_cluster_keep() -> None:
     """Verify `--cluster ${name}` works as expected with the `--keep`
     flag."""

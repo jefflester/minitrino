@@ -1,6 +1,5 @@
 """Pytest configuration and fixtures for Minitrino CLI tests."""
 
-import io
 import json
 import logging
 import os
@@ -9,7 +8,6 @@ import sys
 import docker
 import pytest
 
-from minitrino.core.docker.socket import resolve_docker_socket
 from test import common
 from test.cli import utils
 from test.cli.constants import CLUSTER_NAME

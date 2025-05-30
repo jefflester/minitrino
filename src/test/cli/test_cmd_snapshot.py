@@ -8,7 +8,6 @@ import pytest
 from minitrino.settings import SCRUBBED
 from test import common
 from test.cli import utils
-from test.cli.utils import logger
 from test.common import MINITRINO_USER_DIR
 
 SNAPSHOT_NAME = "test"

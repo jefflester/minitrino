@@ -177,30 +177,39 @@ class MinitrinoLogFormatter(logging.Formatter):
         "CRITICAL": "[e]",
     }
 
+    def __init__(self, always_verbose=False):
+        super().__init__()
+        self.always_verbose = always_verbose
+        self.enable_color = sys.stdout.isatty()
+
     def format(self, record: logging.LogRecord):
         """Format a log record."""
         logger_name = record.name
-        module = logger_name
-        if record.pathname:
-            filename = os.path.basename(record.pathname)
-        else:
-            filename = record.module
-        lineno = record.lineno
         prefix = self.PREFIXES.get(record.levelname, "[i]")
         color = self.COLORS.get(record.levelname, "cyan")
-        if logger_name.startswith("minitrino"):
+        if self.enable_color:
             styled_prefix = style(prefix, fg=color, bold=True)
         else:
-            styled_prefix = style(prefix, fg="bright_black", bold=True)
-        left = f"{styled_prefix} {module}:{filename}:{lineno} "
+            styled_prefix = prefix
+
         msg = record.getMessage()
-        lines = msg.splitlines()
-        if not lines:
-            return left
-        formatted = [f"{left}{lines[0]}"]
-        for line in lines[1:]:
-            formatted.append(f"{DEFAULT_INDENT}{line}")
-        return "\n".join(formatted)
+
+        if self.always_verbose or record.levelno != logging.INFO:
+            if record.pathname:
+                filename = os.path.basename(record.pathname)
+            else:
+                filename = record.module
+            lineno = record.lineno
+            left = f"{styled_prefix} {logger_name}:{filename}:{lineno} "
+            lines = msg.splitlines()
+            if not lines:
+                return left
+            formatted = [f"{left}{lines[0]}"]
+            for line in lines[1:]:
+                formatted.append(f"{DEFAULT_INDENT}{line}")
+            return "\n".join(formatted)
+        else:
+            return f"{styled_prefix} {msg}"
 
 
 def configure_logging(log_level: LogLevel, global_logging: bool = False) -> None:
@@ -213,8 +222,9 @@ def configure_logging(log_level: LogLevel, global_logging: bool = False) -> None
             logger.removeHandler(handler)
 
     py_level = PY_LEVEL[log_level]
+    always_verbose = log_level == LogLevel.DEBUG
     handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(MinitrinoLogFormatter())
+    handler.setFormatter(MinitrinoLogFormatter(always_verbose=always_verbose))
 
     if global_logging:
         root_logger.addHandler(handler)

@@ -120,6 +120,7 @@ def cli(
 
 def display_version(ctx: click.Context) -> None:
     """Return the version of the CLI and the library as a string."""
+    minitrino_logger.configure_logging(LogLevel.INFO)
     env = []
     args = sys.argv
     i = 0

@@ -1,8 +1,7 @@
 from dataclasses import dataclass
+from typing import Any
 
 import pytest
-
-from typing import Any
 
 from test.cli import utils
 from test.cli.constants import CLUSTER_NAME, CLUSTER_NAME_2

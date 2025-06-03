@@ -1,3 +1,4 @@
+import time
 from dataclasses import dataclass
 from typing import Optional
 
@@ -212,6 +213,7 @@ def test_type_module_mismatch() -> None:
 def test_running() -> None:
     """Ensure the `module` command can output metadata for running
     modules."""
+    time.sleep(5)  # avoid race condition
     result = utils.cli_cmd(
         utils.build_cmd(**CMD_MODULES, append=["--json", "--running"])
     )
@@ -238,6 +240,7 @@ def test_running_cluster() -> None:
     Ensure module metadata is outputted for running modules tied to a
     specific cluster.
     """
+    time.sleep(5)  # avoid race condition
     cmd = utils.build_cmd(**CMD_MODULES, append=["--json", "--running"])
     result = utils.cli_cmd(cmd)
     utils.assert_exit_code(result)

@@ -161,7 +161,7 @@ def extract_tarball(tarball_path: str, extract_dir: str) -> None:
     """Extract a .tar.gz file to the given directory using Python's
     tarfile."""
     with tarfile.open(tarball_path, "r:gz") as tar:
-        tar.extractall(path=extract_dir)
+        tar.extractall(path=extract_dir, filter="fully_trusted")
 
 
 @utils.pass_environment()

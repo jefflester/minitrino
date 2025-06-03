@@ -81,7 +81,8 @@ daemon_off_scenarios = [
     ids=utils.get_scenario_ids(daemon_off_scenarios),
     indirect=["log_msg"],
 )
-def test_daemon_off_scenarios(scenario: DaemonOffScenario, stop_docker) -> None:
+@pytest.mark.usefixtures("stop_docker")
+def test_daemon_off_scenarios(scenario: DaemonOffScenario) -> None:
     """Run each DaemonOffScenario."""
     err_msg = "Error when pinging the Docker server"
     result = utils.cli_cmd(utils.build_cmd(**scenario.cmd), scenario.input_val)

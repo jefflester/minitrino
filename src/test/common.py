@@ -74,10 +74,9 @@ def try_start(cmd: list[str]) -> bool:
         otherwise.
     """
     try:
-        result = subprocess.run(
-            cmd, check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-        )
-        return result.returncode == 0
+        cmd_str = " ".join(shlex.quote(arg) for arg in cmd)
+        result = execute_cmd(cmd=cmd_str)
+        return result.exit_code == 0
     except Exception:
         return False
 
@@ -136,7 +135,7 @@ def start_docker_daemon(logger: Optional[logging.Logger] = None) -> None:
     else:
         raise RuntimeError(f"Incompatible testing platform: {sys.platform}")
 
-    for _ in range(61):
+    for _ in range(60):
         if is_docker_running():
             return
         sleep(1)
@@ -159,17 +158,53 @@ def try_stop(cmd: list[str]) -> bool:
         otherwise.
     """
     try:
-        result = subprocess.run(
-            cmd, check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-        )
-        return result.returncode == 0
+        cmd_str = " ".join(shlex.quote(arg) for arg in cmd)
+        result = execute_cmd(cmd=cmd_str)
+        return result.exit_code == 0
     except Exception:
         return False
 
 
+def force_quit_docker_backends():
+    """
+    Immediately quit all known Docker backends (Docker Desktop,
+    OrbStack, Rancher Desktop) on macOS. Tries AppleScript for graceful
+    quit, then killall for UI and backend processes. No sudo required.
+    For Colima, uses 'colima stop'.
+    """
+    import shutil
+    from time import sleep
+
+    for app in ["Docker", "OrbStack", "Rancher Desktop"]:
+        if shutil.which("osascript"):
+            try:
+                execute_cmd(cmd=f"osascript -e 'quit app \"{app}\"'")
+            except Exception:
+                pass
+    sleep(2)
+    for proc in [
+        "Docker",
+        "com.docker.backend",
+        "com.docker.hyperkit",
+        "OrbStack",
+        "com.orbstack.backend",
+        "com.orbstack.hyperkit",
+        "Rancher Desktop",
+        "lima",
+        "qemu-system-aarch64",
+        "qemu-system-x86_64",
+    ]:
+        try:
+            execute_cmd(cmd=f"killall -9 {proc}")
+        except Exception:
+            pass
+    if shutil.which("colima"):
+        execute_cmd(cmd="colima stop")
+
+
 def stop_docker_daemon() -> None:
     """
-    Stop the Docker daemon.
+    Force-stop the Docker daemon.
 
     Raises
     ------
@@ -179,39 +214,28 @@ def stop_docker_daemon() -> None:
     TimeoutError
         If the Docker daemon does not stop within one minute.
     """
-    stopped = False
     if sys.platform.lower() == "darwin":
-        if shutil.which("osascript"):
-            stopped = try_stop(["osascript", "-e", 'quit app "Docker"'])
-        if not stopped and shutil.which("osascript"):
-            stopped = try_stop(["osascript", "-e", 'quit app "OrbStack"'])
-        if not stopped and shutil.which("colima"):
-            stopped = try_stop(["colima", "stop"])
-        if not stopped and shutil.which("osascript"):
-            stopped = try_stop(["osascript", "-e", 'quit app "Rancher Desktop"'])
-        if not stopped:
-            raise RuntimeError(
-                "No supported Docker backend found "
-                "(Docker Desktop, OrbStack, Colima, Rancher Desktop) for stopping."
-            )
+        force_quit_docker_backends()
     elif "linux" in sys.platform.lower():
+        stopped = False
         if shutil.which("systemctl"):
             stopped = try_stop(["sudo", "systemctl", "stop", "docker"])
         if not stopped and shutil.which("service"):
             stopped = try_stop(["sudo", "service", "docker", "stop"])
         if not stopped:
-            raise RuntimeError(
-                "Could not stop Docker daemon (systemctl/service not available)."
+            cmd_str = " ".join(
+                shlex.quote(arg) for arg in ["sudo", "killall", "-9", "dockerd"]
             )
+            execute_cmd(cmd=cmd_str)
+
     else:
         raise RuntimeError(f"Incompatible testing platform: {sys.platform}")
 
-    # Wait for Docker to be unavailable
-    for counter in range(61):
+    for _ in range(10):
         if not is_docker_running():
             return
         sleep(1)
-    raise TimeoutError("Docker daemon failed to stop after one minute.")
+    raise TimeoutError("Docker daemon failed to stop after force quit.")
 
 
 def get_containers(container_name: str = "", all: bool = False) -> list[Container]:

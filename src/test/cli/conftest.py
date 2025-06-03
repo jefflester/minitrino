@@ -120,7 +120,7 @@ def start_docker() -> None:
     yield
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def stop_docker() -> None:
     """
     Stop the Docker daemon.
@@ -132,6 +132,7 @@ def stop_docker() -> None:
     logger.debug("Stopping Docker daemon.")
     common.stop_docker_daemon()
     yield
+    common.start_docker_daemon(logger)
 
 
 @pytest.fixture

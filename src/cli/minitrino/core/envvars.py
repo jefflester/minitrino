@@ -81,7 +81,7 @@ class EnvironmentVariables(dict):
             return
 
         for env_var in self._ctx._user_env:
-            k, v = utils.parse_key_value_pair(self._ctx, env_var)
+            k, v = utils.parse_key_value_pair(self._ctx, env_var, hard_fail=True)
             self[k.upper()] = v
 
     def _parse_os_env(self) -> None:

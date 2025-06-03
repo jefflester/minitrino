@@ -244,7 +244,9 @@ def generate_identifier(identifiers: Optional[Dict[str, Any]] = None) -> str:
     return " ".join(identifier)
 
 
-def parse_key_value_pair(ctx: MinitrinoContext, pair: str) -> tuple[str, str]:
+def parse_key_value_pair(
+    ctx: MinitrinoContext, pair: str, hard_fail: bool = False
+) -> tuple[str, str]:
     """
     Parse a key-value pair from a string.
 
@@ -252,6 +254,9 @@ def parse_key_value_pair(ctx: MinitrinoContext, pair: str) -> tuple[str, str]:
     ----------
     pair : str
         Key-value pair to parse.
+    hard_fail : bool, optional
+        Whether to raise an error if the key-value pair is invalid,
+        by default `False`.
 
     Returns
     -------
@@ -260,10 +265,12 @@ def parse_key_value_pair(ctx: MinitrinoContext, pair: str) -> tuple[str, str]:
     """
     pair = pair.strip()
     if "=" not in pair:
-        raise UserError(f"Invalid key-value pair: {pair}")
+        if hard_fail:
+            raise UserError(f"Invalid key-value pair: {pair}")
     key, value = pair.split("=", 1)
     if not key or not value:
-        raise UserError(f"Invalid key-value pair: {pair}")
+        if hard_fail:
+            raise UserError(f"Invalid key-value pair: {pair}")
     return key, value
 
 

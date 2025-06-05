@@ -3,13 +3,14 @@ services:
 
   minitrino:
     environment:
-      MINITRINO_BOOTSTRAP: bootstrap-cluster.sh
       CONFIG_PROPERTIES: |-
         web-ui.authentication.type=oauth2
         http-server.authentication.type=OAUTH2
         http-server.authentication.oauth2.issuer=https://host.docker.internal:8100/example
         http-server.authentication.oauth2.client-id=id
         http-server.authentication.oauth2.client-secret=secret
+    volumes:
+      - ./modules/security/oauth2/resources/bootstrap/bootstrap-cluster.sh:/mnt/bootstrap/oauth2/bootstrap-cluster.sh:ro
     depends_on:
       oauth2-healthcheck:
         condition: service_healthy
@@ -45,5 +46,5 @@ services:
       timeout: 10s
     command: [tail, -f, /dev/null]
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=security-oauth2
+      - org.minitrino.root=true
+      - org.minitrino.module.security.oauth2=true

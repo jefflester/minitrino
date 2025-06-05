@@ -2,10 +2,9 @@
 services:
 
   minitrino:
-    environment:
-      MINITRINO_BOOTSTRAP: 458-native-fs-workaround.sh
     volumes:
       - ./modules/catalog/iceberg/resources/cluster/iceberg.properties:/mnt/etc/catalog/iceberg.properties:ro
+      - ./modules/catalog/iceberg/resources/bootstrap/458-native-fs-workaround.sh:/mnt/bootstrap/iceberg/458-native-fs-workaround.sh:ro
 
   iceberg-rest:
     image: tabulario/iceberg-rest:${ICEBERG_REST_VER}

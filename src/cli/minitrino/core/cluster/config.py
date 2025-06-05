@@ -10,12 +10,12 @@ from __future__ import annotations
 import os
 import re
 import socket
-import time
 from typing import TYPE_CHECKING, Optional
 
 import yaml
 
 from minitrino import utils
+from minitrino.core.docker.wrappers import MinitrinoContainer
 from minitrino.core.errors import MinitrinoError, UserError
 from minitrino.settings import (
     CLUSTER_CONFIG,
@@ -68,20 +68,17 @@ class ClusterConfigManager:
                 "but no running container was found."
             )
 
-        cfgs, jvm_cfg = self._gather_user_configs(modules)
+        cfgs, jvm_cfg = self._get_user_configs(modules)
         if not cfgs and not jvm_cfg:
+            self._signal_append_config_complete(coordinator)
             return
 
         cfgs = self._handle_password_authenticators(cfgs)
-        self._wait_for_coordinator_start(coordinator)
 
         current_cluster_cfgs, current_jvm_cfg = self._current_config()
         self._append_config(coordinator, cfgs, current_cluster_cfgs, CLUSTER_CONFIG)
         self._append_config(coordinator, jvm_cfg, current_jvm_cfg, CLUSTER_JVM_CONFIG)
-
-        self._cluster.ops.restart_containers(
-            [self._cluster.resource.fq_container_name("minitrino")]
-        )
+        self._signal_append_config_complete(coordinator)
 
     def set_external_ports(self, modules: Optional[list[str]] = None) -> None:
         """
@@ -117,7 +114,7 @@ class ClusterConfigManager:
                     )
                 self._assign_port(container_name, host_port_var_name, int(default_port))
 
-    def _gather_user_configs(self, modules: Optional[list[str]]) -> tuple[list, list]:
+    def _get_user_configs(self, modules: Optional[list[str]]) -> tuple[list, list]:
         """Collect user and module config and JVM config overrides."""
         cfgs = []
         jvm_cfg = []
@@ -172,29 +169,6 @@ class ClusterConfigManager:
         new_cfgs = [x for i, x in enumerate(cfgs) if i not in merge]
         new_cfgs.append(auth_property)
         return new_cfgs
-
-    def _wait_for_coordinator_start(self, coordinator):
-        """Wait until the coordinator container is running."""
-        self._ctx.logger.debug(
-            "Checking coordinator server status before updating configs...",
-        )
-        retry = 0
-        while retry <= 30:
-            logs = coordinator.logs().decode()
-            if "======== SERVER STARTED ========" in logs:
-                self._ctx.logger.debug("Coordinator started.")
-                break
-            elif coordinator.status != "running":
-                raise MinitrinoError(
-                    "The coordinator stopped running. Inspect the "
-                    "container logs if the container is still available. "
-                    "If the container was rolled back, rerun the command with "
-                    "the '--no-rollback' option, then inspect the logs."
-                )
-            else:
-                self._ctx.logger.debug("Waiting for coordinator to start...")
-                time.sleep(1)
-                retry += 1
 
     def _append_config(self, coordinator, usr_cfgs, current_cfgs, filename):
         """Write merged config to the container."""
@@ -299,6 +273,15 @@ class ClusterConfigManager:
         current_jvm_cfg = self._split_config(current_cfgs[1].output)
 
         return current_cluster_cfgs, current_jvm_cfg
+
+    def _signal_append_config_complete(self, container: MinitrinoContainer):
+        """Signal that configs have been appended."""
+        _, uid = utils.container_user_and_id(self._ctx, container)
+        self._ctx.cmd_executor.execute(
+            f"bash -c 'echo FINISHED > {ETC_DIR}/.minitrino/append-config-status.txt'",
+            container=container,
+            docker_user=uid,
+        )
 
     def _is_port_in_use(self, port: int) -> bool:
         """Check if a port is in use on the local machine."""

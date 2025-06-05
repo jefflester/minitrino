@@ -2,10 +2,9 @@
 services:
 
   minitrino:
-    environment:
-      MINITRINO_BOOTSTRAP: 458-native-fs-workaround.sh
     volumes:
       - ./modules/catalog/hive/resources/cluster/hive.properties:/mnt/etc/catalog/hive.properties:ro
+      - ./modules/catalog/hive/resources/bootstrap/458-native-fs-workaround.sh:/mnt/bootstrap/hive/458-native-fs-workaround.sh:ro
 
   postgres-hive:
     image: postgres:${POSTGRES_HMS_VER}

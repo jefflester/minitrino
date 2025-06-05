@@ -1,5 +1,6 @@
 """Provisioning commands for Minitrino CLI."""
 
+import concurrent.futures
 import os
 import stat
 from typing import Optional
@@ -192,10 +193,10 @@ def runner(
         compose_cmd = build_command(docker_native, cmd_chunk)
         ctx.cmd_executor.execute(compose_cmd, environment=ctx.env.copy())
 
-        execute_bootstraps(modules)
         ctx.cluster.config.write_config(modules)
         ctx.cluster.validator.check_dup_config()
         ctx.cluster.ops.provision_workers(workers)
+        execute_bootstraps(modules)
 
     except Exception as e:
         rollback(no_rollback)
@@ -295,28 +296,39 @@ def build_command(
 def execute_bootstraps(
     ctx: MinitrinoContext, modules: Optional[list[str]] = None
 ) -> None:
-    """Execute bootstrap scripts."""
+    """Execute container bootstrap scripts for the specified modules."""
+
+    def _helper(ctx: MinitrinoContext, b: str, fq: str, y: str) -> None:
+        execute_container_bootstrap(ctx, b, fq, y)
+        ctx.cluster.ops.restart_containers([fq])
+
     if modules is None:
         modules = []
 
     services = ctx.modules.module_services(modules)
+    tasks = []
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        for service in services:
+            bootstrap = service[1].get("environment", {}).get("MINITRINO_BOOTSTRAP")
+            if bootstrap is None:
+                continue
+            container_name = service[1].get("container_name", "")
+            if not container_name:
+                container_name = service[0]
+            fq_container_name = ctx.cluster.resource.fq_container_name(container_name)
+            tasks.append(
+                executor.submit(
+                    _helper,
+                    ctx,
+                    bootstrap,
+                    fq_container_name,
+                    service[2],
+                )
+            )
+        for future in concurrent.futures.as_completed(tasks):
+            future.result()
 
-    # Get all container names for each service
-    for service in services:
-        bootstrap = service[1].get("environment", {}).get("MINITRINO_BOOTSTRAP")
-        if bootstrap is None:
-            continue
-        container_name = service[1].get("container_name", "")
-        if not container_name:
-            # If there is no container name, the service name becomes
-            # the name of the container
-            container_name = service[0]
-        fq_container_name = ctx.cluster.resource.fq_container_name(container_name)
-        execute_container_bootstrap(bootstrap, fq_container_name, service[2])
-        ctx.cluster.ops.restart_containers([fq_container_name])
 
-
-@utils.pass_environment()
 def execute_container_bootstrap(
     ctx: MinitrinoContext,
     bootstrap: str = "",

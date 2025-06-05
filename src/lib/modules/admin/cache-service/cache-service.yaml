@@ -2,13 +2,13 @@
 services:
 
   minitrino:
-    environment:
-      MINITRINO_BOOTSTRAP: bootstrap-cluster.sh
     volumes:
       - ./modules/admin/cache-service/resources/cluster/rules.json:/mnt/etc/rules.json:ro
       - ./modules/admin/cache-service/resources/cluster/cache.properties:/mnt/etc/cache.properties:ro
       - ./modules/admin/cache-service/resources/cluster/cache_svc.properties:/mnt/etc/catalog/cache_svc.properties:ro
       - ./modules/admin/cache-service/resources/cluster/hive_mv_tsr.properties:/mnt/etc/catalog/hive_mv_tsr.properties:ro
+      - ./modules/admin/cache-service/resources/bootstrap/bootstrap-cluster.sh:/mnt/bootstrap/cache-service/bootstrap-cluster.sh:ro
+      - ./modules/admin/cache-service/resources/bootstrap/458-native-fs-workaround.sh:/mnt/bootstrap/cache-service/458-native-fs-workaround.sh:ro
     ports:
       - ${__PORT_CACHE_SERVICE}:8180
 

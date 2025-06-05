@@ -386,15 +386,17 @@ class ClusterOperations:
             user = self._ctx.env.get("SERVICE_USER")
             tar_path = "/tmp/${CLUSTER_DIST}.tar.gz"
 
-            # Copy the source directory from the coordinator to the
-            # worker container
+            # Create tar archive of coordinator's /etc/${CLUSTER_DIST}
             self._ctx.cmd_executor.execute(
-                f"bash -c 'tar czf {tar_path} -C /etc ${{CLUSTER_DIST}}'",
+                "bash -c 'rm -rf /tmp/${CLUSTER_DIST}_copy'",
+                "bash -c 'cp -a /etc/${CLUSTER_DIST} /tmp/${CLUSTER_DIST}_copy'",
+                f"bash -c 'tar czf {tar_path} -C /tmp ${{CLUSTER_DIST}}_copy'",
+                "bash -c 'rm -rf /tmp/${CLUSTER_DIST}_copy'",
                 container=coordinator,
                 docker_user=user,
             )
 
-            # Copy the tar file from the coordinator container
+            # Copy the tar archive from the coordinator container
             bits, _ = coordinator.get_archive(
                 f"/tmp/{self._ctx.env.get('CLUSTER_DIST')}.tar.gz"
             )
@@ -402,7 +404,7 @@ class ClusterOperations:
 
             worker.put_archive("/tmp", tar_stream)
 
-            # Put the tar file into the new worker container & extract
+            # Extract the tar archive into the new worker container
             self._ctx.cmd_executor.execute(
                 f"bash -c 'tar xzf {tar_path} -C /etc'",
                 container=worker,
@@ -423,7 +425,6 @@ class ClusterOperations:
         self.restart_containers(restart)
 
     def _remove(self, obj_type: str, label: str | None, force: bool) -> None:
-        """Helper for public remove method."""
         resources = self._cluster.resource.resources([label] if label else None)
         items: list[MinitrinoDockerObject]
         if obj_type == "image":

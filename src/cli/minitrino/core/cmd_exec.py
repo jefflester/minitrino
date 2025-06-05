@@ -82,7 +82,29 @@ class CommandExecutor:
                 kwargs.get("environment", None), kwargs.get("container", None)
             )
             for command in args:
+                try:
                 results.append(self._execute_in_container(command, **kwargs))
+                except Exception as e:
+                    container: MinitrinoContainer = kwargs.get("container", None)
+                    try:
+                        logs = self._ctx.api_client.logs(
+                            container.name, tail=200, stderr=True, stdout=True
+                        )
+                        if isinstance(logs, bytes):
+                            logs = logs.decode(errors="replace")
+                        self._ctx.logger.error(
+                            f"Last 200 lines of logs from container "
+                            f"'{container.name}':\n{logs}"
+                        )
+                    except Exception as log_exc:
+                        self._ctx.logger.error(
+                            f"Failed to fetch logs for container "
+                            f"'{container.name}': {log_exc}"
+                        )
+                    raise MinitrinoError(
+                        f"Failed to execute command in container "
+                        f"'{container.name}': {e}"
+                    )
         else:
             kwargs["environment"] = self._construct_environment(
                 kwargs.get("environment", None)

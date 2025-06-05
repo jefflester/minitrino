@@ -74,8 +74,20 @@ def handle_exception(
         error_msg = str(error)
         exit_code = 1
 
+    tb = error.__traceback__
+    while tb and tb.tb_next:
+        tb = tb.tb_next
+    if tb:
+        frame = tb.tb_frame
+        filename = os.path.basename(frame.f_code.co_filename)
+        lineno = tb.tb_lineno
+        module = frame.f_globals.get("__name__", "")
+        origin = f"{module}:{filename}:{lineno}"
+    else:
+        origin = "unknown:unknown:0"
+
     logger = getattr(ctx, "logger", MinitrinoLogger())
-    logger.error(additional_msg, error_msg)
+    logger.error(f"[Origin: {origin}]", additional_msg, error_msg)
 
     if not skip_traceback:
         echo()  # Force a newline

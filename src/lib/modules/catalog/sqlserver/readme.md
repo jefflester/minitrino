@@ -32,8 +32,8 @@ This module uses named volumes to persist SQL Server data:
 volumes:
   sqlserver-data:
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-sqlserver
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.sqlserver=true
 ```
 
 The user-facing implication is that SQL Server data is retained even after
@@ -48,7 +48,7 @@ look out for these warnings:
 To remove these volumes, run:
 
 ```sh
-minitrino -v remove --volumes --label org.minitrino.module=catalog-sqlserver
+minitrino -v remove --volumes --label org.minitrino.module.catalog.sqlserver=true
 ```
   
 Or, remove them directly using the Docker CLI:

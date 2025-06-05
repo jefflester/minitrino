@@ -40,8 +40,8 @@ This module uses named volumes to persist ClickHouse data:
 volumes:
   clickhouse-data:
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-clickhouse
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.clickhouse=true
 ```
 
 The user-facing implication is that ClickHouse data is retained even after
@@ -56,7 +56,7 @@ look out for these warnings:
 To remove these volumes, run:
 
 ```sh
-minitrino -v remove --volumes --label org.minitrino.module=catalog-clickhouse
+minitrino -v remove --volumes --label org.minitrino.module.catalog.clickhouse=true
 ```
   
 Or, remove them directly using the Docker CLI:

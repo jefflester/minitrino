@@ -23,8 +23,8 @@ services:
     volumes:
       - iceberg-metadata:/home/iceberg
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-iceberg
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.iceberg=true
 
   # ---------------------------------------------------------------------------
   # I couldn't get path-style access to work with
@@ -55,8 +55,8 @@ services:
     volumes:
       - minio-iceberg-data:/data
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-iceberg
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.iceberg=true
 
   create-minio-iceberg-buckets:
     image: minio/mc:${MINIO_MC_VER}
@@ -76,15 +76,15 @@ services:
       tail -f /dev/null
       "
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-iceberg
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.iceberg=true
 
 volumes:
   iceberg-metadata:
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-iceberg
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.iceberg=true
   minio-iceberg-data:
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-iceberg
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.iceberg=true

@@ -34,12 +34,12 @@ This module uses named volumes to persist Iceberg metadata and MinIO data:
 volumes:
   iceberg-metadata:
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-iceberg 
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.iceberg=true
   minio-iceberg-data:
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-iceberg
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.iceberg=true
 ```
 
 The user-facing implication is that the Iceberg's metadata and the data files
@@ -54,7 +54,7 @@ module with named volumes is deployed––be sure to look out for these warning
 To remove these volumes, run:
 
 ```sh
-minitrino -v remove --volumes --label org.minitrino.module=catalog-iceberg
+minitrino -v remove --volumes --label org.minitrino.module.catalog.iceberg=true
 ```
   
 Or, remove them directly using the Docker CLI:

@@ -23,11 +23,11 @@ services:
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-elasticsearch
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.elasticsearch=true
 
 volumes:
   elasticsearch-data:
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-elasticsearch
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.elasticsearch=true

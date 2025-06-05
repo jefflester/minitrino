@@ -20,8 +20,8 @@ services:
     volumes:
       - postgres-delta-lake-data:/var/lib/postgresql/data
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-delta-lake
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.delta-lake=true
 
   metastore-delta-lake:
     image: jefflester/hive-metastore:${HMS_VER}
@@ -34,8 +34,8 @@ services:
     ports:
       - :9083
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-delta-lake
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.delta-lake=true
 
   minio-delta-lake:
     image: minio/minio:${MINIO_VER}
@@ -50,8 +50,8 @@ services:
     volumes:
       - minio-delta-lake-data:/data
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-delta-lake
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.delta-lake=true
 
   create-minio-delta-lake-buckets:
     image: minio/mc:${MINIO_MC_VER}
@@ -71,15 +71,15 @@ services:
       tail -f /dev/null
       "
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-delta-lake
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.delta-lake=true
 
 volumes:
   postgres-delta-lake-data:
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-delta-lake
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.delta-lake=true
   minio-delta-lake-data:
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-delta-lake
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.delta-lake=true

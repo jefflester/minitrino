@@ -17,11 +17,11 @@ services:
     volumes:
       - mariadb-data:/var/lib/mysql
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-mariadb
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.mariadb=true
 
 volumes:
   mariadb-data:
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-mariadb
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.mariadb=true

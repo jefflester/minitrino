@@ -17,11 +17,11 @@ services:
     volumes:
       - mysql-data:/var/lib/mysql
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-mysql
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.mysql=true
 
 volumes:
   mysql-data:
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-mysql
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.mysql=true

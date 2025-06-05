@@ -318,7 +318,7 @@ class ClusterOperations:
             if c.name
             and re.match(pattern, c.name)
             and c.name.startswith("minitrino-worker-")
-            and c.labels.get("org.minitrino") == "root"
+            and c.labels.get("org.minitrino.root") == "true"
         ]
         running_workers = len(worker_containers)
 
@@ -371,8 +371,8 @@ class ClusterOperations:
                     detach=True,
                     network=network_name,
                     labels={
-                        "org.minitrino": "root",
-                        "org.minitrino.module": "minitrino",
+                        "org.minitrino.root": "true",
+                        "org.minitrino.module.minitrino": "true",
                         "com.docker.compose.project": compose_project_name,
                         "com.docker.compose.service": "minitrino-worker",
                     },

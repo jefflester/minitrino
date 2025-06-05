@@ -18,5 +18,5 @@ services:
     env_file:
       - ./modules/admin/cache-service/resources/postgres/cache-svc.env
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=admin-cache-service
+      - org.minitrino.root=true
+      - org.minitrino.module.admin.cache-service=true

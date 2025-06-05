@@ -32,8 +32,8 @@ This module uses named volumes to persist Postgres data:
 volumes:
   postgres-data:
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-postgres
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.postgres=true
 ```
 
 The user-facing implication is that Postgres data is retained even after
@@ -48,7 +48,7 @@ look out for these warnings:
 To remove these volumes, run:
 
 ```sh
-minitrino -v remove --volumes --label org.minitrino.module=catalog-postgres
+minitrino -v remove --volumes --label org.minitrino.module.catalog.postgres=true
 ```
   
 Or, remove them directly using the Docker CLI:

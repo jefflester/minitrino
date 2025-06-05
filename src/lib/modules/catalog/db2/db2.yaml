@@ -16,5 +16,5 @@ services:
     ports:
       - ${__PORT_DB2}:50000
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-db2
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.db2=true

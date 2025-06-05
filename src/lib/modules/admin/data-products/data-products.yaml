@@ -8,4 +8,4 @@ services:
         data-product.starburst-jdbc-url=jdbc:trino://minitrino:8080
         data-product.starburst-user=admin
     labels:
-      - org.minitrino.module=admin-data-products
+      - org.minitrino.module.admin.data-products=true

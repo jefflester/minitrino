@@ -10,18 +10,18 @@ services:
     build:
       context: ./modules/catalog/test/
       labels:
-        - org.minitrino=root
-    command: [tail, -f, /dev/null]  # Keep alive
+        - org.minitrino.root=true
+    command: [tail, -f, /dev/null]
     image: minitrino/test:latest
     container_name: test-${CLUSTER_NAME}
     volumes:
       - test-data:/etc/test/
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-test
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.test=true
 
 volumes:
   test-data:
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-test
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.test=true

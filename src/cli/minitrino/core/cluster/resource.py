@@ -68,7 +68,7 @@ class ClusterResourceManager:
             Docker objects must match all labels in the list to be
             included in the result. If not provided, resource retrieval
             is limited only to the root label `ROOT_LABEL`
-            (`org.minitrino=root`).
+            (`org.minitrino.root=true`).
 
         Returns
         -------
@@ -141,7 +141,7 @@ class ClusterResourceManager:
         Unlike the `resources()` method, this method does not group
         resources by cluster or take additional labels to filter by.
         Fetch containers, volumes, images, and networks that are tagged
-        with the global label `ROOT_LABEL` (`org.minitrino=root`).
+        with the global label `ROOT_LABEL` (`org.minitrino.root=true`).
         """
         filters = {"label": [ROOT_LABEL]}
         cluster = self._ctx.cluster_name

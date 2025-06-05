@@ -36,8 +36,8 @@ This module uses a named volume to persist Postgres data:
 volumes:
   postgres-insights-data:
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=admin-insights
+      - org.minitrino.root=true
+      - org.minitrino.module.admin-insights=true
 ```
 
 The user-facing implication is that the data in Postgres is retained even after
@@ -52,7 +52,7 @@ look out for these warnings:
 To remove these volumes, run:
 
 ```sh
-minitrino -v remove --volumes --label org.minitrino.module=admin-insights
+minitrino -v remove --volumes --label org.minitrino.module.admin-insights=true
 ```
 
 Or, remove them directly using the Docker CLI:

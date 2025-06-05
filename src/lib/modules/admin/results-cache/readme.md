@@ -32,8 +32,8 @@ This module uses named volumes to persist MinIO data:
 volumes:
   minio-results-cache-data:
     labels:
-      - org.minitrino=root
-      - org.minitrino.module.hive=admin-results-cache
+      - org.minitrino.root=true
+      - org.minitrino.module.admin.results-cache=true
 ```
 
 The user-facing implication is that the data files stored in MinIO are retained
@@ -48,7 +48,7 @@ sure to look out for these warnings:
 To remove these volumes, run:
 
 ```sh
-minitrino -v remove --volumes --label org.minitrino.module.hive=admin-results-cache
+minitrino -v remove --volumes --label org.minitrino.module.admin.results-cache=true
 ```
 
 Or, remove them directly using the Docker CLI:

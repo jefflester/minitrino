@@ -5,5 +5,5 @@ services:
     volumes:
       - ./modules/catalog/faker/resources/cluster/faker.properties:/mnt/etc/catalog/faker.properties:ro
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-faker
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.faker=true

@@ -15,11 +15,11 @@ services:
     volumes:
       - sqlserver-data:/var/opt/mssql
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-sqlserver
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.sqlserver=true
 
 volumes:
   sqlserver-data:
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-sqlserver
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.sqlserver=true

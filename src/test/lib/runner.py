@@ -63,7 +63,8 @@ class ModuleTest:
         'trino'.
         """
         cmd_result = common.execute_cmd(
-            f"minitrino modules -m {self.module} -j | jq --arg module {self.module} '.[$module].enterprise'"
+            f"minitrino modules -m {self.module} -j | "
+            f"jq --arg module {self.module} '.[$module].enterprise'"
         )
         if self.image == "trino" and cmd_result.output == "true":
             log_status(f"Module '{self.module}' is an enterprise module, skipping test")
@@ -104,7 +105,8 @@ class ModuleTest:
 
         for t in tests:
             log_status(
-                f"Running test type '{t.get('type')}' for module '{self.module}': '{t.get('name')}'"
+                f"Running test type '{t.get('type')}' "
+                f"for module '{self.module}': '{t.get('name')}'"
             )
             if t.get("type") == "query":
                 self.test_query(t)
@@ -131,12 +133,16 @@ class ModuleTest:
 
         if not contains and row_count is None:
             raise KeyError(
-                "JSON schema error: 'contains' and/or 'rowCount' must be defined in query tests"
+                "JSON schema error: 'contains' and/or 'rowCount' "
+                "must be defined in query tests"
             )
 
         # Wait for server to become available
         i = 0
-        cmd = "curl -X GET -H 'Accept: application/json' -H 'X-Trino-User: admin' 'localhost:8080/v1/info/'"
+        cmd = (
+            "curl -X GET -H 'Accept: application/json' "
+            "-H 'X-Trino-User: admin' 'localhost:8080/v1/info/'"
+        )
         while i <= 60:
             cmd_result = common.execute_cmd(cmd, "minitrino")
             if '"starting":false' in cmd_result.output:
@@ -283,9 +289,10 @@ class ModuleTest:
                 for c in contains:
                     assert c in cmd_result.output, f"'{c}' not in {cmd_type} output"
                 if isinstance(exit_code, int):
-                    assert (
-                        exit_code == cmd_result.exit_code
-                    ), f"Unexpected exit code: {cmd_result.exit_code} expected: {exit_code}"
+                    assert exit_code == cmd_result.exit_code, (
+                        f"Unexpected exit code: {cmd_result.exit_code} "
+                        f"expected: {exit_code}"
+                    )
             except AssertionError as e:
                 if i < retry:
                     print(f"{cmd_type.title()} did not succeed. Retrying...")
@@ -293,7 +300,8 @@ class ModuleTest:
                     time.sleep(1)
                 else:
                     raise TimeoutError(
-                        f"'{c}' not in {cmd_type} output after {retry} retries. Last error: {e}"
+                        f"'{c}' not in {cmd_type} output after {retry} retries. "
+                        f"Last error: {e}"
                     )
 
     def _validate(self, json_data={}) -> None:

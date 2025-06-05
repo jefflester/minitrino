@@ -2,8 +2,8 @@
 
 import json
 import logging
-import os
 import sys
+from typing import Generator
 
 import docker
 import pytest
@@ -12,7 +12,12 @@ from test import common
 from test.cli import utils
 from test.cli.constants import CLUSTER_NAME
 from test.cli.utils import logger
-from test.common import CONFIG_FILE, MINITRINO_USER_DIR
+
+
+def pytest_sessionstart(session):
+    """Run pre-work before any tests are collected or run."""
+    utils.remove()
+    utils.cleanup_config()
 
 
 @pytest.fixture
@@ -60,7 +65,7 @@ def log_msg(request: pytest.FixtureRequest) -> str:
 
 
 @pytest.fixture
-def log_test(log_msg: str) -> None:
+def log_test(log_msg: str) -> Generator:
     """
     Log a test start and end message.
 
@@ -75,7 +80,7 @@ def log_test(log_msg: str) -> None:
 
 
 @pytest.fixture
-def down() -> None:
+def down() -> Generator:
     """
     Bring down all running containers.
 
@@ -88,7 +93,7 @@ def down() -> None:
 
 
 @pytest.fixture
-def remove() -> None:
+def remove() -> Generator:
     """
     Remove resources for all modules in all clusters.
 
@@ -97,17 +102,11 @@ def remove() -> None:
     Runs after the test.
     """
     yield
-    msg = "Removing all volumes and networks."
-    utils.shut_down()
-    logger.debug(msg)
-    utils.cli_cmd(
-        utils.build_cmd("remove", "all", append=["--volume", "--network"]),
-        log_output=False,
-    )
+    utils.remove()
 
 
 @pytest.fixture
-def start_docker() -> None:
+def start_docker() -> Generator:
     """
     Start the Docker daemon.
 
@@ -121,7 +120,7 @@ def start_docker() -> None:
 
 
 @pytest.fixture(scope="session")
-def stop_docker() -> None:
+def stop_docker() -> Generator:
     """
     Stop the Docker daemon.
 
@@ -136,7 +135,7 @@ def stop_docker() -> None:
 
 
 @pytest.fixture
-def cleanup_config() -> None:
+def cleanup_config() -> Generator:
     """
     Ensure a sample config file and directory exist.
 
@@ -144,33 +143,15 @@ def cleanup_config() -> None:
     -----
     Runs before and after the test.
     """
-
-    def cleanup():
-        logger.debug(f"Ensuring directory exists: {MINITRINO_USER_DIR}")
-        os.makedirs(MINITRINO_USER_DIR, exist_ok=True)
-        if os.path.isfile(CONFIG_FILE):
-            logger.debug(f"Removing existing config file: {CONFIG_FILE}")
-            os.remove(CONFIG_FILE)
-        config = (
-            "[config]\n"
-            "LIB_PATH=\n"
-            "CLUSTER_VER=\n"
-            "TEXT_EDITOR=\n"
-            "LIC_PATH=\n"
-            "SECRET_KEY=abc123\n"
-        )
-        logger.debug(f"Writing sample config to: {CONFIG_FILE}")
-        utils.write_file(CONFIG_FILE, config)
-
     logger.debug("Running initial config cleanup (before test)")
-    cleanup()
+    utils.cleanup_config()
     yield
     logger.debug("Running config cleanup (after test)")
-    cleanup()
+    utils.cleanup_config()
 
 
 @pytest.fixture
-def reset_metadata(request: pytest.FixtureRequest) -> None:
+def reset_metadata(request: pytest.FixtureRequest) -> Generator:
     """
     Reset the given module's `metadata.json` file to default values.
 
@@ -205,7 +186,7 @@ def reset_metadata(request: pytest.FixtureRequest) -> None:
 
 
 @pytest.fixture
-def provision_clusters(request: pytest.FixtureRequest) -> None:
+def provision_clusters(request: pytest.FixtureRequest) -> Generator:
     """
     Provision one or more clusters with the `test` module by default.
 

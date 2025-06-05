@@ -110,7 +110,6 @@ def cli(
     no_scrub : bool
         If True, do not scrub sensitive data from user config file.
     """
-
     ctx.initialize()
     utils.check_lib(ctx)
 
@@ -474,8 +473,7 @@ def move_snapshot_to_destination(
     name: str, temp_snapshot_dir: str, directory: str
 ) -> None:
     """
-    Move the tarball and snapshot directory to the user-specified
-    directory.
+    Move resources to the user-specified directory.
 
     Parameters
     ----------

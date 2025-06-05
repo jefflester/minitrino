@@ -73,10 +73,10 @@ def cli(
             "Provide a valid container name and try again.",
         )
     it = "-it" if interactive else ""
-    command = " ".join(command) if command else "/bin/bash"
-    cmd = f"docker exec{f' {it}' if it else ''} {fqcn} {command}"
+    cmd_str = " ".join(command) if command else "/bin/bash"
+    cmd = f"docker exec{f' {it}' if it else ''} {fqcn} {cmd_str}"
     output = ctx.cmd_executor.execute(
         cmd, interactive=interactive, suppress_output=True
     )[0].output
     if not interactive:
-    ctx.logger.info(output)
+        ctx.logger.info(output)

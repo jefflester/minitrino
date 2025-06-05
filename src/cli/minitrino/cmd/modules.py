@@ -156,7 +156,6 @@ def log_info(ctx: MinitrinoContext, module_name: str, module_metadata: dict) -> 
     module_metadata : dict
         Metadata associated with the module.
     """
-
     log_msg = [f"Module: {module_name}\n"]
     keys = [
         "description",

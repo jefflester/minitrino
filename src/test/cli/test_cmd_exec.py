@@ -5,8 +5,6 @@ import pytest
 from test.cli import utils
 from test.cli.constants import CLUSTER_NAME
 
-CMD_EXEC = {"base": "exec"}
-
 pytestmark = pytest.mark.usefixtures("log_test", "start_docker")
 
 
@@ -109,6 +107,6 @@ def test_exec_scenarios(scenario: ExecScenario) -> None:
     if scenario.cmd_flags:
         append_flags.extend(scenario.cmd_flags)
     append_flags.append(scenario.cmd)
-    result = utils.cli_cmd(utils.build_cmd(**CMD_EXEC, append=append_flags))
+    result = utils.cli_cmd(utils.build_cmd(base="exec", append=append_flags))
     utils.assert_exit_code(result, expected=scenario.expected_exit_code)
     utils.assert_in_output(*scenario.expected_output, result=result)

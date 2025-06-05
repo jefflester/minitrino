@@ -121,7 +121,8 @@ def start_docker_daemon(logger: Optional[logging.Logger] = None) -> None:
             started = try_start(["open", "-a", "Rancher Desktop"])
         if not started:
             raise RuntimeError(
-                "No supported Docker backend found (Docker Desktop, OrbStack, Colima, Rancher Desktop)."
+                "No supported Docker backend found "
+                "(Docker Desktop, OrbStack, Colima, Rancher Desktop)."
             )
     elif "linux" in sys.platform.lower():
         if shutil.which("systemctl"):
@@ -167,10 +168,10 @@ def try_stop(cmd: list[str]) -> bool:
 
 def force_quit_docker_backends():
     """
-    Immediately quit all known Docker backends (Docker Desktop,
-    OrbStack, Rancher Desktop) on macOS. Tries AppleScript for graceful
-    quit, then killall for UI and backend processes. No sudo required.
-    For Colima, uses 'colima stop'.
+    Immediately quit all known Docker backends on macOS.
+
+    Tries AppleScript for graceful quit, then killall for UI and backend
+    processes. No sudo required. For Colima, uses 'colima stop'.
     """
     import shutil
     from time import sleep
@@ -301,7 +302,7 @@ def execute_cmd(
     cmd: str = "",
     container: Optional[str] = None,
     env: Optional[dict[str, str]] = None,
-    user: Optional[str] = "root",
+    user: str = "root",
 ) -> CommandResult:
     """
     Execute a command in the user's shell or inside of a container.
@@ -379,7 +380,7 @@ def _execute_in_container(
     cmd: str = "",
     container_name: str = "",
     env: Optional[dict[str, str]] = None,
-    user: Optional[str] = "root",
+    user: str = "root",
 ) -> CommandResult:
     """
     Execute a command inside of a container.
@@ -442,9 +443,7 @@ def _execute_in_container(
     return CommandResult(cmd, output, exit_code)
 
 
-def execute_in_coordinator(
-    cmd: str = None, container_name: str = None
-) -> CommandResult:
+def execute_in_coordinator(cmd: str = "", container_name: str = "") -> CommandResult:
     """
     Execute a command in the coordinator container.
 

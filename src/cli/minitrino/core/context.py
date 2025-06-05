@@ -69,15 +69,14 @@ class MinitrinoContext:
     env: EnvironmentVariables
     modules: Modules
     cmd_executor: CommandExecutor
-    docker_client: docker.DockerClient
-    api_client: docker.APIClient
+    docker_client: Optional[docker.DockerClient]
+    api_client: Optional[docker.APIClient]
     all_clusters: bool
     provisioned_clusters: list[str]
     user_home_dir: str
     minitrino_user_dir: str
     config_file: str
     snapshot_dir: str
-    lib_dir: str
 
     def __init__(self):
         # ------------------------------

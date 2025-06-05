@@ -6,7 +6,7 @@ import pytest
 from test.cli import utils
 from test.cli.constants import CLUSTER_NAME, CLUSTER_NAME_2
 
-CMD_RESOURCES = {"base": "resources", "cluster": "all"}
+CMD_RESOURCES: utils.BuildCmdArgs = {"base": "resources", "cluster": "all"}
 CLUSTER_RESOURCES = [
     f"minitrino_{CLUSTER_NAME}",  # network
     f"minitrino-{CLUSTER_NAME}_test-data",  # volume
@@ -91,10 +91,12 @@ def test_resources_scenarios(scenario: ResourcesScenario) -> None:
         utils.cli_cmd(
             utils.build_cmd("remove", "all", append=["--volumes", "--networks"])
         )
-        result = utils.cli_cmd(utils.build_cmd(**CMD_RESOURCES))
+        cmd_args = CMD_RESOURCES.copy()
+        result = utils.cli_cmd(utils.build_cmd(**cmd_args))
         utils.assert_exit_code(result)
         utils.assert_not_in_output(*CLUSTER_RESOURCES, result=result)
-    result = utils.cli_cmd(utils.build_cmd(**CMD_RESOURCES))
+    cmd_args = CMD_RESOURCES.copy()
+    result = utils.cli_cmd(utils.build_cmd(**cmd_args))
     utils.assert_exit_code(result)
     if scenario.cluster_count == 1:
         utils.assert_in_output(*CLUSTER_RESOURCES, result=result)

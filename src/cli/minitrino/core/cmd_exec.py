@@ -83,7 +83,7 @@ class CommandExecutor:
             )
             for command in args:
                 try:
-                results.append(self._execute_in_container(command, **kwargs))
+                    results.append(self._execute_in_container(command, **kwargs))
                 except Exception as e:
                     container: MinitrinoContainer = kwargs.get("container", None)
                     try:
@@ -139,7 +139,7 @@ class CommandExecutor:
         )
 
         if interactive:
-            process = subprocess.run(
+            completed = subprocess.run(
                 command,
                 shell=True,
                 env=kwargs.get("environment", {}),
@@ -148,6 +148,7 @@ class CommandExecutor:
                 stderr=sys.stderr,
             )
             output = ""
+            rc = completed.returncode
         else:
             process = subprocess.Popen(
                 command,
@@ -164,7 +165,6 @@ class CommandExecutor:
                 # is generated as a string, so there is no need to
                 # decode bytes. The only cleansing we need to do is to
                 # run the string through the `_strip_ansi()` function.
-
                 started_stream = False
                 output = ""
                 if process.stdout is not None:
@@ -180,8 +180,11 @@ class CommandExecutor:
                         output += output_line
             else:
                 output, _ = process.communicate()
+            rc_raw = (
+                process.returncode if hasattr(process, "returncode") else process.poll()
+            )
+            rc = rc_raw if isinstance(rc_raw, int) else -1
 
-        rc = process.returncode if hasattr(process, "returncode") else process.poll()
         if rc != 0 and kwargs.get("trigger_error", True):
             raise MinitrinoError(
                 f"Failed to execute shell command:\n{command}\n"

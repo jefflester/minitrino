@@ -3,53 +3,16 @@
 import json
 import logging
 import os
-from typing import Dict, Optional
+from typing import Dict, Optional, TypedDict
 
 import docker
 from click.testing import CliRunner, Result
 
 from minitrino.cli import cli
 from test.cli.constants import CLUSTER_NAME
-from test.common import CommandResult, get_containers
+from test.common import CONFIG_FILE, MINITRINO_USER_DIR, CommandResult, get_containers
 
 logger = logging.getLogger("minitrino.test")
-
-
-def cli_cmd(
-    cmd: list[str],
-    input: str | None = None,
-    env: Optional[Dict[str, str]] = None,
-    log_output: bool = True,
-) -> Result:
-    """
-    Log and execute a CLI command.
-
-    Parameters
-    ----------
-    cmd : list[str]
-        The command and arguments to invoke.
-    input : str | None
-        Input string to pass to the command (for prompts, etc.).
-        Defaults to None.
-    env : Optional[Dict[str, str]]
-        Environment variables to set for the command. Defaults to an
-        empty dict.
-    log_output : bool
-        Whether to log the output of the command. Defaults to `True`.
-
-    Returns
-    -------
-    Result
-        The Click testing Result object.
-    """
-    msg = "Invoking CLI command '%s' %s"
-    logger.info(msg % (cmd, " with input: %s" % input if input else ""))
-    runner = CliRunner()
-    env = env or {}
-    result = runner.invoke(cli, cmd, input=input, env=env)
-    if log_output:
-        logger.info(f"Result output:\n{result.output}")
-    return result
 
 
 def docker_client() -> tuple[docker.DockerClient, docker.APIClient]:
@@ -64,6 +27,25 @@ def docker_client() -> tuple[docker.DockerClient, docker.APIClient]:
 # ------------------------
 # Config Helpers
 # ------------------------
+
+
+def cleanup_config():
+    """Ensure a sample config file and directory exist."""
+    logger.debug(f"Ensuring directory exists: {MINITRINO_USER_DIR}")
+    os.makedirs(MINITRINO_USER_DIR, exist_ok=True)
+    if os.path.isfile(CONFIG_FILE):
+        logger.debug(f"Removing existing config file: {CONFIG_FILE}")
+        os.remove(CONFIG_FILE)
+    config = (
+        "[config]\n"
+        "LIB_PATH=\n"
+        "CLUSTER_VER=\n"
+        "TEXT_EDITOR=\n"
+        "LIC_PATH=\n"
+        "SECRET_KEY=abc123\n"
+    )
+    logger.debug(f"Writing sample config to: {CONFIG_FILE}")
+    write_file(CONFIG_FILE, config)
 
 
 def update_metadata_json(module: str, updates: Optional[list[dict]] = None) -> None:
@@ -324,6 +306,15 @@ def shut_down() -> None:
     cli_cmd(build_cmd("down", "all", append=["--sig-kill"], verbose=False))
 
 
+def remove() -> None:
+    """Remove all volumes and networks."""
+    shut_down()
+    logger.debug("Removing all volumes and networks.")
+    cli_cmd(
+        build_cmd("remove", "all", append=["--volume", "--network"]), log_output=False
+    )
+
+
 # ------------------------
 # Scenario Helpers
 # ------------------------
@@ -351,11 +342,26 @@ def normalize(s: str) -> str:
     return re.sub(r"\s+", " ", s).strip()
 
 
+# ------------------------
+# CLI Command Helpers
+# ------------------------
+
+
+class BuildCmdArgs(TypedDict, total=False):
+    """Arguments for build_cmd."""
+
+    base: str
+    append: list[str]
+    prepend: list[str]
+    cluster: str
+    verbose: bool
+
+
 def build_cmd(
-    base: Optional[str] = None,
-    cluster: Optional[str] = CLUSTER_NAME,
-    append: Optional[list[str]] = None,
-    prepend: Optional[list[str]] = None,
+    base: str = "",
+    cluster: str = CLUSTER_NAME,
+    append: list[str] = [],
+    prepend: list[str] = [],
     verbose: bool = True,
 ) -> list[str]:
     """
@@ -366,13 +372,13 @@ def build_cmd(
 
     Parameters
     ----------
-    base : Optional[str]
+    base : str
         The base command (e.g. 'down', 'remove').
-    cluster : Optional[str]
+    cluster : str
         The cluster to use. Defaults to 'cli-test'.
-    append : Optional[list[str]]
+    append : list[str]
         Extra arguments to add to the command after the base command.
-    prepend : Optional[list[str]]
+    prepend : list[str]
         Extra arguments to add to the command before the base command.
     verbose : bool
         Whether to add the '-v' flag to the command. Defaults to `True`.
@@ -391,12 +397,50 @@ def build_cmd(
     >>> build_cmd("down", append=["--sig-kill"], prepend=["--env", "FOO=bar"])
     ["-v", "--cluster", "cli-test", "--env", "FOO=bar", "down", "--sig-kill"]
     """
-    base = base or None
-    append = append or []
-    prepend = prepend or []
     cmd = ["--cluster", cluster, *prepend, base, *append]
-    if None in cmd:
-        cmd.remove(None)
     if verbose:
         cmd.insert(0, "-v")
     return cmd
+
+
+def cli_cmd(
+    cmd: list[str],
+    input: str | None = None,
+    env: Optional[Dict[str, str]] = None,
+    log_output: bool = True,
+) -> Result:
+    """
+    Log and execute a CLI command.
+
+    Parameters
+    ----------
+    cmd : list[str]
+        The command and arguments to invoke.
+    input : str | None
+        Input string to pass to the command (for prompts, etc.).
+        Defaults to None.
+    env : Optional[Dict[str, str]]
+        Environment variables to set for the command. Defaults to an
+        empty dict.
+    log_output : bool
+        Whether to log the output of the command. Defaults to `True`.
+
+    Returns
+    -------
+    Result
+        The Click testing Result object.
+    """
+    msg = "Invoking CLI command '%s' %s"
+    logger.info(
+        msg
+        % (
+            f"minitrino {' '.join(cmd) if cmd else ''}",
+            " with input: %s" % input if input else "",
+        )
+    )
+    runner = CliRunner()
+    env = env or {}
+    result = runner.invoke(cli, cmd, input=input, env=env)
+    if log_output:
+        logger.info(f"Result output:\n{result.output}")
+    return result

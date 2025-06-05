@@ -5,9 +5,6 @@ import pytest
 from test.cli import utils
 from test.cli.constants import CLUSTER_NAME
 
-CMD_RESTART = {"base": "restart"}
-CMD_PROVISION = {"base": "provision"}
-
 pytestmark = pytest.mark.usefixtures("start_docker")
 
 
@@ -66,10 +63,10 @@ restart_scenarios = [
 @pytest.mark.usefixtures("log_test", "cleanup_config", "down")
 def test_restart_scenarios(scenario: RestartScenario) -> None:
     """Run each RestartScenario."""
-    cmd = utils.build_cmd(**CMD_PROVISION, append=scenario.provision_args)
+    cmd = utils.build_cmd(base="provision", append=scenario.provision_args)
     result = utils.cli_cmd(cmd)
     utils.assert_exit_code(result)
-    result = utils.cli_cmd(utils.build_cmd(**CMD_RESTART))
+    result = utils.cli_cmd(utils.build_cmd(base="restart"))
     utils.assert_exit_code(result)
     for expected in scenario.expected_outputs:
         utils.assert_in_output(expected, result=result)

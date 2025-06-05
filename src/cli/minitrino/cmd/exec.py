@@ -78,4 +78,5 @@ def cli(
     output = ctx.cmd_executor.execute(
         cmd, interactive=interactive, suppress_output=True
     )[0].output
+    if not interactive:
     ctx.logger.info(output)

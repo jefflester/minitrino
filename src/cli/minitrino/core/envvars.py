@@ -215,5 +215,5 @@ class EnvironmentVariables(dict):
         if self:
             self._ctx.logger.debug(
                 f"Registered environment variables:\n"
-                f"{json.dumps(self, indent=2, sort_keys=True)}",
+                f"{json.dumps(self, sort_keys=True)}",
             )

@@ -7,6 +7,8 @@ import pytest
 from test.cli import utils
 from test.common import CONFIG_FILE
 
+pytestmark = pytest.mark.usefixtures("log_test")
+
 
 @dataclass
 class DaemonOffScenario:
@@ -23,8 +25,6 @@ class DaemonOffScenario:
         The input value.
     expected_exit_code : int
         The expected exit code.
-    expected_in_output : str
-        The expected output string to assert.
     log_msg : str
         The log message to display before running the test.
     """
@@ -33,7 +33,6 @@ class DaemonOffScenario:
     cmd: dict
     input_val: Optional[str]
     expected_exit_code: int
-    expected_in_output: str
     log_msg: str
 
 
@@ -43,7 +42,6 @@ daemon_off_scenarios = [
         cmd={"base": "down"},
         input_val=None,
         expected_exit_code=2,
-        expected_in_output="Error when pinging the Docker server",
         log_msg="Down command: fails when daemon is off",
     ),
     DaemonOffScenario(
@@ -51,7 +49,6 @@ daemon_off_scenarios = [
         cmd={"base": "provision"},
         input_val=None,
         expected_exit_code=2,
-        expected_in_output="Error when pinging the Docker server",
         log_msg="Provision command: fails when daemon is off",
     ),
     DaemonOffScenario(
@@ -59,7 +56,6 @@ daemon_off_scenarios = [
         cmd={"base": "remove"},
         input_val=None,
         expected_exit_code=2,
-        expected_in_output="Error when pinging the Docker server",
         log_msg="Remove command: fails when daemon is off",
     ),
     DaemonOffScenario(
@@ -67,7 +63,6 @@ daemon_off_scenarios = [
         cmd={"base": "snapshot", "append": ["--name", "test"]},
         input_val="y\n",
         expected_exit_code=2,
-        expected_in_output="Error when pinging the Docker server",
         log_msg="Snapshot command: fails when daemon is off",
     ),
     DaemonOffScenario(
@@ -75,24 +70,24 @@ daemon_off_scenarios = [
         cmd={"base": "modules", "append": ["--running"]},
         input_val=None,
         expected_exit_code=2,
-        expected_in_output="Error when pinging the Docker server",
         log_msg="Modules (running) command: fails when daemon is off",
     ),
 ]
 
 
 @pytest.mark.parametrize(
-    "scenario",
-    daemon_off_scenarios,
+    "scenario,log_msg",
+    utils.get_scenario_and_log_msg(daemon_off_scenarios),
     ids=utils.get_scenario_ids(daemon_off_scenarios),
-    indirect=False,
+    indirect=["log_msg"],
 )
-@pytest.mark.usefixtures("log_test", "stop_docker")
+@pytest.mark.usefixtures("stop_docker")
 def test_daemon_off_scenarios(scenario: DaemonOffScenario) -> None:
     """Run each DaemonOffScenario."""
+    err_msg = "Error when pinging the Docker server"
     result = utils.cli_cmd(utils.build_cmd(**scenario.cmd), scenario.input_val)
     utils.assert_exit_code(result, expected=scenario.expected_exit_code)
-    utils.assert_in_output(scenario.expected_in_output, result=result)
+    utils.assert_in_output(err_msg, result=result)
 
 
 @dataclass
@@ -166,26 +161,26 @@ env_scenarios = [
     ids=utils.get_scenario_ids(env_scenarios),
     indirect=["log_msg"],
 )
-@pytest.mark.usefixtures("log_test", "cleanup_config")
+@pytest.mark.usefixtures("cleanup_config")
 def test_env_scenarios(scenario: EnvScenario) -> None:
     """Run each EnvScenario."""
     if scenario.source == "cli":
         result = utils.cli_cmd(
             utils.build_cmd(
-                "version", prepend=["--env", f"{scenario.envvar}={scenario.envval}"]
+                "modules", prepend=["--env", f"{scenario.envvar}={scenario.envval}"]
             ),
         )
     elif scenario.source == "shell":
         result = utils.cli_cmd(
-            utils.build_cmd("version"),
+            utils.build_cmd("modules"),
             env={scenario.envvar: scenario.envval},
         )
     elif scenario.source == "config":
         utils.write_file(CONFIG_FILE, f"{scenario.envvar}={scenario.envval}", mode="a")
-        result = utils.cli_cmd(utils.build_cmd("version"))
+        result = utils.cli_cmd(utils.build_cmd("modules"))
         os.remove(CONFIG_FILE)
     else:  # unset
-        result = utils.cli_cmd(utils.build_cmd("version"))
+        result = utils.cli_cmd(utils.build_cmd("modules"))
     utils.assert_exit_code(result)
     if scenario.expected_present:
         utils.assert_in_output(scenario.envvar, scenario.envval, result=result)
@@ -233,11 +228,11 @@ invalid_env_scenarios = [
     ids=utils.get_scenario_ids(invalid_env_scenarios),
     indirect=["log_msg"],
 )
-@pytest.mark.usefixtures("log_test", "cleanup_config")
+@pytest.mark.usefixtures("cleanup_config")
 def test_invalid_env_scenarios(scenario: InvalidEnvScenario) -> None:
     """Run each InvalidEnvScenario."""
     result = utils.cli_cmd(
-        utils.build_cmd("version", prepend=["--env", scenario.envflag])
+        utils.build_cmd("modules", prepend=["--env", scenario.envflag])
     )
     utils.assert_exit_code(result, expected=2)
     utils.assert_in_output("Invalid key-value pair", result=result)
@@ -283,7 +278,7 @@ invalid_lib_scenarios = [
     ids=utils.get_scenario_ids(invalid_lib_scenarios),
     indirect=["log_msg"],
 )
-@pytest.mark.usefixtures("log_test", "cleanup_config")
+@pytest.mark.usefixtures("cleanup_config")
 def test_invalid_lib_scenarios(scenario: InvalidLibScenario) -> None:
     """Run each InvalidLibScenario."""
     result = utils.cli_cmd(
@@ -298,7 +293,7 @@ def test_invalid_lib_scenarios(scenario: InvalidLibScenario) -> None:
 TEST_MULTI_ENV_MSG = "Pass in multiple environment variables"
 
 
-@pytest.mark.usefixtures("log_test", "cleanup_config")
+@pytest.mark.usefixtures("cleanup_config")
 @pytest.mark.parametrize("log_msg", [TEST_MULTI_ENV_MSG], indirect=True)
 def test_multiple_env() -> None:
     """
@@ -307,21 +302,18 @@ def test_multiple_env() -> None:
     """
     result = utils.cli_cmd(
         utils.build_cmd(
-            "version",
+            "modules",
             prepend=[
-                "--env",
-                "COMPOSE_PROJECT_NAME=test",
                 "--env",
                 "CLUSTER_VER=420-e",
                 "--env",
-                "TRINO=is=awesome",
+                "FOO=bar",
             ],
         ),
     )
     utils.assert_exit_code(result)
     utils.assert_in_output(
-        '"COMPOSE_PROJECT_NAME": "test"',
         '"CLUSTER_VER": "420-e"',
-        '"TRINO": "is=awesome"',
+        '"FOO": "bar"',
         result=result,
     )

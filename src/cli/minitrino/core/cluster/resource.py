@@ -53,6 +53,7 @@ class ClusterResourceManager:
 
     def __init__(self, ctx: MinitrinoContext):
         self._ctx = ctx
+        self._logged_cluster_resource_msg = False
 
     def resources(
         self, addl_labels: Optional[list[str]] = None
@@ -67,7 +68,7 @@ class ClusterResourceManager:
             Docker objects must match all labels in the list to be
             included in the result. If not provided, resource retrieval
             is limited only to the root label `ROOT_LABEL`
-            (`org.minitrino=root`).
+            (`org.minitrino.root=true`).
 
         Returns
         -------
@@ -140,7 +141,7 @@ class ClusterResourceManager:
         Unlike the `resources()` method, this method does not group
         resources by cluster or take additional labels to filter by.
         Fetch containers, volumes, images, and networks that are tagged
-        with the global label `ROOT_LABEL` (`org.minitrino=root`).
+        with the global label `ROOT_LABEL` (`org.minitrino.root=true`).
         """
         filters = {"label": [ROOT_LABEL]}
         cluster = self._ctx.cluster_name
@@ -259,10 +260,12 @@ class ClusterResourceManager:
                     cluster_names.append(project.split("minitrino-")[1])
 
         cluster_names = sorted(list(set(cluster_names)))
-        self._ctx.logger.debug(
-            f"Identified the following clusters with existing "
-            f"Docker resources: {cluster_names}"
-        )
+        if not self._logged_cluster_resource_msg:
+            self._ctx.logger.debug(
+                f"Identified the following clusters with existing "
+                f"Docker resources: {cluster_names}"
+            )
+            self._logged_cluster_resource_msg = True
         return cluster_names
 
     def _deduplicate_objects(

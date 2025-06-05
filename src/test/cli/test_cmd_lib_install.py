@@ -1,4 +1,5 @@
 import os
+import shutil
 from dataclasses import dataclass
 from typing import Any, Optional
 
@@ -8,6 +9,21 @@ from test.cli import utils
 from test.common import MINITRINO_USER_DIR
 
 CMD_INSTALL = {"base": "lib-install", "append": ["--version", "0.0.0"]}
+LIB_DIR = os.path.join(MINITRINO_USER_DIR, "lib")
+
+
+@pytest.fixture(autouse=True, scope="module")
+def clean_before_test():
+    """Clean up the lib directory before and after tests."""
+
+    def _uninstall():
+        if os.path.isdir(LIB_DIR):
+            utils.logger.debug(f"Removing existing library directory: {LIB_DIR}")
+            shutil.rmtree(LIB_DIR)
+
+    _uninstall()
+    yield
+    _uninstall()
 
 
 @dataclass
@@ -54,15 +70,31 @@ lib_install_scenarios = [
         input_val="y\n",
         expected_exit_code=0,
         expected_output="Removing existing library directory",
-        log_msg="Install library with overwrite",
+        log_msg="Overwrite existing library",
     ),
     LibInstallScenario(
         id="invalid_version",
         cmd={"base": "lib-install", "append": ["--version", "foo"]},
         input_val=None,
-        expected_exit_code=1,
-        expected_output=None,
+        expected_exit_code=2,
+        expected_output="X.Y.Z format",
         log_msg="Install library with invalid version",
+    ),
+    LibInstallScenario(
+        id="invalid_version",
+        cmd={"base": "lib-install", "append": ["--version", "9.9.9"]},
+        input_val=None,
+        expected_exit_code=1,
+        expected_output="not found",
+        log_msg="Install library with valid but non-existent version",
+    ),
+    LibInstallScenario(
+        id="list_releases",
+        cmd={"base": "lib-install", "append": ["--list-releases"]},
+        input_val=None,
+        expected_exit_code=0,
+        expected_output="Available Minitrino releases:",
+        log_msg="List library releases",
     ),
 ]
 
@@ -80,7 +112,9 @@ def test_lib_install_scenarios(
     """Run each LibInstallScenario."""
     cli_cmd = utils.build_cmd(**scenario.cmd)
     result = utils.cli_cmd(cli_cmd, scenario.input_val)
+    if scenario.id == "install_overwrite":
+        result = utils.cli_cmd(cli_cmd, scenario.input_val)
     utils.assert_exit_code(result, expected=scenario.expected_exit_code)
-    utils.assert_is_dir(os.path.join(MINITRINO_USER_DIR, "lib"))
+    utils.assert_is_dir(LIB_DIR)
     if scenario.expected_output:
         utils.assert_in_output(scenario.expected_output, result=result)

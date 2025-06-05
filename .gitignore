@@ -56,3 +56,4 @@ yarn-error.log*
 *.tar.gz
 .mypy_cache
 .local
+.windsurf

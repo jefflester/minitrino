@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import re
 import subprocess
+import sys
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -60,8 +61,8 @@ class CommandExecutor:
             If `False`, errors (non-zero exit codes) from executed
             commands will not raise an exception. Defaults to `True`.
         environment : dict, optional
-            A dictionary of environment variables to pass to the
-            subprocess or container.
+            Environment variables to pass to the subprocess or
+            container.
         suppress_output : bool, optional
             If `True`, suppresses printing command output to stdout.
         container : docker.models.containers.Container, optional
@@ -70,23 +71,51 @@ class CommandExecutor:
         docker_user_or_id : str, optional
             The user or user ID to execute the command as within the
             Docker container. Defaults to `root`.
+        interactive : bool, optional
+            If `True`, runs the command in interactive mode
+            (stdin/stdout/stderr attached). Defaults to False.
         """
+        interactive = kwargs.pop("interactive", False)
         results = []
         if kwargs.get("container", None):
             kwargs["environment"] = self._construct_environment(
                 kwargs.get("environment", None), kwargs.get("container", None)
             )
             for command in args:
-                results.append(self._execute_in_container(command, **kwargs))
+                try:
+                    results.append(self._execute_in_container(command, **kwargs))
+                except Exception as e:
+                    container: MinitrinoContainer = kwargs.get("container", None)
+                    try:
+                        logs = self._ctx.api_client.logs(
+                            container.name, tail=200, stderr=True, stdout=True
+                        )
+                        if isinstance(logs, bytes):
+                            logs = logs.decode(errors="replace")
+                        self._ctx.logger.error(
+                            f"Last 200 lines of logs from container "
+                            f"'{container.name}':\n{logs}"
+                        )
+                    except Exception as log_exc:
+                        self._ctx.logger.error(
+                            f"Failed to fetch logs for container "
+                            f"'{container.name}': {log_exc}"
+                        )
+                    raise MinitrinoError(
+                        f"Failed to execute command in container "
+                        f"'{container.name}': {e}"
+                    )
         else:
             kwargs["environment"] = self._construct_environment(
                 kwargs.get("environment", None)
             )
             for command in args:
-                results.append(self._execute_in_shell(command, **kwargs))
+                results.append(self._execute_in_shell(command, interactive, **kwargs))
         return results
 
-    def _execute_in_shell(self, command: str, **kwargs) -> CommandResult:
+    def _execute_in_shell(
+        self, command: str, interactive: bool = False, **kwargs
+    ) -> CommandResult:
         """
         Execute a command in the user's shell.
 
@@ -94,6 +123,9 @@ class CommandExecutor:
         ----------
         command : str
             The command string to execute.
+        interactive : bool, optional
+            If `True`, runs the command in interactive mode
+            (stdin/stdout/stderr attached). Defaults to `False`.
         **kwargs : dict
             Keyword arguments to pass to the subprocess.
 
@@ -106,49 +138,64 @@ class CommandExecutor:
             f"Executing command in shell:\n{command}",
         )
 
-        process = subprocess.Popen(
-            command,
-            shell=True,
-            env=kwargs.get("environment", {}),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            universal_newlines=True,
-        )
-
-        if not kwargs.get("suppress_output", False):
-            # Stream the output of the executed command line-by-line.
-            # `universal_newlines=True` ensures output is generated as a
-            # string, so there is no need to decode bytes. The only
-            # cleansing we need to do is to run the string through the
-            # `_strip_ansi()` function.
-
-            started_stream = False
+        if interactive:
+            completed = subprocess.run(
+                command,
+                shell=True,
+                env=kwargs.get("environment", {}),
+                stdin=sys.stdin,
+                stdout=sys.stdout,
+                stderr=sys.stderr,
+            )
             output = ""
-            if process.stdout is not None:
-                while True:
-                    output_line = process.stdout.readline()
-                    if output_line == "" and process.poll() is not None:
-                        break
-                    output_line = self._strip_ansi(output_line)
-                    if not started_stream:
-                        self._ctx.logger.debug("Command Output:")
-                        started_stream = True
-                    self._ctx.logger.debug(output_line, stream=True)
-                    output += output_line
+            rc = completed.returncode
         else:
-            output, _ = process.communicate()
+            process = subprocess.Popen(
+                command,
+                shell=True,
+                env=kwargs.get("environment", {}),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                universal_newlines=True,
+            )
 
-        if process.returncode != 0 and kwargs.get("trigger_error", True):
+            if not kwargs.get("suppress_output", False):
+                # Stream the output of the executed command
+                # line-by-line. `universal_newlines=True` ensures output
+                # is generated as a string, so there is no need to
+                # decode bytes. The only cleansing we need to do is to
+                # run the string through the `_strip_ansi()` function.
+                started_stream = False
+                output = ""
+                if process.stdout is not None:
+                    while True:
+                        output_line = process.stdout.readline()
+                        if output_line == "" and process.poll() is not None:
+                            break
+                        output_line = self._strip_ansi(output_line)
+                        if not started_stream:
+                            self._ctx.logger.debug("Command Output:")
+                            started_stream = True
+                        self._ctx.logger.debug(output_line)
+                        output += output_line
+            else:
+                output, _ = process.communicate()
+            rc_raw = (
+                process.returncode if hasattr(process, "returncode") else process.poll()
+            )
+            rc = rc_raw if isinstance(rc_raw, int) else -1
+
+        if rc != 0 and kwargs.get("trigger_error", True):
             raise MinitrinoError(
                 f"Failed to execute shell command:\n{command}\n"
-                f"Exit code: {process.returncode}\n"
+                f"Exit code: {rc}\n"
                 f"Command output: {self._strip_ansi(output)}"
             )
 
         return CommandResult(
             command=command,
             output=self._strip_ansi(output),
-            exit_code=process.returncode,
+            exit_code=rc,
         )
 
     def _execute_in_container(self, command: str = "", **kwargs) -> CommandResult:
@@ -214,7 +261,7 @@ class CommandExecutor:
                     if not started_stream:
                         self._ctx.logger.debug("Command Output:")
                         started_stream = True
-                    self._ctx.logger.debug(full_line, stream=True)
+                    self._ctx.logger.debug(full_line)
                     full_line = ""
                 if chunk[1]:
                     full_line = chunk[1]
@@ -223,19 +270,18 @@ class CommandExecutor:
 
         # Catch lingering full line post-loop
         if not kwargs.get("suppress_output", False) and full_line:
-            self._ctx.logger.debug(full_line, stream=True)
+            self._ctx.logger.debug(full_line)
 
         # Get the exit code
         exit_code = self._ctx.api_client.exec_inspect(exec_handler["Id"]).get(
             "ExitCode"
         )
         # https://www.gnu.org/software/bash/manual/html_node/Exit-Status.html
-        if exit_code == 126:
+        if exit_code in [126, 127]:
             self._ctx.logger.warn(
-                f"The command exited with a 126 code which typically means an "
-                f"executable is not accessible or installed. Does this image have "
-                f"all required dependencies installed?\n"
-                f"Command: {command}\n"
+                f"The command '{command}' exited with a {exit_code} code which "
+                f"typically means an executable is not accessible or installed. "
+                f"Does this image have all required dependencies installed?\n"
                 f"Command output: {output}"
             )
 

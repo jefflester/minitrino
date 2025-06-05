@@ -12,7 +12,12 @@ from test.common import (
     MINITRINO_USER_DIR,
 )
 
-CMD = {"base": "config", "prepend": ["-v", "-e", "TEXT_EDITOR=cat"]}
+CMD_CONFIG: utils.BuildCmdArgs = {
+    "base": "config",
+    "prepend": ["-v", "-e", "TEXT_EDITOR=cat"],
+}
+
+pytestmark = pytest.mark.usefixtures("log_test", "cleanup_config")
 
 
 @dataclass
@@ -36,7 +41,7 @@ class ConfigScenario:
         Whether the config directory is expected to exist.
     expected_file : bool
         Whether the config file is expected to exist.
-    expected_in_output : Optional[str]
+    expected_output : Optional[str]
         Expected string to be in the output of the config command.
     expected_not_in_file : Optional[str]
         Expected string to NOT be in the config file.
@@ -51,7 +56,7 @@ class ConfigScenario:
     expected_exit_code: int
     expected_dir: bool
     expected_file: bool
-    expected_in_output: Optional[str]
+    expected_output: Optional[str]
     expected_not_in_file: Optional[str]
     log_msg: str
 
@@ -65,19 +70,19 @@ config_scenarios = [
         expected_exit_code=0,
         expected_dir=True,
         expected_file=True,
-        expected_in_output=None,
+        expected_output=None,
         expected_not_in_file=None,
         log_msg="Testing config: creates directory and config file when missing",
     ),
     ConfigScenario(
         id="no_config_file",
-        setup=lambda: os.path.isfile(CONFIG_FILE) and os.remove(CONFIG_FILE),
+        setup=lambda: (os.remove(CONFIG_FILE) if os.path.isfile(CONFIG_FILE) else None),
         cmd_args=[],
         input_val=None,
         expected_exit_code=0,
         expected_dir=False,
         expected_file=True,
-        expected_in_output=None,
+        expected_output=None,
         expected_not_in_file=None,
         log_msg="Testing config: creates config file when only config is missing",
     ),
@@ -89,7 +94,7 @@ config_scenarios = [
         expected_exit_code=0,
         expected_dir=False,
         expected_file=True,
-        expected_in_output=None,
+        expected_output=None,
         expected_not_in_file="hello world",
         log_msg="Testing config: resets invalid config file",
     ),
@@ -101,7 +106,7 @@ config_scenarios = [
         expected_exit_code=0,
         expected_dir=False,
         expected_file=False,
-        expected_in_output="Failed to parse config file",
+        expected_output="Failed to parse config file",
         expected_not_in_file=None,
         log_msg="Testing config: fails with invalid config file",
     ),
@@ -114,7 +119,6 @@ config_scenarios = [
     ids=utils.get_scenario_ids(config_scenarios),
     indirect=["log_msg"],
 )
-@pytest.mark.usefixtures("log_test", "cleanup_config")
 def test_config_scenarios(
     scenario: ConfigScenario,
 ) -> None:
@@ -122,22 +126,24 @@ def test_config_scenarios(
     if scenario.setup:
         logger.debug("Running setup function for scenario.")
         scenario.setup()
-    cmd = utils.build_cmd(**CMD, append=scenario.cmd_args)
+    cmd_args = CMD_CONFIG.copy()
+    cmd_args["append"] = scenario.cmd_args
+    cmd = utils.build_cmd(**cmd_args)
     result = utils.cli_cmd(cmd, scenario.input_val)
     utils.assert_exit_code(result, expected=scenario.expected_exit_code)
     if scenario.expected_dir:
         utils.assert_is_dir(MINITRINO_USER_DIR)
     if scenario.expected_file:
         utils.assert_is_file(CONFIG_FILE)
-    if scenario.expected_in_output:
-        utils.assert_in_output(scenario.expected_in_output, result=result)
+    if scenario.expected_output:
+        utils.assert_in_output(scenario.expected_output, result=result)
     if scenario.expected_not_in_file:
-        utils.assert_not_in_file(scenario.expected_not_in_file, CONFIG_FILE)
+        utils.assert_not_in_file(scenario.expected_not_in_file, path=CONFIG_FILE)
 
 
-@pytest.mark.usefixtures("log_test", "cleanup_config")
 @pytest.mark.parametrize("log_msg", ["Testing edit valid config"], indirect=True)
 def test_edit_valid_config() -> None:
     """Verify the user can edit an existing configuration file."""
-    result = utils.cli_cmd(utils.build_cmd(**CMD))
+    cmd_args = CMD_CONFIG.copy()
+    result = utils.cli_cmd(utils.build_cmd(**cmd_args))
     utils.assert_exit_code(result)

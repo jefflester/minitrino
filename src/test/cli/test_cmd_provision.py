@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 
 import pytest
-import yaml
 from click.testing import Result
 
 from minitrino.settings import DEFAULT_CLUSTER_VER, ETC_DIR, MIN_CLUSTER_VER
@@ -14,10 +13,14 @@ from test.cli.constants import (
     TEST_CONTAINER,
 )
 
-CMD_PROVISION = {"base": "provision"}
-CMD_PROVISION_MOD = {"base": "provision", "append": ["--module", "test"]}
+CMD_PROVISION_MOD: utils.BuildCmdArgs = {
+    "base": "provision",
+    "append": ["--module", "test"],
+}
 
-pytestmark = pytest.mark.usefixtures("reset_metadata")
+pytestmark = pytest.mark.usefixtures(
+    "log_test", "start_docker", "down", "reset_metadata"
+)
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -94,7 +97,6 @@ version_scenarios = [
     ids=utils.get_scenario_ids(version_scenarios),
     indirect=["log_msg"],
 )
-@pytest.mark.usefixtures("log_test", "down")
 def test_version_scenarios(scenario: VersionScenario) -> None:
     """Run each VersionScenario."""
     append = []
@@ -103,7 +105,7 @@ def test_version_scenarios(scenario: VersionScenario) -> None:
     prepend = []
     if scenario.version:
         prepend.extend(["--env", f"CLUSTER_VER={scenario.version}"])
-    cmd = utils.build_cmd(**CMD_PROVISION, prepend=prepend, append=append)
+    cmd = utils.build_cmd(base="provision", prepend=prepend, append=append)
     result = utils.cli_cmd(cmd)
     utils.assert_exit_code(result, expected=scenario.expected_exit_code)
     utils.assert_in_output(scenario.expected_output, result=result)
@@ -171,11 +173,10 @@ module_requirements_scenarios = [
     ids=utils.get_scenario_ids(module_requirements_scenarios),
     indirect=["log_msg"],
 )
-@pytest.mark.usefixtures("log_test", "down")
 def test_module_requirements_scenarios(scenario: ModuleRequirementsScenario) -> None:
     """Run each ModuleRequirementsScenario."""
     append = [item for module in scenario.module_names for item in ("--module", module)]
-    result = utils.cli_cmd(utils.build_cmd(**CMD_PROVISION, append=append))
+    result = utils.cli_cmd(utils.build_cmd(base="provision", append=append))
     utils.assert_exit_code(result, expected=scenario.expected_exit_code)
     if scenario.expected_output:
         utils.assert_in_output(scenario.expected_output, result=result)
@@ -202,19 +203,24 @@ class EnterpriseScenario:
         Whether the module is enterprise.
     license_path : str | None
         The path to the license file.
-    expected_exit_code : int
+    expected_exit_code : int | None
         The expected exit code.
     expected_output : str
         The expected output string to assert.
+    unexpected_output : str
+        The unexpected output string to assert.
     log_msg : str
         The log message to display before running the test.
     """
 
+    LIC_MSG = "You must provide a path to a Starburst license"
+
     id: str
     enterprise: bool
     license_path: str | None
-    expected_exit_code: int
+    expected_exit_code: int | None
     expected_output: str
+    unexpected_output: str
     log_msg: str
 
 
@@ -224,15 +230,17 @@ enterprise_scenarios = [
         enterprise=True,
         license_path=None,
         expected_exit_code=2,
-        expected_output="You must provide a path to a Starburst license",
+        expected_output=EnterpriseScenario.LIC_MSG,
+        unexpected_output="",
         log_msg="Enterprise: missing license should error",
     ),
     EnterpriseScenario(
         id="enterprise_with_license",
         enterprise=True,
         license_path="/tmp/dummy.license",
-        expected_exit_code=0,
-        expected_output="LIC_PATH",
+        expected_exit_code=None,
+        expected_output='"LIC_PATH": "/tmp/dummy.license"',
+        unexpected_output=EnterpriseScenario.LIC_MSG,
         log_msg="Enterprise: with license should succeed",
     ),
 ]
@@ -244,7 +252,7 @@ enterprise_scenarios = [
     ids=utils.get_scenario_ids(enterprise_scenarios),
     indirect=["log_msg"],
 )
-@pytest.mark.usefixtures("log_test", "cleanup_config", "down", "reset_metadata")
+@pytest.mark.usefixtures("cleanup_config", "reset_metadata")
 def test_enterprise_scenarios(scenario: EnterpriseScenario) -> None:
     """Run each EnterpriseScenario."""
     data = [{"enterprise": scenario.enterprise}]
@@ -255,10 +263,14 @@ def test_enterprise_scenarios(scenario: EnterpriseScenario) -> None:
     if scenario.license_path:
         prepend.extend(["--env", f"LIC_PATH={scenario.license_path}"])
     append = ["--image", "starburst", "--module", "test", "--no-rollback"]
-    cmd = utils.build_cmd(**CMD_PROVISION, prepend=prepend, append=append)
+    cmd = utils.build_cmd(base="provision", prepend=prepend, append=append)
     result = utils.cli_cmd(cmd)
-    utils.assert_exit_code(result, expected=scenario.expected_exit_code)
-    utils.assert_in_output(scenario.expected_output, result=result)
+    if scenario.expected_exit_code is not None:
+        utils.assert_exit_code(result, expected=scenario.expected_exit_code)
+    if scenario.expected_output:
+        utils.assert_in_output(scenario.expected_output, result=result)
+    if scenario.unexpected_output:
+        utils.assert_not_in_output(scenario.unexpected_output, result=result)
 
 
 @dataclass
@@ -332,7 +344,7 @@ cluster_dependency_scenarios = [
     ids=utils.get_scenario_ids(cluster_dependency_scenarios),
     indirect=["log_msg"],
 )
-@pytest.mark.usefixtures("log_test", "down", "reset_metadata")
+@pytest.mark.usefixtures("reset_metadata")
 def test_cluster_dependency_scenarios(scenario: ClusterDependencyScenario) -> None:
     """Run each ClusterDependencyScenario."""
     if scenario.id == "circular_dependency":
@@ -344,11 +356,13 @@ def test_cluster_dependency_scenarios(scenario: ClusterDependencyScenario) -> No
             [dep_cluster_metadata(modules=scenario.modules, workers=scenario.workers)],
         )
         expected_exit_code = 0
-    result = utils.cli_cmd(utils.build_cmd(**CMD_PROVISION_MOD))
+    cmd_args = CMD_PROVISION_MOD.copy()
+    result = utils.cli_cmd(utils.build_cmd(**cmd_args))
     utils.assert_exit_code(result, expected=expected_exit_code)
     utils.assert_in_output(scenario.expected_output, result=result)
     if expected_exit_code == 0:
-        # utils.assert_num_containers(scenario.expected_containers, all=True)
+        # utils.assert_num_containers(scenario.expected_containers,
+        # all=True)
         containers = [MINITRINO_CONTAINER]
         if "postgres" in scenario.modules:
             containers.append(f"postgres-dep-cluster-{CLUSTER_NAME}-test")
@@ -416,11 +430,12 @@ config_scenarios = [
     ids=utils.get_scenario_ids(config_scenarios),
     indirect=["log_msg"],
 )
-@pytest.mark.usefixtures("log_test", "down")
 def test_append_config_scenarios(scenario: AppendConfigScenario) -> None:
     """Run each AppendConfigScenario."""
     prepend = ["--env", f"{scenario.config_type}={scenario.config_value}"]
-    result = utils.cli_cmd(utils.build_cmd(**CMD_PROVISION_MOD, prepend=prepend))
+    cmd_args = CMD_PROVISION_MOD.copy()
+    cmd_args["prepend"] = prepend
+    result = utils.cli_cmd(utils.build_cmd(**cmd_args))
     utils.assert_exit_code(result, expected=scenario.expected_exit_code)
     utils.assert_in_output(scenario.expected_output, result=result)
     if scenario.expected_exit_code == 0:
@@ -491,13 +506,12 @@ docker_native_scenarios = [
     ids=utils.get_scenario_ids(docker_native_scenarios),
     indirect=["log_msg"],
 )
-@pytest.mark.usefixtures("log_test", "down")
 def test_docker_native_scenarios(scenario: DockerNativeScenario) -> None:
     """Run each DockerNativeScenario."""
     if not GH_WORKFLOW_RUNNING and scenario.id == "valid_docker_native_build":
         pytest.skip("Skipping - don't do rebuild on local.")
     append = ["--module", "test", "--docker-native", scenario.docker_native]
-    result = utils.cli_cmd(utils.build_cmd(**CMD_PROVISION, append=append))
+    result = utils.cli_cmd(utils.build_cmd(base="provision", append=append))
     utils.assert_exit_code(result, expected=scenario.expected_exit_code)
     utils.assert_in_output(scenario.expected_output, result=result)
     if scenario.expected_exit_code == 0:
@@ -535,6 +549,8 @@ class ModuleAddScenario:
     expected_output: str
     log_msg: str
 
+
+# TODO: Re-enable when module-add is properly implemented
 
 module_add_scenarios = [
     ModuleAddScenario(
@@ -575,7 +591,7 @@ module_add_scenarios = [
     [{"keepalive": True}, {"no_modules": True}],
     indirect=True,
 )
-@pytest.mark.usefixtures("log_test", "provision_clusters", "down")
+@pytest.mark.usefixtures("provision_clusters")
 def test_module_add_scenarios(scenario: ModuleAddScenario) -> None:
     """Run each ModuleAddScenario."""
     utils.cli_cmd(utils.build_cmd(base="down", cluster="all", append=["--sig-kill"]))
@@ -594,7 +610,7 @@ def _provision_module(
     modules: list[str], scenario: ModuleAddScenario, is_last: bool
 ) -> None:
     module_flags = [flag for m in modules for flag in ("--module", m)]
-    result = utils.cli_cmd(utils.build_cmd(**CMD_PROVISION, append=module_flags))
+    result = utils.cli_cmd(utils.build_cmd(base="provision", append=module_flags))
     utils.assert_exit_code(result)
     if is_last:
         if scenario.expected_output:
@@ -690,7 +706,6 @@ worker_scenarios = [
     ids=utils.get_scenario_ids(worker_scenarios),
     indirect=["log_msg"],
 )
-@pytest.mark.usefixtures("log_test", "down")
 def test_worker_scenarios(
     scenario: WorkerScenario,
 ) -> None:
@@ -698,11 +713,11 @@ def test_worker_scenarios(
 
     def _run_cmd(workers: int, add: int = 0, remove: int = 0) -> Result:
         utils.cli_cmd(
-            utils.build_cmd(**CMD_PROVISION, append=["--workers", str(workers)]),
+            utils.build_cmd(base="provision", append=["--workers", str(workers)]),
         )
         return utils.cli_cmd(
             utils.build_cmd(
-                **CMD_PROVISION, append=["--workers", str(workers + add - remove)]
+                base="provision", append=["--workers", str(workers + add - remove)]
             ),
         )
 
@@ -722,52 +737,36 @@ def test_worker_scenarios(
 TEST_BOOTSTRAP_MSG = "Test bootstrap script execution in containers"
 
 
-@pytest.mark.usefixtures("log_test", "down")
 @pytest.mark.parametrize("log_msg", [TEST_BOOTSTRAP_MSG], indirect=True)
 def test_bootstrap() -> None:
     """Ensure bootstrap scripts execute in containers."""
 
-    def add_yaml_bootstrap(yaml_path):
-        with open(yaml_path, "r") as file:
-            data = yaml.safe_load(file)
-        for svc_name, svc_content in data.get("services", {}).items():
-            if "environment" not in svc_content:
-                svc_content["environment"] = {
-                    "MINITRINO_BOOTSTRAP": f"bootstrap-{svc_name}.sh"
-                }
-        with open(yaml_path, "w") as file:
-            yaml.dump(data, file, default_flow_style=False)
-
-    def del_yaml_bootstrap(yaml_path):
-        with open(yaml_path, "r") as file:
-            data = yaml.safe_load(file)
-        for _, svc_content in data.get("services", {}).items():
-            if "environment" in svc_content:
-                del svc_content["environment"]
-        with open(yaml_path, "w") as file:
-            yaml.dump(data, file, default_flow_style=False)
-
-    yaml_path = utils.get_module_yaml_path("test")
-    add_yaml_bootstrap(yaml_path)
-    result = utils.cli_cmd(utils.build_cmd(**CMD_PROVISION_MOD))
+    cmd_args = CMD_PROVISION_MOD.copy()
+    result = utils.cli_cmd(utils.build_cmd(**cmd_args))
     utils.assert_exit_code(result)
     utils.assert_in_output("Successfully executed bootstrap script", result=result)
 
-    minitrino_bootstrap = common.execute_cmd(
-        "cat /tmp/bootstrap.txt", container=MINITRINO_CONTAINER
+    minitrino_bootstrap_env_var = common.execute_cmd(
+        "cat /tmp/bootstrap-env-var.txt", container=MINITRINO_CONTAINER
+    )
+    minitrino_bootstrap_before = common.execute_cmd(
+        "cat /tmp/bootstrap-before.txt", container=MINITRINO_CONTAINER
+    )
+    minitrino_bootstrap_after = common.execute_cmd(
+        "cat /tmp/bootstrap-after.txt", container=MINITRINO_CONTAINER
     )
     test_bootstrap = common.execute_cmd(
         "cat /tmp/bootstrap.txt", container=TEST_CONTAINER
     )
-    utils.assert_in_output("hello world", result=minitrino_bootstrap)
     utils.assert_in_output("hello world", result=test_bootstrap)
-    del_yaml_bootstrap(yaml_path)
+    utils.assert_in_output("hello world", result=minitrino_bootstrap_env_var)
+    utils.assert_in_output("hello world", result=minitrino_bootstrap_before)
+    utils.assert_in_output("hello world", result=minitrino_bootstrap_after)
 
 
 TEST_VALID_USER_CONFIG_MSG = "Test valid user-defined cluster and JVM config"
 
 
-@pytest.mark.usefixtures("log_test", "down")
 @pytest.mark.parametrize("log_msg", [TEST_VALID_USER_CONFIG_MSG], indirect=True)
 def test_valid_user_config() -> None:
     """Ensure valid configs can be appended to cluster config files."""
@@ -777,8 +776,9 @@ def test_valid_user_config() -> None:
         "--env",
         "JVM_CONFIG=-Xms1G\n-Xmx2G",
     ]
-    built_cmd = utils.build_cmd(**CMD_PROVISION_MOD, prepend=prepend)
-    result = utils.cli_cmd(built_cmd)
+    cmd_args = CMD_PROVISION_MOD.copy()
+    cmd_args["prepend"] = prepend
+    result = utils.cli_cmd(utils.build_cmd(**cmd_args))
     utils.assert_exit_code(result)
     utils.assert_in_output("Appending user-defined config", result=result)
 
@@ -797,7 +797,6 @@ def test_valid_user_config() -> None:
 TEST_DUPLICATE_CONFIG_PROPS_MSG = "Test duplicate configuration properties warning"
 
 
-@pytest.mark.usefixtures("log_test", "down")
 @pytest.mark.parametrize("log_msg", [TEST_DUPLICATE_CONFIG_PROPS_MSG], indirect=True)
 def test_duplicate_config_props() -> None:
     """Ensure that duplicate config properties are logged as a warning
@@ -811,7 +810,7 @@ def test_duplicate_config_props() -> None:
     ctx.cluster_name = CLUSTER_NAME
     ctx._log_level = LogLevel.DEBUG
 
-    log_output = []
+    log_output: list[str] = []
     ctx.logger.set_log_sink(log_output)
 
     cluster = Cluster(ctx)

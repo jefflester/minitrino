@@ -2,10 +2,9 @@
 services:
 
   minitrino:
-    environment:
-      MINITRINO_BOOTSTRAP: 458-native-fs-workaround.sh
     volumes:
       - ./modules/catalog/hive/resources/cluster/hive.properties:/mnt/etc/catalog/hive.properties:ro
+      - ./modules/catalog/hive/resources/bootstrap/458-native-fs-workaround.sh:/mnt/bootstrap/hive/458-native-fs-workaround.sh:ro
 
   postgres-hive:
     image: postgres:${POSTGRES_HMS_VER}
@@ -20,8 +19,8 @@ services:
     volumes:
       - postgres-hive-data:/var/lib/postgresql/data
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-hive
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.hive=true
 
   metastore-hive:
     image: jefflester/hive-metastore:${HMS_VER}
@@ -34,8 +33,8 @@ services:
     ports:
       - :9083
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-hive
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.hive=true
 
   minio:
     image: minio/minio:${MINIO_VER}
@@ -50,8 +49,8 @@ services:
     volumes:
       - minio-hive-data:/data
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-hive
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.hive=true
 
   create-minio-buckets:
     image: minio/mc:${MINIO_MC_VER}
@@ -71,15 +70,15 @@ services:
       tail -f /dev/null
       "
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-hive
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.hive=true
 
 volumes:
   postgres-hive-data:
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-hive
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.hive=true
   minio-hive-data:
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-hive
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.hive=true

@@ -1,6 +1,7 @@
 """Commands for displaying and filtering Minitrino module metadata."""
 
 import json
+import sys
 from typing import Optional
 
 import click
@@ -102,8 +103,15 @@ def cli(
         )
         return
 
-    for module, module_metadata in sorted(filtered_modules.items()):
-        log_info(module, module_metadata, json_format)
+    if json_format:
+        all_metadata = {
+            module: module_metadata
+            for module, module_metadata in sorted(filtered_modules.items())
+        }
+        sys.stdout.write(json.dumps(all_metadata, indent=2) + "\n")
+    else:
+        for module, module_metadata in sorted(filtered_modules.items()):
+            log_info(module, module_metadata)
 
 
 @utils.pass_environment()
@@ -136,9 +144,7 @@ def filter_modules(
 
 
 @utils.pass_environment()
-def log_info(
-    ctx: MinitrinoContext, module_name: str, module_metadata: dict, json_format: bool
-) -> None:
+def log_info(ctx: MinitrinoContext, module_name: str, module_metadata: dict) -> None:
     """Log module metadata to the terminal.
 
     Parameters
@@ -149,28 +155,22 @@ def log_info(
         Name of the module being logged.
     module_metadata : dict
         Metadata associated with the module.
-    json_format : bool
-        If True, displays the output as formatted JSON.
-
-    Notes
-    -----
-    If `json_format` is enabled, outputs raw JSON. Otherwise, prints
-    human-readable key information.
     """
-    if json_format:
-        print(json.dumps({module_name: module_metadata}, indent=2))
-    else:
-        log_msg = [f"Module: {module_name}\n"]
-        keys = [
-            "description",
-            "incompatibleModules",
-            "dependentModules",
-            "versions",
-            "enterprise",
-        ]
-        for key in keys:
-            val = module_metadata.get(key, None)
-            if val is not None:
-                log_msg.append(f"{key[0].upper() + key[1:]}: {val}\n")
-
-        ctx.logger.info("".join(log_msg))
+    log_msg = [f"Module: {module_name}\n"]
+    keys = [
+        "description",
+        "incompatibleModules",
+        "dependentModules",
+        "versions",
+        "enterprise",
+        "dependentClusters",
+    ]
+    for key in keys:
+        val = module_metadata.get(key, None)
+        if val is not None:
+            try:
+                val = json.dumps(val, indent=2)
+            except TypeError:
+                pass
+            log_msg.append(f"{key[0].upper() + key[1:]}: {val}\n")
+    ctx.logger.info("".join(log_msg))

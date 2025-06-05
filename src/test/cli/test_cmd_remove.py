@@ -1,17 +1,21 @@
+import io
 import time
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any, Generator, Optional
 
 import pytest
 from click.testing import Result
 from docker import DockerClient
+from docker.models.images import ImageCollection
+from docker.models.networks import NetworkCollection
+from docker.models.volumes import VolumeCollection
 
-from minitrino.core.docker.socket import resolve_docker_socket
 from minitrino.settings import (
     COMPOSE_LABEL_KEY,
     MODULE_LABEL_KEY,
     ROOT_LABEL,
 )
+from test import common
 from test.cli import utils
 from test.cli.constants import (
     CLUSTER_NAME,
@@ -20,10 +24,100 @@ from test.cli.constants import (
     TEST_IMAGE_NAME,
 )
 
-CMD_REMOVE = {"base": "remove"}
-CMD_DOWN_KEEP = {"base": "down", "cluster": "all", "append": ["--sig-kill", "--keep"]}
+CMD_REMOVE: utils.BuildCmdArgs = {"base": "remove"}
 
-TEST_MODULE_LABEL = f"{MODULE_LABEL_KEY}=catalog-test"
+CMD_DOWN: utils.BuildCmdArgs = {"base": "down", "cluster": "all"}
+CMD_DOWN_KEEP: utils.BuildCmdArgs = {
+    "base": "down",
+    "cluster": "all",
+    "append": ["--sig-kill", "--keep"],
+}
+
+CLUSTER_LABEL = f"{COMPOSE_LABEL_KEY}=minitrino-cli-test"
+TEST_MODULE_LABEL = f"{MODULE_LABEL_KEY}.catalog.test=true"
+
+REMOVED_VOLUME = "Volume removed:"
+REMOVED_NETWORK = "Network removed:"
+REMOVED_IMAGE = "Image removed:"
+FAILURE_VOLUME = "Cannot remove volume"
+FAILURE_NETWORK = "Cannot remove network"
+
+
+@pytest.fixture(scope="session")
+def dummy_resources() -> Generator:
+    """
+    Spin up dummy Docker resources for testing.
+
+    Returns
+    -------
+    dict
+        Dictionary of created resource objects.
+
+    Notes
+    -----
+    Fails if resource cleanup fails. Logs resource creation and cleanup.
+    """
+
+    volume = "minitrino_dummy_volume"
+    image = "minitrino_dummy_image"
+    network = "minitrino_dummy_network"
+    container = "minitrino_dummy_container"
+    labels = {"org.minitrino": "test"}
+
+    def _cleanup_resources(client: DockerClient):
+        c = client.containers
+        remove = [
+            ("container", container, lambda: c.get(container).remove(force=True)),
+            ("volume", volume, lambda: client.volumes.get(volume).remove(force=True)),
+            ("network", network, lambda: client.networks.get(network).remove()),
+            ("image", image, lambda: client.images.remove(image, force=True)),
+        ]
+        for resource_type, name, action in remove:
+            try:
+                action()
+                utils.logger.debug(f"{resource_type.capitalize()} removed: {name}")
+            except Exception as e:
+                utils.logger.warning(
+                    f"Failed to remove {resource_type} {name}: {e}"
+                    "It may have already been removed."
+                )
+
+    utils.logger.debug("Starting Docker daemon for dummy resources")
+    common.start_docker_daemon(utils.logger)
+    client, _ = utils.docker_client()
+    _cleanup_resources(client)
+    resources: dict[str, Any] = {}
+    utils.logger.debug(f"Creating dummy volume: {volume}")
+    resources["volume"] = client.volumes.create(name=volume, labels=labels)
+    utils.logger.debug("Pulling busybox:latest image")
+    client.images.pull("busybox:latest")
+    dockerfile = "FROM busybox:latest\n\nLABEL org.minitrino=test"
+    utils.logger.debug(f"Building dummy image: {image}")
+    image_obj, _ = client.images.build(
+        fileobj=io.BytesIO(dockerfile.encode()), tag=image, rm=True
+    )
+    resources["image"] = image_obj
+    utils.logger.debug(f"Creating dummy network: {network}")
+    resources["network"] = client.networks.create(network, labels=labels)
+    utils.logger.debug(f"Creating dummy container: {container}")
+    container_obj = client.containers.create(
+        image=image,
+        name=container,
+        command="sleep 60000",
+        detach=True,
+        network=network,
+        labels=labels,
+    )
+    container_obj.start()
+    resources["container"] = container_obj
+
+    yield resources
+    _cleanup_resources(client)
+
+
+pytestmark = pytest.mark.usefixtures(
+    "log_test", "dummy_resources", "start_docker", "provision_clusters", "remove"
+)
 
 
 @dataclass
@@ -35,10 +129,10 @@ class RemoveAllScenario:
     ----------
     id : str
         Identifier for scenario, used in pytest parametrize ids.
-    resource_type : Optional[str]
-        The resource type to remove.
-    cmd_flag : Optional[str]
-        The command flag to use.
+    cmd_flags : Optional[list[str]]
+        The command flags to use.
+    expected_remove_types : list[str]
+        The resource types to remove.
     label : Optional[str]
         The label to use.
     image_name : Optional[str]
@@ -48,8 +142,8 @@ class RemoveAllScenario:
     """
 
     id: str
-    resource_type: Optional[str]
-    cmd_flag: Optional[str]
+    expected_remove_types: list[str]
+    cmd_flags: Optional[list[str]]
     label: Optional[str]
     image_name: Optional[str]
     log_msg: str
@@ -58,35 +152,43 @@ class RemoveAllScenario:
 remove_all_scenarios = [
     RemoveAllScenario(
         id="images",
-        resource_type="images",
-        cmd_flag="--images",
+        cmd_flags=["--images"],
+        expected_remove_types=["images"],
         label=None,
         image_name=TEST_IMAGE_NAME,
         log_msg="Remove all images",
     ),
     RemoveAllScenario(
         id="volumes",
-        resource_type="volumes",
-        cmd_flag="--volumes",
+        cmd_flags=["--volumes"],
+        expected_remove_types=["volumes"],
         label=ROOT_LABEL,
         image_name=None,
         log_msg="Remove all volumes",
     ),
     RemoveAllScenario(
         id="networks",
-        resource_type="networks",
-        cmd_flag="--networks",
+        cmd_flags=["--networks"],
+        expected_remove_types=["networks"],
         label=ROOT_LABEL,
         image_name=None,
         log_msg="Remove all networks",
     ),
     RemoveAllScenario(
-        id="all",
-        resource_type=None,
-        cmd_flag=None,
+        id="all_explicit",
+        cmd_flags=["--images", "--volumes", "--networks"],
+        expected_remove_types=["images", "volumes", "networks"],
         label=ROOT_LABEL,
         image_name=None,
-        log_msg="Remove all resources",
+        log_msg="Remove all resources (explicit)",
+    ),
+    RemoveAllScenario(
+        id="all_implicit",
+        cmd_flags=None,
+        expected_remove_types=["images", "volumes", "networks"],
+        label=ROOT_LABEL,
+        image_name=None,
+        log_msg="Remove all resources (implicit)",
     ),
 ]
 
@@ -97,34 +199,27 @@ remove_all_scenarios = [
     ids=utils.get_scenario_ids(remove_all_scenarios),
     indirect=["log_msg"],
 )
-@pytest.mark.usefixtures("log_test", "dummy_resources", "provision_cluster", "remove")
 def test_remove_all_scenarios(
     docker_client: DockerClient, scenario: RemoveAllScenario
 ) -> None:
     """Run each RemoveAllScenario."""
 
-    resource_types = (
-        [scenario.resource_type]
-        if scenario.resource_type
-        else ["images", "volumes", "networks"]
-    )
-
-    if "images" in resource_types:
+    if "images" in scenario.expected_remove_types:
         if not GH_WORKFLOW_RUNNING:
             return
 
-    append_flags = []
-    if scenario.cmd_flag:
-        append_flags.append(scenario.cmd_flag)
+    append_flags: list[str] = []
+    if scenario.cmd_flags:
+        append_flags.extend(scenario.cmd_flags)
 
     result = utils.cli_cmd(
-        utils.build_cmd(**CMD_REMOVE, cluster="all", append=append_flags), "y\n"
+        utils.build_cmd(base="remove", cluster="all", append=append_flags), "y\n"
     )
     utils.assert_exit_code(result)
     assert_resources_removed(
         docker_client=docker_client,
         result=result,
-        resource_types=resource_types,
+        resource_types=scenario.expected_remove_types,
         label=scenario.label,
         image_name=scenario.image_name,
     )
@@ -139,8 +234,8 @@ class RemoveModuleScenario:
     ----------
     id : str
         Identifier for scenario, used in pytest parametrize ids.
-    resource_type : Optional[str]
-        The resource type to remove.
+    expected_remove_types : list[str]
+        The resource types to remove.
     cmd_flag : Optional[str]
         The command flag to use.
     label : str
@@ -154,7 +249,7 @@ class RemoveModuleScenario:
     """
 
     id: str
-    resource_type: Optional[str]
+    expected_remove_types: list[str]
     cmd_flag: Optional[str]
     label: str
     module_flag: Optional[str]
@@ -165,7 +260,7 @@ class RemoveModuleScenario:
 remove_module_scenarios = [
     RemoveModuleScenario(
         id="module_volumes",
-        resource_type="volumes",
+        expected_remove_types=["volumes"],
         cmd_flag="--volumes",
         label=TEST_MODULE_LABEL,
         module_flag="--module",
@@ -174,16 +269,16 @@ remove_module_scenarios = [
     ),
     RemoveModuleScenario(
         id="module_networks",
-        resource_type="networks",
+        expected_remove_types=[],
         cmd_flag="--networks",
         label=TEST_MODULE_LABEL,
         module_flag="--module",
         module_name="test",
-        log_msg="Remove module networks",
+        log_msg="Networks are tied to cluster, nothing gets removed here",
     ),
     RemoveModuleScenario(
         id="module_all",
-        resource_type=None,
+        expected_remove_types=["volumes"],
         cmd_flag=None,
         label=TEST_MODULE_LABEL,
         module_flag="--module",
@@ -199,16 +294,12 @@ remove_module_scenarios = [
     ids=utils.get_scenario_ids(remove_module_scenarios),
     indirect=["log_msg"],
 )
-@pytest.mark.usefixtures("log_test", "dummy_resources", "provision_cluster", "remove")
 def test_remove_module_scenarios(
     docker_client: DockerClient,
     scenario: RemoveModuleScenario,
 ) -> None:
     """Run each RemoveModuleScenario."""
-    resource_types = (
-        [scenario.resource_type] if scenario.resource_type else ["volumes", "networks"]
-    )
-    append_flags = []
+    append_flags: list[str] = []
     if scenario.cmd_flag:
         append_flags.append(scenario.cmd_flag)
     if scenario.module_flag:
@@ -216,13 +307,13 @@ def test_remove_module_scenarios(
     if scenario.module_name:
         append_flags.append(scenario.module_name)
     result = utils.cli_cmd(
-        utils.build_cmd(**CMD_REMOVE, cluster="all", append=append_flags),
+        utils.build_cmd(base="remove", cluster="all", append=append_flags),
     )
     utils.assert_exit_code(result)
     assert_resources_removed(
         docker_client=docker_client,
         result=result,
-        resource_types=resource_types,
+        resource_types=scenario.expected_remove_types,
         label=scenario.label,
     )
 
@@ -295,20 +386,19 @@ remove_cluster_resource_scenarios = [
     [{"cluster_names": [CLUSTER_NAME_2]}],
     indirect=True,
 )
-@pytest.mark.usefixtures("log_test", "dummy_resources", "provision_clusters", "remove")
 def test_remove_cluster_resource_scenarios(
     docker_client: DockerClient,
     scenario: RemoveClusterResourceScenario,
 ) -> None:
     """Run each RemoveClusterResourceScenario."""
     cmd = utils.build_cmd(
-        **CMD_REMOVE, cluster=CLUSTER_NAME_2, append=scenario.cmd_flags
+        base="remove", cluster=CLUSTER_NAME_2, append=scenario.cmd_flags
     )
     result = utils.cli_cmd(cmd)
     utils.assert_exit_code(result)
     for resource_type in scenario.resource_types:
         utils.assert_in_output(
-            f"{resource_type[:-1].capitalize()} removed:", result=result
+            f"{resource_type[:-1].capitalize()} removed", result=result
         )
         assert_docker_resource_count(
             DockerResourceCount(
@@ -321,7 +411,7 @@ def test_remove_cluster_resource_scenarios(
 
 
 @dataclass
-class RemoveDependentResourceForceScenario:
+class RemoveForceScenario:
     """
     Remove dependent resources via force scenario.
 
@@ -333,10 +423,10 @@ class RemoveDependentResourceForceScenario:
         The resource type to remove.
     cmd_flag : str
         The command flag to use.
-    fail_msg : str
-        The failure message to expect.
-    success_msg : str
-        The success message to expect.
+    log_match : str
+        The log message to expect.
+    expected_resource_count : int
+        The expected resource count.
     log_msg: str
         The log message to display before running the test.
     """
@@ -344,60 +434,77 @@ class RemoveDependentResourceForceScenario:
     id: str
     resource_type: str
     cmd_flag: str
-    fail_msg: str
-    success_msg: str
+    log_match: str
+    expected_resource_count: int
     log_msg: str
 
 
-resource_dependent_force_scenarios = [
-    RemoveDependentResourceForceScenario(
-        id="volumes_dependent_force",
+remove_force_scenarios = [
+    RemoveForceScenario(
+        id="volumes_dependent_force_running",
         resource_type="volumes",
         cmd_flag="--volumes",
-        fail_msg="Cannot remove volume",
-        success_msg="Volume removed:",
-        log_msg="Force remove dependent volume",
+        log_match=FAILURE_VOLUME,
+        expected_resource_count=1,
+        log_msg="Force remove dependent volume from running cluster",
     ),
-    RemoveDependentResourceForceScenario(
-        id="networks_dependent_force",
+    RemoveForceScenario(
+        id="volumes_dependent_force_stopped",
+        resource_type="volumes",
+        cmd_flag="--volumes",
+        log_match=FAILURE_VOLUME,
+        expected_resource_count=1,
+        log_msg="Force remove dependent volume from stopped cluster",
+    ),
+    RemoveForceScenario(
+        id="networks_dependent_force_running",
         resource_type="networks",
         cmd_flag="--networks",
-        fail_msg="Cannot remove network",
-        success_msg="Network removed:",
-        log_msg="Force remove dependent network",
+        log_match=FAILURE_NETWORK,
+        expected_resource_count=1,
+        log_msg="Force remove dependent network from running cluster",
+    ),
+    RemoveForceScenario(
+        id="networks_dependent_force_stopped",
+        resource_type="networks",
+        cmd_flag="--networks",
+        log_match=REMOVED_NETWORK,
+        expected_resource_count=0,
+        log_msg="Force remove dependent network from stopped cluster",
     ),
 ]
 
 
 @pytest.mark.parametrize(
-    "scenario,log_msg",
-    utils.get_scenario_and_log_msg(resource_dependent_force_scenarios),
-    ids=utils.get_scenario_ids(resource_dependent_force_scenarios),
-    indirect=["log_msg"],
+    "scenario,log_msg,provision_clusters",
+    [
+        (*s, {"keepalive": True})
+        for s in utils.get_scenario_and_log_msg(remove_force_scenarios)
+    ],
+    ids=utils.get_scenario_ids(remove_force_scenarios),
+    indirect=["log_msg", "provision_clusters"],
 )
-@pytest.mark.usefixtures("log_test", "dummy_resources", "provision_cluster", "remove")
-def test_remove_dependent_and_force_scenarios(
+def test_remove_force_scenarios(
     docker_client: DockerClient,
-    scenario: RemoveDependentResourceForceScenario,
+    scenario: RemoveForceScenario,
 ) -> None:
-    """Run each RemoveDependentResourceForceScenario."""
-    utils.cli_cmd(utils.build_cmd(**CMD_DOWN_KEEP))
-    cmd = utils.build_cmd(**CMD_REMOVE, append=[scenario.cmd_flag])
-    result = utils.cli_cmd(cmd)
-    utils.assert_exit_code(result, expected=2)
-    utils.assert_in_output(scenario.fail_msg, result=result)
-
-    cmd_force = utils.build_cmd(
-        **CMD_REMOVE,
+    """Run each RemoveForceScenario."""
+    if scenario.id.endswith("_stopped"):
+        cmd_args = CMD_DOWN_KEEP.copy()
+        utils.cli_cmd(utils.build_cmd(**cmd_args))
+    cmd = utils.build_cmd(
+        base="remove",
         cluster="all",
         append=[scenario.cmd_flag, "--force"],
     )
-    result_force = utils.cli_cmd(cmd_force)
-    utils.assert_exit_code(result_force)
-    utils.assert_in_output(scenario.success_msg, result=result_force)
+    result = utils.cli_cmd(cmd)
+    utils.assert_exit_code(result)
+    utils.assert_in_output(scenario.log_match, result=result)
     assert_docker_resource_count(
         DockerResourceCount(
-            getattr(docker_client, scenario.resource_type), ROOT_LABEL, 0
+            getattr(docker_client, scenario.resource_type),
+            ROOT_LABEL,
+            scenario.expected_resource_count,
         )
     )
 
@@ -417,6 +524,8 @@ class RemoveImagesNegativeScenario:
         The expected message.
     cluster : str
         The cluster to use.
+    expected_exit_code : int
+        The expected exit code.
     log_msg : str
         The log message to display before running the test.
     """
@@ -425,6 +534,7 @@ class RemoveImagesNegativeScenario:
     append_flags: list[str]
     expected_msg: str
     cluster: str
+    expected_exit_code: int
     log_msg: str
 
 
@@ -434,6 +544,7 @@ images_negative_scenarios = [
         append_flags=["--images", "--module", "test"],
         expected_msg="Cannot remove images for a specific module",
         cluster="all",
+        expected_exit_code=2,
         log_msg="Negative: images with module",
     ),
     RemoveImagesNegativeScenario(
@@ -441,6 +552,7 @@ images_negative_scenarios = [
         append_flags=["--images"],
         expected_msg="Cannot remove images for a specific cluster",
         cluster=CLUSTER_NAME,
+        expected_exit_code=0,
         log_msg="Negative: images with specific cluster",
     ),
 ]
@@ -452,7 +564,6 @@ images_negative_scenarios = [
     ids=utils.get_scenario_ids(images_negative_scenarios),
     indirect=["log_msg"],
 )
-@pytest.mark.usefixtures("log_test", "dummy_resources", "provision_cluster", "remove")
 def test_remove_images_negative_scenarios(
     docker_client: DockerClient,
     scenario: RemoveImagesNegativeScenario,
@@ -460,14 +571,17 @@ def test_remove_images_negative_scenarios(
     """Run each RemoveImagesNegativeScenario."""
     result = utils.cli_cmd(
         utils.build_cmd(
-            **CMD_REMOVE, cluster=scenario.cluster, append=scenario.append_flags
+            base="remove", cluster=scenario.cluster, append=scenario.append_flags
         )
     )
-    utils.assert_exit_code(result, expected=2)
+    utils.assert_exit_code(result, scenario.expected_exit_code)
     utils.assert_in_output(scenario.expected_msg, result=result)
     assert_docker_resource_count(
         DockerResourceCount(
-            docker_client.images, expected_count=1, image_names=[TEST_IMAGE_NAME]
+            docker_client.images,
+            label=ROOT_LABEL,
+            expected_count=1,
+            image_names=[TEST_IMAGE_NAME],
         )
     )
 
@@ -475,45 +589,58 @@ def test_remove_images_negative_scenarios(
 TEST_MULTI_MOD_ALL_MSG = "Testing removing multiple modules from all clusters"
 
 
-@pytest.mark.parametrize("log_msg", [TEST_MULTI_MOD_ALL_MSG], indirect=True)
-@pytest.mark.usefixtures(
-    "log_test", "dummy_resources", "provision_two_clusters", "remove"
+@pytest.mark.parametrize(
+    "log_msg,provision_clusters",
+    [(TEST_MULTI_MOD_ALL_MSG, {"modules": ["postgres"], "keepalive": True})],
+    indirect=True,
 )
 def test_remove_multiple_module_all(
     docker_client: DockerClient,
 ) -> None:
     """Remove multiple modules from all clusters."""
-    result = utils.cli_cmd(
-        utils.build_cmd(
-            **CMD_REMOVE,
-            cluster="all",
-            append=["--module", "test", "--module", "postgres"],
-        ),
-    )
-    postgres_module_label = f"{MODULE_LABEL_KEY}=catalog-postgres"
+    cmd_args = CMD_DOWN_KEEP.copy()
+    utils.cli_cmd(utils.build_cmd(**cmd_args))
+    append = ["--module", "test", "--module", "postgres"]
+    cmd = utils.build_cmd(base="remove", cluster="all", append=append)
+    result = utils.cli_cmd(cmd)
     utils.assert_exit_code(result)
-    utils.assert_in_output("Volume removed:", "Network removed:", result=result)
+    # Can't delete volumes tied to stopped containers. Networks are
+    # mapped to clusters, so they are not deleted due to the module
+    # flags
     assert_docker_resource_count(
-        DockerResourceCount(
-            docker_client.images, expected_count=1, image_names=[TEST_IMAGE_NAME]
-        ),
-        DockerResourceCount(docker_client.volumes, TEST_MODULE_LABEL, 0),
-        DockerResourceCount(docker_client.networks, TEST_MODULE_LABEL, 0),
-        DockerResourceCount(docker_client.volumes, postgres_module_label, 0),
-        DockerResourceCount(docker_client.networks, postgres_module_label, 0),
+        DockerResourceCount(docker_client.volumes, CLUSTER_LABEL, 2),
+        DockerResourceCount(docker_client.networks, CLUSTER_LABEL, 1),
+    )
+    # Both volumes are removed (one for each module), but the network
+    # stays since it doesn't have a module label applied to it.
+    cmd_args = CMD_DOWN.copy()
+    utils.cli_cmd(utils.build_cmd(**cmd_args))
+    result = utils.cli_cmd(cmd)
+    utils.assert_exit_code(result)
+    utils.assert_in_output(REMOVED_VOLUME, result=result)
+    assert_docker_resource_count(
+        DockerResourceCount(docker_client.images, ROOT_LABEL, 1, [TEST_IMAGE_NAME]),
+        DockerResourceCount(docker_client.volumes, CLUSTER_LABEL, 0),
+        DockerResourceCount(docker_client.networks, CLUSTER_LABEL, 1),
     )
 
 
-@pytest.mark.parametrize("log_msg", ["Testing invalid module"], indirect=True)
-@pytest.mark.usefixtures(
-    "log_test", "dummy_resources", "provision_two_clusters", "remove"
+@pytest.mark.parametrize(
+    "log_msg,provision_clusters",
+    [
+        (
+            "Testing invalid module",
+            {"cluster_names": [CLUSTER_NAME_2], "keepalive": True},
+        )
+    ],
+    indirect=True,
 )
 def test_remove_module_invalid() -> None:
     """Try to remove an invalid module."""
     result = utils.cli_cmd(
-        utils.build_cmd(**CMD_REMOVE, append=["--module", "invalid"])
+        utils.build_cmd(base="remove", append=["--module", "invalid"])
     )
-    utils.assert_exit_code(result, expected_code=2)
+    utils.assert_exit_code(result, expected=2)
     utils.assert_in_output("Module 'invalid' not found", result=result)
 
 
@@ -536,7 +663,7 @@ class DockerResourceCount:
         DockerClient.images)
     """
 
-    resource_type: DockerClient.images | DockerClient.volumes | DockerClient.networks
+    resource_type: ImageCollection | VolumeCollection | NetworkCollection
     label: str
     expected_count: int = 0
     image_names: list[str] | None = None
@@ -559,7 +686,7 @@ def assert_docker_resource_count(*args: DockerResourceCount) -> None:
     """
 
     time.sleep(2)  # Avoid race condition
-    client = DockerClient(base_url=resolve_docker_socket())
+    client, _ = utils.docker_client()
     label = "org.minitrino=test"
     resources = [
         ("image", client.images.list(filters={"label": label})),
@@ -601,7 +728,7 @@ def assert_docker_resource_count(*args: DockerResourceCount) -> None:
 
 
 def assert_resources_removed(
-    docker_client: DockerClient, result: Result, **kwargs: dict[str, Any]
+    docker_client: DockerClient, result: Result, **kwargs: Any
 ) -> None:
     """Assert that all specified resource types have been removed."""
     for resource_type in kwargs.get("resource_types", []):
@@ -611,7 +738,7 @@ def assert_resources_removed(
         assert_docker_resource_count(
             DockerResourceCount(
                 getattr(docker_client, resource_type),
-                kwargs.get("label"),
+                kwargs.get("label", ROOT_LABEL),
                 0,
                 kwargs.get("image_name"),
             )

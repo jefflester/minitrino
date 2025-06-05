@@ -184,40 +184,17 @@ class ClusterOperations:
                 )
                 return
 
-        labels = []
+        module_labels = []
         for module_name in modules:
             module: dict | None = self._ctx.modules.data.get(module_name)
             if module is None:
                 raise UserError(f"Module '{module_name}' not found.")
-            labels.append(module["label"])
-
-        resources = self._cluster.resource.resources(labels)
-        items: list[MinitrinoDockerObject]
-        if obj_type == "image":
-            items = list(resources.images())
-        elif obj_type == "volume":
-            items = list(resources.volumes())
-        elif obj_type == "network":
-            items = list(resources.networks())
-        else:
-            raise ValueError(f"Invalid object type: {obj_type}")
-
-        for obj in items:
-            identifier = "<unknown>"
-            try:
-                fields = self._get_identifier_fields(obj_type, obj)
-                identifier = utils.generate_identifier(fields)
-                if obj.kind == "network":
-                    obj.remove()
-                else:
-                    assert not isinstance(obj, MinitrinoNetwork)
-                    obj.remove(force=force)
-                self._ctx.logger.info(f"{obj_type.title()} removed: {identifier}")
-            except APIError as e:
-                self._ctx.logger.debug(
-                    f"Cannot remove {obj_type}: {identifier}\n"
-                    f"Error from Docker: {e.explanation}"
-                )
+            module_labels.append(module["label"])
+        if not module_labels:
+            self._remove(obj_type, None, force)
+            return
+        for label in module_labels:
+            self._remove(obj_type, label, force)
 
     def restart(self) -> None:
         """Restart all cluster containers (coordinator and workers)."""
@@ -341,7 +318,7 @@ class ClusterOperations:
             if c.name
             and re.match(pattern, c.name)
             and c.name.startswith("minitrino-worker-")
-            and c.labels.get("org.minitrino") == "root"
+            and c.labels.get("org.minitrino.root") == "true"
         ]
         running_workers = len(worker_containers)
 
@@ -394,8 +371,8 @@ class ClusterOperations:
                     detach=True,
                     network=network_name,
                     labels={
-                        "org.minitrino": "root",
-                        "org.minitrino.module": "minitrino",
+                        "org.minitrino.root": "true",
+                        "org.minitrino.module.minitrino": "true",
                         "com.docker.compose.project": compose_project_name,
                         "com.docker.compose.service": "minitrino-worker",
                     },
@@ -406,18 +383,20 @@ class ClusterOperations:
                     f"in network '{network_name}'"
                 )
 
-            user = self._ctx.env.get("BUILD_USER")
+            user = self._ctx.env.get("SERVICE_USER")
             tar_path = "/tmp/${CLUSTER_DIST}.tar.gz"
 
-            # Copy the source directory from the coordinator to the
-            # worker container
+            # Create tar archive of coordinator's /etc/${CLUSTER_DIST}
             self._ctx.cmd_executor.execute(
-                f"bash -c 'tar czf {tar_path} -C /etc ${{CLUSTER_DIST}}'",
+                "bash -c 'rm -rf /tmp/${CLUSTER_DIST}_copy'",
+                "bash -c 'cp -a /etc/${CLUSTER_DIST} /tmp/${CLUSTER_DIST}_copy'",
+                f"bash -c 'tar czf {tar_path} -C /tmp ${{CLUSTER_DIST}}_copy'",
+                "bash -c 'rm -rf /tmp/${CLUSTER_DIST}_copy'",
                 container=coordinator,
                 docker_user=user,
             )
 
-            # Copy the tar file from the coordinator container
+            # Copy the tar archive from the coordinator container
             bits, _ = coordinator.get_archive(
                 f"/tmp/{self._ctx.env.get('CLUSTER_DIST')}.tar.gz"
             )
@@ -425,7 +404,7 @@ class ClusterOperations:
 
             worker.put_archive("/tmp", tar_stream)
 
-            # Put the tar file into the new worker container & extract
+            # Extract the tar archive into the new worker container
             self._ctx.cmd_executor.execute(
                 f"bash -c 'tar xzf {tar_path} -C /etc'",
                 container=worker,
@@ -444,6 +423,35 @@ class ClusterOperations:
             self._ctx.logger.debug(f"Copied {ETC_DIR} to '{fq_worker_name}'")
 
         self.restart_containers(restart)
+
+    def _remove(self, obj_type: str, label: str | None, force: bool) -> None:
+        resources = self._cluster.resource.resources([label] if label else None)
+        items: list[MinitrinoDockerObject]
+        if obj_type == "image":
+            items = list(resources.images())
+        elif obj_type == "volume":
+            items = list(resources.volumes())
+        elif obj_type == "network":
+            items = list(resources.networks())
+        else:
+            raise ValueError(f"Invalid object type: {obj_type}")
+        for obj in items:
+            identifier = "<unknown>"
+            try:
+                fields = self._get_identifier_fields(obj_type, obj)
+                identifier = utils.generate_identifier(fields)
+                if obj.kind == "network":
+                    assert isinstance(obj, MinitrinoNetwork)
+                    obj.remove()
+                else:
+                    assert not isinstance(obj, MinitrinoNetwork)
+                    obj.remove(force=force)
+                self._ctx.logger.info(f"{obj_type.title()} removed: {identifier}")
+            except APIError as e:
+                self._ctx.logger.info(
+                    f"Cannot remove {obj_type}: {identifier}\n"
+                    f"Error from Docker: {e.explanation}"
+                )
 
     def _get_identifier_fields(
         self, obj_type: str, item: MinitrinoDockerObject

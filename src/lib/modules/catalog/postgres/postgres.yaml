@@ -15,11 +15,11 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-postgres
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.postgres=true
 
 volumes:
   postgres-data:
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=catalog-postgres
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.postgres=true

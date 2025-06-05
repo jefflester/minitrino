@@ -19,5 +19,5 @@ services:
     ports:
       - ${__PORT_MYSQL_EVENT_LISTENER_DB}:3306
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=admin-mysql-event-listener
+      - org.minitrino.root=true
+      - org.minitrino.module.admin.mysql-event-listener=true

@@ -81,7 +81,7 @@ class EnvironmentVariables(dict):
             return
 
         for env_var in self._ctx._user_env:
-            k, v = utils.parse_key_value_pair(self._ctx, env_var)
+            k, v = utils.parse_key_value_pair(self._ctx, env_var, hard_fail=True)
             self[k.upper()] = v
 
     def _parse_os_env(self) -> None:
@@ -111,7 +111,7 @@ class EnvironmentVariables(dict):
             "TEXT_EDITOR",
         ]
         try:
-            lib_env = self._parse_library_env(dry_run=True)
+            lib_env = self._parse_library_env()
             for k, v in lib_env.items():
                 if k.startswith("__PORT"):
                     shell_source.append(k)
@@ -159,15 +159,9 @@ class EnvironmentVariables(dict):
             )
             return
 
-    def _parse_library_env(self, dry_run: bool = False) -> dict:
+    def _parse_library_env(self) -> dict:
         """
         Parse the Minitrino library's `minitrino.env` file.
-
-        Parameters
-        ----------
-        dry_run : bool, optional
-            If `True`, environment variables will not be added to the
-            current mapping. Defaults to `False`.
 
         Returns
         -------
@@ -203,8 +197,7 @@ class EnvironmentVariables(dict):
                 k, v = utils.parse_key_value_pair(self._ctx, env_var)
                 k = k.upper()
                 if not self.get(k):
-                    if not dry_run:
-                        self[k] = v
+                    self[k] = v
                     lib_env[k] = v
 
         return lib_env
@@ -222,5 +215,5 @@ class EnvironmentVariables(dict):
         if self:
             self._ctx.logger.debug(
                 f"Registered environment variables:\n"
-                f"{json.dumps(self, indent=2, sort_keys=True)}",
+                f"{json.dumps(self, sort_keys=True)}",
             )

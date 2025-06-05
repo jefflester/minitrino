@@ -9,8 +9,8 @@ services:
         starburst.access-control.authorized-users=admin
         starburst.access-control.authorized-groups=admins,clusteradmins
         access-control.config-files=etc/biac.properties
-      MINITRINO_BOOTSTRAP: bootstrap-cluster.sh
     volumes:
       - ./modules/security/biac/resources/cluster/biac.properties:/mnt/etc/biac.properties:ro
+      - ./modules/security/biac/resources/bootstrap/bootstrap-cluster.sh:/mnt/bootstrap/biac/bootstrap-cluster.sh:ro
     labels:
-      - org.minitrino.module=security-biac
+      - org.minitrino.module.security.biac=true

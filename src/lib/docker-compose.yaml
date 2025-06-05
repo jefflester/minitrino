@@ -8,10 +8,10 @@ services:
         UBUNTU_VER: ${UBUNTU_VER}
         CLUSTER_VER: ${CLUSTER_VER}
         CLUSTER_DIST: ${CLUSTER_DIST}
-        BUILD_USER: ${BUILD_USER}
+        SERVICE_USER: ${SERVICE_USER}
       labels:
-        - org.minitrino=root
-        - org.minitrino.module=minitrino
+        - org.minitrino.root=true
+        - org.minitrino.module.minitrino=true
     image: minitrino/cluster:${CLUSTER_VER}-${CLUSTER_DIST}
     container_name: minitrino-${CLUSTER_NAME}
     restart: 'no'
@@ -20,13 +20,13 @@ services:
     volumes:
       - ${LIC_PATH}:${LIC_MOUNT_PATH}
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=minitrino
+      - org.minitrino.root=true
+      - org.minitrino.module.minitrino=true
 
 networks:
   default:
     name: minitrino_${CLUSTER_NAME}
     driver: bridge
     labels:
-      - org.minitrino=root
-      - org.minitrino.module=minitrino
+      - org.minitrino.root=true
+      - org.minitrino.module.minitrino=true

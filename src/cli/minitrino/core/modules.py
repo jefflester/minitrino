@@ -92,37 +92,38 @@ class Modules:
         labels are considered modules.
         """
         utils.check_daemon(self._ctx.docker_client)
-        categories = [f"{MODULE_ADMIN}-", f"{MODULE_CATALOG}-", f"{MODULE_SECURITY}-"]
         containers = self._ctx.cluster.resource.resources().containers()
         if not containers:
             return {}
         modules = {}
-        hint_msg = "Check the compose.yaml file for this module at %s"
 
-        def get_module_from_labels(labels):
-            for label_key, label_val in labels.items():
-                if "org.minitrino" not in label_key:
+        def get_modules_from_labels(labels: dict[str, str]) -> list[str]:
+            module_names = []
+            for label_key, label_value in labels.items():
+                if not label_key.startswith(MODULE_LABEL_KEY):
                     continue
-                for category in categories:
-                    if category in label_val:
-                        return label_val.lower().replace(category, "")
-            return None
+                if label_value != "true":
+                    continue
+                parts = label_key[len(f"{MODULE_LABEL_KEY}.") :].split(".")
+                if len(parts) < 2:
+                    continue
+                module_name = ".".join(parts[1:])
+                module_names.append(module_name)
+            return module_names
 
         for container in containers:
-            module = get_module_from_labels(container.labels)
             cluster_name = container.cluster_name
-            if module:
+            module_names = get_modules_from_labels(container.labels)
+            if module_names:
                 if cluster_name is None:
                     raise UserError(
                         f"Unable to determine cluster name for container "
                         f"'{container.name}'. Container '{container.name}' "
                         f"is either missing the '{COMPOSE_LABEL_KEY}' label "
                         f"or it is malformed.",
-                        hint_msg=hint_msg.format(
-                            self.data.get(module, {}).get("yaml_file", "<unknown>")
-                        ),
                     )
-                modules[module] = cluster_name
+                for module in module_names:
+                    modules[module] = cluster_name
                 continue
 
             if (
@@ -132,9 +133,6 @@ class Modules:
                 continue
             raise UserError(
                 f"Missing Minitrino labels for container '{container.name}'.",
-                hint_msg=hint_msg.format(
-                    self.data.get(module, {}).get("yaml_file", "<unknown>")
-                ),
             )
 
         for module in modules:
@@ -148,7 +146,7 @@ class Modules:
 
     def check_dep_modules(self, modules: Optional[list[str]] = None) -> list[str]:
         """
-        Check if provided modules have dependencies and include them.
+        Recursively collect all direct and transitive module deps.
 
         Parameters
         ----------
@@ -160,21 +158,24 @@ class Modules:
         list[str]
             List of modules dependent to the modules provided.
         """
+
+        def _add_with_deps(module):
+            if module in result:
+                return
+            result.add(module)
+            for dep in self.data.get(module, {}).get("dependentModules", []):
+                self._ctx.logger.debug(
+                    f"Module dependency for module '{module}' will be included: '{dep}'"
+                )
+                _add_with_deps(dep)
+
         if modules is None:
             modules = []
+        result: set[str] = set()
 
-        for module in modules:
-            dependent_modules = self.data.get(module, {}).get("dependentModules", [])
-            if not dependent_modules:
-                continue
-            for dependent_module in dependent_modules:
-                if dependent_module not in modules:
-                    modules.insert(0, dependent_module)
-                    self._ctx.logger.debug(
-                        f"Module dependency for module '{module}' "
-                        f"will be included: '{dependent_module}'",
-                    )
-        return list(set(modules))
+        for m in modules:
+            _add_with_deps(m)
+        return list(result)
 
     def check_module_version_requirements(
         self, modules: Optional[list[str]] = None
@@ -317,11 +318,12 @@ class Modules:
                     f"You must provide a path to a Starburst license via the "
                     f"LIC_PATH environment variable."
                 )
-            if not os.path.isfile(self._ctx.env.get("LIC_PATH", "")):
+            lic_path = os.path.expanduser(self._ctx.env.get("LIC_PATH", ""))
+            if not os.path.isfile(lic_path):
                 raise UserError(
                     f"Module(s) {enterprise_modules} requires a Starburst license. "
                     f"The path provided via the LIC_PATH environment variable does "
-                    f"not exist or is not a file: {self._ctx.env.get('LIC_PATH', '')}."
+                    f"not exist or is not a file: {lic_path}."
                 )
             self._ctx.env.update({"LIC_MOUNT_PATH": LIC_MOUNT_PATH})
         elif self._ctx.env.get("LIC_PATH", ""):
@@ -358,13 +360,14 @@ class Modules:
 
         services = []
         for module in modules:
+            self._ctx.logger.debug(f"Checking for services in module '{module}'...")
             yaml_file = self.data.get(module, {}).get("yaml_file", "")
             module_services = (
                 self.data.get(module, {}).get("yaml_dict", {}).get("services", {})
             )
             if not module_services:
                 raise MinitrinoError(
-                    f"Invalid Docker Compose YAML file "
+                    f"Invalid Docker Compose YAML file for module '{module}' "
                     f"(no 'services' section found): {yaml_file}"
                 )
             # Get all services defined in YAML file
@@ -488,6 +491,8 @@ class Modules:
                     self.data[module_name][k] = v
 
                 # Add module label
-                self.data[module_name][
-                    "label"
-                ] = f"{MODULE_LABEL_KEY}={self.data[module_name]['type']}-{module_name}"
+                self.data[module_name]["label"] = (
+                    f"{MODULE_LABEL_KEY}."
+                    f"{self.data[module_name]['type']}."
+                    f"{module_name}=true"
+                )

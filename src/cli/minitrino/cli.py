@@ -1,4 +1,4 @@
-"""Minitrino CLI entrypoint module."""
+"""Minitrino CLI entrypoint."""
 
 import difflib
 import os
@@ -9,8 +9,9 @@ from typing import Any
 import click
 
 from minitrino import utils
+from minitrino.core import logger as minitrino_logger
 from minitrino.core.context import MinitrinoContext
-from minitrino.core.logger import LogLevel
+from minitrino.core.logger import LogLevel, MinitrinoLogger
 
 
 class CommandLineInterface(click.MultiCommand):
@@ -28,8 +29,6 @@ class CommandLineInterface(click.MultiCommand):
 
     def get_command(self, ctx, name) -> Any:
         """Load and return the command module."""
-        from minitrino.core.logger import MinitrinoLogger
-
         logger = MinitrinoLogger()
         mod_name = name.replace("-", "_")
         try:
@@ -47,23 +46,14 @@ class CommandLineInterface(click.MultiCommand):
         return cmd
 
 
-def version_string() -> str:
-    """Return the version of the CLI and the library as a string."""
-    cli_version = utils.cli_ver()
-    try:
-        ctx = MinitrinoContext()
-        ctx.initialize(version_only=True)
-        lib_version = utils.lib_ver(ctx=ctx)
-    except Exception:
-        lib_version = "NOT INSTALLED"
-    return f"{cli_version} (library: {lib_version})"
-
-
 @click.command(cls=CommandLineInterface)
-@click.version_option(
-    version=version_string(),  # type: ignore[arg-type]
-    prog_name="minitrino",
-    message="%(prog)s version %(version)s",
+@click.option(
+    "--version",
+    is_flag=True,
+    help="Show the version and exit.",
+    expose_value=False,
+    is_eager=True,
+    callback=lambda ctx, param, value: display_version(ctx) if value else None,
 )
 @click.option(
     "-v",
@@ -80,6 +70,12 @@ def version_string() -> str:
     ),
     default="INFO",
     help="Set the minimum log level (ERROR, WARN, INFO, DEBUG).",
+)
+@click.option(
+    "--global-logging",
+    is_flag=True,
+    default=False,
+    help="Enable logging for all dependencies.",
 )
 @click.option(
     "-e",
@@ -103,6 +99,7 @@ def cli(
     ctx: MinitrinoContext,
     verbose: bool,
     log_level: str,
+    global_logging: bool,
     env: list[str],
     cluster_name: str,
 ) -> None:
@@ -116,3 +113,31 @@ def cli(
 
     effective_log_level = LogLevel.DEBUG if verbose else LogLevel[log_level.upper()]
     ctx._log_level = effective_log_level
+    minitrino_logger.configure_logging(
+        effective_log_level, global_logging=global_logging
+    )
+
+
+def display_version(ctx: click.Context) -> None:
+    """Return the version of the CLI and the library as a string."""
+    minitrino_logger.configure_logging(LogLevel.INFO)
+    env = []
+    args = sys.argv
+    i = 0
+    while i < len(args):
+        if args[i] == "--env" or args[i] == "-e":
+            if i + 1 < len(args):
+                env.append(args[i + 1])
+            i += 2
+        else:
+            i += 1
+    minitrino_ctx: MinitrinoContext = ctx.ensure_object(MinitrinoContext)
+    minitrino_ctx._user_env = env
+    minitrino_ctx.initialize(version_only=True)
+    cli_version = utils.cli_ver()
+    try:
+        lib_version = utils.lib_ver(ctx=minitrino_ctx)
+    except Exception:
+        lib_version = "NOT INSTALLED"
+    minitrino_ctx.logger.info(f"{cli_version} (library: {lib_version})")
+    sys.exit()

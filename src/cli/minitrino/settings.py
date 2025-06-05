@@ -1,7 +1,7 @@
 """Settings and configuration for Minitrino CLI."""
 
 # Docker labels
-ROOT_LABEL = "org.minitrino=root"
+ROOT_LABEL = "org.minitrino.root=true"
 MODULE_LABEL_KEY = "org.minitrino.module"
 COMPOSE_LABEL_KEY = "com.docker.compose.project"
 
@@ -29,7 +29,8 @@ SNAPSHOT_ROOT_FILES = [
     "image",
 ]
 
-# Scrub Keys
+# Scrubbing
+SCRUBBED = "*" * 8
 SCRUB_KEYS = [
     "key",
     "-key",

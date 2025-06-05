@@ -74,8 +74,20 @@ def handle_exception(
         error_msg = str(error)
         exit_code = 1
 
+    tb = error.__traceback__
+    while tb and tb.tb_next:
+        tb = tb.tb_next
+    if tb:
+        frame = tb.tb_frame
+        filename = os.path.basename(frame.f_code.co_filename)
+        lineno = tb.tb_lineno
+        module = frame.f_globals.get("__name__", "")
+        origin = f"{module}:{filename}:{lineno}"
+    else:
+        origin = "unknown:unknown:0"
+
     logger = getattr(ctx, "logger", MinitrinoLogger())
-    logger.error(additional_msg, error_msg)
+    logger.error(f"[Origin: {origin}]", additional_msg, error_msg)
 
     if not skip_traceback:
         echo()  # Force a newline
@@ -207,9 +219,9 @@ def container_user_and_id(
         raise MinitrinoError("Container object or container name must be provided")
     if isinstance(container, str):
         container = ctx.cluster.resource.container(container)
-    usr = ctx.cmd_executor.execute("bash -c 'echo $BUILD_USER'", container=container)[
-        0
-    ].output.strip()
+    usr = ctx.cmd_executor.execute(
+        "bash -c 'echo ${SERVICE_USER}'", container=container
+    )[0].output.strip()
     uid = ctx.cmd_executor.execute(f"bash -c 'id -u {usr}'", container=container)[
         0
     ].output.strip()
@@ -244,7 +256,9 @@ def generate_identifier(identifiers: Optional[Dict[str, Any]] = None) -> str:
     return " ".join(identifier)
 
 
-def parse_key_value_pair(ctx: MinitrinoContext, pair: str) -> tuple[str, str]:
+def parse_key_value_pair(
+    ctx: MinitrinoContext, pair: str, hard_fail: bool = False
+) -> tuple[str, str]:
     """
     Parse a key-value pair from a string.
 
@@ -252,6 +266,9 @@ def parse_key_value_pair(ctx: MinitrinoContext, pair: str) -> tuple[str, str]:
     ----------
     pair : str
         Key-value pair to parse.
+    hard_fail : bool, optional
+        Whether to raise an error if the key-value pair is invalid,
+        by default `False`.
 
     Returns
     -------
@@ -260,9 +277,12 @@ def parse_key_value_pair(ctx: MinitrinoContext, pair: str) -> tuple[str, str]:
     """
     pair = pair.strip()
     if "=" not in pair:
-        ctx.logger.warn(f"Invalid key-value pair: {pair}")
-        return "", ""
+        if hard_fail:
+            raise UserError(f"Invalid key-value pair: {pair}")
     key, value = pair.split("=", 1)
+    if not key or not value:
+        if hard_fail:
+            raise UserError(f"Invalid key-value pair: {pair}")
     return key, value
 
 

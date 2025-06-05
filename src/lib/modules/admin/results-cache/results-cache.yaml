@@ -26,8 +26,8 @@ services:
     volumes:
       - minio-results-cache-data:/data
     labels:
-      - org.minitrino=root
-      - org.minitrino.module.hive=admin-results-cache
+      - org.minitrino.root=true
+      - org.minitrino.module.admin.results-cache=true
 
   create-minio-results-cache-buckets:
     image: minio/mc:${MINIO_MC_VER}
@@ -47,11 +47,11 @@ services:
       tail -f /dev/null
       "
     labels:
-      - org.minitrino=root
-      - org.minitrino.module.hive=admin-results-cache
+      - org.minitrino.root=true
+      - org.minitrino.module.admin.results-cache=true
 
 volumes:
   minio-results-cache-data:
     labels:
-      - org.minitrino=root
-      - org.minitrino.module.hive=admin-results-cache
+      - org.minitrino.root=true
+      - org.minitrino.module.admin.results-cache=true

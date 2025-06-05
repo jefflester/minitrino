@@ -1,43 +1,54 @@
 """Logging utilities for Minitrino clusters."""
 
-from dataclasses import dataclass
+import inspect
+import logging
+import os
+import sys
 from enum import Enum
-from shutil import get_terminal_size
-from textwrap import fill
+from types import FrameType
 from typing import Callable, Optional
 
-from click import echo, prompt, style
+from click import prompt, style
 
-
-@dataclass(frozen=True)
-class LogMeta:
-    """Logging metadata."""
-
-    prefix: str
-    color: str
-    debug: bool = False
+DEFAULT_INDENT = " " * 5
 
 
 class LogLevel(Enum):
-    """
-    Log levels.
+    """Logging levels for Minitrino."""
 
-    Attributes
-    ----------
-    INFO : LogMeta
-        Info level configuration (default).
-    WARN : LogMeta
-        Warning level configuration.
-    ERROR : LogMeta
-        Error level configuration.
-    DEBUG : LogMeta
-        Debug level configuration.
-    """
+    INFO = ("[i]  ", "cyan", False)
+    WARN = ("[w]  ", "yellow", False)
+    ERROR = ("[e]  ", "red", False)
+    DEBUG = ("[v]  ", "magenta", True)
 
-    INFO = LogMeta("[i]  ", "cyan")
-    WARN = LogMeta("[w]  ", "yellow")
-    ERROR = LogMeta("[e]  ", "red")
-    DEBUG = LogMeta("[v]  ", "magenta", True)
+    def __init__(self, prefix: str, color: str, debug: bool):
+        self.prefix = prefix
+        self.color = color
+        self.debug = debug
+
+
+class SinkHandler(logging.Handler):
+    """Logging handler that sends log records to a sink."""
+
+    def __init__(self, sink: Callable[[str], None] | list[str]):
+        super().__init__()
+        self.sink = sink
+
+    def emit(self, record: logging.LogRecord) -> None:
+        """Emit a log record to the sink."""
+        msg = self.format(record)
+        if callable(self.sink):
+            self.sink(msg)
+        elif isinstance(self.sink, list):
+            self.sink.append(msg)
+
+
+PY_LEVEL = {
+    LogLevel.DEBUG: logging.DEBUG,
+    LogLevel.INFO: logging.INFO,
+    LogLevel.WARN: logging.WARNING,
+    LogLevel.ERROR: logging.ERROR,
+}
 
 
 class MinitrinoLogger:
@@ -49,22 +60,17 @@ class MinitrinoLogger:
     log_level : LogLevel, optional
         Minimum log level to emit (default: INFO)
 
-    Attributes
-    ----------
-    DEFAULT_INDENT : str
-        Standard indent used for multi-line log output.
-
     Methods
     -------
-    log(*args, level=LogLevel.INFO, stream=False) :
+    log(*args, level=LogLevel.INFO) :
         Log a message with optional styling and indentation.
-    info(*args, stream=False) :
+    info(*args) :
         Log a message at the info level.
-    warn(*args, stream=False) :
+    warn(*args) :
         Log a message at the warning level.
-    error(*args, stream=False) :
+    error(*args) :
         Log a message at the error level.
-    debug(*args, stream=False) :
+    debug(*args) :
         Log a message at the debug level.
     prompt_msg(msg="") :
         Prompt the user with a message and capture input.
@@ -73,115 +79,162 @@ class MinitrinoLogger:
         output. Useful for testing.
     styled_prefix(level=LogLevel.INFO) :
         Return the ANSI-styled log prefix.
-
-    Notes
-    -----
-    This class provides standardized logging methods (`info`, `warn`,
-    `error`, `debug`) that emit formatted messages to the console using
-    `click.echo()`. It also supports interactive prompting and message
-    styling with configurable verbosity.
     """
-
-    DEFAULT_INDENT = " " * 5
 
     def __init__(self, log_level: Optional[LogLevel] = None) -> None:
         self._log_level = log_level if log_level is not None else LogLevel.INFO
-        self._log_sink = None
-
-    def should_log(self, level: LogLevel) -> bool:
-        """Return True if the log should be emitted based on level."""
-        order = [LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR]
-        min_level_idx = order.index(self._log_level)
-        msg_level_idx = order.index(level)
-        return msg_level_idx >= min_level_idx
-
-    def set_level(self, level: LogLevel) -> None:
-        """Set the minimum log level."""
-        self._log_level = level
-
-    def log(
-        self, *args: str, level: LogLevel = LogLevel.INFO, stream: bool = False
-    ) -> None:
-        """Log messages to the terminal using color-coded levels."""
-        if not self.should_log(level):
-            return
-
-        for msg in args:
-            lines = str(msg).replace("\r", "\n").split("\n")
-            for i, line in enumerate(lines):
-                formatted = self._format(line, level.value)
-                if not formatted:
-                    continue
-                prefix = (
-                    self.DEFAULT_INDENT
-                    if stream or i > 0
-                    else self.styled_prefix(level)
-                )
-                output = f"{prefix}{formatted}"
-                # Write to sink if set
-                if self._log_sink is not None:
-                    if callable(self._log_sink):
-                        self._log_sink(output)
-                    elif isinstance(self._log_sink, list):
-                        self._log_sink.append(output)
-                echo(output)
-
-    def info(self, *args: str, stream: bool = False) -> None:
-        """Log an info-level message."""
-        self.log(*args, level=LogLevel.INFO, stream=stream)
-
-    def warn(self, *args: str, stream: bool = False) -> None:
-        """Log a warning message."""
-        self.log(*args, level=LogLevel.WARN, stream=stream)
-
-    def error(self, *args: str, stream: bool = False) -> None:
-        """Log an error message."""
-        self.log(*args, level=LogLevel.ERROR, stream=stream)
-
-    def debug(self, *args: str, stream: bool = False) -> None:
-        """Log a debug message."""
-        self.log(*args, level=LogLevel.DEBUG, stream=stream)
-
-    def prompt_msg(self, msg: str = "") -> str:
-        """Prompt the user with a styled message and return input."""
-        msg = self._format(str(msg))
-        styled_prefix = style(
-            LogLevel.INFO.value.prefix, fg=LogLevel.INFO.value.color, bold=True
-        )
-
-        return prompt(
-            f"{styled_prefix}{msg}",
-            type=str,
-        )
-
-    def styled_prefix(self, level: LogLevel = LogLevel.INFO) -> str:
-        """Return the ANSI-styled log prefix."""
-        return style(level.value.prefix, fg=level.value.color, bold=True)
+        self.logger = logging.getLogger("minitrino")
+        self.set_level(self._log_level)
+        self._log_sink: Optional[Callable[[str], None] | list[str]] = None
+        self._sink_handler: Optional[SinkHandler] = None
 
     def set_log_sink(self, sink: Callable[[str], None] | list[str]) -> None:
         """Set a log sink (callback or list)."""
+        if self._sink_handler is not None:
+            self.logger.removeHandler(self._sink_handler)
+            self._sink_handler = None
         self._log_sink = sink
+        if sink is not None:
+            handler = SinkHandler(sink)
+            for h in self.logger.handlers:
+                if isinstance(h, logging.StreamHandler):
+                    handler.setFormatter(h.formatter)
+                    break
+            self.logger.addHandler(handler)
+            self._sink_handler = handler
 
-    def get_log_sink(self) -> Callable[[str], None] | list[str]:
-        """Get the current log sink."""
+    def get_log_sink(self) -> Optional[Callable[[str], None] | list[str]]:
+        """Return the current log sink."""
         return self._log_sink
 
-    def _format(self, msg: str, meta: LogMeta = LogLevel.INFO.value) -> str:
-        """
-        Format a log message with the given metadata.
+    def set_level(self, level: LogLevel) -> None:
+        """Set the log level."""
+        self._log_level = level
+        py_level = PY_LEVEL[level]
+        self.logger.setLevel(py_level)
 
-        Parameters
-        ----------
-        msg : str
-            The message to format.
-        meta : LogMeta
-            The log metadata.
+    def log(self, *args: str, level: LogLevel = LogLevel.INFO) -> None:
+        """Log a message."""
+        py_level = PY_LEVEL[level]
+        msg = " ".join(str(a) for a in args)
+        logger = self._get_caller_logger()
+        logger.log(py_level, msg, stacklevel=3)
 
-        Returns
-        -------
-        str
-            Formatted log message string.
-        """
-        indent = self.DEFAULT_INDENT
-        msg = fill(msg, width=get_terminal_size().columns - len(indent))
-        return msg.replace("\n", "\n" + indent)
+    def info(self, *args: str) -> None:
+        """Log an info message."""
+        self.log(*args, level=LogLevel.INFO)
+
+    def warn(self, *args: str) -> None:
+        """Log a warning message."""
+        self.log(*args, level=LogLevel.WARN)
+
+    def error(self, *args: str) -> None:
+        """Log an error message."""
+        self.log(*args, level=LogLevel.ERROR)
+
+    def debug(self, *args: str) -> None:
+        """Log a debug message."""
+        self.log(*args, level=LogLevel.DEBUG)
+
+    def prompt_msg(self, msg: str = "") -> str:
+        """Prompt the user with a message and capture input."""
+        msg = str(msg)
+        styled_prefix = style(LogLevel.INFO.prefix, fg=LogLevel.INFO.color, bold=True)
+        return prompt(f"{styled_prefix}{msg}", type=str)
+
+    def styled_prefix(self, level: LogLevel = LogLevel.INFO) -> str:
+        """Return the ANSI-styled log prefix."""
+        return style(level.prefix, fg=level.color, bold=True)
+
+    def _get_caller_logger(self) -> logging.Logger:
+        frame: Optional[FrameType] = inspect.currentframe()
+        if frame is None:
+            return logging.getLogger("minitrino")
+        for _ in range(3):
+            if frame.f_back is None:
+                break
+            frame = frame.f_back
+        module = inspect.getmodule(frame)
+        logger_name = module.__name__ if module else "minitrino"
+        return logging.getLogger(logger_name)
+
+
+class MinitrinoLogFormatter(logging.Formatter):
+    """Formatter for Minitrino logs."""
+
+    COLORS = {
+        "DEBUG": "magenta",
+        "INFO": "cyan",
+        "WARNING": "yellow",
+        "ERROR": "red",
+        "CRITICAL": "red",
+    }
+    PREFIXES = {
+        "DEBUG": "[v]",
+        "INFO": "[i]",
+        "WARNING": "[w]",
+        "ERROR": "[e]",
+        "CRITICAL": "[e]",
+    }
+
+    def __init__(self, always_verbose=False):
+        super().__init__()
+        self.always_verbose = always_verbose
+        self.enable_color = sys.stdout.isatty()
+
+    def format(self, record: logging.LogRecord):
+        """Format a log record."""
+        logger_name = record.name
+        prefix = self.PREFIXES.get(record.levelname, "[i]")
+        color = self.COLORS.get(record.levelname, "cyan")
+        if self.enable_color:
+            styled_prefix = style(prefix, fg=color, bold=True)
+        else:
+            styled_prefix = prefix
+
+        msg = record.getMessage()
+
+        if self.always_verbose or record.levelno != logging.INFO:
+            if record.pathname:
+                filename = os.path.basename(record.pathname)
+            else:
+                filename = record.module
+            lineno = record.lineno
+            left = f"{styled_prefix} {logger_name}:{filename}:{lineno} "
+            lines = msg.splitlines()
+            if not lines:
+                return left
+            formatted = [f"{left}{lines[0]}"]
+            for line in lines[1:]:
+                formatted.append(f"{DEFAULT_INDENT}{line}")
+            return "\n".join(formatted)
+        else:
+            return f"{styled_prefix} {msg}"
+
+
+def configure_logging(log_level: LogLevel, global_logging: bool = False) -> None:
+    """Configure logging for Minitrino and optionally globally."""
+    root_logger = logging.getLogger()
+    minitrino_logger = logging.getLogger("minitrino")
+
+    for logger in (root_logger, minitrino_logger):
+        for handler in list(logger.handlers):
+            logger.removeHandler(handler)
+
+    py_level = PY_LEVEL[log_level]
+    always_verbose = log_level == LogLevel.DEBUG
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(MinitrinoLogFormatter(always_verbose=always_verbose))
+
+    if global_logging:
+        root_logger.addHandler(handler)
+        root_logger.setLevel(py_level)
+        minitrino_logger.propagate = True
+    else:
+        minitrino_logger.addHandler(handler)
+        minitrino_logger.setLevel(py_level)
+        minitrino_logger.propagate = False
+        root_logger.setLevel(logging.WARNING)
+        for name in logging.root.manager.loggerDict:
+            if not name.startswith("minitrino"):
+                logging.getLogger(name).setLevel(logging.WARNING)

@@ -2,20 +2,20 @@
 
 set -euxo pipefail
 
-USER="${1}"
-GROUP="${2}"
-UID="${3}"
-GID="${4}"
+SERVICE_USER="${1}"
+SERVICE_GROUP="${2}"
+SERVICE_UID="${3}"
+SERVICE_GID="${4}"
 TRINO_VER="${CLUSTER_VER:0:3}"
 
-echo "Installing ${CLUSTER_DIST}-${CLUSTER_VER} for user ${USER} (UID=${UID}, GID=${GID})..."
+echo "Installing ${CLUSTER_DIST}-${CLUSTER_VER} for user ${SERVICE_USER} (UID=${SERVICE_UID}, GID=${SERVICE_GID})..."
 
 create_app_user() {
     echo "Creating application user..."
-    if ! id "${USER}" &>/dev/null; then
-        useradd "${USER}" --uid "${UID}" --gid "${GID}"
-        usermod -aG "${GROUP}" "${USER}"
-        echo "${USER} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+    if ! id "${SERVICE_USER}" &>/dev/null; then
+        useradd "${SERVICE_USER}" --uid "${SERVICE_UID}" --gid "${SERVICE_GID}"
+        usermod -aG "${SERVICE_GROUP}" "${SERVICE_USER}"
+        echo "${SERVICE_USER} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
     fi
 }
 
@@ -36,7 +36,7 @@ copy_scripts() {
 
 set_ownership_and_perms() {
     echo "Setting directory ownership and permissions..."
-    chown -R "${USER}":"${GROUP}" \
+    chown -R "${SERVICE_USER}":"${SERVICE_GROUP}" \
         /usr/lib/"${CLUSTER_DIST}" \
         /data/"${CLUSTER_DIST}" \
         /etc/"${CLUSTER_DIST}" \
@@ -56,7 +56,7 @@ configure_jvm() {
     curl -#LfS -o jvm.config \
         https://raw.githubusercontent.com/trinodb/trino/"${TRINO_VER}"/core/docker/default/etc/jvm.config
     chmod g+w jvm.config
-    chown "${USER}":"${GROUP}" jvm.config
+    chown "${SERVICE_USER}":"${SERVICE_GROUP}" jvm.config
     sed -i '/^-agentpath:\/usr\/lib\/trino\/bin\/libjvmkill\.so$/d' jvm.config
     echo "-Djavax.net.ssl.trustStore=/etc/${CLUSTER_DIST}/tls-jvm/cacerts" >> jvm.config
     echo "-Djavax.net.ssl.trustStorePassword=changeit" >> jvm.config
@@ -72,7 +72,7 @@ configure_node_props() {
 
 install_java() {
     echo "Installing Java..."
-    bash /tmp/install-java.sh "${USER}" "${GROUP}"
+    bash /tmp/install-java.sh "${SERVICE_USER}" "${SERVICE_GROUP}"
 }
 
 install_trino_cli() {
@@ -81,7 +81,7 @@ install_trino_cli() {
     curl -#LfS -o "${TRINO_CLI_PATH}" \
         "https://repo1.maven.org/maven2/io/trino/trino-cli/${TRINO_VER}/trino-cli-${TRINO_VER}-executable.jar"
     chmod +x "${TRINO_CLI_PATH}"
-    chown "${USER}":"${GROUP}" "${TRINO_CLI_PATH}"
+    chown "${SERVICE_USER}":"${SERVICE_GROUP}" "${TRINO_CLI_PATH}"
 }
 
 install_wait_for_it() {
@@ -90,7 +90,7 @@ install_wait_for_it() {
     WAIT_FOR_IT_URL="https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh"
     curl -fsSL "${WAIT_FOR_IT_URL}" > "${WAIT_FOR_IT}"
     chmod +x "${WAIT_FOR_IT}"
-    chown "${USER}":"${GROUP}" "${WAIT_FOR_IT}"
+    chown "${SERVICE_USER}":"${SERVICE_GROUP}" "${WAIT_FOR_IT}"
 }
 
 cleanup() {

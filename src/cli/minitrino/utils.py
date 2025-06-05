@@ -219,9 +219,9 @@ def container_user_and_id(
         raise MinitrinoError("Container object or container name must be provided")
     if isinstance(container, str):
         container = ctx.cluster.resource.container(container)
-    usr = ctx.cmd_executor.execute("bash -c 'echo $BUILD_USER'", container=container)[
-        0
-    ].output.strip()
+    usr = ctx.cmd_executor.execute(
+        "bash -c 'echo ${SERVICE_USER}'", container=container
+    )[0].output.strip()
     uid = ctx.cmd_executor.execute(f"bash -c 'id -u {usr}'", container=container)[
         0
     ].output.strip()

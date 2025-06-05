@@ -7,9 +7,9 @@
 
 set -euxo pipefail
 
-USER="${1}"
-GROUP="${2}"
-USER_HOME=$(eval echo "~${USER}")
+SERVICE_USER="${1}"
+SERVICE_GROUP="${2}"
+USER_HOME=$(eval echo "~${SERVICE_USER}")
 TRINO_VER="${CLUSTER_VER:0:3}"
 
 if [ "${TRINO_VER}" -ge 436 ] && [ "${TRINO_VER}" -le 446 ]; then
@@ -23,9 +23,9 @@ else
     exit 1
 fi
 
-echo "Installing Java version ${JAVA_VER} for user ${USER}..."
-su - "${USER}" -c "bash -lc 'curl -s https://get.sdkman.io | bash'"
-su - "${USER}" -c \
+echo "Installing Java version ${JAVA_VER} for user ${SERVICE_USER}..."
+su - "${SERVICE_USER}" -c "bash -lc 'curl -s https://get.sdkman.io | bash'"
+su - "${SERVICE_USER}" -c \
     "bash -lc 'source ~/.sdkman/bin/sdkman-init.sh && \
     sdk install java ${JAVA_VER}-tem --disableUsage && \
     sdk flush temp'"
@@ -39,5 +39,5 @@ fi
 
 mkdir -p /etc/"${CLUSTER_DIST}"/tls-jvm/
 cp "${CACERTS_PATH}" /etc/"${CLUSTER_DIST}"/tls-jvm/
-chown -R "${USER}":"${GROUP}" /etc/"${CLUSTER_DIST}"/tls-jvm
+chown -R "${SERVICE_USER}":"${SERVICE_GROUP}" /etc/"${CLUSTER_DIST}"/tls-jvm
 chmod 644 /etc/"${CLUSTER_DIST}"/tls-jvm/cacerts

@@ -383,7 +383,7 @@ class ClusterOperations:
                     f"in network '{network_name}'"
                 )
 
-            user = self._ctx.env.get("BUILD_USER")
+            user = self._ctx.env.get("SERVICE_USER")
             tar_path = "/tmp/${CLUSTER_DIST}.tar.gz"
 
             # Copy the source directory from the coordinator to the

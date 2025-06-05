@@ -219,7 +219,7 @@ def set_distribution(ctx: MinitrinoContext, image: str) -> None:
         )
 
     ctx.env.update({"CLUSTER_DIST": image})
-    ctx.env.update({"BUILD_USER": image})
+    ctx.env.update({"SERVICE_USER": image})
     ctx.env.update({"ETC": f"/etc/{image}"})
 
 

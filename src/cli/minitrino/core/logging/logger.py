@@ -1,47 +1,17 @@
-"""Logging utilities for Minitrino clusters."""
+"""MinitrinoLogger and logging configuration."""
 
 import inspect
 import logging
-import os
-import sys
-from enum import Enum
+from contextlib import contextmanager
 from types import FrameType
 from typing import Callable, Optional
 
 from click import prompt, style
 
+from minitrino.core.logging.spinner import Spinner, SpinnerAwareHandler
+from minitrino.core.logging.utils import LogLevel, MinitrinoLogFormatter, SinkHandler
+
 DEFAULT_INDENT = " " * 5
-
-
-class LogLevel(Enum):
-    """Logging levels for Minitrino."""
-
-    INFO = ("[i]  ", "cyan", False)
-    WARN = ("[w]  ", "yellow", False)
-    ERROR = ("[e]  ", "red", False)
-    DEBUG = ("[v]  ", "magenta", True)
-
-    def __init__(self, prefix: str, color: str, debug: bool):
-        self.prefix = prefix
-        self.color = color
-        self.debug = debug
-
-
-class SinkHandler(logging.Handler):
-    """Logging handler that sends log records to a sink."""
-
-    def __init__(self, sink: Callable[[str], None] | list[str]):
-        super().__init__()
-        self.sink = sink
-
-    def emit(self, record: logging.LogRecord) -> None:
-        """Emit a log record to the sink."""
-        msg = self.format(record)
-        if callable(self.sink):
-            self.sink(msg)
-        elif isinstance(self.sink, list):
-            self.sink.append(msg)
-
 
 PY_LEVEL = {
     LogLevel.DEBUG: logging.DEBUG,
@@ -74,6 +44,8 @@ class MinitrinoLogger:
         Log a message at the debug level.
     prompt_msg(msg="") :
         Prompt the user with a message and capture input.
+    spinner(message: str) :
+        Display a spinner and buffer the logs.
     set_log_sink(sink: Callable[[str], None] | list[str]) :
         Set a log sink (e.g., list or callback) for capturing log
         output. Useful for testing.
@@ -85,21 +57,23 @@ class MinitrinoLogger:
         self._log_level = log_level if log_level is not None else LogLevel.INFO
         self.logger = logging.getLogger("minitrino")
         self.set_level(self._log_level)
+
         self._log_sink: Optional[Callable[[str], None] | list[str]] = None
         self._sink_handler: Optional[SinkHandler] = None
+        self._spinner = Spinner(self, self.set_log_sink)
 
-    def set_log_sink(self, sink: Callable[[str], None] | list[str]) -> None:
+    def set_log_sink(self, sink: Callable[[str], None] | list[str] | None) -> None:
         """Set a log sink (callback or list)."""
-        if self._sink_handler is not None:
-            self.logger.removeHandler(self._sink_handler)
-            self._sink_handler = None
+        # Remove all SinkHandler instances to prevent duplicates
+        for handler in list(self.logger.handlers):
+            if isinstance(handler, SinkHandler):
+                self.logger.removeHandler(handler)
+        self._sink_handler = None
         self._log_sink = sink
         if sink is not None:
             handler = SinkHandler(sink)
-            for h in self.logger.handlers:
-                if isinstance(h, logging.StreamHandler):
-                    handler.setFormatter(h.formatter)
-                    break
+            always_verbose = self._log_level == LogLevel.DEBUG
+            handler.setFormatter(MinitrinoLogFormatter(always_verbose=always_verbose))
             self.logger.addHandler(handler)
             self._sink_handler = handler
 
@@ -146,6 +120,12 @@ class MinitrinoLogger:
         """Return the ANSI-styled log prefix."""
         return style(level.prefix, fg=level.color, bold=True)
 
+    @contextmanager
+    def spinner(self, message: str):
+        """Display a spinner while a task is in progress."""
+        with self._spinner.spinner(message):
+            yield
+
     def _get_caller_logger(self) -> logging.Logger:
         frame: Optional[FrameType] = inspect.currentframe()
         if frame is None:
@@ -159,71 +139,38 @@ class MinitrinoLogger:
         return logging.getLogger(logger_name)
 
 
-class MinitrinoLogFormatter(logging.Formatter):
-    """Formatter for Minitrino logs."""
+def configure_logging(
+    log_level: LogLevel,
+    logger: Optional[MinitrinoLogger] = None,
+    global_logging: bool = False,
+) -> None:
+    """
+    Configure logging for Minitrino and optionally globally.
 
-    COLORS = {
-        "DEBUG": "magenta",
-        "INFO": "cyan",
-        "WARNING": "yellow",
-        "ERROR": "red",
-        "CRITICAL": "red",
-    }
-    PREFIXES = {
-        "DEBUG": "[v]",
-        "INFO": "[i]",
-        "WARNING": "[w]",
-        "ERROR": "[e]",
-        "CRITICAL": "[e]",
-    }
-
-    def __init__(self, always_verbose=False):
-        super().__init__()
-        self.always_verbose = always_verbose
-        self.enable_color = sys.stdout.isatty()
-
-    def format(self, record: logging.LogRecord):
-        """Format a log record."""
-        logger_name = record.name
-        prefix = self.PREFIXES.get(record.levelname, "[i]")
-        color = self.COLORS.get(record.levelname, "cyan")
-        if self.enable_color:
-            styled_prefix = style(prefix, fg=color, bold=True)
-        else:
-            styled_prefix = prefix
-
-        msg = record.getMessage()
-
-        if self.always_verbose or record.levelno != logging.INFO:
-            if record.pathname:
-                filename = os.path.basename(record.pathname)
-            else:
-                filename = record.module
-            lineno = record.lineno
-            left = f"{styled_prefix} {logger_name}:{filename}:{lineno} "
-            lines = msg.splitlines()
-            if not lines:
-                return left
-            formatted = [f"{left}{lines[0]}"]
-            for line in lines[1:]:
-                formatted.append(f"{DEFAULT_INDENT}{line}")
-            return "\n".join(formatted)
-        else:
-            return f"{styled_prefix} {msg}"
-
-
-def configure_logging(log_level: LogLevel, global_logging: bool = False) -> None:
-    """Configure logging for Minitrino and optionally globally."""
+    Parameters
+    ----------
+    log_level : LogLevel
+        Minimum log level to emit.
+    logger : MinitrinoLogger, optional
+        The logger instance to use for spinner state. If None, a new
+        instance is created.
+    global_logging : bool, optional
+        If True, configure root logger as well.
+    """
     root_logger = logging.getLogger()
     minitrino_logger = logging.getLogger("minitrino")
 
-    for logger in (root_logger, minitrino_logger):
-        for handler in list(logger.handlers):
-            logger.removeHandler(handler)
+    for logger_obj in (root_logger, minitrino_logger):
+        for handler in list(logger_obj.handlers):
+            logger_obj.removeHandler(handler)
 
     py_level = PY_LEVEL[log_level]
     always_verbose = log_level == LogLevel.DEBUG
-    handler = logging.StreamHandler(sys.stdout)
+
+    if logger is None:
+        logger = MinitrinoLogger(log_level)
+
+    handler = SpinnerAwareHandler(logger._spinner)
     handler.setFormatter(MinitrinoLogFormatter(always_verbose=always_verbose))
 
     if global_logging:

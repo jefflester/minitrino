@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, Optional
 
 from minitrino.core.errors import UserError
@@ -26,6 +27,8 @@ class ClusterValidator:
 
     Methods
     -------
+    check_cluster_name()
+        Validate that the cluster name is valid.
     check_cluster_ver()
         Validate that the current `CLUSTER_VER` and `CLUSTER_DIST`
         environment variables meet minimum requirements for either Trino
@@ -40,6 +43,29 @@ class ClusterValidator:
     def __init__(self, ctx: MinitrinoContext, cluster: Cluster):
         self._ctx = ctx
         self._cluster = cluster
+
+    def check_cluster_name(self) -> None:
+        """
+        Validate that the cluster name is valid.
+
+        Raises
+        ------
+        UserError
+            If the cluster name is invalid.
+        """
+        if self._ctx.cluster_name == "images" or self._ctx.cluster_name == "system":
+            raise UserError(
+                f"Cluster name '{self._ctx.cluster_name}' is reserved for "
+                "internal use. Please use a different cluster name."
+            )
+
+        if not re.fullmatch(r"[A-Za-z0-9_\-\*]+", self._ctx.cluster_name):
+            raise UserError(
+                f"Invalid cluster name '{self._ctx.cluster_name}'. Cluster names can "
+                "only contain alphanumeric characters, underscores, dashes, or "
+                "asterisks (asterisks are for filtering operations only and will "
+                "not work with the `provision` command)."
+            )
 
     def check_cluster_ver(self) -> None:
         """
@@ -104,7 +130,7 @@ class ClusterValidator:
 
         def _helper(module_dependent_clusters):
             for cluster in module_dependent_clusters:
-                cluster_name = f"dep-cluster-{self._ctx.cluster_name}-{cluster['name']}"
+                cluster_name = f"{self._ctx.cluster_name}-dep-{cluster['name']}"
                 cluster["name"] = cluster_name
                 dependent_clusters.append(cluster)
 
@@ -161,11 +187,13 @@ class ClusterValidator:
                             msg.append(f"    - {entry}")
                 self._ctx.logger.warn("\n".join(msg))
 
-        if cluster_cfgs is None or jvm_cfgs is None:
-            current_cluster_cfgs, current_jvm_cfg = (
-                self._cluster.config._current_config()
-            )
-            cluster_cfgs = cluster_cfgs or current_cluster_cfgs
-            jvm_cfgs = jvm_cfgs or current_jvm_cfg
-        log_duplicates(cluster_cfgs, CLUSTER_CONFIG)
-        log_duplicates(jvm_cfgs, CLUSTER_JVM_CONFIG)
+        containers = self._cluster.resource.cluster_containers()
+        for container in containers:
+            if cluster_cfgs is None or jvm_cfgs is None:
+                current_cluster_cfgs, current_jvm_cfg = (
+                    self._cluster.config._current_config(container)
+                )
+                cluster_cfgs = cluster_cfgs or current_cluster_cfgs
+                jvm_cfgs = jvm_cfgs or current_jvm_cfg
+            log_duplicates(cluster_cfgs, CLUSTER_CONFIG)
+            log_duplicates(jvm_cfgs, CLUSTER_JVM_CONFIG)

@@ -58,9 +58,21 @@ configure_jvm() {
         https://raw.githubusercontent.com/trinodb/trino/"${TRINO_VER}"/core/docker/default/etc/jvm.config
     chmod g+w jvm.config
     chown "${SERVICE_USER}":"${SERVICE_GROUP}" jvm.config
+
     sed -i '/^-agentpath:\/usr\/lib\/trino\/bin\/libjvmkill\.so$/d' jvm.config
     echo "-Djavax.net.ssl.trustStore=/etc/${CLUSTER_DIST}/tls-jvm/cacerts" >> jvm.config
     echo "-Djavax.net.ssl.trustStorePassword=changeit" >> jvm.config
+
+    if grep -qE '^-XX:(InitialRAMPercentage|MaxRAMPercentage)' jvm.config; then
+        line_num=$(grep -nE '^-XX:(InitialRAMPercentage|MaxRAMPercentage)' \
+            jvm.config | head -n1 | cut -d: -f1)
+        sed -i '/^-XX:InitialRAMPercentage/d' jvm.config
+        sed -i '/^-XX:MaxRAMPercentage/d' jvm.config
+        sed -i "${line_num}i-Xmx1G\n-Xms1G" jvm.config
+    else
+        echo "-Xmx1G" >> jvm.config
+        echo "-Xms1G" >> jvm.config
+    fi
 }
 
 configure_node_props() {

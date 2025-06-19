@@ -166,6 +166,24 @@ class ClusterResourceManager:
             ],
         }
 
+    def cluster_containers(self) -> list[MinitrinoContainer]:
+        """
+        Fetch coordinator and workers for the active cluster.
+
+        Returns
+        -------
+        list[MinitrinoContainer]
+            List of cluster containers.
+        """
+        containers: list[MinitrinoContainer] = self.resources().containers()
+        cluster_containers = []
+        for c in containers:
+            if c.name == self.fq_container_name("minitrino"):
+                cluster_containers.append(c)
+            elif c.name.startswith(self.fq_container_name("minitrino-worker-")):
+                cluster_containers.append(c)
+        return cluster_containers
+
     def compose_project_name(self, cluster_name: str = "") -> str:
         """
         Compute the Docker Compose project name for a cluster.

@@ -6,6 +6,7 @@ import json
 import os
 from typing import TYPE_CHECKING, Optional
 
+import jsonschema
 import yaml
 
 from minitrino import utils
@@ -24,6 +25,35 @@ from minitrino.settings import (
 
 if TYPE_CHECKING:
     from minitrino.core.context import MinitrinoContext
+
+MODULE_METADATA_SPEC = {
+    "type": "object",
+    "properties": {
+        "description": {"type": "string"},
+        "incompatibleModules": {"type": "array", "items": {"type": "string"}},
+        "enterprise": {"type": "boolean"},
+        "versions": {
+            "type": "array",
+            "items": {"type": "string"},
+            "minItems": 0,
+            "maxItems": 2,
+        },
+        "dependentModules": {"type": "array", "items": {"type": "string"}},
+        "dependentClusters": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "modules": {"type": "array", "items": {"type": "string"}},
+                    "workers": {"type": "number"},
+                },
+                "required": ["name", "modules", "workers"],
+            },
+        },
+    },
+    "required": ["description"],
+}
 
 
 class Modules:
@@ -475,17 +505,22 @@ class Modules:
                         f, Loader=yaml.FullLoader
                     )
 
-                # Get metadata.json if present
                 json_basename = "metadata.json"
                 json_file = os.path.join(module_dir, json_basename)
                 metadata = {}
-                if os.path.isfile(json_file):
-                    with open(json_file) as f:
-                        metadata = json.load(f)
-                else:
-                    self._ctx.logger.debug(
-                        f"No JSON metadata file for module '{module_name}'. "
-                        f"Will not load metadata for module.",
+                if not os.path.isfile(json_file):
+                    raise MinitrinoError(
+                        f"Missing required metadata.json file for "
+                        f"module '{module_name}'."
+                    )
+                with open(json_file) as f:
+                    metadata = json.load(f)
+                try:
+                    jsonschema.validate(metadata, MODULE_METADATA_SPEC)
+                except jsonschema.ValidationError as e:
+                    raise UserError(
+                        f"Invalid metadata.json in module '{module_name}': {e.message}",
+                        f"File: {json_file}",
                     )
                 for k, v in metadata.items():
                     self.data[module_name][k] = v

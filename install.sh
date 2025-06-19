@@ -52,15 +52,15 @@ find_python() {
         if command -v "${py}" >/dev/null 2>&1; then
             version=$("${py}" -c 'import sys; print(f"{sys.version_info[0]}.{sys.version_info[1]}")')
             echo "Detected Python version: ${version} (${py})"
-            case "${version}" in
-                3.8|3.9|3.1[0-9])
-                    PYTHON="${py}"
-                    return
-                    ;;
-            esac
+            major=$(echo "${version}" | cut -d. -f1)
+            minor=$(echo "${version}" | cut -d. -f2)
+            if [ "${major}" -eq 3 ] && [ "${minor}" -ge 10 ]; then
+                PYTHON="${py}"
+                return
+            fi
         fi
     done
-    echo "Error: Python 3.8+ is required but not found." >&2
+    echo "Error: Python 3.10+ is required but not found." >&2
     exit 1
 }
 

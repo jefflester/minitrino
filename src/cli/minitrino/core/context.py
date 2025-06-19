@@ -1,7 +1,6 @@
 """Core context and controls for Minitrino CLI."""
 
 import os
-import re
 from pathlib import Path
 from typing import Optional, cast
 
@@ -13,7 +12,7 @@ from minitrino.core.cmd_exec import CommandExecutor
 from minitrino.core.docker.socket import resolve_docker_socket
 from minitrino.core.envvars import EnvironmentVariables
 from minitrino.core.errors import UserError
-from minitrino.core.logger import LogLevel, MinitrinoLogger
+from minitrino.core.logging.logger import LogLevel, MinitrinoLogger
 from minitrino.core.modules import Modules
 
 
@@ -302,8 +301,8 @@ class MinitrinoContext:
         cluster_name : str
             The name of the cluster to set.
         """
-        self._set_cluster_name(cluster_name)
         self.cluster = Cluster(self)
+        self._set_cluster_name(cluster_name)
         self.env.update(
             {
                 "COMPOSE_PROJECT_NAME": self.cluster.resource.compose_project_name(
@@ -328,22 +327,10 @@ class MinitrinoContext:
         else:
             self.cluster_name = "default"
 
+        self.cluster.validator.check_cluster_name()
+
         if self.cluster_name == "all":
             self.all_clusters = True
-
-        if self.cluster_name == "images":
-            raise UserError(
-                "Cluster name 'images' is reserved for internal use. "
-                "Please use a different cluster name."
-            )
-
-        if not re.fullmatch(r"[A-Za-z0-9_\-\*]+", self.cluster_name):
-            raise UserError(
-                f"Invalid cluster name '{self.cluster_name}'. Cluster names can only "
-                f"contain alphanumeric characters, underscores, dashes, or asterisks "
-                f"(asterisks are for filtering operations only and will not work with "
-                f"the `provision` command)."
-            )
 
         self.env.update({"CLUSTER_NAME": self.cluster_name})
         self.logger.debug(f"Cluster name set to: {self.cluster_name}")

@@ -49,7 +49,13 @@ class ClusterConfigManager:
         self._ctx = ctx
         self._cluster = cluster
 
-    def write_config(self, modules: Optional[list[str]] = None) -> None:
+    def write_config(
+        self,
+        modules: Optional[list[str]] = None,
+        coordinator: bool = False,
+        worker: bool = False,
+        workers: int = 0,
+    ) -> None:
         """
         Append configs to cluster config files.
 
@@ -58,27 +64,41 @@ class ClusterConfigManager:
         modules : list[str], optional
             A list of module names to include when collecting
             configuration overrides.
+        coordinator : bool
+            Whether to write configs to the coordinator container.
+        worker : bool
+            Whether to write configs to the worker containers.
+        workers : int
+            The number of workers being provisioned.
         """
-        fq_container_name = self._cluster.resource.fq_container_name("minitrino")
-        coordinator = self._cluster.resource.container(fq_container_name)
 
-        if not coordinator:
-            raise MinitrinoError(
-                "Attempting to append cluster config in Minitrino container, "
-                "but no running container was found."
+        def _check_container(fq_full_name: str) -> MinitrinoContainer:
+            cluster_container = self._cluster.resource.container(fq_full_name)
+            if not cluster_container:
+                raise MinitrinoError(
+                    f"Attempting to append cluster config in Minitrino container "
+                    f"'{fq_full_name}', but no running container was found."
+                )
+            return cluster_container
+
+        if coordinator:
+            coordinator_container = _check_container(
+                self._cluster.resource.fq_container_name("minitrino")
+            )
+            self._write_config_to_container(
+                modules, False, workers, coordinator_container
             )
 
-        cfgs, jvm_cfg = self._get_user_configs(modules)
-        if not cfgs and not jvm_cfg:
-            self._signal_append_config_complete(coordinator)
-            return
-
-        cfgs = self._handle_password_authenticators(cfgs)
-
-        current_cluster_cfgs, current_jvm_cfg = self._current_config()
-        self._append_config(coordinator, cfgs, current_cluster_cfgs, CLUSTER_CONFIG)
-        self._append_config(coordinator, jvm_cfg, current_jvm_cfg, CLUSTER_JVM_CONFIG)
-        self._signal_append_config_complete(coordinator)
+        if worker and workers > 0:
+            for worker_id in range(1, workers + 1):
+                worker_container = _check_container(
+                    self._cluster.resource.fq_container_name(
+                        f"minitrino-worker-{worker_id}"
+                    )
+                )
+                self._write_config_to_container(
+                    modules, True, workers, worker_container
+                )
 
     def set_external_ports(self, modules: Optional[list[str]] = None) -> None:
         """
@@ -114,15 +134,29 @@ class ClusterConfigManager:
                     )
                 self._assign_port(container_name, host_port_var_name, int(default_port))
 
-    def _get_user_configs(self, modules: Optional[list[str]]) -> tuple[list, list]:
-        """Collect user and module config and JVM config overrides."""
+    def _get_user_configs(
+        self, modules: Optional[list[str]], worker: bool = False
+    ) -> tuple[list, list]:
+        """
+        Collect user and module config and JVM config overrides.
+
+        Defaults to collecting coordinator configs. Optionally collects
+        worker configs if `worker` is `True`.
+        """
         cfgs = []
         jvm_cfg = []
         modules = modules or []
         modules = list(modules) + ["minitrino"]  # ensure minitrino is checked
 
-        env_usr_cfgs = self._ctx.env.get("CONFIG_PROPERTIES", "")
-        env_user_jvm_cfg = self._ctx.env.get("JVM_CONFIG", "")
+        if worker:
+            jvm_env_var = "JVM_CONFIG_WORKER"
+            config_env_var = "CONFIG_PROPERTIES_WORKER"
+        else:
+            jvm_env_var = "JVM_CONFIG"
+            config_env_var = "CONFIG_PROPERTIES"
+
+        env_usr_cfgs = self._ctx.env.get(config_env_var, "")
+        env_user_jvm_cfg = self._ctx.env.get(jvm_env_var, "")
         if env_usr_cfgs:
             cfgs.extend(self._split_config(env_usr_cfgs))
         if env_user_jvm_cfg:
@@ -138,13 +172,13 @@ class ClusterConfigManager:
                 yaml_file.get("services", {})
                 .get("minitrino", {})
                 .get("environment", {})
-                .get("CONFIG_PROPERTIES", [])
+                .get(config_env_var, [])
             )
             yaml_jvm_cfg = (
                 yaml_file.get("services", {})
                 .get("minitrino", {})
                 .get("environment", {})
-                .get("JVM_CONFIG", [])
+                .get(jvm_env_var, [])
             )
             if yaml_cfgs:
                 cfgs.extend(self._split_config(yaml_cfgs))
@@ -224,11 +258,10 @@ class ClusterConfigManager:
         )
         _, uid = utils.container_user_and_id(self._ctx, coordinator)
         for line in config_lines:
-            append_cfg = f'bash -c "cat <<EOT >> {ETC_DIR}/{filename}\n{line}\nEOT"'
+            append_cfg = f"bash -c \"cat <<'EOT' >> {ETC_DIR}/{filename}\n{line}\nEOT\""
             self._ctx.cmd_executor.execute(
                 append_cfg,
                 container=coordinator,
-                suppress_output=True,
                 docker_user=uid,
             )
 
@@ -250,21 +283,27 @@ class ClusterConfigManager:
                 parsed.append(("unified", cfg, ""))
         return parsed
 
-    def _current_config(self) -> tuple[list[tuple], list[tuple]]:
+    def _current_config(
+        self, container: MinitrinoContainer
+    ) -> tuple[list[tuple], list[tuple]]:
         """
-        Fetch current cluster configs from the coordinator container.
+        Fetch current cluster configs from a cluster container.
+
+        Parameters
+        ----------
+        container : MinitrinoContainer
+            The container to fetch configs from.
 
         Returns
         -------
         tuple[list[tuple], list[tuple]]
             A tuple of parsed config tuples for both files.
         """
-        fq_container_name = self._cluster.resource.fq_container_name("minitrino")
-        _, uid = utils.container_user_and_id(self._ctx, fq_container_name)
+        _, uid = utils.container_user_and_id(self._ctx, container)
         current_cfgs = self._ctx.cmd_executor.execute(
             f"bash -c 'cat {ETC_DIR}/{CLUSTER_CONFIG}'",
             f"bash -c 'cat {ETC_DIR}/{CLUSTER_JVM_CONFIG}'",
-            container=self._cluster.resource.container(fq_container_name),
+            container=container,
             suppress_output=True,
             docker_user=uid,
         )
@@ -273,6 +312,56 @@ class ClusterConfigManager:
         current_jvm_cfg = self._split_config(current_cfgs[1].output)
 
         return current_cluster_cfgs, current_jvm_cfg
+
+    def _write_config_to_container(
+        self,
+        modules: Optional[list[str]] = None,
+        worker: bool = False,
+        workers: int = 0,
+        cluster_container: MinitrinoContainer = None,
+    ):
+        """Write config to a cluster container."""
+        modules = modules or []
+        self._ctx.logger.debug(f"Writing config to container: {cluster_container.name}")
+        cfgs, jvm_cfg = self._get_user_configs(modules, worker)
+
+        # Inject node-scheduler.include-coordinator=false for
+        # coordinator if workers > 0, but only if user did NOT
+        # explicitly set it to true via env
+        if not worker and workers > 0:
+            user_env_cfg = self._ctx.env.get("CONFIG_PROPERTIES", "")
+            user_explicit_true = any(
+                line.strip() == "node-scheduler.include-coordinator=true"
+                for line in user_env_cfg.splitlines()
+            )
+            if not user_explicit_true:
+                # Remove any existing key to avoid duplicates
+                cfgs = [
+                    c
+                    for c in cfgs
+                    if not (
+                        c[0] == "key_value"
+                        and c[1] == "node-scheduler.include-coordinator"
+                    )
+                ]
+                cfgs.append(
+                    ("key_value", "node-scheduler.include-coordinator", "false")
+                )
+
+        if not cfgs and not jvm_cfg:
+            self._signal_append_config_complete(cluster_container)
+            return
+
+        cfgs = self._handle_password_authenticators(cfgs)
+
+        current_cluster_cfgs, current_jvm_cfg = self._current_config(cluster_container)
+        self._append_config(
+            cluster_container, cfgs, current_cluster_cfgs, CLUSTER_CONFIG
+        )
+        self._append_config(
+            cluster_container, jvm_cfg, current_jvm_cfg, CLUSTER_JVM_CONFIG
+        )
+        self._signal_append_config_complete(cluster_container)
 
     def _signal_append_config_complete(self, container: MinitrinoContainer):
         """Signal that configs have been appended."""

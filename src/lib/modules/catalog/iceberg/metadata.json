@@ -1,5 +1,8 @@
 {
   "description": "Iceberg catalog module (uses Iceberg REST catalog for metadata management)",
   "incompatibleModules": [],
+  "dependentModules": [
+    "minio"
+  ],
   "enterprise": false
 }

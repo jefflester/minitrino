@@ -1,0 +1,8 @@
+---
+services:
+
+  minitrino:
+    volumes:
+      - ./modules/catalog/stargate-parallel/resources/cluster/stargate_parallel.properties:/mnt/etc/catalog/stargate_parallel.properties:ro
+    labels:
+      - org.minitrino.module.catalog.stargate-parallel=true

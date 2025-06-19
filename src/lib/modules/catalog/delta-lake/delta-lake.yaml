@@ -4,6 +4,7 @@ services:
   minitrino:
     volumes:
       - ./modules/catalog/delta-lake/resources/cluster/delta.properties:/mnt/etc/catalog/delta.properties:ro
+      - ./modules/catalog/delta-lake/resources/bootstrap/create-schema.sh:/mnt/bootstrap/delta-lake/create-schema.sh:ro
       - ./modules/catalog/delta-lake/resources/bootstrap/458-native-fs-workaround.sh:/mnt/bootstrap/delta-lake/458-native-fs-workaround.sh:ro
 
   postgres-delta-lake:
@@ -36,49 +37,8 @@ services:
       - org.minitrino.root=true
       - org.minitrino.module.catalog.delta-lake=true
 
-  minio-delta-lake:
-    image: minio/minio:${MINIO_VER}
-    container_name: minio-delta-lake-${CLUSTER_NAME}
-    environment:
-      MINIO_ROOT_USER: access-key
-      MINIO_ROOT_PASSWORD: secret-key
-    command: server --address :9000 --console-address :9001 /data
-    ports:
-      - :9000
-      - ${__PORT_MINIO_DELTA_LAKE}:9001
-    volumes:
-      - minio-delta-lake-data:/data
-    labels:
-      - org.minitrino.root=true
-      - org.minitrino.module.catalog.delta-lake=true
-
-  create-minio-delta-lake-buckets:
-    image: minio/mc:${MINIO_MC_VER}
-    container_name: create-minio-delta-lake-buckets-${CLUSTER_NAME}
-    entrypoint: |-
-      /bin/sh -c "
-      wfi=wait-for-it && \
-      curl -fsSL \\
-        https://raw.githubusercontent.com/vishnubob/$$wfi/master/$$wfi.sh \\
-        > /tmp/$$wfi.sh && \
-      chmod +x /tmp/$$wfi.sh && \
-      echo 'Waiting for MinIO to come up...' && \
-      /tmp/$$wfi.sh minio-delta-lake:9000 --strict --timeout=60 && \
-      /usr/bin/mc alias set minio \\
-        http://minio-delta-lake:9000 access-key secret-key && \
-      /usr/bin/mc mb minio/sample-bucket/wh/ && \
-      tail -f /dev/null
-      "
-    labels:
-      - org.minitrino.root=true
-      - org.minitrino.module.catalog.delta-lake=true
-
 volumes:
   postgres-delta-lake-data:
-    labels:
-      - org.minitrino.root=true
-      - org.minitrino.module.catalog.delta-lake=true
-  minio-delta-lake-data:
     labels:
       - org.minitrino.root=true
       - org.minitrino.module.catalog.delta-lake=true

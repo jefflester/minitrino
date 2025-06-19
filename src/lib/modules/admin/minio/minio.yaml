@@ -1,0 +1,50 @@
+---
+services:
+
+  minio:
+    image: minio/minio:${MINIO_VER}
+    container_name: minio-${CLUSTER_NAME}
+    environment:
+      MINIO_ROOT_USER: access-key
+      MINIO_ROOT_PASSWORD: secret-key
+      MINIO_DOMAIN: s3.us-east-1.minio.com
+    command: server --address :9000 --console-address :9001 /data
+    networks:
+      default:
+        aliases:
+          - minitrino.s3.us-east-1.minio.com
+    ports:
+      - :9000
+      - ${__PORT_MINIO}:9001
+    volumes:
+      - minio-data:/data
+    labels:
+      - org.minitrino.root=true
+      - org.minitrino.module.admin.minio=true
+
+  minio-client:
+    image: minio/mc:${MINIO_MC_VER}
+    container_name: minio-client-${CLUSTER_NAME}
+    entrypoint: |-
+      /bin/sh -c "
+      wfi=wait-for-it && \
+      curl -fsSL \\
+        https://raw.githubusercontent.com/vishnubob/$$wfi/master/$$wfi.sh \\
+        > /tmp/$$wfi.sh && \
+      chmod +x /tmp/$$wfi.sh && \
+      echo 'Waiting for MinIO to come up...' && \
+      /tmp/$$wfi.sh minio:9000 --strict --timeout=60 && \
+      /usr/bin/mc alias set minio \\
+        http://minio:9000 access-key secret-key && \
+      /usr/bin/mc mb minio/minitrino || true && \
+      tail -f /dev/null
+      "
+    labels:
+      - org.minitrino.root=true
+      - org.minitrino.module.admin.minio=true
+
+volumes:
+  minio-data:
+    labels:
+      - org.minitrino.root=true
+      - org.minitrino.module.admin.minio=true

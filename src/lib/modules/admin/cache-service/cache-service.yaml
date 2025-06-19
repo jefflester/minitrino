@@ -11,6 +11,8 @@ services:
       - ./modules/admin/cache-service/resources/bootstrap/458-native-fs-workaround.sh:/mnt/bootstrap/cache-service/458-native-fs-workaround.sh:ro
     ports:
       - ${__PORT_CACHE_SERVICE}:8180
+    labels:
+      - org.minitrino.module.admin.cache-service=true
 
   postgres-backend-svc:
     environment:

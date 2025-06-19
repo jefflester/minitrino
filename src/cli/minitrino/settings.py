@@ -16,8 +16,8 @@ MIN_CLUSTER_VER = 443
 DEFAULT_CLUSTER_VER = 468
 ETC_DIR = "/etc/${CLUSTER_DIST}"
 LIC_VOLUME_MOUNT = "${LIC_PATH}:${LIC_MOUNT_PATH}"
-LIC_MOUNT_PATH = "/mnt/license/starburstdata.license:ro"
-DUMMY_LIC_MOUNT_PATH = "/mnt/license/dummy.license:ro"
+LIC_MOUNT_PATH = "/mnt/etc/starburstdata.license:ro"
+DUMMY_LIC_MOUNT_PATH = "/mnt/etc/dummy.license:ro"
 CLUSTER_CONFIG = "config.properties"
 CLUSTER_JVM_CONFIG = "jvm.config"
 

@@ -10,7 +10,7 @@ views](https://docs.starburst.io/latest/connector/starburst-hive.html#materializ
 The module launches with the `postgres`, `hive`, and `insights` modules.
 Additional catalogs, `cache_svc` and `hive_mv_tsr`, are also configured.
 `cache_svc` exposes the backend database for the cache service for querying in
-Starburst, and `hive_mv_tsr` is a clone of the `hive` catalog but with
+Starburst, and `hive_mv_tsr` is based on the `hive` catalog but with
 materialized views and `hive.security=allow-all` enabled.
 
 For troubleshooting, the bootstrap script enables debug logging for

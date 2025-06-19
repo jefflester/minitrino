@@ -6,6 +6,7 @@ import stat
 from typing import Optional
 
 import click
+from docker.errors import NotFound
 
 from minitrino import utils
 from minitrino.core.context import MinitrinoContext
@@ -119,6 +120,7 @@ def cli(
     ctx.modules.check_module_version_requirements(modules_list)
     modules_list = append_running_modules(modules_list)
     modules_list = ctx.modules.check_dep_modules(modules_list)
+    ensure_shared_network()
     runner(modules_list, workers, no_rollback, docker_native)
 
     dependent_clusters = ctx.cluster.validator.check_dependent_clusters(modules_list)
@@ -222,6 +224,25 @@ def set_distribution(ctx: MinitrinoContext, image: str) -> None:
     ctx.env.update({"CLUSTER_DIST": image})
     ctx.env.update({"SERVICE_USER": image})
     ctx.env.update({"ETC": f"/etc/{image}"})
+
+
+@utils.pass_environment()
+def ensure_shared_network(ctx: MinitrinoContext):
+    """Ensure the shared network exists."""
+    try:
+        ctx.docker_client.networks.get("cluster_shared")
+        ctx.logger.debug("Shared network already exists, skipping creation.")
+    except NotFound:
+        ctx.logger.debug("Creating shared network...")
+        ctx.docker_client.networks.create(
+            name="cluster_shared",
+            driver="bridge",
+            labels={
+                "org.minitrino.root": "true",
+                "org.minitrino.module.minitrino": "true",
+                "com.docker.compose.project": "minitrino-system",
+            },
+        )
 
 
 @utils.pass_environment()

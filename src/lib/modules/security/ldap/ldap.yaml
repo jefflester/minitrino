@@ -9,15 +9,15 @@ services:
       - ./modules/security/ldap/resources/cluster/password-authenticator.properties:/mnt/etc/password-authenticator.properties:ro
       - ./modules/security/ldap/resources/ldap/ldap-users:/mnt/etc/ldap-users:ro
     links:
-      - ldap:ldap.minitrino.starburstdata.com
+      - ldap:ldap.minitrino.com
 
   ldap:
     image: osixia/openldap:${OPEN_LDAP_VER}
     container_name: ldap-${CLUSTER_NAME}
-    hostname: ldap.minitrino.starburstdata.com
+    hostname: ldap.minitrino.com
     environment:
       LDAP_ORGANISATION: Example Inc.
-      LDAP_DOMAIN: example.com
+      LDAP_DOMAIN: minitrino.com
       LDAP_ADMIN_PASSWORD: trinoRocks15
       LDAP_TLS_VERIFY_CLIENT: try
       LDAPTLS_REQCERT: never

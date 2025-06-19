@@ -13,7 +13,7 @@ minitrino -v -e CLUSTER_VER=${version} provision -m password-file
 docker exec -it minitrino bash 
 
 trino-cli --server https://minitrino:8443 \
-  --truststore-path /etc/"${CLUSTER_DIST}"/tls-mnt/truststore.jks --truststore-password changeit \
+  --truststore-path /etc/"${CLUSTER_DIST}"/tls/truststore.jks --truststore-password changeit \
   --user bob --password
     
 trino> SHOW SCHEMAS FROM tpch;

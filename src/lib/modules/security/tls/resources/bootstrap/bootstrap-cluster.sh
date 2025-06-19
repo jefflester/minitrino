@@ -4,7 +4,7 @@ set -euxo pipefail
 
 before_start() {
 	echo "Setting variables..."
-	SSL_DIR=/etc/"${CLUSTER_DIST}"/tls-mnt
+	SSL_DIR=/mnt/etc/tls
 
 	echo "Removing pre-existing SSL resources..."
 	rm -rf "${SSL_DIR}"/* 
@@ -16,7 +16,7 @@ before_start() {
 		-keystore "${SSL_DIR}"/keystore.jks \
 		-keypass changeit \
 		-storepass changeit \
-		-dname "CN=*.starburstdata.com" \
+		-dname "CN=*.minitrino.com" \
 		-ext san=dns:minitrino,dns:localhost
 
 	echo "Adding keystore and truststore in ${SSL_DIR}..."
@@ -44,6 +44,9 @@ before_start() {
 		-keystore /etc/"${CLUSTER_DIST}"/tls-jvm/cacerts \
 		-storepass changeit \
 		-noprompt
+
+	# Synchronize generated TLS artifacts to /etc/${CLUSTER_DIST}/tls
+	cp -a "${SSL_DIR}/." "/etc/${CLUSTER_DIST}/tls/"
 }
 
 after_start() {

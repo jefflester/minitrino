@@ -11,7 +11,7 @@ after_start() {
   while [ "${COUNTER}" -lt 90 ]
   do
     set +e
-    RESPONSE=$(curl -s -X GET -H 'Accept: application/json' -H 'X-Trino-User: admin' 'minitrino:8080/v1/info/')
+    RESPONSE=$(curl -s -X GET -H 'Accept: application/json' -H 'X-Trino-User: admin' "minitrino-${CLUSTER_NAME}:8080/v1/info")
     echo "${RESPONSE}" | grep -q '"starting":false'
     if [ $? -eq 0 ]; then
       echo "Health check passed."
@@ -48,13 +48,13 @@ after_start() {
 
   echo "Creating Hive cache schema (for table scan redirections)..."
   trino-cli --user admin --output-format TSV_HEADER \
-    --execute "CREATE SCHEMA IF NOT EXISTS hive_mv_tsr.cache WITH (LOCATION = 's3a://sample-bucket/cache/')"
+    --execute "CREATE SCHEMA IF NOT EXISTS hive_mv_tsr.cache WITH (LOCATION = 's3a://minitrino/cache/')"
 
   echo "Creating materialized view schemas..."
   trino-cli --user admin --output-format TSV_HEADER \
-    --execute "CREATE SCHEMA IF NOT EXISTS hive_mv_tsr.mv_storage WITH (LOCATION = 's3a://sample-bucket/mv/mv_storage/')"
+    --execute "CREATE SCHEMA IF NOT EXISTS hive_mv_tsr.mv_storage WITH (LOCATION = 's3a://minitrino/mv/mv_storage/')"
   trino-cli --user admin --output-format TSV_HEADER \
-    --execute "CREATE SCHEMA IF NOT EXISTS hive_mv_tsr.mvs WITH (LOCATION = 's3a://sample-bucket/mv/mvs/')"
+    --execute "CREATE SCHEMA IF NOT EXISTS hive_mv_tsr.mvs WITH (LOCATION = 's3a://minitrino/mv/mvs/')"
 
   echo "Creating materialized views..."
   QUERY="CREATE OR REPLACE MATERIALIZED VIEW hive_mv_tsr.mvs.example

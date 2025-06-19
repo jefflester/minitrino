@@ -64,7 +64,7 @@ TEXT_EDITOR=
 
 WORKER_CONFIG_PROPS = """coordinator=false
 http-server.http.port=8080
-discovery.uri=http://minitrino:8080
+discovery.uri=http://minitrino-${ENV:CLUSTER_NAME}:8080
 internal-communication.shared-secret=bWluaXRyaW5vUm9ja3MxNQo="""
 
 # fmt: off

@@ -14,9 +14,10 @@ minitrino -v -e CLUSTER_VER=${version} provision -m tls
 ## Client Keystore and Truststore
 
 The Java keystore and truststore needed for clients and drivers to securely
-connect to the cluster are located in a volume mount `~/.minitrino/tls-mnt`.
-These two files are transient and will be automatically replaced whenever
-Minitrino is provisioned with a security module that enables SSL.
+connect to the cluster are located in a volume mount
+`~/.minitrino/${CLUSTER_NAME}/tls`. These two files are transient and will be
+automatically replaced whenever Minitrino is provisioned with a security module
+that enables SSL.
 
 ## Accessing the Cluster with the CLI
 
@@ -25,7 +26,7 @@ Via Docker:
 ```sh
 docker exec -it minitrino trino-cli \
   --server https://minitrino:8443 \
-  --truststore-path /etc/${CLUSTER_DIST}/tls-mnt/truststore.jks \
+  --truststore-path /etc/${CLUSTER_DIST}/tls/truststore.jks \
   --truststore-password changeit
 ```
 
@@ -34,7 +35,7 @@ Via host machine:
 ```sh
 trino-cli-xxx-executable.jar \
   --server https://localhost:8443 \
-  --truststore-path ~/.minitrino/tls-mnt/truststore.jks 
+  --truststore-path ~/.minitrino/${CLUSTER_NAME}/tls/truststore.jks \
   --truststore-password changeit
 ```
 

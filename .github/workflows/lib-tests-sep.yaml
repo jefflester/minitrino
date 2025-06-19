@@ -36,4 +36,4 @@ jobs:
       - name: Run library tests
         run: |-
           python ./src/test/src/lib/runner.py \
-            --remove-images --image starburst
+            --debug --remove-images --image starburst

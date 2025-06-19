@@ -175,7 +175,7 @@ def runner(
     # variables so that the Compose YAMLs use the correct values.
     if cluster:
         ctx.logger.info(f"Provisioning dependent cluster: {cluster['name']}...")
-        modules = cluster.get("modules", [])
+        modules = ctx.modules.check_dep_modules(cluster.get("modules", []))
         workers = cluster.get("workers", 0)
         ctx.cluster_name = cluster.get("name", "")
         ctx.env.update({"CLUSTER_NAME": ctx.cluster_name})
@@ -195,10 +195,12 @@ def runner(
         compose_cmd = build_command(docker_native, cmd_chunk)
         ctx.cmd_executor.execute(compose_cmd, environment=ctx.env.copy())
 
-        ctx.cluster.config.write_config(modules)
-        ctx.cluster.validator.check_dup_config()
-        ctx.cluster.ops.provision_workers(workers)
         execute_bootstraps(modules)
+        ctx.cluster.config.write_config(modules, coordinator=True, workers=workers)
+        ctx.cluster.ops.provision_workers(workers)
+        if workers > 0:
+            ctx.cluster.config.write_config(modules, worker=True, workers=workers)
+        ctx.cluster.validator.check_dup_config()
 
     except Exception as e:
         rollback(no_rollback)
@@ -215,7 +217,7 @@ def set_distribution(ctx: MinitrinoContext, image: str) -> None:
         image = ctx.env.get("IMAGE", "trino")
     if image != "trino" and image != "starburst":
         raise UserError(
-            "Invalid image type '{image}'. Please specify either 'trino' "
+            f"Invalid image type '{image}'. Please specify either 'trino' "
             "or 'starburst'.",
             "Example: `minitrino provision -i trino`. This can also be set "
             "permanently via `minitrino config`.",
@@ -319,7 +321,9 @@ def execute_bootstraps(
 ) -> None:
     """Execute container bootstrap scripts for the specified modules."""
 
-    def _helper(ctx: MinitrinoContext, b: str, fq: str, y: str) -> None:
+    def _execute_bootstrap_and_restart(
+        ctx: MinitrinoContext, b: str, fq: str, y: str
+    ) -> None:
         execute_container_bootstrap(ctx, b, fq, y)
         ctx.cluster.ops.restart_containers([fq])
 
@@ -339,7 +343,7 @@ def execute_bootstraps(
             fq_container_name = ctx.cluster.resource.fq_container_name(container_name)
             tasks.append(
                 executor.submit(
-                    _helper,
+                    _execute_bootstrap_and_restart,
                     ctx,
                     bootstrap,
                     fq_container_name,

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import TYPE_CHECKING, Optional
 
@@ -16,7 +17,6 @@ from minitrino.core.docker.wrappers import (
     MinitrinoNetwork,
 )
 from minitrino.core.errors import MinitrinoError, UserError
-from minitrino.core.logger import LogLevel
 from minitrino.settings import (
     CLUSTER_CONFIG,
     ETC_DIR,
@@ -206,17 +206,12 @@ class ClusterOperations:
             return
 
         cluster_containers = [c.name for c in containers if c.name]
-
-        self.restart_containers(cluster_containers, log_level=LogLevel.INFO)
+        self.restart_containers(cluster_containers)
         self._ctx.logger.info(
             f"Restarted containers in cluster '{self._ctx.cluster_name}'."
         )
 
-    def restart_containers(
-        self,
-        c_restart: Optional[list[str]] = None,
-        log_level: LogLevel = LogLevel.DEBUG,
-    ) -> None:
+    def restart_containers(self, c_restart: Optional[list[str]] = None) -> None:
         """
         Restart all the containers in the provided list.
 
@@ -225,12 +220,9 @@ class ClusterOperations:
         c_restart : Optional[list[str]], optional
             List of fully-qualified container names to restart, by
             default None.
-        log_level : LogLevel, optional
-            Log level for restart messages, by default LogLevel.DEBUG.
         """
         if c_restart is None:
             return
-
         c_restart = list(set(c_restart))
 
         def _restart_container(container_name: str) -> None:
@@ -249,13 +241,10 @@ class ClusterOperations:
             """
             try:
                 container = self._ctx.docker_client.containers.get(container_name)
-                self._ctx.logger.log(
-                    f"Restarting container '{container.name}'...", level=log_level
-                )
+                self._ctx.logger.debug(f"Restarting container '{container.name}'...")
                 container.restart()
-                self._ctx.logger.log(
-                    f"Container '{container.name}' restarted successfully.",
-                    level=log_level,
+                self._ctx.logger.debug(
+                    f"Container '{container.name}' restarted successfully."
                 )
             except NotFound:
                 raise MinitrinoError(
@@ -298,7 +287,7 @@ class ClusterOperations:
                 pass
 
     def provision_workers(self, workers: int = 0) -> None:
-        """Reconcile number of workers with the specified number."""
+        """Provision the specified number of workers."""
         # Handles five scenarios:
         #  1. No `workers` value is provided and no workers are
         #     currently running — does nothing.
@@ -310,6 +299,8 @@ class ClusterOperations:
         #     provisions more workers.
         #  5. Provided `workers` value is less than running workers —
         #     removes excess workers.
+
+        self._wait_for_config_copy_log()
 
         pattern = rf"minitrino-worker-\d+-{self._ctx.cluster_name}"
         worker_containers = [
@@ -365,9 +356,12 @@ class ClusterOperations:
             try:
                 worker = self._cluster.resource.container(fq_worker_name)
             except NotFound:
+                env_list = coordinator.attrs["Config"]["Env"]
+                env_dict = dict(item.split("=", 1) for item in env_list if "=" in item)
                 worker_base = self._ctx.docker_client.containers.run(
                     worker_img,
                     name=fq_worker_name,
+                    environment=env_dict,
                     detach=True,
                     network=network_name,
                     labels={
@@ -377,10 +371,13 @@ class ClusterOperations:
                         "com.docker.compose.service": "minitrino-worker",
                     },
                 )
+                shared_network = self._ctx.docker_client.networks.get("cluster_shared")
+                shared_network.connect(worker_base)
+
                 worker = MinitrinoContainer(worker_base, self._ctx.cluster_name)
                 self._ctx.logger.debug(
                     f"Created and started worker container: '{fq_worker_name}' "
-                    f"in network '{network_name}'"
+                    f"in network '{network_name}'."
                 )
 
             user = self._ctx.env.get("SERVICE_USER")
@@ -390,7 +387,7 @@ class ClusterOperations:
             self._ctx.cmd_executor.execute(
                 "bash -c 'rm -rf /tmp/${CLUSTER_DIST}_copy'",
                 "bash -c 'cp -a /etc/${CLUSTER_DIST} /tmp/${CLUSTER_DIST}_copy'",
-                f"bash -c 'tar czf {tar_path} -C /tmp ${{CLUSTER_DIST}}_copy'",
+                f"bash -c 'tar czf {tar_path} -C /tmp/${{CLUSTER_DIST}}_copy .'",
                 "bash -c 'rm -rf /tmp/${CLUSTER_DIST}_copy'",
                 container=coordinator,
                 docker_user=user,
@@ -406,7 +403,7 @@ class ClusterOperations:
 
             # Extract the tar archive into the new worker container
             self._ctx.cmd_executor.execute(
-                f"bash -c 'tar xzf {tar_path} -C /etc'",
+                f"bash -c 'tar xzf {tar_path} -C /etc/${{CLUSTER_DIST}}'",
                 container=worker,
                 docker_user=user,
             )
@@ -423,6 +420,23 @@ class ClusterOperations:
             self._ctx.logger.debug(f"Copied {ETC_DIR} to '{fq_worker_name}'")
 
         self.restart_containers(restart)
+
+    def _wait_for_config_copy_log(self, timeout: int = 30) -> None:
+        """Poll the coordinator container logs for finished message."""
+        fq_container_name = self._cluster.resource.fq_container_name("minitrino")
+        coordinator = self._cluster.resource.container(fq_container_name)
+        start = time.time()
+        found = False
+        while time.time() - start < timeout:
+            logs = coordinator.logs(tail=500).decode("utf-8", errors="replace")
+            if "Finished copying configs" in logs:
+                found = True
+                break
+            time.sleep(1)
+        if not found:
+            raise TimeoutError(
+                "Timed out waiting for 'Finished copying configs' in coordinator logs."
+            )
 
     def _remove(self, obj_type: str, label: str | None, force: bool) -> None:
         resources = self._cluster.resource.resources([label] if label else None)

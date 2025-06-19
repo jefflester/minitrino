@@ -1,0 +1,20 @@
+{
+  "description": "Stargate parallel catalog module",
+  "incompatibleModules": [],
+  "enterprise": true,
+  "versions": [
+    "467",
+    "9999"
+  ],
+  "dependentClusters": [
+    {
+      "name": "stargate-parallel-remote",
+      "modules": [
+        "hive",
+        "password-file",
+        "spooling-protocol"
+      ],
+      "workers": 2
+    }
+  ]
+}

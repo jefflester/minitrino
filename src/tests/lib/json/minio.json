@@ -1,0 +1,34 @@
+{
+  "tests": [
+    {
+      "type": "shell",
+      "name": "Create minitrino-lib-test bucket",
+      "container": "minio-client-default",
+      "command": "mc mb minio/minitrino-lib-test",
+      "exitCode": 0,
+      "contains": [
+        "Bucket created successfully `minio/minitrino-lib-test`"
+      ]
+    },
+    {
+      "type": "shell",
+      "name": "Delete minitrino-lib-test bucket",
+      "container": "minio-client-default",
+      "command": "mc rb minio/minitrino-lib-test --force",
+      "exitCode": 0,
+      "contains": [
+        "Removed `minio/minitrino-lib-test` successfully"
+      ]
+    },
+    {
+      "type": "shell",
+      "name": "List buckets",
+      "container": "minio-client-default",
+      "command": "mc ls minio",
+      "exitCode": 0,
+      "contains": [
+        "minitrino"
+      ]
+    }
+  ]
+}

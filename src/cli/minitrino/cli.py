@@ -9,15 +9,14 @@ from typing import Any
 import click
 
 from minitrino import utils
-from minitrino.core import logger as minitrino_logger
 from minitrino.core.context import MinitrinoContext
-from minitrino.core.logger import LogLevel, MinitrinoLogger
+from minitrino.core.logging.logger import LogLevel, MinitrinoLogger, configure_logging
 
 
 class CommandLineInterface(click.MultiCommand):
     """Click MultiCommand class for loading and executing commands."""
 
-    def list_commands(self, ctx) -> list[str]:
+    def list_commands(self, ctx: click.Context) -> list[str]:
         """List available commands."""
         cmd_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "cmd"))
         commands = [
@@ -27,7 +26,7 @@ class CommandLineInterface(click.MultiCommand):
         ]
         return sorted(commands)
 
-    def get_command(self, ctx, name) -> Any:
+    def get_command(self, ctx: click.Context, name: str) -> Any:
         """Load and return the command module."""
         logger = MinitrinoLogger()
         mod_name = name.replace("-", "_")
@@ -113,14 +112,14 @@ def cli(
 
     effective_log_level = LogLevel.DEBUG if verbose else LogLevel[log_level.upper()]
     ctx._log_level = effective_log_level
-    minitrino_logger.configure_logging(
-        effective_log_level, global_logging=global_logging
+    configure_logging(
+        effective_log_level, global_logging=global_logging, logger=ctx.logger
     )
 
 
 def display_version(ctx: click.Context) -> None:
     """Return the version of the CLI and the library as a string."""
-    minitrino_logger.configure_logging(LogLevel.INFO)
+    configure_logging(LogLevel.INFO)
     env = []
     args = sys.argv
     i = 0

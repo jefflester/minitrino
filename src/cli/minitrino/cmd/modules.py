@@ -9,7 +9,7 @@ import click
 from minitrino import utils
 from minitrino.core.context import MinitrinoContext
 from minitrino.core.errors import UserError
-from minitrino.core.logger import LogLevel
+from minitrino.core.logging.logger import LogLevel
 from minitrino.settings import MODULE_ADMIN, MODULE_CATALOG, MODULE_SECURITY
 
 

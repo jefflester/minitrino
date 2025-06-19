@@ -17,7 +17,7 @@ from docker.models.containers import Container
 from minitrino.core.docker.socket import resolve_docker_socket
 from minitrino.core.docker.wrappers import MinitrinoContainer
 from minitrino.core.errors import MinitrinoError, UserError
-from minitrino.core.logger import LogLevel, MinitrinoLogger
+from minitrino.core.logging.logger import LogLevel, MinitrinoLogger
 
 if TYPE_CHECKING:
     from minitrino.core.context import MinitrinoContext

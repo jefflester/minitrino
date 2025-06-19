@@ -340,7 +340,8 @@ class CommandExecutor:
         environment.update(host_environment)
         return environment
 
-    def _strip_ansi(self, value: str = "") -> str:
+    @staticmethod
+    def _strip_ansi(value: str = "") -> str:
         """
         Remove ANSI escape sequences from the given string.
 

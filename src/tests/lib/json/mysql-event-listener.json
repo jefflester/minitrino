@@ -1,0 +1,29 @@
+{
+  "tests": [
+    {
+      "type": "query",
+      "name": "Prime event listener database",
+      "sql": "SELECT 123",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'",
+        "--user admin"
+      ],
+      "contains": [
+        "123"
+      ]
+    },
+    {
+      "type": "query",
+      "name": "Query event listener database",
+      "sql": "SELECT query, query_state FROM mysql_event_listener.event_listener.trino_queries WHERE query = 'SELECT 123'",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'",
+        "--user admin"
+      ],
+      "contains": [
+        "SELECT 1",
+        "FINISHED"
+      ]
+    }
+  ]
+}

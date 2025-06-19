@@ -113,7 +113,7 @@ pip_install() {
         exit 1
     }
 
-    "${PYTHON}" -m pip install -e "${SCRIPT_DIR}/src/test/" --use-pep517 || {
+    "${PYTHON}" -m pip install -e "${SCRIPT_DIR}/src/tests/" --use-pep517 || {
         echo "Error: Failed to install test module"
         exit 1
     }

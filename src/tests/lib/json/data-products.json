@@ -1,0 +1,44 @@
+{
+  "tests": [
+    {
+      "type": "shell",
+      "name": "Create domain and data product",
+      "container": "minitrino-default",
+      "command": "curl -v -X POST -H 'Accept: application/json' -H 'X-Trino-User: admin' -H 'Content-Type: application/json' --data '{\"name\":\"test\",\"description\":\"test\", \"schemaLocation\":\"s3a://minitrino/test/\"}' 'http://localhost:8080/api/v1/dataProduct/domains'",
+      "exitCode": 0,
+      "contains": [
+        "schemaLocation",
+        "s3a://minitrino/test/",
+        "createdAt",
+        "updatedAt"
+      ],
+      "healthcheck": {
+        "command": "curl -X GET -H 'Accept: application/json' -H 'X-Trino-User: admin' 'localhost:8080/v1/info/'",
+        "container": "minitrino-default",
+        "retries": 30,
+        "contains": [
+          "\"starting\":false"
+        ]
+      },
+      "subCommands": [
+        {
+          "name": "Get domain id",
+          "command": "sh -c \"curl -s -X GET -H 'Accept: application/json' -H 'X-Trino-User: admin' 'http://localhost:8080/api/v1/dataProduct/domains' | jq -r '.[0].id'\"",
+          "container": "minitrino-default",
+          "exitCode": 0
+        },
+        {
+          "name": "Create data product",
+          "command": "curl -v -X POST -H 'Accept: application/json' -H 'X-Trino-User: admin' -H 'Content-Type: application/json' --data '{\"catalogName\":\"hive\", \"schemaName\":\"test\", \"dataDomainId\":\"${PREV_OUTPUT}\", \"name\":\"test\", \"summary\":\"test\"}' 'http://localhost:8080/api/v1/dataProduct/products'",
+          "container": "minitrino-default",
+          "exitCode": 0,
+          "contains": [
+            "catalogName",
+            "dataDomainId",
+            "name"
+          ]
+        }
+      ]
+    }
+  ]
+}

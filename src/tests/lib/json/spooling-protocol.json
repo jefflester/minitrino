@@ -1,0 +1,13 @@
+{
+  "tests": [
+    {
+      "type": "logs",
+      "name": "Ensure cluster is running (stargate tests verify actual functionality)",
+      "container": "minitrino-default",
+      "contains": [
+        "=== SERVER STARTED ==="
+      ],
+      "timeout": 60
+    }
+  ]
+}

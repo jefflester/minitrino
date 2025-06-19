@@ -32,4 +32,4 @@ jobs:
       - name: Run library tests
         run: |-
           python ./src/test/src/lib/runner.py \
-            --remove-images --image trino
+            --debug --remove-images --image trino

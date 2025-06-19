@@ -1,0 +1,31 @@
+{
+  "tests": [
+    {
+      "type": "query",
+      "name": "Test password",
+      "sql": "SELECT 12345",
+      "trinoCliArgs": [
+        "--server 'https://minitrino:8443'",
+        "--user admin",
+        "--truststore-path /etc/${CLUSTER_DIST}/tls/truststore.jks",
+        "--truststore-password changeit",
+        "--password"
+      ],
+      "contains": [
+        "12345"
+      ],
+      "env": {
+        "TRINO_PASSWORD": "trinoRocks15"
+      }
+    },
+    {
+      "type": "logs",
+      "name": "Ensure cluster is running",
+      "container": "minitrino-default",
+      "contains": [
+        "=== SERVER STARTED ==="
+      ],
+      "timeout": 60
+    }
+  ]
+}

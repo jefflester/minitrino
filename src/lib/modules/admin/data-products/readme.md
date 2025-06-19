@@ -22,5 +22,5 @@ When configuring data product domains, use this `s3a` path, which is from a
 bucket auto-provisioned in the related MinIO container:
 
 ```txt
-s3a://sample-bucket/<domain>
+s3a://minitrino/<domain>
 ```

@@ -12,7 +12,7 @@ minitrino -v -e CLUSTER_VER=${version} provision -m ldap
 docker exec -it minitrino bash 
 
 trino-cli --server https://minitrino:8443 \
-  --truststore-path /etc/"${CLUSTER_DIST}"/tls-mnt/truststore.jks \
+  --truststore-path /etc/"${CLUSTER_DIST}"/tls/truststore.jks \
   --truststore-password changeit \
   --user bob --password
 

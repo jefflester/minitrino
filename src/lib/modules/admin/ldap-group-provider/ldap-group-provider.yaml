@@ -1,0 +1,8 @@
+---
+services:
+
+  minitrino:
+    volumes:
+      - ./modules/admin/ldap-group-provider/resources/cluster/group-provider.properties:/mnt/etc/group-provider.properties:ro
+    labels:
+      - org.minitrino.module.admin.ldap-group-provider=true

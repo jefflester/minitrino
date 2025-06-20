@@ -90,11 +90,20 @@ install_java() {
 
 install_trino_cli() {
     echo "Installing trino-cli..."
-    TRINO_CLI_PATH="/usr/local/bin/trino-cli"
-    curl -#LfS -o "${TRINO_CLI_PATH}" \
+    local trino_cli_jar="/usr/local/bin/trino-cli.jar"
+    local trino_cli_wrapper="/usr/local/bin/trino-cli"
+
+    curl -#LfS -o "${trino_cli_jar}" \
         "https://repo1.maven.org/maven2/io/trino/trino-cli/${TRINO_VER}/trino-cli-${TRINO_VER}-executable.jar"
-    chmod +x "${TRINO_CLI_PATH}"
-    chown "${SERVICE_USER}":"${SERVICE_GROUP}" "${TRINO_CLI_PATH}"
+
+    # Wrapper with logging disabled
+    cat <<-EOF > "${trino_cli_wrapper}"
+	#!/bin/bash
+	exec java -Djava.util.logging.config.file=/dev/null -jar "${trino_cli_jar}" "\$@"
+EOF
+
+    chmod +x "${trino_cli_wrapper}" "${trino_cli_jar}"
+    chown "${SERVICE_USER}:${SERVICE_GROUP}" "${trino_cli_wrapper}" "${trino_cli_jar}"
 }
 
 install_wait_for_it() {

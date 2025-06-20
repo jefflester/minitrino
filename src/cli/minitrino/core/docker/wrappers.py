@@ -128,6 +128,52 @@ class MinitrinoContainer(MinitrinoDockerObjectMixin, Container):
             return project.split("minitrino-")[1]
         return str(getattr(self, "_cluster_name", None)) or str(super().cluster_name)
 
+    def ports_and_host_endpoints(self) -> tuple[list[str], list[str]]:
+        """
+        Get published and exposed ports and host endpoints.
+
+        Returns
+        -------
+        tuple[list[str], list[str]]
+            - ports: Published ports as 'host_port:container_port',
+              exposed-only as 'container_port'
+            - host_endpoints: Published host endpoints as
+              'localhost:host_port'
+        """
+        ports_dict = self.attrs.get("NetworkSettings", {}).get("Ports", {})
+        exposed_ports_dict = self.attrs.get("Config", {}).get("ExposedPorts", {})
+        port_mappings = set()
+        host_endpoints = set()
+        published_container_ports = set()
+
+        # Published ports
+        for container_port, mappings in (ports_dict or {}).items():
+            port_num = (
+                container_port.split("/")[0]
+                if "/" in container_port
+                else container_port
+            )
+            if mappings:
+                for mapping in mappings:
+                    host_port = mapping.get("HostPort")
+                    if host_port:
+                        port_mappings.add(f"{host_port}:{port_num}")
+                        host_endpoints.add(f"localhost:{host_port}")
+                        published_container_ports.add(port_num)
+
+        # Exposed-only ports (not published)
+        for exposed_port in exposed_ports_dict or {}:
+            port_num = (
+                exposed_port.split("/")[0] if "/" in exposed_port else exposed_port
+            )
+            if port_num not in published_container_ports:
+                port_mappings.add(f"{port_num}")
+
+        return (
+            sorted(port_mappings, key=lambda x: (x.count(":"), x)),
+            sorted(host_endpoints),
+        )
+
 
 class MinitrinoVolume(MinitrinoDockerObjectMixin, Volume):
     """

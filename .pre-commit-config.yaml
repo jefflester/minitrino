@@ -22,7 +22,7 @@ repos:
       - id: isort
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.15.0
+    rev: v1.16.1
     hooks:
       - id: mypy
         additional_dependencies:
@@ -41,6 +41,15 @@ repos:
       - id: pydocstyle
         additional_dependencies: [tomli]
 
+  - repo: https://github.com/koalaman/shellcheck-precommit
+    rev: v0.10.0
+    hooks:
+      - id: shellcheck
+        name: shellcheck
+        entry: shellcheck
+        language: system
+        types: [shell]
+
   - repo: https://github.com/adrienverge/yamllint
     rev: v1.37.1
     hooks:
@@ -54,7 +63,9 @@ repos:
         entry: |-
           bash -c '
           modified=()
-          for file in $(find src/ -type d -name ".*" -prune -o -name "*.json" -print); do
+          for file in $(
+            find src/ -type d -name ".*" -prune -o -name "*.json" -print
+          ); do
             tmpfile=$(mktemp)
             if ! jq . "$file" > "$tmpfile"; then
               echo "Failed to process $file"

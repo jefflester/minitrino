@@ -12,8 +12,7 @@ after_start() {
   do
     set +e
     RESPONSE=$(curl -s -X GET -H 'Accept: application/json' -H 'X-Trino-User: admin' "minitrino-${CLUSTER_NAME}:8080/v1/info")
-    echo "${RESPONSE}" | grep -q '"starting":false'
-    if [ $? -eq 0 ]; then
+    if echo "${RESPONSE}" | grep -q '"starting":false'; then
       echo "Health check passed."
       sleep 5
       break
@@ -29,7 +28,7 @@ after_start() {
   fi
 
   set -e
-  echo "com.starburstdata.cache=DEBUG" >> /etc/${CLUSTER_DIST}/log.properties
+  echo "com.starburstdata.cache=DEBUG" >> /etc/"${CLUSTER_DIST}"/log.properties
 
   echo -e "jmx.dump-tables=com.starburstdata.cache.resource:name=cacheresource,\\
   com.starburstdata.cache.resource:name=materializedviewsresource,\\

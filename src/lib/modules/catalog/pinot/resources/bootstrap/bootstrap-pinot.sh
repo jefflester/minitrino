@@ -35,7 +35,8 @@ cd /opt/pinot/
 load_table_if_not_exists() {
   local schema_file=$1
   local table_config_file=$2
-  local table_name=$(basename "$table_config_file" | cut -d_ -f1)
+  local table_name
+  table_name=$(basename "$table_config_file" | cut -d_ -f1)
 
   # Check if the table already exists
   if curl -s http://pinot-controller:9000/tables | grep -q "\"$table_name\""; then
@@ -53,7 +54,8 @@ load_table_if_not_exists() {
 
 launch_job_if_not_loaded() {
   local job_spec_file=$1
-  local table_name=$(basename "$job_spec_file" | cut -d_ -f1)
+  local table_name
+  table_name=$(basename "$job_spec_file" | cut -d_ -f1)
 
   # Check if the table already has data
   row_count=$(curl -s http://pinot-broker:8099/query -X POST -d "SELECT COUNT(*) FROM $table_name" | grep -o '"rows":[[][0-9]*' | awk -F':' '{print $2}' || echo 0)

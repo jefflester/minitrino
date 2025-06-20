@@ -4,15 +4,16 @@ MAX_ATTEMPTS=60
 for (( ATTEMPTS=1; ATTEMPTS<=MAX_ATTEMPTS; ATTEMPTS++ ))
 do
    # Check if the admin user already has privileges
-   mariadb -ptrinoRocks15 -e "SHOW GRANTS FOR 'admin';" | grep -q "GRANT ALL PRIVILEGES ON *.* TO 'admin'"
-   if [ $? == 0 ]; then
+   if mariadb -ptrinoRocks15 -e "SHOW GRANTS FOR 'admin';" \
+      | grep -q "GRANT ALL PRIVILEGES ON *.* TO 'admin'"
+   then
       echo "Privileges already granted to 'admin'. Skipping privilege grant."
       break
    fi
 
    # Grant privileges if they are not already granted
-   mariadb -ptrinoRocks15 -e "GRANT ALL PRIVILEGES ON *.* TO 'admin';"
-   if [ $? == 0 ]; then
+   if mariadb -ptrinoRocks15 -e "GRANT ALL PRIVILEGES ON *.* TO 'admin';"
+   then
       break
    fi
    sleep 1

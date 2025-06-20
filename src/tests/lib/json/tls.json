@@ -17,7 +17,7 @@
     {
       "type": "shell",
       "name": "Test https endpoint via curl",
-      "container": "minitrino-default",
+      "container": "minitrino-lib-test",
       "command": "curl -v -k https://minitrino:8443",
       "exitCode": 0,
       "contains": [
@@ -29,7 +29,7 @@
     {
       "type": "logs",
       "name": "Ensure cluster is running",
-      "container": "minitrino-default",
+      "container": "minitrino-lib-test",
       "contains": [
         "=== SERVER STARTED ==="
       ],

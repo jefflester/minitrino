@@ -3,12 +3,12 @@
     {
       "type": "shell",
       "name": "Ensure oauth2 server is accessible",
-      "container": "minitrino-default",
+      "container": "minitrino-lib-test",
       "command": "echo 'pass'",
       "exitCode": 0,
       "healthcheck": {
-        "command": "curl -v -k https://host.docker.internal:8100/default/.well-known/openid-configuration",
-        "container": "minitrino-default",
+        "command": "curl -v -k https://host.docker.internal:8100/minitrino-issuer/.well-known/openid-configuration",
+        "container": "minitrino-lib-test",
         "retries": 30,
         "exitCode": 0,
         "contains": [
@@ -21,7 +21,7 @@
     {
       "type": "logs",
       "name": "Ensure cluster is running",
-      "container": "minitrino-default",
+      "container": "minitrino-lib-test",
       "contains": [
         "=== SERVER STARTED ==="
       ],

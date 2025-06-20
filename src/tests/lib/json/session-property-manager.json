@@ -15,14 +15,14 @@
     {
       "type": "shell",
       "name": "Fetch query ID to confirm correct session properties",
-      "container": "minitrino-default",
+      "container": "minitrino-lib-test",
       "command": "trino-cli --user admin --output-format CSV_UNQUOTED --execute \"SELECT query_id FROM system.runtime.queries WHERE query = 'SELECT ''admin-user'''\"",
       "exitCode": 0,
       "subCommands": [
         {
           "name": "Parse query JSON",
           "command": "sh -c \"curl -s -u admin: localhost:8080/v1/query/${PREV_OUTPUT} | jq -r '.session.systemProperties'\"",
-          "container": "minitrino-default",
+          "container": "minitrino-lib-test",
           "exitCode": 0,
           "contains": [
             "resource_overcommit",
@@ -47,14 +47,14 @@
     {
       "type": "shell",
       "name": "Fetch query ID to confirm correct session properties",
-      "container": "minitrino-default",
+      "container": "minitrino-lib-test",
       "command": "trino-cli --user admin --output-format CSV_UNQUOTED --execute \"SELECT query_id FROM system.runtime.queries WHERE query = 'SHOW CREATE TABLE tpch.tiny.customer' AND user = 'foo'\"",
       "exitCode": 0,
       "subCommands": [
         {
           "name": "Parse query JSON",
           "command": "sh -c \"curl -s -u admin: localhost:8080/v1/query/${PREV_OUTPUT} | jq -r '.session.systemProperties'\"",
-          "container": "minitrino-default",
+          "container": "minitrino-lib-test",
           "exitCode": 0,
           "contains": [
             "query_max_execution_time",
@@ -78,14 +78,14 @@
     {
       "type": "shell",
       "name": "Fetch query ID to confirm correct session properties",
-      "container": "minitrino-default",
+      "container": "minitrino-lib-test",
       "command": "trino-cli --user admin --output-format CSV_UNQUOTED --execute \"SELECT query_id FROM system.runtime.queries WHERE query = 'SELECT ''metadata-user'''\"",
       "exitCode": 0,
       "subCommands": [
         {
           "name": "Parse query JSON",
           "command": "sh -c \"curl -s -u admin: localhost:8080/v1/query/${PREV_OUTPUT} | jq -r '.session.systemProperties'\"",
-          "container": "minitrino-default",
+          "container": "minitrino-lib-test",
           "exitCode": 0,
           "contains": [
             "query_max_execution_time",
@@ -109,14 +109,14 @@
     {
       "type": "shell",
       "name": "Fetch query ID to confirm correct session properties",
-      "container": "minitrino-default",
+      "container": "minitrino-lib-test",
       "command": "trino-cli --user admin --output-format CSV_UNQUOTED --execute \"SELECT query_id FROM system.runtime.queries WHERE query = 'SELECT ''platform-user'''\"",
       "exitCode": 0,
       "subCommands": [
         {
           "name": "Parse query JSON",
           "command": "sh -c \"curl -s -u admin: localhost:8080/v1/query/${PREV_OUTPUT} | jq -r '.session.systemProperties'\"",
-          "container": "minitrino-default",
+          "container": "minitrino-lib-test",
           "exitCode": 0,
           "contains": [
             "query_max_execution_time",
@@ -140,14 +140,14 @@
     {
       "type": "shell",
       "name": "Fetch query ID to confirm correct session properties",
-      "container": "minitrino-default",
+      "container": "minitrino-lib-test",
       "command": "trino-cli --user admin --output-format CSV_UNQUOTED --execute \"SELECT query_id FROM system.runtime.queries WHERE query = 'SELECT ''foo'''\"",
       "exitCode": 0,
       "subCommands": [
         {
           "name": "Parse query JSON",
           "command": "sh -c \"curl -s -u admin: localhost:8080/v1/query/${PREV_OUTPUT} | jq -r '.session.systemProperties'\"",
-          "container": "minitrino-default",
+          "container": "minitrino-lib-test",
           "exitCode": 0,
           "contains": [
             "query_max_execution_time",

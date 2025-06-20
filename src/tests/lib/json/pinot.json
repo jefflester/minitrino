@@ -3,12 +3,12 @@
     {
       "type": "shell",
       "name": "Ensure Pinot is accessible",
-      "container": "minitrino-default",
+      "container": "minitrino-lib-test",
       "command": "echo 'pass'",
       "exitCode": 0,
       "healthcheck": {
         "command": "trino-cli --debug --output-format CSV_HEADER --execute 'SHOW TABLES IN pinot.default' --user admin",
-        "container": "minitrino-default",
+        "container": "minitrino-lib-test",
         "retries": 60,
         "exitCode": 0,
         "contains": [

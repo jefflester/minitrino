@@ -51,7 +51,7 @@
     {
       "type": "logs",
       "name": "Verify MV and TSR storage",
-      "container": "minitrino-default",
+      "container": "minitrino-lib-test",
       "contains": [
         "Import from hive_mv_tsr.mvs.example to hive_mv_tsr.mv_storage.example_",
         "Import from hive_mv_tsr.mvs.test to hive_mv_tsr.mv_storage.test_",

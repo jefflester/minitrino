@@ -1,53 +1,67 @@
 # TLS Module
 
-This module configures server TLS on the Trino container using a self-signed
-certificate.
+Enable [HTTPS](https://trino.io/docs/current/security/tls.html) on the
+coordinator using a self-signed certificate.
 
 ## Usage
 
 ```sh
-minitrino -v provision -m tls
-# Or specify cluster version
-minitrino -v -e CLUSTER_VER=${version} provision -m tls
+minitrino provision -m tls
 ```
 
 ## Client Keystore and Truststore
 
-The Java keystore and truststore needed for clients and drivers to securely
-connect to the cluster are located in a volume mount
-`~/.minitrino/${CLUSTER_NAME}/tls`. These two files are transient and will be
-automatically replaced whenever Minitrino is provisioned with a security module
-that enables SSL.
+The Java keystore and truststore required for clients and drivers are available
+on the host machine at `~/.minitrino/tls/${CLUSTER_NAME}/`.
 
-## Accessing the Cluster with the CLI
-
-Via Docker:
+The truststore is available in the container at
+`/etc/${CLUSTER_DIST}/tls/truststore.jks`.
 
 ```sh
-docker exec -it minitrino trino-cli \
-  --server https://minitrino:8443 \
-  --truststore-path /etc/${CLUSTER_DIST}/tls/truststore.jks \
-  --truststore-password changeit
+minitrino exec -i 'ls -l /etc/${CLUSTER_DIST}/tls/'
 ```
 
-Via host machine:
+```txt
+total 12
+-rw-rw-r-- 1 trino root 3454 Jun 19 22:02 keystore.jks
+-rw-rw-r-- 1 trino root 1460 Jun 19 22:02 minitrino_cert.cer
+-rw-rw-r-- 1 trino root 1414 Jun 19 22:02 truststore.jks
+```
+
+## Accessing Trino Securely
+
+### Using Docker
 
 ```sh
-trino-cli-xxx-executable.jar \
+minitrino exec -i 'trino-cli \
+  --server https://minitrino:8443 \
+  --truststore-path /etc/${CLUSTER_DIST}/tls/truststore.jks \
+  --truststore-password changeit'
+```
+
+Certificate trust can be bypassed by using the `--insecure` flag:
+
+```sh
+minitrino exec -i 'trino-cli \
+  --server https://minitrino:8443 \
+  --insecure'
+```
+
+### Using Host Machine
+
+```sh
+trino-cli-executable.jar \
   --server https://localhost:8443 \
   --truststore-path ~/.minitrino/${CLUSTER_NAME}/tls/truststore.jks \
   --truststore-password changeit
 ```
 
-## Accessing the Web UI
+### Using the Web UI
 
-Open a web browser and go to `https://localhost:8443`. To have the browser
-accept the self-signed certificate, do the following:
+Open a browser and go to `https://localhost:8443`.
 
-**Chrome**: Click anywhere on the page and type `thisisunsafe`.
-
-**Firefox**: Click on the **Advanced** button and then click on **Accept the
-Risk and Continue**.
-
-**Safari**: Click on the button **Show Details** and then click the link **visit
-this website**.
+| Browser   | How to Accept Self-Signed Certificate                 |
+|:----------|:------------------------------------------------------|
+| Chrome    | Click anywhere and type `thisisunsafe`                |
+| Firefox   | Click **Advanced** → **Accept the Risk and Continue** |
+| Safari    | Click **Show Details** → **visit this website**       |

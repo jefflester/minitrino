@@ -3,12 +3,12 @@
     {
       "type": "shell",
       "name": "Ensure Elasticsearch is running",
-      "container": "minitrino-default",
+      "container": "minitrino-lib-test",
       "command": "echo 'pass'",
       "exitCode": 0,
       "healthcheck": {
         "command": "curl -v -k elasticsearch:9200/_cluster/health/user",
-        "container": "minitrino-default",
+        "container": "minitrino-lib-test",
         "retries": 30,
         "exitCode": 0,
         "contains": [

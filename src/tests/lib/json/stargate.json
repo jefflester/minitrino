@@ -3,12 +3,12 @@
     {
       "type": "shell",
       "name": "Ensure remote cluster is running",
-      "container": "minitrino-default",
+      "container": "minitrino-lib-test",
       "command": "echo 'pass'",
       "exitCode": 0,
       "healthcheck": {
-        "command": "curl -v -k minitrino-default-dep-stargate-remote:8080/v1/info || true",
-        "container": "minitrino-default",
+        "command": "curl -v -k minitrino-lib-test-dep-stargate-remote:8080/v1/info || true",
+        "container": "minitrino-lib-test",
         "retries": 60,
         "exitCode": 0,
         "contains": [

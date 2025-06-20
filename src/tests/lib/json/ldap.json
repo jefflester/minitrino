@@ -21,7 +21,7 @@
     {
       "type": "logs",
       "name": "Ensure cluster is running",
-      "container": "minitrino-default",
+      "container": "minitrino-lib-test",
       "contains": [
         "=== SERVER STARTED ==="
       ],

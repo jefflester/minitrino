@@ -125,6 +125,9 @@ def cli(
     validate_name(name)
     check_exists(name, directory, force)
 
+    modules = list(modules) or []
+    for module in modules:
+        ctx.modules.validate_module_name(module)
     if modules:
         ctx.logger.info("Creating snapshot of specified modules...")
         modules = ctx.modules.check_dep_modules(list(modules))
@@ -440,8 +443,7 @@ def copy_module_dirs(
     modules : list of str, optional
         List of modules to copy.
     """
-    if modules is None:
-        modules = []
+    modules = modules or []
     for module in modules:
         module_dir = ctx.modules.data.get(module, {}).get("module_dir", "")
         module_type = ctx.modules.data.get(module, {}).get("type", "")
@@ -527,8 +529,7 @@ def snapshot_runner(
     directory : str, optional
         Directory to save the snapshot tarball.
     """
-    if modules is None:
-        modules = []
+    modules = modules or []
     temp_snapshot_dir = create_temp_snapshot_dir(name, no_scrub, modules)
     copy_module_dirs(temp_snapshot_dir, modules)
     create_snapshot_tarball(name, temp_snapshot_dir, os.path.dirname(temp_snapshot_dir))

@@ -75,6 +75,8 @@ class Modules:
     -------
     running_modules() :
         Returns a dictionary of modules that are currently running.
+    validate_module_name(name: str) :
+        Return the module name or raise UserError with a suggestion.
     check_dep_modules(modules: Optional[list[str]] = None) :
         Check if provided modules have dependencies and include them.
     check_module_version_requirements(modules: Optional[list[str]] =
@@ -173,6 +175,31 @@ class Modules:
                     "the wrong location?"
                 )
         return modules
+
+    def validate_module_name(self, name: str) -> str:
+        """
+        Return the module name or raise UserError with a suggestion.
+
+        Always use this method to validate any user-provided module
+        name(s).
+
+        Parameters
+        ----------
+        name : str
+            User-supplied module name.
+
+        Returns
+        -------
+        str
+            Validated module name.
+
+        Raises
+        ------
+        UserError
+            If the module name is not found, with a suggestion.
+        """
+        valid_names = list(self.data.keys())
+        return utils.closest_match_or_error(name, valid_names, "module")
 
     def check_dep_modules(self, modules: Optional[list[str]] = None) -> list[str]:
         """
@@ -340,7 +367,7 @@ class Modules:
                     f"Module(s) {enterprise_modules} are only compatible with "
                     f"Starburst Enterprise. Please specify the image type with "
                     f"the '-i' option. ",
-                    "Example: minitrino provision -i starburst",
+                    "minitrino provision -i starburst",
                 )
             if not self._ctx.env.get("LIC_PATH", ""):
                 raise UserError(

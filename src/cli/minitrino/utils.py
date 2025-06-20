@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import difflib
 import os
 import sys
 import traceback
@@ -284,6 +285,43 @@ def parse_key_value_pair(
         if hard_fail:
             raise UserError(f"Invalid key-value pair: {pair}")
     return key, value
+
+
+def closest_match_or_error(
+    name: str, valid_names: list[str], context: str = "item"
+) -> str:
+    """
+    Return the name or fail with a closest match suggestion.
+
+    Parameters
+    ----------
+    name : str
+        The user-provided name to validate.
+    valid_names : list[str]
+        List of valid names to check against.
+    context : str, optional
+        Context string for error message (default: "item").
+
+    Returns
+    -------
+    str
+        The valid name (if found).
+
+    Raises
+    ------
+    UserError
+        If the name is not valid, with a suggestion if available.
+
+    Examples
+    --------
+    >>> closest_match_or_error('ressources', ['resources', 'remove'])
+    UserError: Item 'ressources' not found. Did you mean 'resources'?
+    """
+    if name in valid_names:
+        return name
+    suggestion = difflib.get_close_matches(name, valid_names, n=1)
+    suggestion_msg = f" Did you mean '{suggestion[0]}'?" if suggestion else ""
+    raise UserError(f"{context.capitalize()} '{name}' not found.{suggestion_msg}")
 
 
 def cli_ver() -> str:

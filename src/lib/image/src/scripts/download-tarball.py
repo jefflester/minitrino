@@ -55,6 +55,7 @@ import platform
 import shutil
 import sys
 import tarfile
+import time
 import urllib.request
 from typing import Optional, Tuple
 
@@ -137,8 +138,19 @@ def download_tarball(url: str, tar_path: str) -> None:
     """
     print(f"Downloading {url} ...")
     with urllib.request.urlopen(url) as response, open(tar_path, "wb") as out_file:
-        shutil.copyfileobj(response, out_file)
-    print(f"Downloaded to {tar_path}")
+        chunk_size = 8192
+        last_print_time = time.time()
+        while True:
+            chunk = response.read(chunk_size)
+            if not chunk:
+                break
+            out_file.write(chunk)
+            now = time.time()
+            if now - last_print_time >= 5:
+                print("Downloading tarball...")
+                sys.stdout.flush()
+                last_print_time = now
+        print(f"Downloaded to {tar_path}")
 
 
 def unpack_tarball(tar_path: str, dest_dir: str) -> None:

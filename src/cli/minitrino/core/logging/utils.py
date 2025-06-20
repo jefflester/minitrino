@@ -60,11 +60,11 @@ class MinitrinoLogFormatter(logging.Formatter):
         "CRITICAL": "red",
     }
     PREFIXES = {
-        "DEBUG": "[v]",
-        "INFO": "[i]",
-        "WARNING": "[w]",
-        "ERROR": "[e]",
-        "CRITICAL": "[e]",
+        "DEBUG": "[v]  ",
+        "INFO": "[i]  ",
+        "WARNING": "[w]  ",
+        "ERROR": "[e]  ",
+        "CRITICAL": "[e]  ",
     }
 
     def __init__(self, always_verbose=False):
@@ -75,7 +75,7 @@ class MinitrinoLogFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord):
         """Format a log record."""
         logger_name = record.name
-        prefix = self.PREFIXES.get(record.levelname, "[i]")
+        prefix = self.PREFIXES.get(record.levelname, "[i]  ")
         color = self.COLORS.get(record.levelname, "cyan")
         if self.enable_color:
             styled_prefix = style(prefix, fg=color, bold=True)
@@ -99,4 +99,4 @@ class MinitrinoLogFormatter(logging.Formatter):
                 formatted.append(f"{DEFAULT_INDENT}{line}")
             return "\n".join(formatted)
         else:
-            return f"{styled_prefix} {msg}"
+            return f"{styled_prefix}{msg}"

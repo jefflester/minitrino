@@ -12,12 +12,16 @@ CLUSTER_RESOURCES = [
     f"minitrino-{CLUSTER_NAME}_test-data",  # volume
     f"minitrino-{CLUSTER_NAME}",  # container
     f"test-{CLUSTER_NAME}",  # container
+    r"localhost:808[0-9]",  # host endpoint
+    r"8080:808[0-9]",  # port
 ]
 CLUSTER_2_RESOURCES = [
     f"minitrino_{CLUSTER_NAME_2}",  # network
     f"minitrino-{CLUSTER_NAME_2}_test-data",  # volume
     f"minitrino-{CLUSTER_NAME_2}",  # container
     f"test-{CLUSTER_NAME_2}",  # container
+    r"localhost:808[0-9]",  # host endpoint
+    r"8080:808[0-9]",  # port
 ]
 
 pytestmark = pytest.mark.usefixtures(

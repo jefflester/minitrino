@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import re
 from typing import Dict, Optional, TypedDict
 
 import docker
@@ -258,24 +259,28 @@ def assert_not_in_file(*args: str, path: str) -> None:
 
 def assert_in_output(*args: str, result: Result | CommandResult | list[str]) -> None:
     """
-    Assert the given strings are in the result output.
+    Assert the given strings or regex patterns are in the result output.
 
     Parameters
     ----------
     args : tuple of str
-        The strings to assert are in the result output.
-    result : Result or CommandResult or list
+        Regex patterns to assert are present in the result output.
+        Literal strings are also supported, as they are valid regex
+        patterns.
+    result : Result or CommandResult or list[str]
         The result to check. Supports list[str] for testing log sinks.
     """
-    msg = "Expected string '%s' not found in output:\n%s."
+    msg = "Expected pattern '%s' not found in output:\n%s."
     if isinstance(result, list):
         joined = "\n".join(normalize(s) for s in result)
-        for expected in args:
-            assert expected in joined, msg % (expected, joined)
+        for pattern in args:
+            if not re.search(pattern, joined):
+                raise AssertionError(msg % (pattern, joined))
         return
-    for expected in args:
-        normalized = normalize(result.output)
-        assert expected in normalized, msg % (expected, normalized)
+    normalized = normalize(result.output)
+    for pattern in args:
+        if not re.search(pattern, normalized):
+            raise AssertionError(msg % (pattern, normalized))
 
 
 def assert_not_in_output(*args: str, result: Result | CommandResult) -> None:
@@ -311,7 +316,7 @@ def remove() -> None:
     shut_down()
     logger.debug("Removing all volumes and networks.")
     cli_cmd(
-        build_cmd("remove", "all", append=["--volume", "--network"]), log_output=False
+        build_cmd("remove", "all", append=["--volumes", "--networks"]), log_output=False
     )
 
 

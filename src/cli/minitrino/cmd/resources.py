@@ -98,6 +98,20 @@ def cli(
                 ]
             )
 
+        container_network_rows = []
+        for c in containers:
+            ports, host_endpoints = c.ports_and_host_endpoints()
+            ports_str = ", ".join(ports) if ports else "<none>"
+            endpoints_str = ", ".join(host_endpoints) if host_endpoints else "<none>"
+            container_network_rows.append(
+                [
+                    c.cluster_name,
+                    c.name,
+                    ports_str,
+                    endpoints_str,
+                ]
+            )
+
     image_rows = []
     if fetch_images:
         images = [
@@ -148,6 +162,13 @@ def cli(
                 "Containers",
                 container_rows,
                 ["Cluster", "Name", "Status", "Age", "Memory", "CPU"],
+            )
+        )
+        sections.append(
+            (
+                "Container Ports and Endpoints",
+                container_network_rows,
+                ["Cluster", "Name", "Ports", "Host Endpoints"],
             )
         )
     if show_image or not show_any:

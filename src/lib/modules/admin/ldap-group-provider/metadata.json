@@ -1,0 +1,10 @@
+{
+  "description": "LDAP group provider module",
+  "incompatibleModules": [
+    "file-group-provider"
+  ],
+  "dependentModules": [
+    "ldap"
+  ],
+  "enterprise": true
+}

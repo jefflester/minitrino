@@ -20,15 +20,15 @@ if [ $elapsed -eq $timeout ]; then
 fi
 
 if [ -f /mnt/etc/starburstdata.license ]; then
-    cp /mnt/etc/starburstdata.license /etc/${CLUSTER_DIST}/starburstdata.license
+    cp /mnt/etc/starburstdata.license /etc/"${CLUSTER_DIST}"/starburstdata.license
 fi
 
-push_status="$(cat /etc/${CLUSTER_DIST}/.minitrino/push-config-status.txt 2>/dev/null || echo "")"
-cp_mnt_status="$(cat /etc/${CLUSTER_DIST}/.minitrino/copy-mnt-status.txt 2>/dev/null || echo "")"
+push_status="$(cat /etc/"${CLUSTER_DIST}"/.minitrino/push-config-status.txt 2>/dev/null || echo "")"
+cp_mnt_status="$(cat /etc/"${CLUSTER_DIST}"/.minitrino/copy-mnt-status.txt 2>/dev/null || echo "")"
 
 if [ "${push_status}" == "ACTIVE" ]; then
-    cp -R /tmp/etc/* /etc/${CLUSTER_DIST}/
-    echo "INACTIVE" > /etc/${CLUSTER_DIST}/.minitrino/push-config-status.txt
+    cp -R /tmp/etc/* /etc/"${CLUSTER_DIST}"/
+    echo "INACTIVE" > /etc/"${CLUSTER_DIST}"/.minitrino/push-config-status.txt
 elif [ "${push_status}" == "INACTIVE" ]; then
     echo "Configs were previously pushed. Not overwriting with mounted (default) configs."
 else
@@ -36,8 +36,8 @@ else
         echo "Configs were previously copied. Not overwriting with mounted (default) configs."
     else
         if compgen -G "/mnt/etc/*" > /dev/null; then
-            cp -R /mnt/etc/* /etc/${CLUSTER_DIST}/
-            echo "FINISHED" > /etc/${CLUSTER_DIST}/.minitrino/copy-mnt-status.txt
+            cp -R /mnt/etc/* /etc/"${CLUSTER_DIST}"/
+            echo "FINISHED" > /etc/"${CLUSTER_DIST}"/.minitrino/copy-mnt-status.txt
         fi
     fi
 fi

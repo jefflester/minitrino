@@ -4,10 +4,10 @@ services:
   minitrino:
     environment:
       CONFIG_PROPERTIES: http-server.authentication.type=PASSWORD
-      MINITRINO_BOOTSTRAP: bootstrap-cluster.sh
     volumes:
+      - ./modules/security/ldap/resources/ldap/ldif:/mnt/etc/ldif:ro
+      - ./modules/security/ldap/resources/bootstrap/bootstrap-cluster.sh:/mnt/bootstrap/ldap/bootstrap-cluster.sh:ro
       - ./modules/security/ldap/resources/cluster/password-authenticator.properties:/mnt/etc/password-authenticator.properties:ro
-      - ./modules/security/ldap/resources/ldap/ldap-users:/mnt/etc/ldap-users:ro
     links:
       - ldap:ldap.minitrino.com
 
@@ -16,7 +16,7 @@ services:
     container_name: ldap-${CLUSTER_NAME}
     hostname: ldap.minitrino.com
     environment:
-      LDAP_ORGANISATION: Example Inc.
+      LDAP_ORGANISATION: Minitrino Inc.
       LDAP_DOMAIN: minitrino.com
       LDAP_ADMIN_PASSWORD: trinoRocks15
       LDAP_TLS_VERIFY_CLIENT: try

@@ -1,0 +1,12 @@
+# cachesvc, minitrino.com
+dn: uid=cachesvc,dc=minitrino,dc=com
+changetype: add
+uid: cachesvc
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: cachesvc
+sn: cachesvc
+mail: cachesvc@minitrino.com
+userPassword: trinoRocks15

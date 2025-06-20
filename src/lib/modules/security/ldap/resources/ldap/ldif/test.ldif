@@ -1,12 +1,12 @@
-# cachesvc, example.com
-dn: uid=cachesvc,dc=example,dc=com
+# test, minitrino.com
+dn: uid=test,dc=minitrino,dc=com
 changetype: add
-uid: cachesvc
+uid: test
 objectClass: inetOrgPerson
 objectClass: organizationalPerson
 objectClass: person
 objectClass: top
-cn: cachesvc
-sn: cachesvc
-mail: cachesvc@example.com
+cn: test
+sn: test
+mail: test@minitrino.com
 userPassword: trinoRocks15

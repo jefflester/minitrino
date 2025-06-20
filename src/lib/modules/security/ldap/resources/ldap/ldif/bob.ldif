@@ -1,12 +1,12 @@
-# admin, example.com
-dn: uid=admin,dc=example,dc=com
+# bob, minitrino.com
+dn: uid=bob,dc=minitrino,dc=com
 changetype: add
-uid: admin
+uid: bob
 objectClass: inetOrgPerson
 objectClass: organizationalPerson
 objectClass: person
 objectClass: top
-cn: admin
-sn: admin
-mail: admin@example.com
+cn: bob
+sn: bob
+mail: bob@minitrino.com
 userPassword: trinoRocks15

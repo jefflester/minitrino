@@ -1,0 +1,12 @@
+# admin, minitrino.com
+dn: uid=admin,dc=minitrino,dc=com
+changetype: add
+uid: admin
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: admin
+sn: admin
+mail: admin@minitrino.com
+userPassword: trinoRocks15

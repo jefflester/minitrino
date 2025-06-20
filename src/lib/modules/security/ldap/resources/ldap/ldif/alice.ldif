@@ -1,0 +1,12 @@
+# alice, minitrino.com
+dn: uid=alice,dc=minitrino,dc=com
+changetype: add
+uid: alice
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: alice
+sn: alice
+mail: alice@minitrino.com
+userPassword: trinoRocks15

@@ -147,7 +147,7 @@ module_requirements_scenarios = [
         id="invalid_module",
         module_names=["nonexistent"],
         expected_exit_code=2,
-        expected_output="Invalid module",
+        expected_output="Module 'nonexistent' not found",
         log_msg="Module requirements: invalid module name should error",
     ),
     ModuleRequirementsScenario(

@@ -1,6 +1,5 @@
 """Minitrino CLI entrypoint."""
 
-import difflib
 import os
 import sys
 from importlib import import_module
@@ -33,10 +32,10 @@ class CommandLineInterface(click.MultiCommand):
         try:
             mod = import_module(f"minitrino.cmd.{mod_name}")
         except ModuleNotFoundError:
-            all_commands = self.list_commands(ctx)
-            suggestion = difflib.get_close_matches(name, all_commands, n=1)
-            suggestion_msg = f" Did you mean '{suggestion[0]}'?" if suggestion else ""
-            logger.error(f"Command '{name}' not found.{suggestion_msg}")
+            suggestion = utils.closest_match_or_error(
+                name, self.list_commands(ctx), "command"
+            )
+            logger.error(f"Command '{name}' not found. {suggestion}")
             sys.exit(1)
         cmd = getattr(mod, "cli", None)
         if cmd is None:

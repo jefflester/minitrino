@@ -102,11 +102,7 @@ def cli(
         )
     modules_list = list(modules)
     for module in modules_list:
-        if not ctx.modules.data.get(module, False):
-            raise UserError(
-                f"Invalid module: '{module}'. It was not found "
-                f"in the Minitrino library at {ctx.lib_dir}"
-            )
+        ctx.modules.validate_module_name(module)
     set_distribution(image)
     if not modules_list:
         ctx.logger.info(

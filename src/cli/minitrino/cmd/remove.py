@@ -108,7 +108,10 @@ def cli(
     if not remove_types:
         remove_types = ["image", "volume", "network"]
 
-    modules = modules or []
+    modules = list(modules) or []
+    for module in modules:
+        ctx.modules.validate_module_name(module)
+
     remove_all = ctx.all_clusters and not modules and len(remove_types) == 3
 
     if remove_all:

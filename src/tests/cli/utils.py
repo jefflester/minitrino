@@ -1,19 +1,17 @@
 """Utility functions for Minitrino CLI tests."""
 
 import json
-import logging
 import os
 import re
-from typing import Dict, Optional, TypedDict
+from typing import Optional
 
 import docker
-from click.testing import CliRunner, Result
+from click.testing import Result
 
-from minitrino.cli import cli
+from tests import common
 from tests.cli.constants import CLUSTER_NAME
-from tests.common import CONFIG_FILE, MINITRINO_USER_DIR, CommandResult, get_containers
 
-logger = logging.getLogger("minitrino.test")
+builder = common.CLICommandBuilder(CLUSTER_NAME)
 
 
 def docker_client() -> tuple[docker.DockerClient, docker.APIClient]:
@@ -21,7 +19,7 @@ def docker_client() -> tuple[docker.DockerClient, docker.APIClient]:
     from minitrino.core.docker.socket import resolve_docker_socket
 
     socket = resolve_docker_socket()
-    logger.debug(f"Docker socket path: {socket}")
+    common.logger.debug(f"Docker socket path: {socket}")
     return docker.DockerClient(base_url=socket), docker.APIClient(base_url=socket)
 
 
@@ -32,11 +30,11 @@ def docker_client() -> tuple[docker.DockerClient, docker.APIClient]:
 
 def cleanup_config():
     """Ensure a sample config file and directory exist."""
-    logger.debug(f"Ensuring directory exists: {MINITRINO_USER_DIR}")
-    os.makedirs(MINITRINO_USER_DIR, exist_ok=True)
-    if os.path.isfile(CONFIG_FILE):
-        logger.debug(f"Removing existing config file: {CONFIG_FILE}")
-        os.remove(CONFIG_FILE)
+    common.logger.debug(f"Ensuring directory exists: {common.MINITRINO_USER_DIR}")
+    os.makedirs(common.MINITRINO_USER_DIR, exist_ok=True)
+    if os.path.isfile(common.CONFIG_FILE):
+        common.logger.debug(f"Removing existing config file: {common.CONFIG_FILE}")
+        os.remove(common.CONFIG_FILE)
     config = (
         "[config]\n"
         "LIB_PATH=\n"
@@ -45,8 +43,8 @@ def cleanup_config():
         "LIC_PATH=\n"
         "SECRET_KEY=abc123\n"
     )
-    logger.debug(f"Writing sample config to: {CONFIG_FILE}")
-    write_file(CONFIG_FILE, config)
+    common.logger.debug(f"Writing sample config to: {common.CONFIG_FILE}")
+    write_file(common.CONFIG_FILE, config)
 
 
 def update_metadata_json(module: str, updates: Optional[list[dict]] = None) -> None:
@@ -69,7 +67,7 @@ def update_metadata_json(module: str, updates: Optional[list[dict]] = None) -> N
         for k, v in update.items():
             data[k] = v
     with open(path, "w") as f:
-        logger.debug(f"Updating {path} with {json.dumps(data)}")
+        common.logger.debug(f"Updating {path} with {json.dumps(data)}")
         json.dump(data, f, indent=4)
 
 
@@ -88,8 +86,10 @@ def get_metadata_json_path(module: str) -> str:
 
 def get_module_metadata(module: str) -> dict:
     """Fetch metadata for a given module."""
-    cmd = build_cmd("modules", append=["--module", module, "--json"], verbose=False)
-    result = cli_cmd(cmd, log_output=False)
+    cmd = builder.build_cmd(
+        "modules", append=["--module", module, "--json"], verbose=False
+    )
+    result = common.cli_cmd(cmd, log_output=False)
     return json.loads(normalize(result.output))
 
 
@@ -132,13 +132,13 @@ def write_file(path: str, contents: str, mode: str = "w") -> int:
 # ------------------------
 
 
-def assert_exit_code(result: Result | CommandResult, expected: int = 0) -> None:
+def assert_exit_code(result: Result | common.CommandResult, expected: int = 0) -> None:
     """
     Assert the CLI result exit code matches expected.
 
     Parameters
     ----------
-    result : Result or CommandResult
+    result : Result or common.CommandResult
         The result to check.
     expected : int
         The expected exit code. Defaults to 0.
@@ -163,7 +163,7 @@ def assert_num_containers(expected: int = 0, all: bool = False) -> None:
         Whether to count all containers or only running containers.
         Defaults to `False`.
     """
-    containers = get_containers(all=all)
+    containers = common.get_containers(all=all)
     container_names = [c.name for c in containers]
     msg = "Unexpected number of containers: %s (expected: %s) (containers: %s)" % (
         len(containers),
@@ -186,7 +186,7 @@ def assert_containers_exist(*args: str, all: bool = False) -> None:
         Defaults to `False`.
     """
     msg = "Expected container '%s' to exist but it does not."
-    containers = get_containers(all=all)
+    containers = common.get_containers(all=all)
     container_names = [c.name for c in containers]
     for name in args:
         assert name in container_names, msg % name
@@ -205,7 +205,7 @@ def assert_containers_not_exist(*args: str, all: bool = False) -> None:
         Defaults to `False`.
     """
     msg = "Expected container '%s' to NOT exist but it does."
-    containers = get_containers(all=all)
+    containers = common.get_containers(all=all)
     container_names = [c.name for c in containers]
     for name in args:
         assert name not in container_names, msg % name
@@ -257,7 +257,9 @@ def assert_not_in_file(*args: str, path: str) -> None:
         assert unexpected not in content, msg % (unexpected, path, content)
 
 
-def assert_in_output(*args: str, result: Result | CommandResult | list[str]) -> None:
+def assert_in_output(
+    *args: str, result: Result | common.CommandResult | list[str]
+) -> None:
     """
     Assert the given strings or regex patterns are in the result output.
 
@@ -267,7 +269,7 @@ def assert_in_output(*args: str, result: Result | CommandResult | list[str]) -> 
         Regex patterns to assert are present in the result output.
         Literal strings are also supported, as they are valid regex
         patterns.
-    result : Result or CommandResult or list[str]
+    result : Result or common.CommandResult or list[str]
         The result to check. Supports list[str] for testing log sinks.
     """
     msg = "Expected pattern '%s' not found in output:\n%s."
@@ -283,7 +285,7 @@ def assert_in_output(*args: str, result: Result | CommandResult | list[str]) -> 
             raise AssertionError(msg % (pattern, normalized))
 
 
-def assert_not_in_output(*args: str, result: Result | CommandResult) -> None:
+def assert_not_in_output(*args: str, result: Result | common.CommandResult) -> None:
     """
     Assert the given strings are not in the result output.
 
@@ -291,7 +293,7 @@ def assert_not_in_output(*args: str, result: Result | CommandResult) -> None:
     ----------
     args : tuple of str
         The strings to assert are not in the result output.
-    result : Result or CommandResult
+    result : Result or common.CommandResult
         The result to check.
     """
     msg = "Unexpected string '%s' found in output:\n%s."
@@ -307,17 +309,18 @@ def assert_not_in_output(*args: str, result: Result | CommandResult) -> None:
 
 def shut_down() -> None:
     """Bring down all containers."""
-    logger.debug("Bringing down all containers.")
-    cli_cmd(build_cmd("down", "all", append=["--sig-kill"], verbose=False))
+    common.logger.debug("Bringing down all containers.")
+    common.cli_cmd(
+        builder.build_cmd("down", "all", append=["--sig-kill"], verbose=False)
+    )
 
 
 def remove() -> None:
     """Remove all volumes and networks."""
     shut_down()
-    logger.debug("Removing all volumes and networks.")
-    cli_cmd(
-        build_cmd("remove", "all", append=["--volumes", "--networks"]), log_output=False
-    )
+    common.logger.debug("Removing all volumes and networks.")
+    cmd = builder.build_cmd("remove", "all", append=["--volumes", "--networks"])
+    common.cli_cmd(cmd, log_output=False)
 
 
 # ------------------------
@@ -342,110 +345,4 @@ def get_scenario_and_log_msg(scenarios: list) -> list[tuple]:
 
 def normalize(s: str) -> str:
     """Normalize a string for assertions."""
-    import re
-
     return re.sub(r"\s+", " ", s).strip()
-
-
-# ------------------------
-# CLI Command Helpers
-# ------------------------
-
-
-class BuildCmdArgs(TypedDict, total=False):
-    """Arguments for build_cmd."""
-
-    base: str
-    cluster: str
-    append: list[str]
-    prepend: list[str]
-    verbose: bool
-
-
-def build_cmd(
-    base: str = "",
-    cluster: str = CLUSTER_NAME,
-    append: list[str] = [],
-    prepend: list[str] = [],
-    verbose: bool = True,
-) -> list[str]:
-    """
-    Build a CLI command for CliRunner.
-
-        [minitrino (<impl>)] [-v] [--cluster <cluster>] <prepend> <base>
-        <append>
-
-    Parameters
-    ----------
-    base : str
-        The base command (e.g. 'down', 'remove').
-    cluster : str
-        The cluster to use. Defaults to 'cli-test'.
-    append : list[str]
-        Extra arguments to add to the command after the base command.
-    prepend : list[str]
-        Extra arguments to add to the command before the base command.
-    verbose : bool
-        Whether to add the '-v' flag to the command. Defaults to `True`.
-
-    Returns
-    -------
-    list[str]
-        The built command.
-
-    Examples
-    --------
-    >>> build_cmd("down")
-    ["-v", "--cluster", "cli-test", "down"]
-    >>> build_cmd("down", cluster="cli-test-2")
-    ["-v", "--cluster", "cli-test-2", "down"]
-    >>> build_cmd("down", append=["--sig-kill"], prepend=["--env", "FOO=bar"])
-    ["-v", "--cluster", "cli-test", "--env", "FOO=bar", "down", "--sig-kill"]
-    """
-    cmd = ["--cluster", cluster, *prepend, base, *append]
-    if verbose:
-        cmd.insert(0, "-v")
-    return cmd
-
-
-def cli_cmd(
-    cmd: list[str],
-    input: str | None = None,
-    env: Optional[Dict[str, str]] = None,
-    log_output: bool = True,
-) -> Result:
-    """
-    Log and execute a CLI command.
-
-    Parameters
-    ----------
-    cmd : list[str]
-        The command and arguments to invoke.
-    input : str | None
-        Input string to pass to the command (for prompts, etc.).
-        Defaults to None.
-    env : Optional[Dict[str, str]]
-        Environment variables to set for the command. Defaults to an
-        empty dict.
-    log_output : bool
-        Whether to log the output of the command. Defaults to `True`.
-
-    Returns
-    -------
-    Result
-        The Click testing Result object.
-    """
-    msg = "Invoking CLI command '%s' %s"
-    logger.info(
-        msg
-        % (
-            f"minitrino {' '.join(cmd) if cmd else ''}",
-            " with input: %s" % input if input else "",
-        )
-    )
-    runner = CliRunner()
-    env = env or {}
-    result = runner.invoke(cli, cmd, input=input, env=env)
-    if log_output:
-        logger.info(f"Result output:\n{result.output}")
-    return result

@@ -12,7 +12,7 @@ from tests.cli.constants import (
     TEST_CONTAINER,
 )
 
-CMD_PROVISION_MOD: utils.BuildCmdArgs = {
+CMD_PROVISION_MOD: common.BuildCmdArgs = {
     "base": "provision",
     "append": ["--module", "test"],
 }
@@ -20,14 +20,15 @@ CMD_PROVISION_MOD: utils.BuildCmdArgs = {
 pytestmark = pytest.mark.usefixtures(
     "log_test", "start_docker", "down", "reset_metadata"
 )
+builder = common.CLICommandBuilder(utils.CLUSTER_NAME)
 
 
 @pytest.fixture(autouse=True, scope="module")
 def clean_before_test():
     """Clean up the env before running tests."""
     utils.shut_down()
-    utils.cli_cmd(
-        utils.build_cmd("remove", "all", append=["--volume", "--network"]),
+    common.cli_cmd(
+        builder.build_cmd("remove", "all", append=["--volume", "--network"]),
         log_output=False,
     )
     yield
@@ -104,8 +105,8 @@ def test_version_scenarios(scenario: VersionScenario) -> None:
     prepend = []
     if scenario.version:
         prepend.extend(["--env", f"CLUSTER_VER={scenario.version}"])
-    cmd = utils.build_cmd(base="provision", prepend=prepend, append=append)
-    result = utils.cli_cmd(cmd)
+    cmd = builder.build_cmd(base="provision", prepend=prepend, append=append)
+    result = common.cli_cmd(cmd)
     utils.assert_exit_code(result, expected=scenario.expected_exit_code)
     utils.assert_in_output(scenario.expected_output, result=result)
     if scenario.expected_exit_code == 0 and scenario.id == "default_version":
@@ -175,7 +176,7 @@ module_requirements_scenarios = [
 def test_module_requirements_scenarios(scenario: ModuleRequirementsScenario) -> None:
     """Run each ModuleRequirementsScenario."""
     append = [item for module in scenario.module_names for item in ("--module", module)]
-    result = utils.cli_cmd(utils.build_cmd(base="provision", append=append))
+    result = common.cli_cmd(builder.build_cmd(base="provision", append=append))
     utils.assert_exit_code(result, expected=scenario.expected_exit_code)
     if scenario.expected_output:
         utils.assert_in_output(scenario.expected_output, result=result)
@@ -262,8 +263,8 @@ def test_enterprise_scenarios(scenario: EnterpriseScenario) -> None:
     if scenario.license_path:
         prepend.extend(["--env", f"LIC_PATH={scenario.license_path}"])
     append = ["--image", "starburst", "--module", "test", "--no-rollback"]
-    cmd = utils.build_cmd(base="provision", prepend=prepend, append=append)
-    result = utils.cli_cmd(cmd)
+    cmd = builder.build_cmd(base="provision", prepend=prepend, append=append)
+    result = common.cli_cmd(cmd)
     if scenario.expected_exit_code is not None:
         utils.assert_exit_code(result, expected=scenario.expected_exit_code)
     if scenario.expected_output:
@@ -356,7 +357,7 @@ def test_cluster_dependency_scenarios(scenario: ClusterDependencyScenario) -> No
         )
         expected_exit_code = 0
     cmd_args = CMD_PROVISION_MOD.copy()
-    result = utils.cli_cmd(utils.build_cmd(**cmd_args))
+    result = common.cli_cmd(builder.build_cmd(**cmd_args))
     utils.assert_exit_code(result, expected=expected_exit_code)
     utils.assert_in_output(scenario.expected_output, result=result)
     if expected_exit_code == 0:
@@ -433,7 +434,7 @@ def test_append_config_scenarios(scenario: AppendConfigScenario) -> None:
     prepend = ["--env", f"{scenario.config_type}={scenario.config_value}"]
     cmd_args = CMD_PROVISION_MOD.copy()
     cmd_args["prepend"] = prepend
-    result = utils.cli_cmd(utils.build_cmd(**cmd_args))
+    result = common.cli_cmd(builder.build_cmd(**cmd_args))
     utils.assert_exit_code(result, expected=scenario.expected_exit_code)
     utils.assert_in_output(scenario.expected_output, result=result)
     if scenario.expected_exit_code == 0:
@@ -514,7 +515,7 @@ module_add_scenarios = [
 @pytest.mark.usefixtures("provision_clusters")
 def test_module_add_scenarios(scenario: ModuleAddScenario) -> None:
     """Run each ModuleAddScenario."""
-    utils.cli_cmd(utils.build_cmd(base="down", cluster="all", append=["--sig-kill"]))
+    common.cli_cmd(builder.build_cmd(base="down", cluster="all", append=["--sig-kill"]))
     if len(scenario.modules_list) == 1:
         _provision_module([scenario.modules_list[0]], scenario, is_last=True)
     elif scenario.sequential:
@@ -530,7 +531,7 @@ def _provision_module(
     modules: list[str], scenario: ModuleAddScenario, is_last: bool
 ) -> None:
     module_flags = [flag for m in modules for flag in ("--module", m)]
-    result = utils.cli_cmd(utils.build_cmd(base="provision", append=module_flags))
+    result = common.cli_cmd(builder.build_cmd(base="provision", append=module_flags))
     utils.assert_exit_code(result)
     if is_last:
         if scenario.expected_output:
@@ -632,11 +633,11 @@ def test_worker_scenarios(
     """Run each WorkerScenario."""
 
     def _run_cmd(workers: int, add: int = 0, remove: int = 0) -> Result:
-        utils.cli_cmd(
-            utils.build_cmd(base="provision", append=["--workers", str(workers)]),
+        common.cli_cmd(
+            builder.build_cmd(base="provision", append=["--workers", str(workers)]),
         )
-        return utils.cli_cmd(
-            utils.build_cmd(
+        return common.cli_cmd(
+            builder.build_cmd(
                 base="provision", append=["--workers", str(workers + add - remove)]
             ),
         )
@@ -662,7 +663,7 @@ def test_bootstrap() -> None:
     """Ensure bootstrap scripts execute in containers."""
 
     cmd_args = CMD_PROVISION_MOD.copy()
-    result = utils.cli_cmd(utils.build_cmd(**cmd_args))
+    result = common.cli_cmd(builder.build_cmd(**cmd_args))
     utils.assert_exit_code(result)
     utils.assert_in_output("Successfully executed bootstrap script", result=result)
 
@@ -697,8 +698,8 @@ def test_stargate_parallel() -> None:
         "lic_path=~/work/license/starburstdata.license",
     ]
     append = ["--module", "stargate-parallel", "--image", "starburst"]
-    result = utils.cli_cmd(
-        utils.build_cmd(base="provision", prepend=prepend, append=append)
+    result = common.cli_cmd(
+        builder.build_cmd(base="provision", prepend=prepend, append=append)
     )
     utils.assert_exit_code(result)
 
@@ -714,7 +715,7 @@ def test_valid_user_config() -> None:
     ]
     cmd_args = CMD_PROVISION_MOD.copy()
     cmd_args["prepend"] = prepend
-    result = utils.cli_cmd(utils.build_cmd(**cmd_args))
+    result = common.cli_cmd(builder.build_cmd(**cmd_args))
     utils.assert_exit_code(result)
     utils.assert_in_output("Appending user-defined config", result=result)
 

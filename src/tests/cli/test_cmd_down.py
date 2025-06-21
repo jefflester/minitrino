@@ -3,6 +3,7 @@ from typing import Optional
 
 import pytest
 
+from tests import common
 from tests.cli import utils
 from tests.cli.constants import (
     CLUSTER_NAME,
@@ -16,6 +17,7 @@ from tests.cli.constants import (
 pytestmark = pytest.mark.usefixtures(
     "log_test", "start_docker", "provision_clusters", "down"
 )
+builder = common.CLICommandBuilder(CLUSTER_NAME)
 
 
 @dataclass
@@ -125,9 +127,9 @@ down_scenarios = [
 def test_down_scenarios(scenario: DownScenario) -> None:
     """Run each DownScenario."""
     if scenario.provision:
-        utils.cli_cmd(utils.build_cmd(base="provision", append=["--module", "test"]))
-    cmd = utils.build_cmd(base="down", append=scenario.down_args)
-    result = utils.cli_cmd(cmd)
+        common.cli_cmd(builder.build_cmd(base="provision", append=["--module", "test"]))
+    cmd = builder.build_cmd(base="down", append=scenario.down_args)
+    result = common.cli_cmd(cmd)
     utils.assert_exit_code(result, expected=scenario.expected_exit_code)
     if scenario.expected_output:
         if isinstance(scenario.expected_output, list):
@@ -150,14 +152,14 @@ CLUSTER_NAME_MSG = "Testing --cluster flag with cluster name 'test'"
 )
 def test_cluster() -> None:
     """Verify `--cluster ${name}` works as expected."""
-    cmd = utils.build_cmd(base="down", cluster=CLUSTER_NAME, append=["--sig-kill"])
-    result = utils.cli_cmd(cmd)
+    cmd = builder.build_cmd(base="down", cluster=CLUSTER_NAME, append=["--sig-kill"])
+    result = common.cli_cmd(cmd)
     utils.assert_exit_code(result)
     utils.assert_in_output(STOPPED_CONTAINER_MSG, REMOVED_CONTAINER_MSG, result=result)
     utils.assert_num_containers(2, all=True)
 
-    cmd2 = utils.build_cmd(base="down", cluster=CLUSTER_NAME_2, append=["--sig-kill"])
-    result = utils.cli_cmd(cmd2)
+    cmd2 = builder.build_cmd(base="down", cluster=CLUSTER_NAME_2, append=["--sig-kill"])
+    result = common.cli_cmd(cmd2)
     utils.assert_exit_code(result)
     utils.assert_in_output(STOPPED_CONTAINER_MSG, REMOVED_CONTAINER_MSG, result=result)
     utils.assert_num_containers(0, all=True)
@@ -175,16 +177,16 @@ def test_cluster_keep() -> None:
     """Verify `--cluster ${name}` works as expected with the `--keep`
     flag."""
     append = ["--sig-kill", "--keep"]
-    cmd = utils.build_cmd(base="down", cluster=CLUSTER_NAME, append=append)
-    result = utils.cli_cmd(cmd)
+    cmd = builder.build_cmd(base="down", cluster=CLUSTER_NAME, append=append)
+    result = common.cli_cmd(cmd)
     utils.assert_exit_code(result)
     utils.assert_in_output(STOPPED_CONTAINER_MSG, result=result)
     utils.assert_not_in_output(REMOVED_CONTAINER_MSG, result=result)
     utils.assert_num_containers(4, all=True)
     utils.assert_containers_exist(MINITRINO_CONTAINER, TEST_CONTAINER, all=True)
 
-    cmd2 = utils.build_cmd(base="down", cluster=CLUSTER_NAME_2, append=append)
-    result = utils.cli_cmd(cmd2)
+    cmd2 = builder.build_cmd(base="down", cluster=CLUSTER_NAME_2, append=append)
+    result = common.cli_cmd(cmd2)
     utils.assert_exit_code(result)
     utils.assert_in_output(STOPPED_CONTAINER_MSG, result=result)
     utils.assert_not_in_output(REMOVED_CONTAINER_MSG, result=result)

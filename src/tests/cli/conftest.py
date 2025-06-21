@@ -11,7 +11,8 @@ import pytest
 from tests import common
 from tests.cli import utils
 from tests.cli.constants import CLUSTER_NAME
-from tests.cli.utils import logger
+
+builder = common.CLICommandBuilder(CLUSTER_NAME)
 
 
 def pytest_sessionstart(session):
@@ -29,16 +30,7 @@ def docker_client() -> docker.DockerClient:
 @pytest.fixture(scope="session")
 def _logger() -> logging.Logger:
     """Session-scoped logger for test output."""
-    logger = logging.getLogger("minitrino.test")
-    logger.setLevel(logging.DEBUG)
-    if not logger.handlers:
-        handler = logging.StreamHandler(sys.stdout)
-        formatter = logging.Formatter(
-            "%(levelname)-8s %(name)s:%(filename)s:%(lineno)d %(message)s"
-        )
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-    return logger
+    return common.get_logger()
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -74,9 +66,9 @@ def log_test(log_msg: str) -> Generator:
     log_msg : str
         The log message for the test.
     """
-    logger.info(f"START: {log_msg}")
+    common.logger.info(f"START: {log_msg}")
     yield
-    logger.info(f"END: {log_msg}")
+    common.logger.info(f"END: {log_msg}")
 
 
 @pytest.fixture
@@ -114,8 +106,8 @@ def start_docker() -> Generator:
     -----
     Runs before the test.
     """
-    logger.debug("Starting Docker daemon.")
-    common.start_docker_daemon(logger)
+    common.logger.debug("Starting Docker daemon.")
+    common.start_docker_daemon(common.logger)
     yield
 
 
@@ -128,10 +120,10 @@ def stop_docker() -> Generator:
     -----
     Runs before the test.
     """
-    logger.debug("Stopping Docker daemon.")
+    common.logger.debug("Stopping Docker daemon.")
     common.stop_docker_daemon()
     yield
-    common.start_docker_daemon(logger)
+    common.start_docker_daemon(common.logger)
 
 
 @pytest.fixture
@@ -143,10 +135,10 @@ def cleanup_config() -> Generator:
     -----
     Runs before and after the test.
     """
-    logger.debug("Running initial config cleanup (before test)")
+    common.logger.debug("Running initial config cleanup (before test)")
     utils.cleanup_config()
     yield
-    logger.debug("Running config cleanup (after test)")
+    common.logger.debug("Running config cleanup (after test)")
     utils.cleanup_config()
 
 
@@ -177,7 +169,7 @@ def reset_metadata(request: pytest.FixtureRequest) -> Generator:
             "dependentClusters": [],
         }
         path = utils.get_metadata_json_path(module)
-        logger.debug(f"Resetting metadata for module: {module}")
+        common.logger.debug(f"Resetting metadata for module: {module}")
         utils.write_file(path, json.dumps(default, indent=2))
 
     _helper()
@@ -200,8 +192,8 @@ def provision_clusters(request: pytest.FixtureRequest) -> Generator:
     Shuts down the clusters after creation unless `keepalive` is set to
     `True`.
     """
-    logger.debug("Starting Docker daemon for cluster provisioning.")
-    common.start_docker_daemon(logger)
+    common.logger.debug("Starting Docker daemon for cluster provisioning.")
+    common.start_docker_daemon(common.logger)
     param = getattr(request, "param", {})
     cluster_names = param.get("cluster_names", [CLUSTER_NAME])
     modules = param.get("modules", ["test"])
@@ -219,16 +211,16 @@ def provision_clusters(request: pytest.FixtureRequest) -> Generator:
             module_flags.extend(["--module", module])
 
     for cluster in cluster_names:
-        logger.debug(f"Provisioning cluster: {cluster}")
-        utils.cli_cmd(
-            utils.build_cmd("provision", cluster, append=module_flags), log_output=False
+        common.logger.debug(f"Provisioning cluster: {cluster}")
+        common.cli_cmd(
+            builder.build_cmd("provision", append=module_flags),
+            log_output=False,
         )
-
     if not keepalive:
         down_cluster = "all" if len(cluster_names) > 1 else cluster_names[0]
-        logger.debug(f"Bringing down cluster: {down_cluster}")
-        utils.cli_cmd(
-            utils.build_cmd("down", down_cluster, append=["--sig-kill"]),
+        common.logger.debug(f"Bringing down cluster: {down_cluster}")
+        common.cli_cmd(
+            builder.build_cmd("down", append=["--sig-kill"]),
             log_output=False,
         )
     yield

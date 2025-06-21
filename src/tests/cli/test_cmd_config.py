@@ -5,19 +5,16 @@ from typing import Callable, Optional
 
 import pytest
 
+from tests import common
 from tests.cli import utils
-from tests.cli.utils import logger
-from tests.common import (
-    CONFIG_FILE,
-    MINITRINO_USER_DIR,
-)
 
-CMD_CONFIG: utils.BuildCmdArgs = {
+CMD_CONFIG: common.BuildCmdArgs = {
     "base": "config",
     "prepend": ["-v", "-e", "TEXT_EDITOR=cat"],
 }
 
 pytestmark = pytest.mark.usefixtures("log_test", "cleanup_config")
+builder = common.CLICommandBuilder(utils.CLUSTER_NAME)
 
 
 @dataclass
@@ -64,7 +61,7 @@ class ConfigScenario:
 config_scenarios = [
     ConfigScenario(
         id="no_directory",
-        setup=lambda: shutil.rmtree(MINITRINO_USER_DIR, ignore_errors=True),
+        setup=lambda: shutil.rmtree(common.MINITRINO_USER_DIR, ignore_errors=True),
         cmd_args=[],
         input_val=None,
         expected_exit_code=0,
@@ -76,7 +73,11 @@ config_scenarios = [
     ),
     ConfigScenario(
         id="no_config_file",
-        setup=lambda: (os.remove(CONFIG_FILE) if os.path.isfile(CONFIG_FILE) else None),
+        setup=lambda: (
+            os.remove(common.CONFIG_FILE)
+            if os.path.isfile(common.CONFIG_FILE)
+            else None
+        ),
         cmd_args=[],
         input_val=None,
         expected_exit_code=0,
@@ -88,7 +89,7 @@ config_scenarios = [
     ),
     ConfigScenario(
         id="reset_invalid",
-        setup=lambda: utils.write_file(CONFIG_FILE, "hello world"),
+        setup=lambda: utils.write_file(common.CONFIG_FILE, "hello world"),
         cmd_args=["--reset"],
         input_val="y\n",
         expected_exit_code=0,
@@ -100,7 +101,7 @@ config_scenarios = [
     ),
     ConfigScenario(
         id="edit_invalid",
-        setup=lambda: utils.write_file(CONFIG_FILE, "hello world"),
+        setup=lambda: utils.write_file(common.CONFIG_FILE, "hello world"),
         cmd_args=[],
         input_val=None,
         expected_exit_code=0,
@@ -124,26 +125,26 @@ def test_config_scenarios(
 ) -> None:
     """Run each ConfigScenario."""
     if scenario.setup:
-        logger.debug("Running setup function for scenario.")
+        common.logger.debug("Running setup function for scenario.")
         scenario.setup()
     cmd_args = CMD_CONFIG.copy()
     cmd_args["append"] = scenario.cmd_args
-    cmd = utils.build_cmd(**cmd_args)
-    result = utils.cli_cmd(cmd, scenario.input_val)
+    cmd = builder.build_cmd(**cmd_args)
+    result = common.cli_cmd(cmd, scenario.input_val)
     utils.assert_exit_code(result, expected=scenario.expected_exit_code)
     if scenario.expected_dir:
-        utils.assert_is_dir(MINITRINO_USER_DIR)
+        utils.assert_is_dir(common.MINITRINO_USER_DIR)
     if scenario.expected_file:
-        utils.assert_is_file(CONFIG_FILE)
+        utils.assert_is_file(common.CONFIG_FILE)
     if scenario.expected_output:
         utils.assert_in_output(scenario.expected_output, result=result)
     if scenario.expected_not_in_file:
-        utils.assert_not_in_file(scenario.expected_not_in_file, path=CONFIG_FILE)
+        utils.assert_not_in_file(scenario.expected_not_in_file, path=common.CONFIG_FILE)
 
 
 @pytest.mark.parametrize("log_msg", ["Testing edit valid config"], indirect=True)
 def test_edit_valid_config() -> None:
     """Verify the user can edit an existing configuration file."""
     cmd_args = CMD_CONFIG.copy()
-    result = utils.cli_cmd(utils.build_cmd(**cmd_args))
+    result = common.cli_cmd(builder.build_cmd(**cmd_args))
     utils.assert_exit_code(result)

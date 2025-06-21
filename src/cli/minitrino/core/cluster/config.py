@@ -116,6 +116,9 @@ class ClusterConfigManager:
         for service in services:
             port_mappings = service[1].get("ports", [])
             container_name = service[1].get("container_name", "undefined")
+            if container_name == "undefined":
+                # If the container name is undefined, use the service name
+                container_name = service[0]
             for port_mapping in port_mappings:
                 if "__PORT" not in port_mapping:
                     continue

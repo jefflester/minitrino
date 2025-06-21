@@ -1,5 +1,6 @@
 """Utility functions for Minitrino test library."""
 
+import os
 import shutil
 import sys
 from time import gmtime, strftime
@@ -11,31 +12,72 @@ from tests import common
 COLOR_OUTPUT = sys.stdout.isatty()
 TERMINAL_WIDTH = shutil.get_terminal_size(fallback=(80, 24)).columns
 
-
-def cleanup(remove_images=False, debug=False) -> None:
-    """
-    Remove containers, networks, and volumes.
-
-    Parameters
-    ----------
-    remove_images : bool
-        Whether to remove images.
-    debug : bool
-        Whether to enable debug logging.
-    """
-    builder = common.CLICommandBuilder("all")
-    cmd_down = builder.build_cmd("down", append=["--sig-kill"], verbose=debug)
-    common.cli_cmd(cmd_down)
-    cmd_remove = builder.build_cmd("remove", append=["--volumes"], verbose=debug)
-    common.cli_cmd(cmd_remove)
-    if remove_images:
-        common.logger.info("Removing images...")
-        common.execute_cmd(
-            'docker images -q | grep -v "$(docker images minitrino/cluster -q)" | '
-            "xargs -r docker rmi"
-        )
-    common.logger.info("Disk space usage:")
-    common.execute_cmd("df -h")
+SPECS = {
+    "query": {
+        "type": "object",
+        "properties": {
+            "type": {"type": "string"},
+            "name": {"type": "string"},
+            "sql": {"type": "string"},
+            "trinoCliArgs": {"type": "array"},
+            "contains": {"type": "array"},
+            "rowCount": {"type": "number"},
+            "env": {"type": "object"},
+        },
+        "required": ["type", "name", "sql"],
+    },
+    "shell": {
+        "type": "object",
+        "properties": {
+            "type": {"type": "string"},
+            "name": {"type": "string"},
+            "command": {"type": "string"},
+            "container": {"type": "string"},
+            "contains": {"type": "array"},
+            "exitCode": {"type": "number"},
+            "env": {"type": "object"},
+            "healthCheck": {
+                "type": "object",
+                "properties": {
+                    "retries": {"type": "number"},
+                    "command": {"type": "string"},
+                    "container": {"type": "string"},
+                    "contains": {"type": "array"},
+                    "exitCode": {"type": "number"},
+                },
+                "required": ["command"],
+            },
+            "subCommands": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "retries": {"type": "number"},
+                        "command": {"type": "string"},
+                        "container": {"type": "string"},
+                        "contains": {"type": "array"},
+                        "exitCode": {"type": "number"},
+                        "env": {"type": "object"},
+                    },
+                    "required": ["command"],
+                },
+            },
+        },
+        "required": ["type", "name", "command"],
+    },
+    "logs": {
+        "type": "object",
+        "properties": {
+            "type": {"type": "string"},
+            "name": {"type": "string"},
+            "container": {"type": "string"},
+            "contains": {"type": "array"},
+            "timeout": {"type": "number"},
+        },
+        "required": ["type", "name", "container", "contains"],
+    },
+}
 
 
 def dump_container_logs(debug=False) -> None:
@@ -51,57 +93,41 @@ def dump_container_logs(debug=False) -> None:
         common.logger.info(f"{logs}\n")
 
 
+def record_failed_test(test_name: str, first: bool = False) -> None:
+    """
+    Record a failed test.
+
+    Parameters
+    ----------
+    test_name : str
+        The name of the failed test.
+    first : bool
+        Whether this is the first failed test. If True, the file is
+        overwritten.
+    """
+    _file = os.path.join(common.MINITRINO_USER_DIR, ".lastfailed")
+    try:
+        with open(_file, "w+" if first else "a+") as f:
+            f.write(f"{test_name}\n")
+    except Exception as e:
+        common.logger.error(f"Failed to record failed test: {e}")
+        raise e
+
+
+def get_failed_tests() -> list[str]:
+    """Get the list of failed tests."""
+    _file = os.path.join(common.MINITRINO_USER_DIR, ".lastfailed")
+    try:
+        with open(_file, "r+") as f:
+            return f.read().splitlines()
+    except Exception as e:
+        common.logger.error(f"Failed to get failed tests: {e}")
+        raise e
+
+
 def _timestamp() -> str:
     """Return the current time as a formatted string for log prefix."""
     return strftime("%d/%m/%Y %H:%M:%S", gmtime())
-
-
-def log_success(msg, timestamp: str | None = None) -> None:
-    """
-    Log a success message.
-
-    Parameters
-    ----------
-    msg : str
-        The message to log.
-    timestamp : str, optional
-        Timestamp string to use as prefix (format: '%d/%m/%Y %H:%M:%S').
-        If not provided, current time is used.
-    """
-    prefix = timestamp if timestamp is not None else _timestamp()
-    click.echo(
-        click.style(
-            f"[{prefix} GMT] [SUCCESS] ",
-            fg="green",
-            bold=True,
-        )
-        + msg,
-        color=COLOR_OUTPUT,
-    )
-
-
-def log_failure(msg, timestamp: str | None = None) -> None:
-    """
-    Log a failure message.
-
-    Parameters
-    ----------
-    msg : str
-        The message to log.
-    timestamp : str, optional
-        Timestamp string to use as prefix (format: '%d/%m/%Y %H:%M:%S').
-        If not provided, current time is used.
-    """
-    prefix = timestamp if timestamp is not None else _timestamp()
-    click.echo(
-        click.style(
-            f"[{prefix} GMT] [FAILURE] ",
-            fg="red",
-            bold=True,
-        )
-        + msg,
-        color=COLOR_OUTPUT,
-    )
 
 
 def log_status(msg) -> None:

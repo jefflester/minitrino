@@ -8,7 +8,6 @@ from tests import common
 from tests.cli import utils
 from tests.cli.constants import (
     CLUSTER_NAME,
-    GH_WORKFLOW_RUNNING,
     MINITRINO_CONTAINER,
     TEST_CONTAINER,
 )
@@ -440,84 +439,6 @@ def test_append_config_scenarios(scenario: AppendConfigScenario) -> None:
     if scenario.expected_exit_code == 0:
         utils.assert_num_containers(2, all=True)
         utils.assert_containers_exist(MINITRINO_CONTAINER, TEST_CONTAINER)
-
-
-@dataclass
-class DockerNativeScenario:
-    """
-    Native Docker flag scenario.
-
-    Parameters
-    ----------
-    id : str
-        Identifier for scenario, used in pytest parametrize ids.
-    docker_native : str
-        The docker native option to use.
-    expected_output : str
-        The expected output string to assert.
-    expected_containers : int
-        The expected number of containers.
-    expected_exit_code : int
-        The expected exit code.
-    log_msg : str
-        The log message to display before running the test.
-    """
-
-    id: str
-    docker_native: str
-    expected_output: str
-    expected_containers: int
-    expected_exit_code: int
-    log_msg: str
-
-
-docker_native_scenarios = [
-    DockerNativeScenario(
-        id="valid_docker_native_build",
-        docker_native="--build",
-        expected_output="Received native Docker Compose options",
-        expected_containers=2,
-        expected_exit_code=0,
-        log_msg="Docker native: valid docker native should succeed",
-    ),
-    DockerNativeScenario(
-        id="valid_docker_timestamps",
-        docker_native="--timestamps",
-        expected_output="Received native Docker Compose options",
-        expected_containers=2,
-        expected_exit_code=0,
-        log_msg="Docker native: valid docker timestamps should succeed",
-    ),
-    DockerNativeScenario(
-        id="invalid_docker_native",
-        docker_native="--foo-bar",
-        expected_output="Received native Docker Compose options",
-        expected_containers=0,
-        expected_exit_code=1,
-        log_msg="Docker native: invalid docker native should fail",
-    ),
-]
-
-
-@pytest.mark.parametrize(
-    "scenario,log_msg",
-    utils.get_scenario_and_log_msg(docker_native_scenarios),
-    ids=utils.get_scenario_ids(docker_native_scenarios),
-    indirect=["log_msg"],
-)
-def test_docker_native_scenarios(scenario: DockerNativeScenario) -> None:
-    """Run each DockerNativeScenario."""
-    if not GH_WORKFLOW_RUNNING and scenario.id == "valid_docker_native_build":
-        pytest.skip("Skipping - don't do rebuild on local.")
-    append = ["--module", "test", "--docker-native", scenario.docker_native]
-    result = utils.cli_cmd(utils.build_cmd(base="provision", append=append))
-    utils.assert_exit_code(result, expected=scenario.expected_exit_code)
-    utils.assert_in_output(scenario.expected_output, result=result)
-    if scenario.expected_exit_code == 0:
-        utils.assert_num_containers(scenario.expected_containers, all=True)
-        utils.assert_containers_exist(MINITRINO_CONTAINER, TEST_CONTAINER)
-    else:
-        utils.assert_num_containers(0, all=True)
 
 
 @dataclass

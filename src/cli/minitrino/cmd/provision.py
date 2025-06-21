@@ -49,14 +49,15 @@ from minitrino.core.errors import UserError
     help="Disables cluster rollback if provisioning fails.",
 )
 @click.option(
-    "-d",
-    "--docker-native",
-    default="",
-    type=str,
+    "-b",
+    "--build",
+    default=False,
+    type=bool,
+    is_flag=True,
     help=(
         """
-        Append flags native to the Docker CLI to the underlying "docker
-        compose up" command, e.g. --build or --dry-run.
+        Build cluster images before provisioning the environment. Only
+        builds if changes have been made to the image source.
         """
     ),
 )
@@ -68,7 +69,7 @@ def cli(
     image: str,
     workers: int,
     no_rollback: bool,
-    docker_native: str,
+    build: bool,
 ) -> None:
     """
     Provision the environment.
@@ -83,15 +84,15 @@ def cli(
         Number of cluster workers to provision.
     no_rollback : bool
         If True, disables rollback on failure.
-    docker_native : str
-        Additional Docker Compose flags to append to the launch command.
+    build : bool
+        Build cluster images before provisioning the environment.
 
     Notes
     -----
     If no options are provided, a standalone coordinator is provisioned.
-    Supports Trino or Starburst distributions, dynamic worker scaling,
-    and native Docker Compose arguments. Dependent clusters are
-    automatically provisioned after the primary environment is launched.
+    Supports Trino or Starburst distributions, and dynamic worker
+    scaling. Dependent clusters are automatically provisioned after the
+    primary environment is launched.
     """
     ctx.initialize()
     if ctx.all_clusters:
@@ -117,7 +118,7 @@ def cli(
     modules_list = append_running_modules(modules_list)
     modules_list = ctx.modules.check_dep_modules(modules_list)
     ensure_shared_network()
-    runner(modules_list, workers, no_rollback, docker_native)
+    runner(modules_list, workers, no_rollback, build)
 
     dependent_clusters = ctx.cluster.validator.check_dependent_clusters(modules_list)
     for cluster in dependent_clusters:
@@ -132,7 +133,7 @@ def runner(
     modules: Optional[list[str]] = None,
     workers: int = 0,
     no_rollback: bool = False,
-    docker_native: str = "",
+    build: bool = False,
     cluster: Optional[dict] = None,
 ) -> None:
     """Execute the provisioning flow for a given cluster and module set.
@@ -150,9 +151,8 @@ def runner(
     no_rollback : bool, optional
         Whether rollback should be skipped on failure. Defaults to
         False.
-    docker_native : str, optional
-        Additional Docker Compose flags to include. Defaults to an empty
-        string.
+    build : bool, optional
+        Build cluster images before provisioning the environment.
     cluster : dict, optional
         Optional dictionary representing a dependent cluster
         configuration. Defaults to None.
@@ -188,17 +188,28 @@ def runner(
 
     try:
         cmd_chunk = chunk(modules)
-        compose_cmd = build_command(docker_native, cmd_chunk)
-        ctx.cmd_executor.execute(compose_cmd, environment=ctx.env.copy())
+        compose_cmd = build_command(build, cmd_chunk)
+        with ctx.logger.spinner("Executing compose command..."):
+            ctx.cmd_executor.execute(compose_cmd, environment=ctx.env.copy())
+        ctx.logger.info("Compose command executed successfully.")
 
+        ctx.logger.info("Executing module bootstraps...")
         execute_bootstraps(modules)
+        ctx.logger.info("Bootstraps executed successfully.")
+
+        ctx.logger.info("Writing coordinator config...")
         ctx.cluster.config.write_config(modules, coordinator=True, workers=workers)
-        ctx.cluster.ops.provision_workers(workers)
+
+        with ctx.logger.spinner(f"Provisioning {workers} workers..."):
+            ctx.cluster.ops.provision_workers(workers)
+            ctx.logger.info(f"{workers} workers provisioned successfully.")
         if workers > 0:
+            ctx.logger.info("Writing worker config...")
             ctx.cluster.config.write_config(modules, worker=True, workers=workers)
+
         ctx.cluster.validator.check_dup_config()
 
-poll_timeout = int(ctx.env.get("POST_START_BOOTSTRAP_TIMEOUT", 60))
+        poll_timeout = int(ctx.env.get("POST_START_BOOTSTRAP_TIMEOUT", 60))
         ctx.cluster.ops.poll_coordinator("POST START BOOTSTRAP COMPLETED", poll_timeout)
 
     except Exception as e:
@@ -291,9 +302,7 @@ def chunk(ctx: MinitrinoContext, modules: list[str]) -> str:
 
 
 @utils.pass_environment()
-def build_command(
-    ctx: MinitrinoContext, docker_native: str = "", chunk: str = ""
-) -> str:
+def build_command(ctx: MinitrinoContext, build: bool = False, chunk: str = "") -> str:
     """Build the cluster command."""
     cmd = []
     cmd.extend(
@@ -306,11 +315,8 @@ def build_command(
         ]
     )
 
-    if docker_native:
-        ctx.logger.debug(
-            f"Received native Docker Compose options: '{docker_native}'",
-        )
-        cmd.extend([" ", docker_native])
+    if build:
+        cmd.extend([" ", "--build"])
     return "".join(cmd)
 
 

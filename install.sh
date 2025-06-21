@@ -2,7 +2,7 @@
 
 # Deactivate any active virtual environment
 if [ -n "${VIRTUAL_ENV:-}" ]; then
-    echo "Deactivating currently active virtual environment: $VIRTUAL_ENV"
+    echo "Deactivating currently active virtual environment: ${VIRTUAL_ENV}"
     if declare -f deactivate >/dev/null 2>&1; then
         deactivate || true
     else
@@ -13,7 +13,6 @@ fi
 
 set -eu
 
-# Determine SCRIPT_PATH and SCRIPT_DIR early for use in all functions
 if command -v realpath >/dev/null 2>&1; then
     SCRIPT_PATH=$(realpath "$0")
 else
@@ -85,16 +84,16 @@ check_docker() {
 }
 
 handle_venv() {
-    VENV_DIR="${SCRIPT_DIR}/venv"
-    if [ ! -d "${VENV_DIR}" ]; then
+    local venv_dir="${SCRIPT_DIR}/venv"
+    if [ ! -d "${venv_dir}" ]; then
         echo "Creating virtual environment in ./venv..."
-        "${PYTHON}" -m venv "${VENV_DIR}"
+        "${PYTHON}" -m venv "${venv_dir}"
     else
         echo "Using existing virtual environment in ./venv"
     fi
 
     # shellcheck source=/dev/null
-    . "${VENV_DIR}/bin/activate"
+    . "${venv_dir}/bin/activate"
 }
 
 pip_install() {
@@ -121,21 +120,22 @@ pip_install() {
 
 handle_path_and_symlink() {
     MINITRINO_BIN=$(command -v minitrino 2>/dev/null || "${PYTHON}" -c "import os; print(os.path.realpath('${SCRIPT_DIR}/venv/bin/minitrino'))")
-    TARGET_BIN_DIR="${HOME}/.local/bin"
+    local target_bin_dir="${HOME}/.local/bin"
 
-    mkdir -p "${TARGET_BIN_DIR}"
+    mkdir -p "${target_bin_dir}"
 
-    if ln -sf "${MINITRINO_BIN}" "${TARGET_BIN_DIR}/minitrino"; then
-        echo "Symlinked minitrino to: ${TARGET_BIN_DIR}/minitrino"
+    if ln -sf "${MINITRINO_BIN}" "${target_bin_dir}/minitrino"; then
+        echo "Symlinked minitrino to: ${target_bin_dir}/minitrino"
 
         case ":${PATH}:" in
-            *":${TARGET_BIN_DIR}:"*) ;; # already in PATH
+            *":${target_bin_dir}:"*) ;; # already in PATH
             *)
-                export PATH="${TARGET_BIN_DIR}:${PATH}"
-                echo "Note: ${TARGET_BIN_DIR} was added to your PATH for this session."
+                export PATH="${target_bin_dir}:${PATH}"
+                echo "Note: ${target_bin_dir} was added to your PATH for this session."
 
-                USER_SHELL=$(basename "${SHELL:-$0}")
-                case "${USER_SHELL}" in
+                local user_shell
+                user_shell=$(basename "${SHELL:-$0}")
+                case "${user_shell}" in
                     bash)
                         echo "To make it permanent, add this line to one of the following (depending on your setup):"
                         echo "  export PATH=\"\$HOME/.local/bin:\$PATH\""
@@ -155,10 +155,25 @@ handle_path_and_symlink() {
                 ;;
         esac
     else
-        echo "Error: Failed to create symlink to ${TARGET_BIN_DIR}"
+        echo "Error: Failed to create symlink to ${target_bin_dir}"
         echo "You can run minitrino directly from:"
         echo "  ${MINITRINO_BIN}"
         return 1
+    fi
+}
+
+symlink_test_runner() {
+    local test_runner_src="${SCRIPT_DIR}/src/tests/lib/runner.py"
+    local target_bin_dir="${HOME}/.local/bin"
+    local target_link="${target_bin_dir}/minitrino-lib-test"
+
+    mkdir -p "${target_bin_dir}"
+
+    chmod +x "${test_runner_src}"
+    if ln -sf "${test_runner_src}" "${target_link}"; then
+        echo "Symlinked test runner to: ${target_link}"
+    else
+        echo "Error: Failed to create symlink for test runner"
     fi
 }
 
@@ -177,7 +192,6 @@ perform_install() {
     if [ "${VERBOSE}" -eq 1 ]; then
         set -x
     fi
-
     find_python
     check_wsl
     check_pip
@@ -185,6 +199,7 @@ perform_install() {
     handle_venv
     pip_install
     handle_path_and_symlink
+    symlink_test_runner
     check_install
 }
 
@@ -195,8 +210,15 @@ Installation complete! Start with the CLI by configuring it with 'minitrino conf
 Alternatively, get started immediately with 'minitrino provision'.
 "
 
+if command -v minitrino-lib-test >/dev/null 2>&1; then
+    echo -e "Running minitrino-lib-test...\n"
+    minitrino-lib-test --help
+fi
+
+echo ""
+
 if command -v minitrino >/dev/null 2>&1; then
-    echo "Running minitrino..."
+    echo -e "Running minitrino...\n"
     minitrino
 else
     echo "You may now run minitrino by sourcing your venv or using the symlink:"

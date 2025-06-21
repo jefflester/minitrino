@@ -369,7 +369,7 @@ class ClusterOperations:
                         "org.minitrino.root": "true",
                         "org.minitrino.module.minitrino": "true",
                         "com.docker.compose.project": compose_project_name,
-                        "com.docker.compose.service": "minitrino-worker",
+                        "com.docker.compose.service": f"minitrino-worker-{i}",
                     },
                 )
                 shared_network = self._ctx.docker_client.networks.get("cluster_shared")

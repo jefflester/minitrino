@@ -38,6 +38,20 @@
     },
     {
       "type": "query",
+      "name": "Test 'test' user",
+      "sql": "SELECT current_groups()",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'",
+        "--user test"
+      ],
+      "contains": [
+        "clusteradmins",
+        "metadata-users",
+        "platform-users"
+      ]
+    },
+    {
+      "type": "query",
       "name": "Test empty group",
       "sql": "SELECT current_groups()",
       "trinoCliArgs": [

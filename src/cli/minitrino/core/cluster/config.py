@@ -239,18 +239,18 @@ class ClusterConfigManager:
         # Add any unused unified config
         for entry in usr_cfgs:
             if entry[0] == "unified":
-                line = entry[1]
-                if line not in [e[1] for e in merged if e[0] == "unified"]:
-                    merged.append(("unified", line, ""))
-        config_lines = []
+                unified_line = entry[1]
+                if unified_line not in [e[1] for e in merged if e[0] == "unified"]:
+                    merged.append(("unified", unified_line, ""))
+        config_lines: list[str] = []
         for entry in merged:
             # Convert merged config to lines for I/O
             if entry[0] == "key_value":
                 _, k, v = entry
                 config_lines.append(f"{k}={v}")
             elif entry[0] == "unified":
-                _, line, _ = entry
-                config_lines.append(line)
+                _, unified_line, _ = entry
+                config_lines.append(unified_line)
         self._ctx.logger.debug(f"Removing existing {filename} file...")
         self._ctx.cmd_executor.execute(
             f"bash -c 'rm {ETC_DIR}/{filename}'", container=coordinator
@@ -261,7 +261,7 @@ class ClusterConfigManager:
         )
         _, uid = utils.container_user_and_id(self._ctx, coordinator)
         for line in config_lines:
-line = line.replace("$${ENV:", "${ENV:")
+            line = line.replace("$${ENV:", "${ENV:")
             append_cfg = f"bash -c \"cat <<'EOT' >> {ETC_DIR}/{filename}\n{line}\nEOT\""
             self._ctx.cmd_executor.execute(
                 append_cfg,

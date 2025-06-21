@@ -261,6 +261,7 @@ class ClusterConfigManager:
         )
         _, uid = utils.container_user_and_id(self._ctx, coordinator)
         for line in config_lines:
+line = line.replace("$${ENV:", "${ENV:")
             append_cfg = f"bash -c \"cat <<'EOT' >> {ETC_DIR}/{filename}\n{line}\nEOT\""
             self._ctx.cmd_executor.execute(
                 append_cfg,

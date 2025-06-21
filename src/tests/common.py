@@ -86,8 +86,8 @@ class CLICommandBuilder:
         self,
         base: str = "",
         cluster: str = "",
-        append: list[str] = [],
-        prepend: list[str] = [],
+        append: Optional[list[str]] = None,
+        prepend: Optional[list[str]] = None,
         verbose: bool = True,
     ) -> list[str]:
         """
@@ -127,12 +127,20 @@ class CLICommandBuilder:
         >>> build_cmd("down", append=["--sig-kill"], prepend=["--env", "FOO=bar"])
         ["-v", "--cluster", "cli-test", "--env", "FOO=bar", "down", "--sig-kill"]
         """
+        append = append or []
+        prepend = prepend or []
+        if not base:
+            raise ValueError("Base command is required")
         cmd = ["--cluster", cluster or self.cluster, *prepend, base, *append]
         if verbose:
             cmd = ["-v", "--global-logging"] + cmd
         if base == "provision":
-            # Always build if there are local changes
             cmd.append("--build")
+        cmd = [  # Filter invalid arguments
+            s
+            for s in cmd
+            if isinstance(s, str) and s.strip() or isinstance(s, (int, float))
+        ]
         return cmd
 
 

@@ -110,6 +110,7 @@ class EnvironmentVariables(dict):
             "JVM_CONFIG_WORKER",
             "LIB_PATH",
             "LIC_PATH",
+            "POST_START_BOOTSTRAP_TIMEOUT",
             "TEXT_EDITOR",
         ]
         try:

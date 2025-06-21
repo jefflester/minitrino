@@ -42,4 +42,4 @@ else
     fi
 fi
 
-echo "Finished copying configs"
+echo "FINISHED COPYING CONFIGS"

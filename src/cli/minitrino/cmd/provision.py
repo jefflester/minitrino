@@ -198,6 +198,9 @@ def runner(
             ctx.cluster.config.write_config(modules, worker=True, workers=workers)
         ctx.cluster.validator.check_dup_config()
 
+poll_timeout = int(ctx.env.get("POST_START_BOOTSTRAP_TIMEOUT", 60))
+        ctx.cluster.ops.poll_coordinator("POST START BOOTSTRAP COMPLETED", poll_timeout)
+
     except Exception as e:
         rollback(no_rollback)
         raise e

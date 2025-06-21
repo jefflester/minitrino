@@ -61,6 +61,8 @@ class ClusterOperations:
     provision_workers(workers: int)
         Provisions or adjusts worker containers based on the specified
         number.
+    poll_coordinator(msg: str, timeout: int = 30)
+        Polls the coordinator container logs for the specified message.
     """
 
     def __init__(self, ctx: MinitrinoContext, cluster: Cluster):
@@ -300,8 +302,7 @@ class ClusterOperations:
         #  5. Provided `workers` value is less than running workers —
         #     removes excess workers.
 
-        self._wait_for_config_copy_log()
-
+        self.poll_coordinator("FINISHED COPYING CONFIGS", spin=False)
         pattern = rf"minitrino-worker-\d+-{self._ctx.cluster_name}"
         worker_containers = [
             c.name
@@ -421,22 +422,39 @@ class ClusterOperations:
 
         self.restart_containers(restart)
 
-    def _wait_for_config_copy_log(self, timeout: int = 30) -> None:
-        """Poll the coordinator container logs for finished message."""
+    def poll_coordinator(self, msg: str, timeout: int = 30, spin: bool = True) -> None:
+        """Poll the coordinator container logs for finished message.
+
+        Parameters
+        ----------
+        msg : str
+            The message to look for in the coordinator logs.
+        timeout : int, optional
+            The timeout in seconds, by default 30.
+        spin : bool, optional
+            Whether to show a spinner, by default True.
+        """
+        log_msg = f"Waiting for '{msg}' in coordinator logs..."
+        if spin:
+            with self._ctx.logger.spinner(log_msg):
+                self._poll_coordinator(msg, log_msg, timeout)
+        else:
+            self._poll_coordinator(msg, log_msg, timeout)
+
+    def _poll_coordinator(self, msg: str, log_msg: str, timeout: int = 30) -> None:
+        self._ctx.logger.debug(log_msg)
         fq_container_name = self._cluster.resource.fq_container_name("minitrino")
         coordinator = self._cluster.resource.container(fq_container_name)
         start = time.time()
         found = False
         while time.time() - start < timeout:
             logs = coordinator.logs(tail=500).decode("utf-8", errors="replace")
-            if "Finished copying configs" in logs:
+            if msg in logs:
                 found = True
                 break
             time.sleep(1)
         if not found:
-            raise TimeoutError(
-                "Timed out waiting for 'Finished copying configs' in coordinator logs."
-            )
+            raise MinitrinoError(f"Timed out waiting for '{msg}' in coordinator logs.")
 
     def _remove(self, obj_type: str, label: str | None, force: bool) -> None:
         resources = self._cluster.resource.resources([label] if label else None)

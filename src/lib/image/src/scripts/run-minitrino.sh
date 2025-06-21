@@ -30,6 +30,7 @@ post_start() {
             if [[ ${found_started} -eq 0 && "${line}" == *"SERVER STARTED"* ]]; then
                 found_started=1
                 /usr/lib/"${CLUSTER_DIST}"/bin/run-bootstraps.sh after_start
+                echo "POST START BOOTSTRAP COMPLETED"
             fi
         done < "${pipe}"
     ) &

@@ -1,9 +1,4 @@
-"""Common utilities for Minitrino integration and system tests.
-
-This module provides helper functions and classes for managing Docker
-containers, executing shell commands, and handling test environment
-setup and teardown.
-"""
+"""Common utilities for Minitrino integration and system tests."""
 
 import logging
 import os
@@ -15,11 +10,13 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from time import sleep
-from typing import Optional
+from typing import Dict, Optional, TypedDict
 
 import docker
+from click.testing import CliRunner, Result
 from docker.models.containers import Container
 
+from minitrino.cli import cli
 from minitrino.core.cmd_exec import CommandExecutor
 from minitrino.core.docker.socket import resolve_docker_socket
 from minitrino.settings import ROOT_LABEL
@@ -30,6 +27,161 @@ CONFIG_FILE = os.path.abspath(os.path.join(MINITRINO_USER_DIR, "minitrino.cfg"))
 MINITRINO_LIB_DIR = os.path.join(
     Path(os.path.abspath(__file__)).resolve().parents[2], "lib"
 )
+
+# ------------------------
+# Misc Utilities
+# ------------------------
+
+
+def get_logger() -> logging.Logger:
+    """Get the logger for the test module."""
+    logger = logging.getLogger("minitrino.test")
+    logger.setLevel(logging.DEBUG)
+    if not logger.handlers:
+        handler = logging.StreamHandler(sys.stdout)
+        formatter = logging.Formatter(
+            "%(levelname)-8s %(name)s:%(filename)s:%(lineno)d %(message)s"
+        )
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+    return logger
+
+
+logger = get_logger()
+
+
+def strip_ansi(text: str) -> str:
+    """Strip ANSI escape codes from a string."""
+    return CommandExecutor._strip_ansi(text)
+
+
+# ------------------------
+# CLI Command Helpers
+# ------------------------
+
+
+class BuildCmdArgs(TypedDict, total=False):
+    """Arguments for build_cmd."""
+
+    base: str
+    cluster: str
+    append: list[str]
+    prepend: list[str]
+    verbose: bool
+
+
+class CLICommandBuilder:
+    """Build a CLI command for CliRunner.
+
+    Parameters
+    ----------
+    cluster : str
+        The cluster name to use.
+    """
+
+    def __init__(self, cluster: str):
+        self.cluster = cluster
+
+    def build_cmd(
+        self,
+        base: str = "",
+        cluster: str = "",
+        append: list[str] = [],
+        prepend: list[str] = [],
+        verbose: bool = True,
+    ) -> list[str]:
+        """
+        Build a CLI command for CliRunner.
+
+            [minitrino (<impl>)] [-v] [--cluster <cluster>] <prepend>
+            <base> <append>
+
+        Parameters
+        ----------
+        base : str
+            The base command (e.g. 'down', 'remove').
+        cluster : str
+            The cluster name to use. Defaults to the cluster name
+            specified in the constructor.
+        append : list[str]
+            Extra arguments to add to the command after the base
+            command.
+        prepend : list[str]
+            Extra arguments to add to the command before the base
+            command.
+        verbose : bool
+            Whether to add the '-v' and '--global-logging' flags to the
+            command. Defaults to `True`.
+
+        Returns
+        -------
+        list[str]
+            The built command.
+
+        Examples
+        --------
+        >>> build_cmd("down")
+        ["-v", "--cluster", "cli-test", "down"]
+        >>> build_cmd("down", cluster="cli-test-2")
+        ["-v", "--cluster", "cli-test-2", "down"]
+        >>> build_cmd("down", append=["--sig-kill"], prepend=["--env", "FOO=bar"])
+        ["-v", "--cluster", "cli-test", "--env", "FOO=bar", "down", "--sig-kill"]
+        """
+        cmd = ["--cluster", cluster or self.cluster, *prepend, base, *append]
+        if verbose:
+            cmd = ["-v", "--global-logging"] + cmd
+        if base == "provision":
+            # Always build if there are local changes
+            cmd.append("--build")
+        return cmd
+
+
+def cli_cmd(
+    cmd: list[str],
+    input: str | None = None,
+    env: Optional[Dict[str, str]] = None,
+    log_output: bool = True,
+) -> Result:
+    """
+    Log and execute a CLI command.
+
+    Parameters
+    ----------
+    cmd : list[str]
+        The command and arguments to invoke.
+    input : str | None
+        Input string to pass to the command (for prompts, etc.).
+        Defaults to None.
+    env : Optional[Dict[str, str]]
+        Environment variables to set for the command. Defaults to an
+        empty dict.
+    log_output : bool
+        Whether to log the output of the command. Defaults to `True`.
+
+    Returns
+    -------
+    Result
+        The Click testing Result object.
+    """
+    msg = "Invoking CLI command '%s' %s"
+    logger.info(
+        msg
+        % (
+            f"minitrino {' '.join(cmd) if cmd else ''}",
+            " with input: %s" % input if input else "",
+        )
+    )
+    runner = CliRunner()
+    env = env or {}
+    result = runner.invoke(cli, cmd, input=input, env=env)
+    if log_output:
+        logger.info(f"Result output:\n{result.output}")
+    return result
+
+
+# ------------------------
+# Docker Helpers
+# ------------------------
 
 
 def is_docker_running(logger: Optional[logging.Logger] = None) -> bool:
@@ -279,6 +431,33 @@ def get_containers(container_name: str = "", all: bool = False) -> list[Containe
     raise RuntimeError(f"Container '{container_name}' not found")
 
 
+def execute_in_coordinator(cmd: str = "", container_name: str = "") -> "CommandResult":
+    """
+    Execute a command in the coordinator container.
+
+    Parameters
+    ----------
+    cmd : str
+        The command to execute.
+
+    Returns
+    -------
+    CommandResult
+        Command result object containing the command output and exit
+        code.
+    """
+    from minitrino.utils import container_user_and_id
+
+    _, uid = container_user_and_id(container=container_name)
+    wrapped_cmd = f"bash -c {shlex.quote(cmd)}"
+    return execute_cmd(wrapped_cmd, container_name, user=uid)
+
+
+# ------------------------
+# Command Helpers
+# ------------------------
+
+
 @dataclass
 class CommandResult:
     """
@@ -441,30 +620,3 @@ def _execute_in_container(
 
     exit_code = api_client.exec_inspect(exec_handler["Id"]).get("ExitCode")
     return CommandResult(cmd, output, exit_code)
-
-
-def strip_ansi(text: str) -> str:
-    """Strip ANSI escape codes from a string."""
-    return CommandExecutor._strip_ansi(text)
-
-
-def execute_in_coordinator(cmd: str = "", container_name: str = "") -> CommandResult:
-    """
-    Execute a command in the coordinator container.
-
-    Parameters
-    ----------
-    cmd : str
-        The command to execute.
-
-    Returns
-    -------
-    CommandResult
-        Command result object containing the command output and exit
-        code.
-    """
-    from minitrino.utils import container_user_and_id
-
-    _, uid = container_user_and_id(container=container_name)
-    wrapped_cmd = f"bash -c {shlex.quote(cmd)}"
-    return execute_cmd(wrapped_cmd, container_name, user=uid)

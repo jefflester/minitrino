@@ -2,10 +2,12 @@ from dataclasses import dataclass
 
 import pytest
 
+from tests import common
 from tests.cli import utils
 from tests.cli.constants import CLUSTER_NAME
 
 pytestmark = pytest.mark.usefixtures("log_test", "start_docker")
+builder = common.CLICommandBuilder(CLUSTER_NAME)
 
 
 @dataclass
@@ -107,6 +109,7 @@ def test_exec_scenarios(scenario: ExecScenario) -> None:
     if scenario.cmd_flags:
         append_flags.extend(scenario.cmd_flags)
     append_flags.append(scenario.cmd)
-    result = utils.cli_cmd(utils.build_cmd(base="exec", append=append_flags))
+    cmd = builder.build_cmd(base="exec", append=append_flags)
+    result = common.cli_cmd(cmd)
     utils.assert_exit_code(result, expected=scenario.expected_exit_code)
     utils.assert_in_output(*scenario.expected_output, result=result)

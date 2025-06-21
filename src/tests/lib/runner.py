@@ -5,7 +5,7 @@ import json
 import os
 import re
 import sys
-import time
+from time import gmtime, sleep, strftime
 
 import jsonschema
 
@@ -24,13 +24,15 @@ if repo_root not in sys.path:
 from tests import common  # noqa: E402
 from tests.lib.specs import SPECS  # noqa: E402
 from tests.lib.utils import (  # noqa: E402
+    TERMINAL_WIDTH,
     cleanup,
     dump_container_logs,
+    log_failure,
     log_status,
     log_success,
 )
 
-CONTAINER_NAME = "minitrino-default"
+CONTAINER_NAME = "minitrino-lib-test"
 
 
 class ModuleTest:
@@ -48,12 +50,13 @@ class ModuleTest:
     debug : bool
         Whether to enable debug logging.
     x : bool
-        Whether to exit on failure; do not rollback resources.
+        Whether to exit on failure; do not rollback resources of failed
+        module.
     specs : dict
         JSON schema specifications for different test types.
     """
 
-    def __init__(self, json_data={}, module="", image="", debug=False, x=False):
+    def __init__(self, json_data: dict, module: str, image: str, debug: bool, x: bool):
         self.json_data = json_data
         self.module = module
         self.image = image
@@ -63,6 +66,7 @@ class ModuleTest:
 
         log_status(f"Module tests for module: '{module}'")
         if self.skip_enterprise():
+            log_status(f"Module '{module}' is an enterprise module, skipping test")
             return
 
         tests = json_data.get("tests", [])
@@ -91,40 +95,45 @@ class ModuleTest:
             f"minitrino modules -m {self.module} --json | "
             f"jq --arg module {self.module} '.[$module].enterprise'"
         )
-        if self.image == "trino" and cmd_result.output == "true":
+        if self.image == "trino" and cmd_result.output.strip() == "true":
             log_status(f"Module '{self.module}' is an enterprise module, skipping test")
             return True
         return False
 
-    def run_tests(self, tests=[], workers=False) -> None:
+    def run_tests(self, tests: list[dict], workers: bool = False) -> None:
         """
         Run all tests for the module.
 
         Parameters
         ----------
-        tests : list
+        tests : list[dict]
             List of tests to run.
         workers : bool
             Whether to run tests with workers.
         """
         if self.image == "starburst":
-            cluster_ver = str(DEFAULT_CLUSTER_VER) + "-e"
+            cluster_ver = ["-e", f"CLUSTER_VER={DEFAULT_CLUSTER_VER}-e"]
         else:
-            cluster_ver = str(DEFAULT_CLUSTER_VER)
+            cluster_ver = ["-e", f"CLUSTER_VER={DEFAULT_CLUSTER_VER}"]
 
-        debug_args = "-v --global-logging" if self.debug else ""
         no_rollback = "--no-rollback" if self.x else ""
-        if not workers:
-            cmd_result = common.execute_cmd(
-                f"minitrino {debug_args} -e CLUSTER_VER={cluster_ver} "
-                f"provision -i {self.image} -m {self.module} {no_rollback}"
-            )
-        else:
-            cmd_result = common.execute_cmd(
-                f"minitrino {debug_args} -e CLUSTER_VER={cluster_ver} "
-                f"provision -i {self.image} -m {self.module} --workers 1 {no_rollback}"
-            )
-
+        append_args = [
+            "--image",
+            self.image,
+            "--module",
+            self.module,
+            no_rollback,
+        ]
+        if workers:
+            append_args += ["--workers", "1"]
+        builder = common.CLICommandBuilder("lib-test")
+        cmd = builder.build_cmd(
+            base="provision",
+            prepend=cluster_ver,
+            append=append_args,
+            verbose=self.debug,
+        )
+        cmd_result = common.cli_cmd(cmd)
         if cmd_result.exit_code != 0:
             raise RuntimeError(
                 f"Provisioning of module '{self.module}' failed. Exiting test."
@@ -145,7 +154,7 @@ class ModuleTest:
                 f"Module test type '{t.get('type')}' for module: '{self.module}'"
             )
 
-    def test_query(self, json_data={}) -> None:
+    def test_query(self, json_data: dict) -> None:
         """
         Test query execution.
 
@@ -173,10 +182,10 @@ class ModuleTest:
         while i <= 60:
             cmd_result = common.execute_cmd(cmd, CONTAINER_NAME)
             if '"starting":false' in cmd_result.output:
-                time.sleep(5)  # hard stop to ensure coordinator is ready
+                sleep(5)  # hard stop to ensure coordinator is ready
                 break
             elif i < 60:
-                time.sleep(1)
+                sleep(1)
                 i += 1
             else:
                 raise TimeoutError(
@@ -202,7 +211,7 @@ class ModuleTest:
                 row_count == query_row_count
             ), f"Expected row count: {row_count}, actual row count: {query_row_count}"
 
-    def test_shell(self, json_data={}) -> None:
+    def test_shell(self, json_data: dict) -> None:
         """
         Test shell command execution.
 
@@ -239,7 +248,7 @@ class ModuleTest:
             for s in subcommands:
                 self._execute_subcommand(s, prev_output=cmd_result.output)
 
-    def test_logs(self, json_data) -> None:
+    def test_logs(self, json_data: dict) -> None:
         """
         Test log output.
 
@@ -249,7 +258,7 @@ class ModuleTest:
             JSON containing log test data.
         """
         timeout = json_data.get("timeout", 30)
-        container = common.get_containers(json_data.get("container"))[0]
+        container = common.get_containers(json_data.get("container", ""))[0]
 
         i = 0
         while True:
@@ -260,14 +269,14 @@ class ModuleTest:
                 break
             except Exception:
                 if i <= timeout:
-                    print("Log text match not found. Retrying...")
-                    time.sleep(1)
+                    common.logger.debug("Log text match not found. Retrying...")
+                    sleep(1)
                     i += 1
                 else:
                     raise TimeoutError(f"'{c}' not found in container log output")
 
     def _execute_subcommand(
-        self, json_data={}, healthcheck=False, prev_output=""
+        self, json_data: dict, healthcheck: bool = False, prev_output: str = ""
     ) -> None:
         """
         Execute a subcommand.
@@ -314,16 +323,18 @@ class ModuleTest:
                 break
             except AssertionError as e:
                 if i < retry:
-                    print(f"{cmd_type.title()} did not succeed. Retrying...")
+                    common.logger.debug(
+                        f"{cmd_type.title()} did not succeed. Retrying..."
+                    )
                     i += 1
-                    time.sleep(1)
+                    sleep(1)
                 else:
                     raise TimeoutError(
                         f"'{c}' not in {cmd_type} output after {retry} retries. "
                         f"Last error: {e}"
                     )
 
-    def _validate(self, json_data={}) -> None:
+    def _validate(self, json_data: dict) -> None:
         """
         Validate JSON input.
 
@@ -336,6 +347,52 @@ class ModuleTest:
         spec = self.specs.get(test_type)
         assert isinstance(spec, dict), f"Invalid test type: {test_type}"
         jsonschema.validate(json_data, spec)
+
+
+def log_complete_msgs(
+    complete_msgs: list[tuple[str, bool, str]], error: Exception | None = None
+) -> None:
+    """
+    Log the status of each completed test, including timestamp.
+
+    - If error is not None, raise it.
+    - If any test failed, exit with code 1.
+    - If all tests passed, exit with code 0.
+
+    Parameters
+    ----------
+    complete_msgs : list of tuple[str, bool, str]
+        Each tuple contains (message, success, timestamp).
+    error : Exception | None
+        Caught exception if any.
+    """
+    sep = "=" * TERMINAL_WIDTH + "\n"
+    underline = "-" * TERMINAL_WIDTH + "\n"
+    failed = False
+
+    sys.stdout.write("\n" + sep)
+    log_status("Test results:")
+    sys.stdout.write(underline)
+    for msg, success, timestamp in complete_msgs:
+        # Print the timestamp before the message, matching log style
+        if success:
+            log_success(msg, timestamp=timestamp)
+        else:
+            log_failure(msg, timestamp=timestamp)
+            if not failed:
+                failed = True
+    total = len(complete_msgs)
+    passed = sum(1 for _, success, _ in complete_msgs if success)
+    sys.stdout.write(underline)
+    log_status(f"Summary: {passed}/{total} modules passed")
+    sys.stdout.write(sep.rstrip() + "\n")
+
+    if error:
+        raise error
+    elif failed:
+        sys.exit(1)
+    else:
+        sys.exit(0)
 
 
 def main() -> None:
@@ -376,6 +433,7 @@ def main() -> None:
     cleanup()
 
     tests = os.path.join(os.path.dirname(__file__), "json")
+    complete_msgs: list[tuple[str, bool, str]] = []  # (message, success, timestamp)
     for t in os.listdir(tests):
         module = os.path.basename(t).split(".")[0]
         if args.modules and module not in args.modules:
@@ -385,11 +443,20 @@ def main() -> None:
         try:
             ModuleTest(json_data, module, args.image, debug=args.debug, x=args.x)
             cleanup(args.remove_images, args.debug)
+            msg = f"All tests passed for module '{module}'"
+            timestamp = strftime("%d/%m/%Y %H:%M:%S", gmtime())
+            log_success(msg)
+            complete_msgs.append((msg, True, timestamp))
         except Exception as e:
-            log_status(f"Module {module} test failed: {e}")
+            msg = f"Module {module} test failed"
+            timestamp = strftime("%d/%m/%Y %H:%M:%S", gmtime())
+            log_failure(f"{msg}: {e}")
+            complete_msgs.append((msg, False, timestamp))
             dump_container_logs(args.debug)
-            cleanup(args.remove_images, args.debug, args.x)
-            raise e
+            if args.x:
+                log_complete_msgs(complete_msgs, e)
+            cleanup(args.remove_images, args.debug)
+    log_complete_msgs(complete_msgs)
 
 
 if __name__ == "__main__":

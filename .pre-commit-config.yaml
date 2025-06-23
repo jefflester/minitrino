@@ -6,7 +6,7 @@ repos:
       - id: black
 
   - repo: https://github.com/pycqa/flake8
-    rev: 7.2.0
+    rev: 7.3.0
     hooks:
       - id: flake8
         args: [
@@ -20,6 +20,12 @@ repos:
     rev: 6.0.1
     hooks:
       - id: isort
+
+  - repo: https://github.com/executablebooks/mdformat
+    rev: 0.7.22
+    hooks:
+      - id: mdformat
+        files: ^docs/
 
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.16.1
@@ -35,12 +41,21 @@ repos:
           - types-tabulate
           - types-python-dateutil
 
+  # npm install --save-dev prettier
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+        files: ^docs/.*\\.md$
+        args: ["--prose-wrap", "always", "--print-width", "80"]
+
   - repo: https://github.com/pycqa/pydocstyle
     rev: 6.3.0
     hooks:
       - id: pydocstyle
         additional_dependencies: [tomli]
 
+  # brew install shellcheck (or: sudo apt-get install shellcheck, etc.)
   - repo: https://github.com/koalaman/shellcheck-precommit
     rev: v0.10.0
     hooks:
@@ -54,8 +69,8 @@ repos:
     rev: v1.37.1
     hooks:
       - id: yamllint
-        args: ["src/"]
 
+  # brew install jq (or: sudo apt-get install jq, etc.)
   - repo: local
     hooks:
       - id: jq-format

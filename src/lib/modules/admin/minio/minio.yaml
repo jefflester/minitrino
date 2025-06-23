@@ -13,6 +13,11 @@ services:
       default:
         aliases:
           - minitrino.s3.us-east-1.minio.com
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
     ports:
       - :9000
       - ${__PORT_MINIO}:9001
@@ -25,15 +30,11 @@ services:
   minio-client:
     image: minio/mc:${MINIO_MC_VER}
     container_name: minio-client-${CLUSTER_NAME}
+    depends_on:
+      minio:
+        condition: service_healthy
     entrypoint: |-
       /bin/sh -c "
-      wfi=wait-for-it && \
-      curl -fsSL \\
-        https://raw.githubusercontent.com/vishnubob/$$wfi/master/$$wfi.sh \\
-        > /tmp/$$wfi.sh && \
-      chmod +x /tmp/$$wfi.sh && \
-      echo 'Waiting for MinIO to come up...' && \
-      /tmp/$$wfi.sh minio:9000 --strict --timeout=60 && \
       /usr/bin/mc alias set minio \\
         http://minio:9000 access-key secret-key && \
       /usr/bin/mc mb minio/minitrino || true && \

@@ -57,3 +57,4 @@ yarn-error.log*
 .mypy_cache
 .local
 .windsurf
+docs/_build/**

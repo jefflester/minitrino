@@ -3,7 +3,7 @@ services:
 
   minitrino:
     environment:
-      CONFIG_PROPERTIES: |-
+      RESULTS_CACHE_CONFIG_PROPERTIES: |-
         results-cache.enabled=true
         results-cache.s3.endpoint=http://minio:9000
         results-cache.s3.aws-access-key=access-key

@@ -3,7 +3,7 @@ services:
 
   minitrino:
     environment:
-      CONFIG_PROPERTIES: |-
+      MYSQL_EVENT_LISTENER_CONFIG_PROPERTIES: |-
         event-listener.config-files=etc/mysql-event-listener.properties
     volumes:
       - ./modules/admin/mysql-event-listener/resources/cluster/mysql-event-listener.properties:/mnt/etc/mysql-event-listener.properties:ro
@@ -12,12 +12,19 @@ services:
   mysql-event-listener-db:
     image: mysql:${MYSQL_EVENT_LISTENER_VER}
     container_name: mysql-event-listener-db-${CLUSTER_NAME}
-    environment:
-      MINITRINO_BOOTSTRAP: bootstrap-mysql.sh
     env_file:
       - ./modules/admin/mysql-event-listener/resources/mysql/mysql.env
     ports:
       - ${__PORT_MYSQL_EVENT_LISTENER_DB}:3306
+    volumes:
+      - mysql-event-listener-db-data:/var/lib/mysql
+      - ./modules/admin/mysql-event-listener/resources/mysql/create-event-listener-db.sql:/docker-entrypoint-initdb.d/create-event-listener-db.sql
+    labels:
+      - org.minitrino.root=true
+      - org.minitrino.module.admin.mysql-event-listener=true
+
+volumes:
+  mysql-event-listener-db-data:
     labels:
       - org.minitrino.root=true
       - org.minitrino.module.admin.mysql-event-listener=true

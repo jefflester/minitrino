@@ -3,7 +3,7 @@ services:
 
   minitrino:
     environment:
-      CONFIG_PROPERTIES: |-
+      DATA_PRODUCTS_CONFIG_PROPERTIES: |-
         starburst.data-product.enabled=true
         data-product.starburst-jdbc-url=jdbc:trino://minitrino-$${ENV:CLUSTER_NAME}:8080
         data-product.starburst-user=admin

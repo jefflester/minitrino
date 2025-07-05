@@ -3,11 +3,11 @@ services:
 
   minitrino:
     environment:
-      CONFIG_PROPERTIES: |-
+      SPOOLING_PROTOCOL_CONFIG_PROPERTIES: |-
         protocol.spooling.enabled=true
         protocol.spooling.shared-secret-key=jxTKysfCBuMZtFqUf8UJDQ1w9ez8rynEJsJqgJf66u0=
         protocol.spooling.retrieval-mode=storage
-      CONFIG_PROPERTIES_WORKER: |-
+      SPOOLING_PROTOCOL_WORKER_CONFIG_PROPERTIES: |-
         protocol.spooling.enabled=true
         protocol.spooling.shared-secret-key=jxTKysfCBuMZtFqUf8UJDQ1w9ez8rynEJsJqgJf66u0=
         protocol.spooling.retrieval-mode=storage

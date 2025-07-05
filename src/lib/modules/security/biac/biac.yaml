@@ -3,14 +3,14 @@ services:
 
   minitrino:
     environment:
-      CONFIG_PROPERTIES: |-
+      BIAC_CONFIG_PROPERTIES: |-
         starburst.access-control.enabled=true
         starburst.access-control.audit.enabled=true
         starburst.access-control.authorized-users=admin
-        starburst.access-control.authorized-groups=admins,clusteradmins
+        starburst.access-control.authorized-groups=clusteradmins
         access-control.config-files=etc/biac.properties
     volumes:
       - ./modules/security/biac/resources/cluster/biac.properties:/mnt/etc/biac.properties:ro
-      - ./modules/security/biac/resources/bootstrap/bootstrap-cluster.sh:/mnt/bootstrap/biac/bootstrap-cluster.sh:ro
+      - ./modules/security/biac/resources/cluster/bootstrap.sh:/mnt/bootstrap/biac/bootstrap.sh:ro
     labels:
       - org.minitrino.module.security.biac=true

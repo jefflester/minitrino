@@ -1,0 +1,71 @@
+---
+services:
+
+  minitrino:
+    environment:
+      KERBEROS_CONFIG_PROPERTIES: |-
+        http-server.authentication.type=KERBEROS
+        http-server.authentication.krb5.service-name=HTTP
+        http.authentication.krb5.config=/etc/${CLUSTER_DIST}/krb5/krb5.conf
+        http-server.authentication.krb5.keytab=/etc/${CLUSTER_DIST}/krb5/keytabs/cluster.keytab
+        http-server.authentication.krb5.principal-hostname=minitrino-${CLUSTER_NAME}
+        http-server.authentication.krb5.user-mapping.pattern=(.*)@MINITRINO\\.COM
+      KERBEROS_JVM_CONFIG: |-
+        -Dlog.enable-console=true
+        -Dsun.security.krb5.debug=true
+        -Djava.security.krb5.conf=/etc/${CLUSTER_DIST}/krb5/krb5.conf
+      KRB5_CONFIG: /etc/${CLUSTER_DIST}/krb5/krb5.conf
+    volumes:
+      - keytabs:/etc/${CLUSTER_DIST}/krb5/keytabs
+      - ./modules/security/kerberos/resources/cluster/krb5.conf:/etc/${CLUSTER_DIST}/krb5/krb5.conf
+
+  kdc:
+    image: gcavalcante8808/krb5-server:${KDC_VER}
+    container_name: kdc-${CLUSTER_NAME}
+    hostname: kdc.minitrino.${CLUSTER_NAME}.com
+    environment:
+      CLUSTER_NAME: ${CLUSTER_NAME}
+      WORKERS: ${WORKERS}
+      KRB5_REALM: MINITRINO.COM
+      KRB5_KDC: kdc.minitrino.${CLUSTER_NAME}.com
+      KRB5_ADMINSERVER: kdc.minitrino.${CLUSTER_NAME}.com
+      KRB5_PASS: changeit
+    expose:
+      - 88/udp
+      - 88/tcp
+      - 749
+    volumes:
+      - kdc-data:/var/lib/krb5kdc
+      - keytabs:/keytabs
+    labels:
+      - org.minitrino.root=true
+      - org.minitrino.module.security.kerberos=true
+
+  kdc-bootstrap:
+    image: gcavalcante8808/krb5-server:${KDC_VER}
+    container_name: kdc-bootstrap-${CLUSTER_NAME}
+    depends_on: [kdc]
+    entrypoint: /bin/sh
+    command: /bootstrap-kdc.sh
+    environment:
+      CLUSTER_NAME: ${CLUSTER_NAME}
+      WORKERS: ${WORKERS}
+      KRB5_REALM: MINITRINO.COM
+    volumes:
+      - kdc-data:/var/lib/krb5kdc
+      - keytabs:/keytabs
+      - ./modules/security/kerberos/resources/cluster/krb5.conf:/etc/krb5.conf:ro
+      - ./modules/security/kerberos/resources/kdc/bootstrap-kdc.sh:/bootstrap-kdc.sh:ro
+    labels:
+      - org.minitrino.root=true
+      - org.minitrino.module.security.kerberos=true
+
+volumes:
+  kdc-data:
+    labels:
+      - org.minitrino.root=true
+      - org.minitrino.module.security.kerberos=true
+  keytabs:
+    labels:
+      - org.minitrino.root=true
+      - org.minitrino.module.security.kerberos=true

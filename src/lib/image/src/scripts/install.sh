@@ -30,9 +30,10 @@ create_directories() {
 
 copy_scripts() {
     echo "Copying entrypoint scripts..."
+    cp /tmp/run-minitrino.sh /usr/lib/"${CLUSTER_DIST}"/bin/
+    cp /tmp/gen_config.py /usr/lib/"${CLUSTER_DIST}"/bin/
     cp /tmp/copy-config.sh /usr/lib/"${CLUSTER_DIST}"/bin/
     cp /tmp/run-bootstraps.sh /usr/lib/"${CLUSTER_DIST}"/bin/
-    cp /tmp/run-minitrino.sh /usr/lib/"${CLUSTER_DIST}"/bin/
 }
 
 set_ownership_and_perms() {

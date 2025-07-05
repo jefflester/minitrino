@@ -4,8 +4,8 @@ services:
   minitrino:
     volumes:
       - ./modules/catalog/hive/resources/cluster/hive.properties:/mnt/etc/catalog/hive.properties:ro
-      - ./modules/catalog/hive/resources/bootstrap/create-schema.sh:/mnt/bootstrap/hive/create-schema.sh:ro
-      - ./modules/catalog/hive/resources/bootstrap/458-native-fs-workaround.sh:/mnt/bootstrap/hive/458-native-fs-workaround.sh:ro
+      - ./modules/catalog/hive/resources/cluster/create-schema.sh:/mnt/bootstrap/hive/create-schema.sh:ro
+      - ./modules/catalog/hive/resources/cluster/458-native-fs-workaround.sh:/mnt/bootstrap/hive/458-native-fs-workaround.sh:ro
 
   postgres-hive:
     image: postgres:${POSTGRES_HMS_VER}
@@ -31,8 +31,8 @@ services:
         condition: service_healthy
     env_file:
       - ./modules/catalog/hive/resources/hms/hms.env
-    ports:
-      - :9083
+    expose:
+      - 9083
     labels:
       - org.minitrino.root=true
       - org.minitrino.module.catalog.hive=true

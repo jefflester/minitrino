@@ -11,8 +11,8 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - :2181
+    expose:
+      - 2181
     volumes:
       - pinot-zookeeper-data:/data
       - pinot-zookeeper-datalog:/datalog
@@ -25,8 +25,6 @@ services:
     container_name: pinot-controller-${CLUSTER_NAME}
     command: StartController -zkAddress pinot-zookeeper:2181
     restart: unless-stopped
-    environment:
-      MINITRINO_BOOTSTRAP: bootstrap-pinot.sh
     env_file:
       - ./modules/catalog/pinot/resources/pinot/controller.env
     depends_on:
@@ -35,6 +33,9 @@ services:
       - ${__PORT_PINOT_CONTROLLER}:9000
     volumes:
       - pinot-controller-data:/tmp/data/PinotController
+      - ./modules/catalog/pinot/resources/pinot/bootstrap.sh:/bootstrap.sh:ro
+      - ./modules/catalog/pinot/resources/pinot/entrypoint-controller.sh:/entrypoint-controller.sh:ro
+    entrypoint: ["/entrypoint-controller.sh"]
     labels:
       - org.minitrino.root=true
       - org.minitrino.module.catalog.pinot=true
@@ -48,8 +49,8 @@ services:
       - ./modules/catalog/pinot/resources/pinot/broker.env
     depends_on:
       - pinot-controller
-    ports:
-      - :8099
+    expose:
+      - 8099
     labels:
       - org.minitrino.root=true
       - org.minitrino.module.catalog.pinot=true
@@ -63,8 +64,8 @@ services:
       - ./modules/catalog/pinot/resources/pinot/server.env
     depends_on:
       - pinot-broker
-    ports:
-      - :8098
+    expose:
+      - 8098
     volumes:
       - pinot-server-data:/tmp/data/pinotServerData
     labels:

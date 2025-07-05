@@ -1,7 +1,8 @@
 {
   "description": "LDAP group provider module",
   "incompatibleModules": [
-    "file-group-provider"
+    "file-group-provider",
+    "scim"
   ],
   "dependentModules": [
     "ldap"

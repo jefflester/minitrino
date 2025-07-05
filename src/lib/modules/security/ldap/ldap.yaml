@@ -3,10 +3,10 @@ services:
 
   minitrino:
     environment:
-      CONFIG_PROPERTIES: http-server.authentication.type=PASSWORD
+      LDAP_CONFIG_PROPERTIES: http-server.authentication.type=PASSWORD
     volumes:
       - ./modules/security/ldap/resources/ldap/ldif:/mnt/etc/ldif:ro
-      - ./modules/security/ldap/resources/bootstrap/bootstrap-cluster.sh:/mnt/bootstrap/ldap/bootstrap-cluster.sh:ro
+      - ./modules/security/ldap/resources/cluster/bootstrap.sh:/mnt/bootstrap/ldap/bootstrap.sh:ro
       - ./modules/security/ldap/resources/cluster/password-authenticator.properties:/mnt/etc/password-authenticator.properties:ro
     links:
       - ldap:ldap.minitrino.com

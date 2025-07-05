@@ -3,7 +3,7 @@ services:
 
   minitrino:
     environment:
-      CONFIG_PROPERTIES: |-
+      TLS_CONFIG_PROPERTIES: |-
         http-server.https.enabled=true
         http-server.https.port=8443
         http-server.https.keystore.path=etc/tls/keystore.jks
@@ -11,7 +11,7 @@ services:
     ports:
       - ${__PORT_MINITRINO_TLS}:8443
     volumes:
-      - ~/.minitrino/tls/${CLUSTER_NAME}:/mnt/etc/tls
-      - ./modules/security/tls/resources/bootstrap/bootstrap-cluster.sh:/mnt/bootstrap/tls/bootstrap-cluster.sh:ro
+      - ${HOME}/.minitrino/tls/${CLUSTER_NAME}:/mnt/etc/tls
+      - ./modules/security/tls/resources/cluster/bootstrap.sh:/mnt/bootstrap/tls/bootstrap.sh:ro
     labels:
       - org.minitrino.module.security.tls=true

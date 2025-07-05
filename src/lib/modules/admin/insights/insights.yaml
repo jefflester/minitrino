@@ -3,7 +3,7 @@ services:
 
   minitrino:
     environment:
-      CONFIG_PROPERTIES: |-
+      INSIGHTS_CONFIG_PROPERTIES: |-
         insights.jdbc.url=jdbc:postgresql://postgres-backend-svc:5432/sep
         insights.jdbc.user=admin
         insights.jdbc.password=trinoRocks15

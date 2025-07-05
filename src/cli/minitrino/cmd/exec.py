@@ -1,7 +1,5 @@
 """Docker Exec wrapper."""
 
-import shlex
-
 import click
 from docker.errors import APIError, NotFound
 
@@ -9,6 +7,7 @@ from minitrino import utils
 from minitrino.core.cluster.resource import MinitrinoContainer
 from minitrino.core.context import MinitrinoContext
 from minitrino.core.errors import MinitrinoError, UserError
+from minitrino.core.exec.utils import detect_container_shell
 
 
 @click.command(
@@ -55,7 +54,7 @@ def cli(
     Parameters
     ----------
     command : tuple
-        The command to run in the container.
+        The command to execute inside the container.
     container : str
         The container to run the command in.
     user : str
@@ -86,65 +85,59 @@ def cli(
             "Provide a valid container name and try again.",
         )
     cmd = build_cmd(command, fqcn, user, interactive)
-    try:
-        result = ctx.cmd_executor.execute(
-            cmd, interactive=interactive, suppress_output=True
-        )[0]
-    except MinitrinoError as e:
-        if "Exit code: 137" in str(e) or "is not running" in str(e):
-            raise UserError(
-                f"Container '{fqcn}' is not running or was stopped.",
-                "Start the container and try again.",
+    if interactive:
+        try:
+            result = ctx.cmd_executor.execute(
+                cmd, interactive=interactive, suppress_output=True, trigger_error=False
+            )[0]
+        except Exception as e:
+            raise MinitrinoError(f"Error while running TTY command in '{fqcn}': {e}")
+        if result.exit_code not in [0, 130, 137]:
+            raise MinitrinoError(
+                f"Failed to execute TTY command in '{fqcn}':\n{cmd}\n"
+                f"Exit code: {result.exit_code}\n"
+                f"Command output: {result.output}"
             )
-        else:
-            raise e
-    if not interactive:
-        if result.output.strip():
-            ctx.logger.info(result.output)
+    else:
+        for line in ctx.cmd_executor.stream_execute(
+            cmd, interactive=interactive, suppress_output=True
+        ):
+            if line.strip():
+                ctx.logger.info(line)
 
 
 @utils.pass_environment()
 def build_cmd(
     ctx: MinitrinoContext, command: tuple, fqcn: str, user: str, interactive: bool
-) -> str:
-    """Build the docker exec command."""
-    it = "-it" if interactive else ""
-    shell = detect_container_shell(ctx.cluster.resource.container(fqcn), user)
-    cmd_str = " ".join(command) if command else shell
-    cmd = (
-        f"docker exec -u {user}"
-        f"{f' {it}' if it else ''} "
-        f"{fqcn} {shell} -c {shlex.quote(cmd_str)}"
-    )
-    return cmd
+) -> list[str]:
+    """Build the docker exec command.
 
+    Parameters
+    ----------
+    ctx : MinitrinoContext
+        The CLI context object.
+    command : tuple
+        The command to execute inside the container.
+    fqcn : str
+        Fully qualified container name.
+    user : str
+        Username or UID to run the command as.
+    interactive : bool
+        If True, runs the command in interactive mode.
 
-@utils.pass_environment()
-def detect_container_shell(
-    ctx: MinitrinoContext, container: MinitrinoContainer, user: str
-):
-    """Detect the shell in the container."""
-    try:
-        result = ctx.cmd_executor.execute(
-            "which bash",
-            container=container,
-            docker_user=user,
-        )
-        if result and result[0].output.strip():
-            return "/bin/bash"
-    except Exception:
-        pass
-    try:
-        result = ctx.cmd_executor.execute(
-            "which sh",
-            container=container,
-            docker_user=user,
-        )
-        if result and result[0].output.strip():
-            return "/bin/sh"
-    except Exception:
-        pass
-    raise MinitrinoError(
-        f"No supported shell found in container '{container.name}'. "
-        "Install /bin/sh or /bin/bash in the container image.",
-    )
+    Returns
+    -------
+    list[str]
+        The full docker exec command as a list of arguments.
+    """
+    shell = detect_container_shell(ctx, fqcn, user)
+    base_cmd = ["docker", "exec", "-u", user]
+    if interactive:
+        base_cmd.append("-it")
+    base_cmd.append(fqcn)
+    if command:
+        shell_cmd = " ".join(command)
+        full_cmd = base_cmd + [shell, "-l", "-c", shell_cmd]
+    else:
+        full_cmd = base_cmd + [shell]
+    return full_cmd

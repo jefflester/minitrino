@@ -3,7 +3,7 @@
     {
       "type": "logs",
       "name": "Ensure Iceberg REST metastore is running",
-      "container": "iceberg-rest",
+      "container": "iceberg-rest-lib-test",
       "contains": [
         "Started @"
       ],

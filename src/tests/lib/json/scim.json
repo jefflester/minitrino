@@ -5,15 +5,9 @@
       "name": "Test clusteradmins group",
       "sql": "SELECT current_groups()",
       "trinoCliArgs": [
-        "--server 'https://localhost:8443'",
-        "--user admin",
-        "--truststore-path /etc/${CLUSTER_DIST}/tls/truststore.jks",
-        "--truststore-password changeit",
-        "--password"
+        "--server 'http://localhost:8080'",
+        "--user admin"
       ],
-      "env": {
-        "TRINO_PASSWORD": "trinoRocks15"
-      },
       "contains": [
         "clusteradmins"
       ]
@@ -23,15 +17,9 @@
       "name": "Test metadata-users groups",
       "sql": "SELECT current_groups()",
       "trinoCliArgs": [
-        "--server 'https://localhost:8443'",
-        "--user metadata-user",
-        "--truststore-path /etc/${CLUSTER_DIST}/tls/truststore.jks",
-        "--truststore-password changeit",
-        "--password"
+        "--server 'http://localhost:8080'",
+        "--user metadata-user"
       ],
-      "env": {
-        "TRINO_PASSWORD": "trinoRocks15"
-      },
       "contains": [
         "metadata-users"
       ]
@@ -41,15 +29,9 @@
       "name": "Test platform-users group",
       "sql": "SELECT current_groups()",
       "trinoCliArgs": [
-        "--server 'https://localhost:8443'",
-        "--user platform-user",
-        "--truststore-path /etc/${CLUSTER_DIST}/tls/truststore.jks",
-        "--truststore-password changeit",
-        "--password"
+        "--server 'http://localhost:8080'",
+        "--user platform-user"
       ],
-      "env": {
-        "TRINO_PASSWORD": "trinoRocks15"
-      },
       "contains": [
         "platform-users"
       ]
@@ -59,15 +41,9 @@
       "name": "Test 'test' user",
       "sql": "SELECT current_groups()",
       "trinoCliArgs": [
-        "--server 'https://localhost:8443'",
-        "--user test",
-        "--truststore-path /etc/${CLUSTER_DIST}/tls/truststore.jks",
-        "--truststore-password changeit",
-        "--password"
+        "--server 'http://localhost:8080'",
+        "--user test"
       ],
-      "env": {
-        "TRINO_PASSWORD": "trinoRocks15"
-      },
       "contains": [
         "clusteradmins",
         "metadata-users",

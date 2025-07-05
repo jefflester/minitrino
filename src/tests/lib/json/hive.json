@@ -3,7 +3,7 @@
     {
       "type": "logs",
       "name": "Ensure HMS is running",
-      "container": "metastore-hive",
+      "container": "metastore-hive-lib-test",
       "contains": [
         "Starting Metastore Server"
       ],

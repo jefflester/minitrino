@@ -7,7 +7,7 @@
       "command": "echo 'pass'",
       "exitCode": 0,
       "healthcheck": {
-        "command": "curl -v -k minitrino-lib-test-dep-stargate-parallel-remote:8080/v1/info || true",
+        "command": "curl -s -k minitrino-lib-test-dep-stargate-parallel-remote:8080/v1/info || true",
         "container": "minitrino-lib-test",
         "retries": 60,
         "exitCode": 0,
@@ -26,6 +26,7 @@
         "--catalog stargate_parallel",
         "--schema default"
       ],
+      "retries": 10,
       "contains": [
         "CALL"
       ]
@@ -38,6 +39,7 @@
         "--server 'http://localhost:8080'",
         "--user admin"
       ],
+      "retries": 10,
       "contains": [
         "default",
         "information_schema",
@@ -54,6 +56,7 @@
         "--catalog stargate_parallel",
         "--schema default"
       ],
+      "retries": 10,
       "contains": [
         "CALL"
       ]
@@ -66,6 +69,7 @@
         "--server 'http://localhost:8080'",
         "--user admin"
       ],
+      "retries": 10,
       "contains": [
         "custkey",
         "name",

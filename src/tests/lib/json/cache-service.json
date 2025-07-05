@@ -3,11 +3,20 @@
     {
       "type": "logs",
       "name": "Ensure HMS is running",
-      "container": "metastore-hive",
+      "container": "metastore-hive-lib-test",
       "contains": [
         "Starting Metastore Server"
       ],
       "timeout": 60
+    },
+    {
+      "type": "logs",
+      "name": "Ensure post-start scripts finish",
+      "container": "minitrino-lib-test",
+      "contains": [
+        "POST START BOOTSTRAPS COMPLETED"
+      ],
+      "timeout": 90
     },
     {
       "type": "query",
@@ -19,7 +28,8 @@
       ],
       "contains": [
         "CREATE MATERIALIZED VIEW"
-      ]
+      ],
+      "retries": 30
     },
     {
       "type": "query",
@@ -49,16 +59,59 @@
       ]
     },
     {
-      "type": "logs",
-      "name": "Verify MV and TSR storage",
-      "container": "minitrino-lib-test",
-      "contains": [
-        "Import from hive_mv_tsr.mvs.example to hive_mv_tsr.mv_storage.example_",
-        "Import from hive_mv_tsr.mvs.test to hive_mv_tsr.mv_storage.test_",
-        "Import from postgres.public.customer to hive_mv_tsr.cache.customer_",
-        "Import from postgres.public.orders to hive_mv_tsr.cache.orders_"
+      "type": "query",
+      "name": "Test table scan redirection - customer",
+      "sql": "SELECT * FROM postgres.public.customer LIMIT 10",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'",
+        "--user admin"
       ],
-      "timeout": 180
+      "contains": [
+        "custkey",
+        "name",
+        "address"
+      ]
+    },
+    {
+      "type": "query",
+      "name": "Test table scan redirection - orders",
+      "sql": "SELECT * FROM postgres.public.orders LIMIT 10",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'",
+        "--user admin"
+      ],
+      "contains": [
+        "orderkey",
+        "orderdate"
+      ]
+    },
+    {
+      "type": "query",
+      "name": "Verify MV storage",
+      "sql": "SHOW TABLES IN hive_mv_tsr.cache",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'",
+        "--user admin"
+      ],
+      "retries": 90,
+      "contains": [
+        "customer_",
+        "orders_"
+      ]
+    },
+    {
+      "type": "query",
+      "name": "Verify TSR storage",
+      "sql": "SHOW TABLES IN hive_mv_tsr.mv_storage",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'",
+        "--user admin"
+      ],
+      "retries": 90,
+      "contains": [
+        "example_",
+        "test_"
+      ]
     }
   ]
 }

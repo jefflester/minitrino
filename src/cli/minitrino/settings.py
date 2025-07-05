@@ -15,9 +15,11 @@ MODULE_RESOURCES = "resources"
 MIN_CLUSTER_VER = 443
 DEFAULT_CLUSTER_VER = 474
 ETC_DIR = "/etc/${CLUSTER_DIST}"
-LIC_VOLUME_MOUNT = "${LIC_PATH}:${LIC_MOUNT_PATH}"
+LIC_VOLUME_MOUNT = (
+    "${LIC_PATH:-./modules/resources/dummy.license}:"
+    "${LIC_MOUNT_PATH:-/mnt/etc/dummy.license:ro}"
+)
 LIC_MOUNT_PATH = "/mnt/etc/starburstdata.license:ro"
-DUMMY_LIC_MOUNT_PATH = "/mnt/etc/dummy.license:ro"
 CLUSTER_CONFIG = "config.properties"
 CLUSTER_JVM_CONFIG = "jvm.config"
 
@@ -61,11 +63,6 @@ LIC_PATH=
 CLUSTER_VER=
 TEXT_EDITOR=
 """
-
-WORKER_CONFIG_PROPS = """coordinator=false
-http-server.http.port=8080
-discovery.uri=http://minitrino-${ENV:CLUSTER_NAME}:8080
-internal-communication.shared-secret=bWluaXRyaW5vUm9ja3MxNQo="""
 
 # fmt: off
 PROVISION_SNAPSHOT_TEMPLATE = """

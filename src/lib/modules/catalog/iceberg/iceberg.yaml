@@ -4,8 +4,8 @@ services:
   minitrino:
     volumes:
       - ./modules/catalog/iceberg/resources/cluster/iceberg.properties:/mnt/etc/catalog/iceberg.properties:ro
-      - ./modules/catalog/iceberg/resources/bootstrap/create-schema.sh:/mnt/bootstrap/iceberg/create-schema.sh:ro
-      - ./modules/catalog/iceberg/resources/bootstrap/458-native-fs-workaround.sh:/mnt/bootstrap/iceberg/458-native-fs-workaround.sh:ro
+      - ./modules/catalog/iceberg/resources/cluster/create-schema.sh:/mnt/bootstrap/iceberg/create-schema.sh:ro
+      - ./modules/catalog/iceberg/resources/cluster/458-native-fs-workaround.sh:/mnt/bootstrap/iceberg/458-native-fs-workaround.sh:ro
 
   iceberg-rest:
     image: tabulario/iceberg-rest:${ICEBERG_REST_VER}

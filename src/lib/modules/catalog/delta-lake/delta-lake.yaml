@@ -4,8 +4,8 @@ services:
   minitrino:
     volumes:
       - ./modules/catalog/delta-lake/resources/cluster/delta.properties:/mnt/etc/catalog/delta.properties:ro
-      - ./modules/catalog/delta-lake/resources/bootstrap/create-schema.sh:/mnt/bootstrap/delta-lake/create-schema.sh:ro
-      - ./modules/catalog/delta-lake/resources/bootstrap/458-native-fs-workaround.sh:/mnt/bootstrap/delta-lake/458-native-fs-workaround.sh:ro
+      - ./modules/catalog/delta-lake/resources/cluster/create-schema.sh:/mnt/bootstrap/delta-lake/create-schema.sh:ro
+      - ./modules/catalog/delta-lake/resources/cluster/458-native-fs-workaround.sh:/mnt/bootstrap/delta-lake/458-native-fs-workaround.sh:ro
 
   postgres-delta-lake:
     image: postgres:${POSTGRES_HMS_VER}
@@ -31,8 +31,8 @@ services:
         condition: service_healthy
     env_file:
       - ./modules/catalog/delta-lake/resources/hms/hms.env
-    ports:
-      - :9083
+    expose:
+      - 9083
     labels:
       - org.minitrino.root=true
       - org.minitrino.module.catalog.delta-lake=true

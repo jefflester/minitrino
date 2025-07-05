@@ -7,17 +7,21 @@ FROM ubuntu:${UBUNTU_VER} AS tarball
 
 ARG CLUSTER_VER
 ARG CLUSTER_DIST
-ARG KEEP_PLUGINS=""
 
-ENV KEEP_PLUGINS=${KEEP_PLUGINS}
-
-COPY ./src/scripts/download-tarball.py /tmp/
+COPY ./src/scripts/downloader.py /tmp/
 RUN apt-get -y update && apt-get install -y --no-install-recommends \
         curl \
         ca-certificates \
         python3 && \
-    KEEP_PLUGINS="${KEEP_PLUGINS}" \
-        python3 /tmp/download-tarball.py ${CLUSTER_VER} ${CLUSTER_DIST}
+    python3 /tmp/downloader.py ${CLUSTER_VER} ${CLUSTER_DIST}
+
+FROM tarball AS pruned
+
+ARG CLUSTER_DIST
+ARG KEEP_PLUGINS=""
+ENV KEEP_PLUGINS=${KEEP_PLUGINS}
+COPY ./src/scripts/prune_plugins.py /tmp/
+RUN python3 /tmp/prune_plugins.py ${CLUSTER_DIST}
 
 FROM ubuntu:${UBUNTU_VER} AS base
 
@@ -27,11 +31,10 @@ ENV SDKMAN_DIR="/home/${SERVICE_USER}/.sdkman"
 ENV JAVA_HOME="${SDKMAN_DIR}/candidates/java/current"
 ENV PATH="${JAVA_HOME}/bin:${PATH}"
 
-COPY ./src/scripts /tmp/
-
 RUN \
     apt-get -y update && \
-    apt-get -y upgrade && apt-get install -y --no-install-recommends \
+    DEBIAN_FRONTEND=noninteractive apt-get -y upgrade && \
+      apt-get install -y --no-install-recommends \
         curl \
         wget \
         telnet \
@@ -45,10 +48,10 @@ RUN \
         zip unzip \
         iputils-ping \
         ldap-utils \
+        krb5-user \
         apache2-utils \
         python3 python-is-python3 python3-pip && \
-    locale-gen en_US.UTF-8 && \
-    chmod +x /tmp/*.sh
+    locale-gen en_US.UTF-8
 
 FROM base AS final
 
@@ -63,10 +66,12 @@ ENV SERVICE_USER=${SERVICE_USER}
 ENV CLUSTER_VER=${CLUSTER_VER}
 ENV CLUSTER_DIST=${CLUSTER_DIST}
 
-COPY --from=tarball /usr/lib/${CLUSTER_DIST} /usr/lib/${CLUSTER_DIST}
+COPY ./src/scripts /tmp/
 COPY ./src/etc/app-config /etc/${CLUSTER_DIST}
+COPY --from=pruned /usr/lib/${CLUSTER_DIST} /usr/lib/${CLUSTER_DIST}
 
-RUN /tmp/install.sh ${SERVICE_USER} ${SERVICE_GROUP} ${SERVICE_UID} ${SERVICE_GID}
+RUN chmod +x /tmp/*.sh && \
+    /tmp/install.sh ${SERVICE_USER} ${SERVICE_GROUP} ${SERVICE_UID} ${SERVICE_GID}
 
 EXPOSE 8080
 WORKDIR /etc/${CLUSTER_DIST}

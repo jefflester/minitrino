@@ -18,8 +18,9 @@ services:
       interval: 5s
       timeout: 3s
       retries: 12
+    expose:
+      - 9000
     ports:
-      - :9000
       - ${__PORT_MINIO}:9001
     volumes:
       - minio-data:/data

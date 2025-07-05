@@ -1,7 +1,8 @@
 {
   "description": "File group provider module",
   "incompatibleModules": [
-    "ldap-group-provider"
+    "ldap-group-provider",
+    "scim"
   ],
   "dependentModules": [],
   "enterprise": false

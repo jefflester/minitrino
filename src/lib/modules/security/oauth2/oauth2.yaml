@@ -3,7 +3,7 @@ services:
 
   minitrino:
     environment:
-      CONFIG_PROPERTIES: |-
+      OAUTH2_CONFIG_PROPERTIES: |-
         web-ui.authentication.type=oauth2
         http-server.authentication.type=OAUTH2
         http-server.authentication.oauth2.client-id=minitrino
@@ -15,7 +15,7 @@ services:
         http-server.authentication.oauth2.user-mapping.pattern=(admin|cachesvc|bob|alice|metadata-user|platform-user|test)@minitrino\.com
       OAUTH2_SERVER_PORT: ${__PORT_OAUTH2_SERVER}
     volumes:
-      - ./modules/security/oauth2/resources/bootstrap/bootstrap-cluster.sh:/mnt/bootstrap/oauth2/bootstrap-cluster.sh:ro
+      - ./modules/security/oauth2/resources/cluster/bootstrap.sh:/mnt/bootstrap/oauth2/bootstrap.sh:ro
     depends_on:
       oauth2-healthcheck:
         condition: service_healthy

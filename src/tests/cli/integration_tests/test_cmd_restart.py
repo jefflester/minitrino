@@ -3,11 +3,11 @@ from dataclasses import dataclass
 import pytest
 
 from tests import common
-from tests.cli import utils
 from tests.cli.constants import CLUSTER_NAME
+from tests.cli.integration_tests import utils
 
 pytestmark = pytest.mark.usefixtures("start_docker")
-builder = common.CLICommandBuilder(utils.CLUSTER_NAME)
+executor = common.MinitrinoExecutor(utils.CLUSTER_NAME)
 
 
 @dataclass
@@ -65,10 +65,10 @@ restart_scenarios = [
 @pytest.mark.usefixtures("log_test", "cleanup_config", "down")
 def test_restart_scenarios(scenario: RestartScenario) -> None:
     """Run each RestartScenario."""
-    cmd = builder.build_cmd(base="provision", append=scenario.provision_args)
-    result = common.cli_cmd(cmd)
+    cmd = executor.build_cmd(base="provision", append=scenario.provision_args)
+    result = executor.exec(cmd)
     utils.assert_exit_code(result)
-    result = common.cli_cmd(builder.build_cmd(base="restart"))
+    result = executor.exec(executor.build_cmd(base="restart"))
     utils.assert_exit_code(result)
     for expected in scenario.expected_outputs:
         utils.assert_in_output(expected, result=result)

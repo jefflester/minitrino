@@ -6,15 +6,16 @@ from typing import Callable, Optional
 import pytest
 
 from tests import common
-from tests.cli import utils
+from tests.cli.integration_tests import utils
 
-CMD_CONFIG: common.BuildCmdArgs = {
+CMD_CONFIG: utils.BuildCmdArgs = {
     "base": "config",
     "prepend": ["-v", "-e", "TEXT_EDITOR=cat"],
 }
 
 pytestmark = pytest.mark.usefixtures("log_test", "cleanup_config")
-builder = common.CLICommandBuilder(utils.CLUSTER_NAME)
+logger = common.logger
+executor = common.MinitrinoExecutor(utils.CLUSTER_NAME)
 
 
 @dataclass
@@ -125,12 +126,12 @@ def test_config_scenarios(
 ) -> None:
     """Run each ConfigScenario."""
     if scenario.setup:
-        common.logger.debug("Running setup function for scenario.")
+        logger.debug("Running setup function for scenario.")
         scenario.setup()
     cmd_args = CMD_CONFIG.copy()
     cmd_args["append"] = scenario.cmd_args
-    cmd = builder.build_cmd(**cmd_args)
-    result = common.cli_cmd(cmd, scenario.input_val)
+    cmd = executor.build_cmd(**cmd_args)
+    result = executor.exec(cmd, scenario.input_val)
     utils.assert_exit_code(result, expected=scenario.expected_exit_code)
     if scenario.expected_dir:
         utils.assert_is_dir(common.MINITRINO_USER_DIR)
@@ -146,5 +147,5 @@ def test_config_scenarios(
 def test_edit_valid_config() -> None:
     """Verify the user can edit an existing configuration file."""
     cmd_args = CMD_CONFIG.copy()
-    result = common.cli_cmd(builder.build_cmd(**cmd_args))
+    result = executor.exec(executor.build_cmd(**cmd_args))
     utils.assert_exit_code(result)

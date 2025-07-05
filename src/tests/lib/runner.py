@@ -3,6 +3,7 @@
 
 import argparse
 import json
+import logging
 import os
 import sys
 import traceback
@@ -43,8 +44,8 @@ def log_complete_msgs(
     error : Exception | None
         Caught exception if any.
     """
-    sep = "=" * utils.TERMINAL_WIDTH + "\n"
-    underline = "-" * utils.TERMINAL_WIDTH + "\n"
+    sep = "=" * utils.get_terminal_width() + "\n"
+    underline = "-" * utils.get_terminal_width() + "\n"
     failed = False
 
     sys.stdout.write("\n" + sep)
@@ -114,6 +115,9 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    log_level = logging.DEBUG if args.debug else logging.INFO
+    common.logger = common.get_logger(log_level)
+
     common.start_docker_daemon()
     ModuleTest.cleanup()
 
@@ -123,11 +127,12 @@ def main() -> None:
     def run_module_test(module, json_data, args, complete_msgs, any_failed) -> bool:
         try:
             test = ModuleTest(json_data, module, args.image, debug=args.debug, x=args.x)
-            test.run()
-            test.cleanup(args.remove_images, args.debug)
+            if not test.run():
+                return any_failed
             msg = f"All tests passed for module: '{module}'"
             test.log_success(msg)
             complete_msgs.append((msg, True, utils._timestamp()))
+            test.cleanup(args.remove_images, args.debug)
             return any_failed
         except Exception as e:
             if any_failed:
@@ -147,18 +152,60 @@ def main() -> None:
 
     try:
         any_failed = False
-        for t in os.listdir(tests):
-            module = os.path.basename(t).split(".")[0]
-            if args.lf:
-                if module not in utils.get_failed_tests():
-                    continue
-            elif args.modules and module not in args.modules:
+        all_json_files = [f for f in os.listdir(tests) if f.endswith(".json")]
+        all_modules = sorted([os.path.splitext(f)[0] for f in all_json_files])
+
+        modules_to_run: list[str] = []
+        modules_run_set: set[str] = set()
+
+        if args.lf:
+            # Get failed modules from .lastfailed, sorted
+            try:
+                failed_modules = sorted(utils.get_failed_tests())
+            except Exception:
+                failed_modules = []
+            # Only keep those that still exist in the json dir
+            failed_modules = [m for m in failed_modules if m in all_modules]
+            modules_to_run.extend(failed_modules)
+            modules_run_set.update(failed_modules)
+            # After .lastfailed, run the rest of the modules that come
+            # after the last failed (in sorted order)
+            if failed_modules:
+                last_failed = failed_modules[-1]
+                idx = all_modules.index(last_failed)
+                rest = [m for m in all_modules[idx + 1 :] if m not in modules_run_set]
+                modules_to_run.extend(rest)
+        elif args.modules:
+            # Use user-provided modules, sorted, and filter to those that exist
+            modules_to_run = sorted([m for m in args.modules if m in all_modules])
+        else:
+            # Default: all modules, sorted
+            modules_to_run = all_modules
+
+        failed_this_run: list[str] = []
+        for module in modules_to_run:
+            json_file = os.path.join(tests, f"{module}.json")
+            if not os.path.isfile(json_file):
                 continue
-            with open(os.path.join(tests, t)) as f:
+            with open(json_file) as f:
                 json_data = json.load(f)
+            prev_failed = any_failed
             any_failed = run_module_test(
                 module, json_data, args, complete_msgs, any_failed
             )
+            if any_failed and not prev_failed:
+                failed_this_run.clear()  # -x: only record the first failure
+            if any_failed:
+                failed_this_run.append(module)
+                if args.x:
+                    common.logger.debug("Recording failed module and exiting")
+                    utils.record_failed_test(module, first=True)
+                    log_complete_msgs(complete_msgs)
+        if failed_this_run and not args.x:
+            common.logger.debug("Recording failed modules")
+            with open(os.path.join(common.MINITRINO_USER_DIR, ".lastfailed"), "w") as f:
+                for m in failed_this_run:
+                    f.write(f"{m}\n")
         log_complete_msgs(complete_msgs)
     except KeyboardInterrupt as e:
         ModuleTest.log_failure("Test run interrupted by user (Ctrl+C)", e)

@@ -10,16 +10,16 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from time import sleep
-from typing import Dict, Optional, TypedDict
+from typing import Dict, Optional
 
 import docker
 from click.testing import CliRunner, Result
 from docker.models.containers import Container
 
 from minitrino.cli import cli
-from minitrino.core.cmd_exec import CommandExecutor
 from minitrino.core.docker.socket import resolve_docker_socket
 from minitrino.settings import ROOT_LABEL
+from minitrino.utils import strip_ansi
 
 USER_HOME_DIR = os.path.expanduser("~")
 MINITRINO_USER_DIR = os.path.abspath(os.path.join(USER_HOME_DIR, ".minitrino"))
@@ -29,14 +29,35 @@ MINITRINO_LIB_DIR = os.path.join(
 )
 
 # ------------------------
-# Misc Utilities
+# Logging Utilities
 # ------------------------
 
 
-def get_logger() -> logging.Logger:
-    """Get the logger for the test module."""
+def get_logger(log_level: int | None = None) -> logging.Logger:
+    """
+    Get or create the logger for the test module.
+
+    If the logger has already been created, always set its log level if
+    log_level is provided. Otherwise, use the environment variable or
+    INFO.
+
+    Parameters
+    ----------
+    log_level : int | None
+        The log level to use for the logger. Defaults to the value of
+        the `MINITRINO_TEST_LOG_LEVEL` environment variable, or
+        `logging.INFO` if not set.
+    """
     logger = logging.getLogger("minitrino.test")
-    logger.setLevel(logging.DEBUG)
+    if isinstance(log_level, int):
+        logger.setLevel(log_level)
+    elif not logger.hasHandlers():
+        env_log_level: str | int = os.environ.get(
+            "MINITRINO_TEST_LOG_LEVEL", logging.INFO
+        )
+        if isinstance(env_log_level, str):
+            env_log_level = env_log_level.strip()
+        logger.setLevel(env_log_level)
     if not logger.handlers:
         handler = logging.StreamHandler(sys.stdout)
         formatter = logging.Formatter(
@@ -47,40 +68,35 @@ def get_logger() -> logging.Logger:
     return logger
 
 
-logger = get_logger()
-
-
-def strip_ansi(text: str) -> str:
-    """Strip ANSI escape codes from a string."""
-    return CommandExecutor._strip_ansi(text)
-
+logger: logging.Logger = get_logger()
 
 # ------------------------
 # CLI Command Helpers
 # ------------------------
 
 
-class BuildCmdArgs(TypedDict, total=False):
-    """Arguments for build_cmd."""
-
-    base: str
-    cluster: str
-    append: list[str]
-    prepend: list[str]
-    verbose: bool
-
-
-class CLICommandBuilder:
-    """Build a CLI command for CliRunner.
+class MinitrinoExecutor:
+    """
+    Minitrino CLI command builder and executor.
 
     Parameters
     ----------
     cluster : str
         The cluster name to use.
+    debug : bool
+        Whether to enable debug logging.
+
+    Methods
+    -------
+    build_cmd
+        Build a CLI command for CliRunner.
+    exec
+        Log and execute a CLI command.
     """
 
-    def __init__(self, cluster: str):
+    def __init__(self, cluster: str, debug: bool = False):
         self.cluster = cluster
+        self.debug = debug
 
     def build_cmd(
         self,
@@ -88,7 +104,7 @@ class CLICommandBuilder:
         cluster: str = "",
         append: Optional[list[str]] = None,
         prepend: Optional[list[str]] = None,
-        verbose: bool = True,
+        debug: Optional[bool] = None,
     ) -> list[str]:
         """
         Build a CLI command for CliRunner.
@@ -109,9 +125,9 @@ class CLICommandBuilder:
         prepend : list[str]
             Extra arguments to add to the command before the base
             command.
-        verbose : bool
-            Whether to add the '-v' and '--global-logging' flags to the
-            command. Defaults to `True`.
+        debug : Optional[bool]
+            Whether to enable debug logging. Defaults to the value of
+            the `debug` attribute of the executor.
 
         Returns
         -------
@@ -132,10 +148,8 @@ class CLICommandBuilder:
         if not base:
             raise ValueError("Base command is required")
         cmd = ["--cluster", cluster or self.cluster, *prepend, base, *append]
-        if verbose:
-            cmd = ["-v", "--global-logging"] + cmd
-        if base == "provision":
-            cmd.append("--build")
+        if self.debug or debug:
+            cmd = ["-v"] + cmd
         cmd = [  # Filter invalid arguments
             s
             for s in cmd
@@ -143,48 +157,49 @@ class CLICommandBuilder:
         ]
         return cmd
 
+    def exec(
+        self,
+        cmd: list[str],
+        input: str | None = None,
+        env: Optional[Dict[str, str]] = None,
+        log_output: bool = True,
+    ) -> Result:
+        """
+        Log and execute a CLI command.
 
-def cli_cmd(
-    cmd: list[str],
-    input: str | None = None,
-    env: Optional[Dict[str, str]] = None,
-    log_output: bool = True,
-) -> Result:
-    """
-    Log and execute a CLI command.
+        Parameters
+        ----------
+        cmd : list[str]
+            The command and arguments to invoke.
+        input : str | None
+            Input string to pass to the command (for prompts, etc.).
+            Defaults to None.
+        env : Optional[Dict[str, str]]
+            Environment variables to set for the command. Defaults to an
+            empty dict.
+        log_output : bool
+            Whether to log the output of the command. Defaults to True.
 
-    Parameters
-    ----------
-    cmd : list[str]
-        The command and arguments to invoke.
-    input : str | None
-        Input string to pass to the command (for prompts, etc.).
-        Defaults to None.
-    env : Optional[Dict[str, str]]
-        Environment variables to set for the command. Defaults to an
-        empty dict.
-    log_output : bool
-        Whether to log the output of the command. Defaults to `True`.
-
-    Returns
-    -------
-    Result
-        The Click testing Result object.
-    """
-    msg = "Invoking CLI command '%s' %s"
-    logger.info(
-        msg
-        % (
-            f"minitrino {' '.join(cmd) if cmd else ''}",
-            " with input: %s" % input if input else "",
-        )
-    )
-    runner = CliRunner()
-    env = env or {}
-    result = runner.invoke(cli, cmd, input=input, env=env)
-    if log_output:
-        logger.info(f"Result output:\n{result.output}")
-    return result
+        Returns
+        -------
+        Result
+            The Click testing Result object.
+        """
+        msg = "Invoking CLI command '%s' %s"
+        if log_output:
+            logger.debug(
+                msg
+                % (
+                    f"minitrino {' '.join(cmd) if cmd else ''}",
+                    " with input: %s" % input if input else "",
+                )
+            )
+        runner = CliRunner()
+        env = env or {}
+        result = runner.invoke(cli, cmd, input=input, env=env)
+        if log_output:
+            logger.debug(f"Result output:\n{result.output.rstrip()}")
+        return result
 
 
 # ------------------------
@@ -192,14 +207,9 @@ def cli_cmd(
 # ------------------------
 
 
-def is_docker_running(logger: Optional[logging.Logger] = None) -> bool:
+def is_docker_running() -> bool:
     """
     Check if the Docker daemon is currently running and accessible.
-
-    Parameters
-    ----------
-    logger : Optional[logging.Logger]
-        The logger to use for logging.
 
     Returns
     -------
@@ -212,10 +222,7 @@ def is_docker_running(logger: Optional[logging.Logger] = None) -> bool:
         return True
     except Exception as e:
         msg = f"Failed to ping Docker daemon: {e}"
-        if not logger:
-            logging.getLogger("minitrino.test").warning(msg)
-        if logger:
-            logger.warning(msg)
+        logger.warning(msg)
         return False
 
 
@@ -242,7 +249,7 @@ def try_start(cmd: list[str]) -> bool:
         return False
 
 
-def start_docker_daemon(logger: Optional[logging.Logger] = None) -> None:
+def start_docker_daemon() -> None:
     """
     Start the Docker daemon on macOS or Linux.
 
@@ -267,7 +274,7 @@ def start_docker_daemon(logger: Optional[logging.Logger] = None) -> None:
     to start it if Docker is not already running. It waits up to 60
     seconds for Docker to become available.
     """
-    if is_docker_running(logger):
+    if is_docker_running():
         return
 
     started = False
@@ -539,7 +546,7 @@ def _execute_in_shell(
         Command result object containing the command output and exit
         code.
     """
-    print(f"Executing command on host shell: {cmd}")
+    logger.debug(f"Executing command in host shell: {cmd}")
 
     env = env or {}
     process = subprocess.Popen(
@@ -553,13 +560,13 @@ def _execute_in_shell(
     )
 
     output = ""
-    print("Command output:")
+    logger.debug("Command output:")
     if process.stdout is None:
-        raise RuntimeError("Failed to execute command.")
+        raise RuntimeError(f"Failed to execute command: {cmd}")
     with process.stdout as p:
         for line in p:
             output += line
-            print(line, end="")  # process line here
+            logger.debug(line.rstrip())
     process.wait()
     return CommandResult(cmd, output, process.returncode)
 
@@ -594,7 +601,7 @@ def _execute_in_container(
     api_client = docker.APIClient(base_url=resolve_docker_socket())
     container = get_containers(container_name)[0]
 
-    print(f"Executing command in container '{container.name}': {cmd}")
+    logger.debug(f"Executing command in container '{container.name}': {cmd}")
 
     env = env or {}
     exec_handler = api_client.exec_create(
@@ -609,22 +616,21 @@ def _execute_in_container(
 
     output = ""
     full_line = ""
-    print("Command output:")
+    logger.debug("Command output:")
     for chunk in output_generator:
         chunk = chunk.decode()
         output += chunk
         chunk = chunk.split("\n", 1)
         if len(chunk) > 1:  # Indicates newline present
             full_line += chunk[0]
-            print(strip_ansi(full_line), end="")
+            logger.debug(strip_ansi(full_line).rstrip())
             full_line = ""
             if chunk[1]:
                 full_line = chunk[1]
         else:
             full_line += chunk[0]
     if full_line:
-        print(strip_ansi(full_line), end="")
-    print("\n")
+        logger.debug(strip_ansi(full_line).rstrip())
 
     exit_code = api_client.exec_inspect(exec_handler["Id"]).get("ExitCode")
     return CommandResult(cmd, output, exit_code)

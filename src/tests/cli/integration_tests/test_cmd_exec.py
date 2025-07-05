@@ -3,11 +3,11 @@ from dataclasses import dataclass
 import pytest
 
 from tests import common
-from tests.cli import utils
 from tests.cli.constants import CLUSTER_NAME
+from tests.cli.integration_tests import utils
 
 pytestmark = pytest.mark.usefixtures("log_test", "start_docker")
-builder = common.CLICommandBuilder(CLUSTER_NAME)
+executor = common.MinitrinoExecutor(CLUSTER_NAME)
 
 
 @dataclass
@@ -109,7 +109,7 @@ def test_exec_scenarios(scenario: ExecScenario) -> None:
     if scenario.cmd_flags:
         append_flags.extend(scenario.cmd_flags)
     append_flags.append(scenario.cmd)
-    cmd = builder.build_cmd(base="exec", append=append_flags)
-    result = common.cli_cmd(cmd)
+    cmd = executor.build_cmd(base="exec", append=append_flags)
+    result = executor.exec(cmd)
     utils.assert_exit_code(result, expected=scenario.expected_exit_code)
     utils.assert_in_output(*scenario.expected_output, result=result)

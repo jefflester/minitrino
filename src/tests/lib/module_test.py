@@ -3,7 +3,7 @@
 import os
 import re
 import sys
-from time import sleep
+from time import monotonic, sleep
 
 import click
 import jsonschema
@@ -25,6 +25,8 @@ from tests.lib import utils  # noqa: E402
 
 CONTAINER_NAME = "minitrino-lib-test"
 COLOR_OUTPUT = sys.stdout.isatty()
+
+logger = common.logger
 
 
 class ModuleTest:
@@ -67,14 +69,21 @@ class ModuleTest:
         self.x = x
         self.specs = utils.SPECS
 
-    def run(self) -> None:
-        """Run all tests for the module."""
+    def run(self) -> bool:
+        """
+        Run all tests for the module.
+
+        Returns
+        -------
+        bool
+            `True` if tests were run, `False` if they were skipped.
+        """
         utils.log_status(f"Running tests for module: '{self.module}'")
         if self._skip_enterprise():
             utils.log_status(
                 f"Module '{self.module}' is an enterprise module, skipping test"
             )
-            return
+            return False
 
         tests = self.json_data.get("tests", [])
         for t in tests:
@@ -83,6 +92,7 @@ class ModuleTest:
         self._runner(tests)
         self.cleanup(debug=self.debug)
         self._runner(tests, workers=True)
+        return True
 
     @staticmethod
     def cleanup(remove_images=False, debug=False) -> None:
@@ -96,18 +106,18 @@ class ModuleTest:
         debug : bool
             Whether to enable debug logging.
         """
-        builder = common.CLICommandBuilder("all")
-        cmd_down = builder.build_cmd("down", append=["--sig-kill"], verbose=debug)
-        common.cli_cmd(cmd_down)
-        cmd_remove = builder.build_cmd("remove", append=["--volumes"], verbose=debug)
-        common.cli_cmd(cmd_remove)
+        executor = common.MinitrinoExecutor("all", debug)
+        cmd_down = executor.build_cmd("down", append=["--sig-kill"])
+        executor.exec(cmd_down)
+        cmd_remove = executor.build_cmd("remove", append=["--volumes"])
+        executor.exec(cmd_remove)
         if remove_images:
-            common.logger.info("Removing images...")
+            logger.debug("Removing images...")
             common.execute_cmd(
                 'docker images -q | grep -v "$(docker images minitrino/cluster -q)" | '
-                "xargs -r docker rmi"
+                "xargs -r docker rmi",
             )
-        common.logger.info("Disk space usage:")
+        logger.debug("Disk space usage:")
         common.execute_cmd("df -h")
 
     @staticmethod
@@ -180,7 +190,7 @@ class ModuleTest:
         """
         cmd_result = common.execute_cmd(
             f"minitrino modules -m {self.module} --json | "
-            f"jq --arg module {self.module} '.[$module].enterprise'"
+            f"jq --arg module {self.module} '.[$module].enterprise'",
         )
         if self.image == "trino" and cmd_result.output.strip() == "true":
             utils.log_status(
@@ -215,15 +225,15 @@ class ModuleTest:
         ]
         if workers:
             append_args += ["--workers", "1"]
-        builder = common.CLICommandBuilder("lib-test")
-        cmd = builder.build_cmd(
+        executor = common.MinitrinoExecutor("lib-test", debug=self.debug)
+        cmd = executor.build_cmd(
             base="provision",
             prepend=cluster_ver,
             append=append_args,
-            verbose=self.debug,
         )
-        cmd_result = common.cli_cmd(cmd)
+        cmd_result = executor.exec(cmd)
         if cmd_result.exit_code != 0:
+            common.logger.info(cmd_result.output)
             raise RuntimeError(
                 f"Provisioning of module '{self.module}' failed. Exiting test."
             )
@@ -243,6 +253,10 @@ class ModuleTest:
                 f"Module test type '{t.get('type')}' for module: '{self.module}'"
             )
 
+        utils.log_status(f"Running test type 'restart' for module '{self.module}'")
+        self._test_restart()
+        self.log_success(f"Module test type 'restart' for module: '{self.module}'")
+
     def _test_query(self, json_data: dict) -> None:
         """
         Test query execution.
@@ -255,6 +269,7 @@ class ModuleTest:
         # Check inputs
         contains = json_data.get("contains", [])
         row_count = json_data.get("rowCount", None)
+        retries = json_data.get("retries", 1)
 
         if not contains and row_count is None:
             raise KeyError(
@@ -263,42 +278,58 @@ class ModuleTest:
             )
 
         # Wait for server to become available
-        i = 0
         cmd = (
             "curl -X GET -H 'Accept: application/json' "
             "-H 'X-Trino-User: admin' 'localhost:8080/v1/info/'"
         )
-        while i <= 60:
+        start = monotonic()
+        while True:
+            elapsed = monotonic() - start
+            if elapsed > 60:
+                raise TimeoutError(
+                    "Timed out waiting for coordinator to become available"
+                )
             cmd_result = common.execute_cmd(cmd, CONTAINER_NAME)
             if '"starting":false' in cmd_result.output:
                 sleep(5)  # hard stop to ensure coordinator is ready
                 break
-            elif i < 60:
+            elif elapsed < 60:
                 sleep(1)
-                i += 1
-            else:
-                raise TimeoutError(
-                    "Timed out waiting for coordinator to become available"
+
+        def _try_query(contains, row_count):
+            sql = json_data.get("sql", "")
+            cmd = f'trino-cli --debug --output-format CSV_HEADER --execute "{sql}"'
+            args = json_data.get("trinoCliArgs", [])
+
+            if args:
+                for i in args:
+                    cmd += f" {i}"
+
+            cmd_result = common.execute_cmd(
+                cmd, CONTAINER_NAME, json_data.get("env", {})
+            )
+
+            for c in contains:
+                assert c in cmd_result.output, f"Output '{c}' not in query result"
+            if row_count:
+                row_count += 1  # Account for column header row
+                query_row_count = cmd_result.output.count("\n")
+                assert row_count == query_row_count, (
+                    f"Expected row count: {row_count}, "
+                    f"actual row count: {query_row_count}"
                 )
 
-        sql = json_data.get("sql", "")
-        cmd = f'trino-cli --debug --output-format CSV_HEADER --execute "{sql}"'
-        args = json_data.get("trinoCliArgs", [])
-
-        if args:
-            for i in args:
-                cmd += f" {i}"
-
-        cmd_result = common.execute_cmd(cmd, CONTAINER_NAME, json_data.get("env", {}))
-
-        for c in contains:
-            assert c in cmd_result.output, f"Output '{c}' not in query result"
-        if row_count:
-            row_count += 1  # Account for column header row
-            query_row_count = cmd_result.output.count("\n")
-            assert (
-                row_count == query_row_count
-            ), f"Expected row count: {row_count}, actual row count: {query_row_count}"
+        for i in range(retries):
+            try:
+                _try_query(contains, row_count)
+                break
+            except Exception as e:
+                if i < retries - 1:
+                    sleep(1.5)
+                    continue
+                else:
+                    common.logger.error(f"Query failed after {retries} retries: {e}")
+                    raise e
 
     def _test_shell(self, json_data: dict) -> None:
         """
@@ -334,8 +365,9 @@ class ModuleTest:
 
         subcommands = json_data.get("subCommands", [])
         if subcommands:
+            prev_output = cmd_result.output
             for s in subcommands:
-                self._execute_subcommand(s, prev_output=cmd_result.output)
+                prev_output = self._execute_subcommand(s, prev_output=prev_output)
 
     def _test_logs(self, json_data: dict) -> None:
         """
@@ -346,29 +378,55 @@ class ModuleTest:
         json_data : dict
             JSON containing log test data.
         """
+        container_name = json_data.get("container", "")
         timeout = json_data.get("timeout", 30)
-        container = common.get_containers(json_data.get("container", ""))[0]
-
-        i = 0
+        start = monotonic()
         while True:
-            logs = container.logs().decode()
+            elapsed = monotonic() - start
+            if elapsed > timeout:
+                raise TimeoutError(
+                    f"Failed to verify container logs after {timeout} seconds"
+                )
             try:
+                container = common.get_containers(container_name)[0]
+                logs = container.logs().decode()
                 for c in json_data.get("contains", []):
-                    assert c in logs, f"'{c}' not found in container log output"
+                    try:
+                        assert c in logs, f"'{c}' not found in container log output"
+                    except Exception:
+                        logger.debug(
+                            f"Log text match for '{c}' not found in container "
+                            f"{container_name}. Retrying..."
+                        )
                 break
             except Exception:
-                if i <= timeout:
-                    common.logger.debug("Log text match not found. Retrying...")
-                    sleep(1)
-                    i += 1
-                else:
-                    raise TimeoutError(f"'{c}' not found in container log output")
+                logger.debug(f"Failed to get container {container_name}. Retrying...")
+            sleep(1)
+
+    def _test_restart(self) -> None:
+        """Test cluster restart."""
+        executor = common.MinitrinoExecutor("lib-test", debug=self.debug)
+        cmd = executor.build_cmd("restart")
+        executor.exec(cmd)
+
+        json_data = {
+            "type": "logs",
+            "name": "Ensure cluster is running after restart",
+            "container": "minitrino-lib-test",
+            "contains": ["CLUSTER IS READY"],
+            "timeout": 60,
+        }
+        try:
+            self._test_logs(json_data)
+        except Exception as e:
+            logger.error(f"Cluster failed to start after restart: {e}")
+            raise e
 
     def _execute_subcommand(
         self, json_data: dict, healthcheck: bool = False, prev_output: str = ""
-    ) -> None:
+    ) -> str:
         """
-        Execute a subcommand.
+        Execute a subcommand and return the output.
 
         Parameters
         ----------
@@ -378,6 +436,11 @@ class ModuleTest:
             Whether this is a healthcheck.
         prev_output : str
             Previous output.
+
+        Returns
+        -------
+        str
+            The output of the subcommand.
         """
         if healthcheck:
             cmd_type = "healthcheck"
@@ -400,8 +463,10 @@ class ModuleTest:
 
         i = 0
         while True:
-            cmd_result = common.execute_cmd(cmd, container, json_data.get("env", {}))
             try:
+                cmd_result = common.execute_cmd(
+                    cmd, container, json_data.get("env", {})
+                )
                 for c in contains:
                     assert c in cmd_result.output, f"'{c}' not in {cmd_type} output"
                 if isinstance(exit_code, int):
@@ -409,12 +474,10 @@ class ModuleTest:
                         f"Unexpected exit code: {cmd_result.exit_code} "
                         f"expected: {exit_code}"
                     )
-                break
-            except AssertionError as e:
+                return cmd_result.output
+            except Exception as e:
                 if i < retry:
-                    common.logger.debug(
-                        f"{cmd_type.title()} did not succeed. Retrying..."
-                    )
+                    logger.debug(f"{cmd_type.title()} did not succeed. Retrying...")
                     i += 1
                     sleep(1)
                 else:

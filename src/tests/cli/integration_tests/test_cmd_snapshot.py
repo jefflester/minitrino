@@ -9,13 +9,13 @@ from click.testing import Result
 
 from minitrino.settings import SCRUBBED
 from tests import common
-from tests.cli import utils
+from tests.cli.integration_tests import utils
 from tests.common import MINITRINO_USER_DIR
 
 SNAPSHOT_NAME = "test"
 
-CMD_SNAPSHOT: common.BuildCmdArgs = {"base": "snapshot"}
-CMD_SNAPSHOT_TEST: common.BuildCmdArgs = {
+CMD_SNAPSHOT: utils.BuildCmdArgs = {"base": "snapshot"}
+CMD_SNAPSHOT_TEST: utils.BuildCmdArgs = {
     "base": "snapshot",
     "append": ["--name", SNAPSHOT_NAME],
 }
@@ -24,7 +24,7 @@ SNAPSHOT_DIR = os.path.join(MINITRINO_USER_DIR, "snapshots")
 SNAPSHOT_FILE = os.path.join(SNAPSHOT_DIR, f"{SNAPSHOT_NAME}.tar.gz")
 MINITRINO_USER_SNAPSHOTS_DIR = os.path.join(MINITRINO_USER_DIR, "snapshots")
 
-builder = common.CLICommandBuilder(utils.CLUSTER_NAME)
+executor = common.MinitrinoExecutor(utils.CLUSTER_NAME)
 
 
 @pytest.fixture
@@ -147,7 +147,7 @@ def test_snapshot_scenarios(scenario: SnapshotScenario) -> None:
 
     cmd_args = copy.deepcopy(CMD_SNAPSHOT)
     cmd_args["append"] = append_flags
-    result = common.cli_cmd(builder.build_cmd(**cmd_args))
+    result = executor.exec(executor.build_cmd(**cmd_args))
     if scenario.check_yaml:
         utils.assert_is_file(snapshot_test_yaml_file(SNAPSHOT_NAME))
     utils.assert_exit_code(result)
@@ -187,7 +187,7 @@ def test_invalid_name() -> None:
     """Test invalid snapshot name."""
     cmd_args = CMD_SNAPSHOT.copy()
     cmd_args["append"] = ["--name", "##.my-test?"]
-    result = common.cli_cmd(builder.build_cmd(**cmd_args))
+    result = executor.exec(executor.build_cmd(**cmd_args))
     utils.assert_exit_code(result, expected=2)
     utils.assert_in_output("Illegal character", result=result)
 
@@ -203,7 +203,7 @@ def test_directory() -> None:
     """
     cmd_args = copy.deepcopy(CMD_SNAPSHOT_TEST)
     cmd_args["append"].extend(["--directory", "/tmp/"])
-    result = common.cli_cmd(builder.build_cmd(**cmd_args), "y\n")
+    result = executor.exec(executor.build_cmd(**cmd_args), "y\n")
     run_assertions(
         result, check_path=os.path.join(os.sep, "tmp"), check_default_paths=False
     )
@@ -220,7 +220,7 @@ def test_directory_invalid() -> None:
     Test that the snapshot file cannot be saved in an invalid directory.
     """
     cmd = append_snapshot_test_cmd(["--directory", "/foo/"])
-    result = common.cli_cmd(cmd, "y\n")
+    result = executor.exec(cmd, "y\n")
     utils.assert_exit_code(result, expected=2)
     utils.assert_in_output(
         "Cannot save snapshot in nonexistent directory:", result=result
@@ -233,12 +233,12 @@ SNAPSHOT_PROVISION_FILE_MSG = "Testing snapshot provision file execution"
 @pytest.mark.parametrize("log_msg", [SNAPSHOT_PROVISION_FILE_MSG], indirect=True)
 def test_provision_file() -> None:
     """Test snapshot `provision-snapshot.sh` execution."""
-    provision = builder.build_cmd(base="provision", append=["--module", "test"])
-    common.cli_cmd(provision)
+    provision = executor.build_cmd(base="provision", append=["--module", "test"])
+    executor.exec(provision)
     cmd_args = copy.deepcopy(CMD_SNAPSHOT_TEST)
     cmd_args["append"].extend(["--module", "test"])
-    common.cli_cmd(builder.build_cmd(**cmd_args), "y\n")
-    common.cli_cmd(builder.build_cmd(base="down", append=["--sig-kill"]))
+    executor.exec(executor.build_cmd(**cmd_args), "y\n")
+    executor.exec(executor.build_cmd(base="down", append=["--sig-kill"]))
     provision_file = snapshot_provision_file()
     output = common.execute_cmd(f"sh {provision_file}")
     utils.assert_exit_code(output)
@@ -253,8 +253,8 @@ def test_force() -> None:
     """Verify overwrite of existing snapshot."""
     cmd_args = copy.deepcopy(CMD_SNAPSHOT_TEST)
     cmd_args["append"].extend(["--module", "test"])
-    common.cli_cmd(builder.build_cmd(**cmd_args))
-    result = common.cli_cmd(append_snapshot_test_cmd(["--force"]))
+    executor.exec(executor.build_cmd(**cmd_args))
+    result = executor.exec(append_snapshot_test_cmd(["--force"]))
     run_assertions(result, check_yaml=False)
     utils.assert_in_output("Overwriting...", result=result)
 
@@ -269,7 +269,7 @@ def test_no_scrub() -> None:
     Verify that the user config file is retained in full when scrubbing
     is disabled.
     """
-    result = common.cli_cmd(append_snapshot_test_cmd(["--no-scrub"]), "y\n")
+    result = executor.exec(append_snapshot_test_cmd(["--no-scrub"]), "y\n")
     run_assertions(result, check_yaml=False)
     utils.assert_not_in_file(SCRUBBED, path=snapshot_config_file())
 
@@ -283,7 +283,7 @@ def test_scrub() -> None:
     """Verify that sensitive data in user config file is scrubbed."""
     cmd_args = copy.deepcopy(CMD_SNAPSHOT_TEST)
     cmd_args["append"].extend(["--module", "test"])
-    result = common.cli_cmd(builder.build_cmd(**cmd_args))
+    result = executor.exec(executor.build_cmd(**cmd_args))
     run_assertions(result, check_yaml=False)
     utils.assert_in_file(SCRUBBED, path=snapshot_config_file())
 
@@ -292,7 +292,7 @@ def append_snapshot_test_cmd(append_flags: list[str] = []) -> list[str]:
     """Build the snapshot command with the given append flags."""
     cmd_args = copy.deepcopy(CMD_SNAPSHOT_TEST)
     cmd_args["append"].extend(append_flags)
-    return builder.build_cmd(**cmd_args)
+    return executor.build_cmd(**cmd_args)
 
 
 def snapshot_test_yaml_file(snapshot_name: str = "test") -> str:

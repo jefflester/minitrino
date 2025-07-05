@@ -1,7 +1,7 @@
 # Spooling Protocol
 
-Adds the [spooling
-protocol](https://docs.starburst.io/latest/client/client-protocol.html#protocol-spooling)
+Adds the
+[spooling protocol](https://docs.starburst.io/latest/client/client-protocol.html#protocol-spooling)
 to the cluster.
 
 ## Usage

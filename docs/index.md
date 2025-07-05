@@ -32,6 +32,6 @@ modules/security/index
 api/index
 ```
 
-______________________________________________________________________
+---
 
 [Minitrino GitHub repository](https://github.com/jefflester/minitrino).

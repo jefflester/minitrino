@@ -23,7 +23,7 @@ SHOW SCHEMAS FROM hive;
 Create a table:
 
 ```sql
-CREATE TABLE hive.minitrino.customer 
+CREATE TABLE hive.minitrino.customer
 WITH (
     location = 's3a://minitrino/minitrino_hive/'
 )

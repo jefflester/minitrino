@@ -19,6 +19,6 @@ session-property-manager
 spooling-protocol
 ```
 
-______________________________________________________________________
+---
 
 [Minitrino GitHub repository](https://github.com/jefflester/minitrino).

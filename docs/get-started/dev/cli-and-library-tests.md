@@ -8,8 +8,8 @@ test type:
 - `.github/workflows/lib-tests.yaml`
 - `.github/workflows/test-release.yaml`
 
-To learn more about the workflows, visit the [GitHub workflows
-overview](https://github.com/jefflester/minitrino/wiki/GitHub-Workflows).
+To learn more about the workflows, visit the
+[GitHub workflows overview](https://github.com/jefflester/minitrino/wiki/GitHub-Workflows).
 
 ## Install Test Packages
 
@@ -22,10 +22,10 @@ pip install --editable src/test/
 
 ## CLI Tests
 
-CLI tests are built using [Click's CLI
-runner](https://click.palletsprojects.com/en/8.1.x/testing/) and thoroughly test
-the CLI's commands and options. The tests and related logic are stored in
-`src/test/src/cli/`.
+CLI tests are built using
+[Click's CLI runner](https://click.palletsprojects.com/en/8.1.x/testing/) and
+thoroughly test the CLI's commands and options. The tests and related logic are
+stored in `src/test/src/cli/`.
 
 To execute the CLI test runner manually, run:
 

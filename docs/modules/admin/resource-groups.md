@@ -1,8 +1,8 @@
 # Resource Groups
 
-Configures [resource
-groups](https://trino.io/docs/current/admin/resource-groups.html) in the
-cluster.
+Configures
+[resource groups](https://trino.io/docs/current/admin/resource-groups.html) in
+the cluster.
 
 ## Usage
 
@@ -25,7 +25,7 @@ can be viewed on the query details through the Trino web UI at
 `system.runtime.queries`, e.g.:
 
 ```sql
-SELECT resource_group_id FROM system.runtime.queries 
+SELECT resource_group_id FROM system.runtime.queries
 WHERE query = 'SELECT 1' AND user = 'admin';
 ```
 

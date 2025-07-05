@@ -84,14 +84,16 @@ minitrino -v provision ...
 minitrino -v -e DOCKER_HOST="unix://${HOME}/.colima/default/docker.sock" provision ...
 ```
 
-Setting this environment variable overrides any context that's set using `docker context use`.
+Setting this environment variable overrides any context that's set using
+`docker context use`.
 
 ## MacOS Users
 
-The latest MacOS releases allow users to use [built-in virtualization
-frameworks](https://docs.docker.com/desktop/settings/mac/) that ship with Docker
-Desktop. To get the most out of the available modules, it is recommended to run
-Minitrino on the latest MacOS with a virtualization framework enabled.
+The latest MacOS releases allow users to use
+[built-in virtualization frameworks](https://docs.docker.com/desktop/settings/mac/)
+that ship with Docker Desktop. To get the most out of the available modules, it
+is recommended to run Minitrino on the latest MacOS with a virtualization
+framework enabled.
 
 Without a virtualization framework, some images will fail to run on ARM64 Macs,
 such as the SQL Server and Db2 images.
@@ -107,9 +109,9 @@ work on older or newer versions due to configuration incompatibilities or
 outdated, dependent services (like a minimum server version for a data source,
 e.g. MySQL). If you run into issues with a module on an older or newer Starburst
 version, you may edit the module source to work with the version you're
-attempting to deploy. See the [module building
-wiki](https://github.com/jefflester/minitrino/wiki/Build-a-Module) for
-instructions on creating/editing modules.
+attempting to deploy. See the
+[module building wiki](https://github.com/jefflester/minitrino/wiki/Build-a-Module)
+for instructions on creating/editing modules.
 
 ## Developer Installation
 

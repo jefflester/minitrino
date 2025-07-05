@@ -1,8 +1,8 @@
 # Password File Authentication
 
-Enable [password file
-authentication](https://trino.io/docs/current/security/password-file.html) on
-the coordinator.
+Enable
+[password file authentication](https://trino.io/docs/current/security/password-file.html)
+on the coordinator.
 
 ## Usage
 

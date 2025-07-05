@@ -86,7 +86,6 @@ for `${POSTGRES_VER}`
 
 ```yaml
 services:
-
   postgres:
     image: postgres:${POSTGRES_VER}
 ```

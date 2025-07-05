@@ -2,8 +2,9 @@
 
 Configure and deploy the necessary components for
 [Insights](https://docs.starburst.io/latest/insights/configuration.html), which
-includes the SEP UI and the required [backend
-service](https://docs.starburst.io/latest/admin/backend-service.html) database.
+includes the SEP UI and the required
+[backend service](https://docs.starburst.io/latest/admin/backend-service.html)
+database.
 
 ## Usage
 

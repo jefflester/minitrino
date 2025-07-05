@@ -1,8 +1,8 @@
 # Elasticsearch Catalog
 
-Add an [Elasticsearch
-catalog](https://trino.io/docs/current/connector/elasticsearch.html) to the
-cluster along with an ES container with some preloaded data.
+Add an
+[Elasticsearch catalog](https://trino.io/docs/current/connector/elasticsearch.html)
+to the cluster along with an ES container with some preloaded data.
 
 ## Usage
 

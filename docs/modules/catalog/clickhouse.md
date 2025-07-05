@@ -1,8 +1,8 @@
 # ClickHouse Catalog
 
-Add a [ClickHouse
-catalog](https://trino.io/docs/current/connector/clickhouse.html) to the cluster
-along with ClickHouse backend.
+Add a
+[ClickHouse catalog](https://trino.io/docs/current/connector/clickhouse.html) to
+the cluster along with ClickHouse backend.
 
 The module provisions a ClickHouse server with some preloaded data. The
 preloaded tables are stored in the `minitrino` ClickHouse database, which is

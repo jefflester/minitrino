@@ -42,7 +42,7 @@ SELECT current_user;
 This should return the user:
 
 ```text
- admin 
+ admin
 ```
 
 The pattern can be used for any of the Kerberos principals defined in the table

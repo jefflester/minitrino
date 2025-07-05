@@ -1,9 +1,9 @@
 # Delta Lake Catalog
 
-Add a [Delta Lake
-catalog](https://trino.io/docs/current/connector/delta-lake.html) to the cluster
-along with a Hive metastore for storing table metadata and MinIO object storage
-for storing table data.
+Add a
+[Delta Lake catalog](https://trino.io/docs/current/connector/delta-lake.html) to
+the cluster along with a Hive metastore for storing table metadata and MinIO
+object storage for storing table data.
 
 ## Usage
 
@@ -26,7 +26,7 @@ SHOW SCHEMAS FROM delta;
 Create a table:
 
 ```sql
-CREATE TABLE delta.minitrino.customer 
+CREATE TABLE delta.minitrino.customer
 WITH (
     location = 's3a://minitrino/minitrino_delta_lake/minitrino/'
 )

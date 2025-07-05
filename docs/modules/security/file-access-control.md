@@ -1,7 +1,7 @@
 # File-Based Access Control
 
-Enable [file-based access
-control](https://trino.io/docs/current/security/file-system-access-control.html).
+Enable
+[file-based access control](https://trino.io/docs/current/security/file-system-access-control.html).
 
 ## Usage
 
@@ -24,12 +24,12 @@ SHOW CATALOGS;
 ```
 
 ```text
- Catalog 
+ Catalog
 ---------
- jmx     
- memory  
- system  
- tpcds   
+ jmx
+ memory
+ system
+ tpcds
  tpch
 ```
 
@@ -46,9 +46,9 @@ SHOW CATALOGS;
 ```
 
 ```text
- Catalog 
+ Catalog
 ---------
- system 
+ system
 ```
 
 ## Access Control Rules

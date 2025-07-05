@@ -39,8 +39,8 @@ workflows are triggered:
 - `cli-tests.yaml`
 - `test-release.yaml`
 
-The first two workflows automate the tests described in [testing
-overview](https://github.com/jefflester/minitrino/wiki/CLI-and-Library-Tests).
+The first two workflows automate the tests described in
+[testing overview](https://github.com/jefflester/minitrino/wiki/CLI-and-Library-Tests).
 The `test-release.yaml` workflow creates a draft release and tag (`0.0.0`) with
 the release branch as its target. This allows for the testing suite to have
 access to an updated Minitrino library reflective of the current state of the

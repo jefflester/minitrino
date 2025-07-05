@@ -1,7 +1,7 @@
 # Built-in Access Control
 
-Enable [built-in access control
-(BIAC)](https://docs.starburst.io/latest/security/biac-overview.html).
+Enable
+[built-in access control (BIAC)](https://docs.starburst.io/latest/security/biac-overview.html).
 
 ## Usage
 
@@ -27,10 +27,10 @@ SHOW ROLES;
 ```
 
 ```text
-   Role   
+   Role
 ----------
- public   
- sysadmin 
+ public
+ sysadmin
 ```
 
 ## Default Roles

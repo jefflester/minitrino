@@ -10,6 +10,6 @@ catalog/index
 security/index
 ```
 
-______________________________________________________________________
+---
 
 [Minitrino GitHub repository](https://github.com/jefflester/minitrino).

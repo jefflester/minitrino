@@ -1,4 +1,4 @@
-# TLS Module
+# TLS
 
 Enable [HTTPS](https://trino.io/docs/current/security/tls.html) on the
 coordinator using a self-signed certificate.
@@ -11,11 +11,7 @@ Provision the module:
 minitrino provision -m tls
 ```
 
-Open a shell to the coordinator:
-
-```sh
-minitrino exec -i
-```
+{{ connect_trino_cli }}
 
 Connect to the coordinator over HTTPS:
 
@@ -82,8 +78,10 @@ trino-cli-executable.jar \
 
 Open a browser and navigate to `https://localhost:8443`.
 
+```{table}
 | Browser | How to Accept Self-Signed Certificate |
 |:----------|:------------------------------------------------------|
 | Chrome | Click anywhere and type `thisisunsafe` |
 | Firefox | Click **Advanced** → **Accept the Risk and Continue** |
 | Safari | Click **Show Details** → **visit this website** |
+```

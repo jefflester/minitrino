@@ -18,6 +18,7 @@ Submodules
 
    minitrino.cli
    minitrino.settings
+   minitrino.shutdown
    minitrino.utils
 
 Module contents

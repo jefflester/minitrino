@@ -1,7 +1,7 @@
-minitrino.core.cmd\_exec module
+minitrino.core.exec.host module
 ===============================
 
-.. automodule:: minitrino.core.cmd_exec
+.. automodule:: minitrino.core.exec.host
    :members:
    :show-inheritance:
    :undoc-members:

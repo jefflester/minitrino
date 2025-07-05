@@ -1,23 +1,21 @@
-# Session Property Manager Module
+# Session Property Manager
 
-A module which implements Trino's file-based [session property
-manager](https://docs.starburst.io/latest/admin/session-property-managers.html).
-
-Leverages the `file-group-provider` and `resource-groups` module to define
-various user groups and resource management logic within the system.
+Configures the file-based [session property
+manager](https://trino.io/docs/current/admin/session-property-managers.html) in
+the cluste.
 
 ## Usage
 
+Provision the module:
+
 ```sh
-minitrino -v provision -m session-property-manager
-# Or specify cluster version
-minitrino -v -e CLUSTER_VER=${version} provision -m session-property-manager
+minitrino provision -m session-property-manager
+```
 
-# Get into the container and connect as a user tied to a group
-docker exec -it minitrino bash 
-trino-cli --user admin
+{{ connect_trino_cli_admin }}
 
-trino> SELECT 1;
+```sql
+SELECT 1;
 ```
 
 The resource groups will apply to all users, with varying weights and priorities
@@ -28,12 +26,11 @@ The session property JSON file is mounted to the cluster as a volume and can be
 viewed/edited within the container:
 
 ```sh
-docker exec -it minitrino bash 
-vi /etc/"${CLUSTER_DIST}"/session-property.json
+minitrino exec -i \
+    'vi /etc/${CLUSTER_DIST}/session-property.json'
 ```
 
-Alternatively, it can be edited directly in the library:
+## Dependent Modules
 
-```sh
-lib/modules/admin/session-property-manager/resources/cluster/session-property.json
-```
+- [`file-group-provider`](./file-group-provider.md): Used to define user groups.
+- [`resource-groups`](./resource-groups.md): Used to define resource groups.

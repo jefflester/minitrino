@@ -1,0 +1,12 @@
+services:
+  minitrino-docs:
+    image: python:3.10-slim
+    container_name: minitrino-docs
+    working_dir: /docs
+    volumes:
+      - .:/docs:ro
+      - ./_build/html:/site:ro
+    ports:
+      - "8000:8000"
+    command: >
+      sh -c "pip install --no-cache-dir sphinx && cd /site && python -m http.server 8000"

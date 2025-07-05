@@ -1,64 +1,41 @@
-# Delta Lake Catalog Module
+# Delta Lake Catalog
 
-This module deploys the necessary components for a Delta Lake environment.
+Add a [Delta Lake
+catalog](https://trino.io/docs/current/connector/delta-lake.html) to the cluster
+along with a Hive metastore for storing table metadata and MinIO object storage
+for storing table data.
 
-- **Metastore**: served via a Hive metastore (`metastore-delta-lake` container
-  backed by `postgres-delta-lake` for storage)
-  - The HMS image is based off of naushadh's repository
-    [here](https://github.com/naushadh/hive-metastore) (refer to his repository
-    for additional documentation on the HMS image and configuration options)
+## Usage
 
-This module uses the Delta Lake connector. There is no Spark backend, so tables
-need to be created via `CREATE TABLE AS ...` queries through the `delta`
-catalog. Example:
+{{ persistent_storage_warning }}
+
+Provision the module:
+
+```sh
+minitrino provision -m delta-lake
+```
+
+{{ connect_trino_cli }}
+
+Confirm Delta Lake is reachable:
 
 ```sql
-CREATE TABLE delta.default.customer 
+SHOW SCHEMAS FROM delta;
+```
+
+Create a table:
+
+```sql
+CREATE TABLE delta.minitrino.customer 
 WITH (
-    location = 's3a://minitrino/wh/default/'
+    location = 's3a://minitrino/minitrino_delta_lake/minitrino/'
 )
 AS SELECT * FROM tpch.tiny.customer;
 ```
 
-This will create the table `delta.default.customer` and a corresponding
+This will create the table `delta.minitrino.customer` and a corresponding
 `_delta_log` directory in MinIO object storage.
 
-## Usage
+## Dependent Modules
 
-```sh
-minitrino -v provision -m delta-lake
-# Or specify cluster version
-minitrino -v -e CLUSTER_VER=${version} provision -m delta-lake
-
-docker exec -it minitrino bash 
-trino-cli
-
-trino> SHOW SCHEMAS FROM delta;
-```
-
-## Persistent Storage
-
-This module uses named volumes to persist MinIO and metastore data:
-
-```yaml
-volumes:
-  postgres-delta-lake-data:
-    labels:
-      - org.minitrino.root=true
-      - org.minitrino.module.catalog.delta-lake=true
-```
-
-The user-facing implication is that the data in the Hive metastore is retained
-even after shutting down and/or removing the environment's containers. Minitrino
-issues a warning about this whenever a module with named volumes is deployed––be
-sure to look out for these warnings:
-
-```text
-[w]  Module '<module>' has persistent volumes associated with it. To delete these volumes, remember to run `minitrino remove --volumes`.
-```
-
-To remove these volumes, run:
-
-```sh
-minitrino -v remove --volumes --label org.minitrino.module.catalog.delta-lake=true
-```
+- [`minio`](../admin/minio.md#minio): Required for object storage.

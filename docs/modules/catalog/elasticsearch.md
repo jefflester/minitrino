@@ -1,109 +1,32 @@
-# Elasticsearch Catalog Module
+# Elasticsearch Catalog
 
-This module contains an ES container with some preloaded data. It contains: a
-schema (ES mapping), a table (ES doc mapping), and 500 rows of fake data (ES
-docs).
+Add an [Elasticsearch
+catalog](https://trino.io/docs/current/connector/elasticsearch.html) to the
+cluster along with an ES container with some preloaded data.
 
 ## Usage
 
+{{ persistent_storage_warning }}
+
+Provision the module:
+
 ```sh
-minitrino -v provision -m elasticsearch
-# Or specify cluster version
-minitrino -v -e CLUSTER_VER=${version} provision -m elasticsearch
+minitrino provision -m elasticsearch
+```
 
-docker exec -it minitrino bash 
-trino-cli
+{{ connect_trino_cli }}
 
-trino> SHOW SCHEMAS FROM elasticsearch;
+Confirm Elasticsearch is reachable:
+
+```sql
+SHOW SCHEMAS FROM elasticsearch;
 ```
 
 ## Loading Data
 
-Elasticsearch is exposed on `localhost:9200`, so additional data can be loaded
-as follows:
+The Elasticsearch REST API is exposed on `localhost:9200`. Data can be loaded
+through that, or by using the script provided in the module:
 
 ```sh
-# Create user index
-curl -XPUT http://localhost:9200/user?pretty=true;
-# Create user mapping
-curl -XPUT http://localhost:9200/user/_mapping/profile?include_type_name=true -H 'Content-Type: application/json'-d '
-{
-  "profile": {
-    "properties": {
-      "full_name": {
-        "type": "text",
-        "store": true
-      },
-      "bio": {
-        "type": "text",
-        "store": true
-      },
-      "age": {
-        "type": "integer"
-      },
-      "location": {
-        "type": "geo_point"
-      },
-      "enjoys_coffee": {
-        "type": "boolean"
-      },
-      "created_on": {
-        "type": "date",
-        "format": "date_time"
-      }
-    }
-  }
-}
-';
-# Create user profile records
-curl -XPOST http://localhost:9200/user/profile/1?pretty=true -H 'Content-Type: application/json' -d '
-{
-  "full_name": "Andrew Puch",
-  "bio": "My name is Andrew. I have a short bio.",
-  "age": 26,
-  "location": "41.1246110,-73.4232880",
-  "enjoys_coffee": true,
-  "created_on": "2015-05-02T14:45:10.000-04:00"
-}
-';
-```
-
-If scripting fake data is preferable, reference the bootstrap script leveraged
-by this module, located at:
-
-```sh
-lib/modules/catalog/elasticsearch/resources/bootstrap/bootstrap-elasticsearch.sh
-```
-
-## Persistent Storage
-
-This module uses named volumes to persist ES data:
-
-```yaml
-volumes:
-  elasticsearch-data:
-    labels:
-      - org.minitrino.root=true
-      - org.minitrino.module.catalog.elasticsearch=true
-```
-
-The user-facing implication is that ES data is retained even after shutting down
-and/or removing the environment's containers. Minitrino issues a warning about
-this whenever a module with named volumes is deployed––be sure to look out for
-these warnings:
-
-```text
-[w]  Module '<module>' has persistent volumes associated with it. To delete these volumes, remember to run `minitrino remove --volumes`.
-```
-
-To remove these volumes, run:
-
-```sh
-minitrino -v remove --volumes --label org.minitrino.module.catalog.elasticsearch=true
-```
-
-Or, remove them directly using the Docker CLI:
-
-```sh
-docker volume rm minitrino_elasticsearch-data
+lib/modules/catalog/elasticsearch/resources/cluster/bootstrap-es.sh
 ```

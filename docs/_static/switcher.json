@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "url": "https://jefflester.github.io/minitrino/",
+  "entries": [
+    {"version": "stable", "url": "https://jefflester.github.io/minitrino/"},
+    {"version": "dev", "url": "https://jefflester.github.io/minitrino/dev/"}
+  ]
+}

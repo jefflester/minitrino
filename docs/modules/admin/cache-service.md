@@ -1,39 +1,51 @@
-# Cache Service Module
+# Cache Service
 
-This module configures [Starburst's cache
-service](https://docs.starburst.io/latest/admin/cache-service.html) feature
-along with basic config for [table scan
+Add a [cache service](https://docs.starburst.io/latest/admin/cache-service.html)
+to the cluster.
+
+The module also configures [table scan
 redirections](https://docs.starburst.io/latest/admin/cache-service.html#enable-table-scan-redirections)
 and [materialized
 views](https://docs.starburst.io/latest/connector/starburst-hive.html#materialized-views).
 
-The module launches with the `postgres`, `hive`, and `insights` modules.
-Additional catalogs, `cache_svc` and `hive_mv_tsr`, are also configured.
-`cache_svc` exposes the backend database for the cache service for querying in
-Starburst, and `hive_mv_tsr` is based on the `hive` catalog but with
-materialized views and `hive.security=allow-all` enabled.
-
-For troubleshooting, the bootstrap script enables debug logging for
-`com.starburstdata.cache` as well as JMX dump tables for the MBeans associated
-with the cache service. The JMX dump tables can be queried in the `jmx.history`
-schema.
-
 ## Usage
 
+{{ starburst_license_warning }}
+
 ```sh
-minitrino -v provision -m cache-service
-# Or specify cluster version
-minitrino -v -e CLUSTER_VER=${version} provision -m cache-service
+minitrino -e CLUSTER_VER=${version}-e provision -i starburst -m cache-service
 ```
 
-## Table Scan Redirections (TSRs)
+The following catalogs are configured:
 
-The `rules.json` file configures two tables for TSRs: `postgres.public.customer`
-and `postgres.public.orders`. Additional tables can be specified for TSRs by
-updating the `rules.json` file. The container logs will display the various
-cache service operations as they occur.
+- `cache_svc`: Exposes the backend database for the cache service for querying
+  in Starburst.
+- `hive_mv_tsr`: Based on the `hive` catalog but with materialized views and
+  `hive.security=allow-all` enabled.
 
-## Materialized Views (MVs)
+The bootstrap script enables debug logging for `com.starburstdata.cache` as well
+as JMX dump tables for the MBeans associated with the cache service. The JMX
+dump tables can be queried in the `jmx.history` schema.
 
-An example MV is created in `hive_mv_tsr.mvs.example`. Any number of MVs can be
-added to this catalog, and MVs can pull data from any data source.
+### Automatic Example Data and Schema Creation
+
+Upon provisioning, the bootstrap script will:
+
+- Create and populate `postgres.public.customer` and `postgres.public.orders`
+  with TPCH data.
+- Create Hive schemas in the `hive_mv_tsr` catalog for cache and materialized
+  views.
+- Create an example materialized view in `hive_mv_tsr.mvs.example`.
+
+This ensures the cache service and table scan redirections are immediately
+testable.
+
+## Dependent Modules
+
+- [`postgres`](../catalog/postgres.md#postgres-catalog): Used as a redirect
+  source for table scan redirections.
+- [`hive`](../catalog/hive.md#hive-catalog): Required for the `hive_mv_tsr`
+  catalog.
+- [`minio`](./minio.md#minio): Required for object storage.
+- [`insights`](./insights.md#insights): Enables the Starburst web UI and
+  configures a backend database for persisting cache service configuration.

@@ -1,21 +1,31 @@
-# Db2 Catalog Module
+# Db2 Catalog
 
-This module provisions a standalone Db2 service.
+Add a [Db2 catalog](https://trino.io/docs/current/connector/db2.html) to the
+cluster along with Db2 backend.
 
-**Note for Mac M-chip users**: the Db2 service can take a *long* time to start
-(10-20+ minutes), so ensure you are viewing the Db2 container logs to check the
-status of the service. If you receive a `connection refused` error from cluster
--> Db2, chances are that Db2 has not started yet.
+:::{admonition} Startup Might be ***Slow***
+:class: important
+
+Last I checked, Db2 doesn't work well on ARM processors, so expect the Db2
+container to take a long time to start if you're running an ARM chip.
+:::
 
 ## Usage
 
+{{ starburst_license_warning }}
+
+{{ persistent_storage_warning }}
+
+Provision the module:
+
 ```sh
-minitrino -v provision -m db2
-# Or specify cluster version
-minitrino -v -e CLUSTER_VER=${version} provision -m db2
+minitrino -e CLUSTER_VER=${version}-e provision -i starburst -m db2
+```
 
-docker exec -it minitrino bash 
-trino-cli
+{{ connect_trino_cli }}
 
-trino> SHOW SCHEMAS FROM db2;
+Confirm Db2 is reachable:
+
+```sql
+SHOW SCHEMAS FROM db2;
 ```

@@ -1,51 +1,35 @@
-# Iceberg Catalog Module
+# Iceberg Catalog
 
-This module deploys infrastructure for an Iceberg catalog leveraging the Iceberg
-REST catalog.
+Add an [Iceberg catalog](https://trino.io/docs/current/connector/iceberg.html)
+to the cluster along with MinIO object storage for storing Iceberg data and an
+Iceberg REST catalog for metadata management.
 
 ## Usage
 
+{{ persistent_storage_warning }}
+
 ```sh
-minitrino -v provision -m iceberg
-# Or specify cluster version
-minitrino -v -e CLUSTER_VER=${version} provision -m iceberg
-
-docker exec -it minitrino bash 
-trino-cli
-
-trino> SHOW SCHEMAS FROM iceberg;
+minitrino provision -m iceberg
 ```
 
-Create a schema and a table:
+{{ connect_trino_cli }}
+
+Confirm Iceberg is reachable:
 
 ```sql
-CREATE SCHEMA iceberg.test WITH (location = 's3a://minitrino/wh/test');
-CREATE TABLE iceberg.test.test_tbl AS SELECT * FROM tpch.tiny.customer;
+SHOW SCHEMAS FROM iceberg;
 ```
 
-## Persistent Storage
+Create a table:
 
-This module uses named volumes to persist Iceberg metadata:
-
-```yaml
-volumes:
-  iceberg-metadata:
-    labels:
-      - org.minitrino.root=true
-      - org.minitrino.module.catalog.iceberg=true
+```sql
+CREATE TABLE iceberg.minitrino.customer 
+WITH (
+    location = 's3a://minitrino/minitrino_iceberg/minitrino/'
+)
+AS SELECT * FROM tpch.tiny.customer;
 ```
 
-The user-facing implication is that the Iceberg's metadata is retained even
-after shutting down and/or removing the environment's containers. Minitrino
-issues a warning about this whenever a module with named volumes is deployed––be
-sure to look out for these warnings:
+## Dependent Modules
 
-```text
-[w]  Module '<module>' has persistent volumes associated with it. To delete these volumes, remember to run `minitrino remove --volumes`.
-```
-
-To remove these volumes, run:
-
-```sh
-minitrino -v remove --volumes --label org.minitrino.module.catalog.iceberg=true
-```
+- [`minio`](../admin/minio.md#minio): Required for object storage.

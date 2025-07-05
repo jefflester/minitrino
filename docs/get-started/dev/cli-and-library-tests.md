@@ -1,4 +1,4 @@
-# Tests
+# CLI and Library Tests
 
 Tests are broken into CLI and library tests. PRs targeting the `master` branch
 and new commits to said PRs trigger the following workflows, which automate each

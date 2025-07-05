@@ -9,6 +9,7 @@ Subpackages
 
    minitrino.core.cluster
    minitrino.core.docker
+   minitrino.core.exec
    minitrino.core.logging
 
 Submodules
@@ -17,7 +18,6 @@ Submodules
 .. toctree::
    :maxdepth: 4
 
-   minitrino.core.cmd_exec
    minitrino.core.context
    minitrino.core.envvars
    minitrino.core.errors

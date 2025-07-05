@@ -1,29 +1,40 @@
-# File Group Provider Module
+# File Group Provider
 
-A module which utilizes Trino's [file-based group
-provider](https://docs.starburst.io/latest/security/group-file.html).
+Enable user-group mapping using the [file-based group
+provider](https://trino.io/docs/current/security/group-file.html).
 
 ## Usage
 
-```sh
-minitrino -v provision -m file-group-provider
-# Or specify cluster version
-minitrino -v -e CLUSTER_VER=${version} provision -m file-group-provider
-
-# View group definitions
-docker exec minitrino sh -c 'cat /etc/${CLUSTER_DIST}/groups.txt'
-
-# Get into the container and connect as a user tied to a group
-docker exec -it minitrino bash 
-trino-cli --user admin
-
-trino> SHOW SCHEMAS FROM tpch;
-```
-
-You will need to supply a username to the Trino CLI in order to map to a group
-(see `lib/modules/security/file-access-control/resources/cluster/groups.txt` for
-which users belong to which groups). Example:
+Provision the module:
 
 ```sh
-trino-cli --user admin # maps to group clusteradmins
+minitrino provision -m file-group-provider
 ```
+
+{{ connect_trino_cli_admin }}
+
+Display the groups for the current user via `current_groups()`:
+
+```sql
+SELECT current_groups();
+-- [clusteradmins]
+```
+
+View the groups for the `test` user:
+
+```sh
+minitrino exec -i 'trino-cli --user test'
+```
+
+```sql
+SELECT current_groups();
+-- [clusteradmins, metadata-users, platform-users]
+```
+
+## Group Mapping
+
+| Group | Users |
+|:-------------------|:---------------------------------|
+| `clusteradmins` | `admin`, `cachesvc`, `test` |
+| `metadata-users` | `metadata-user`, `bob`, `test` |
+| `platform-users` | `platform-user`, `alice`, `test` |

@@ -1,45 +1,73 @@
-# File Access Control Module
+# File-Based Access Control
 
-A module which utilizes Trino's [file-based system access control
-plugin](https://docs.starburst.io/latest/security/file-system-access-control.html).
-This module also makes used of the [file-based group
-provider](https://docs.starburst.io/latest/security/group-file.html).
+Enable [file-based access
+control](https://trino.io/docs/current/security/file-system-access-control.html).
 
 ## Usage
 
-```sh
-minitrino -v provision -m file-access-control
-# Or specify cluster version
-minitrino -v -e CLUSTER_VER=${version} provision -m file-access-control
-
-docker exec -it minitrino bash 
-trino-cli --user admin
-
-trino> SHOW SCHEMAS FROM tpch;
-```
-
-You will need to supply a username to the Trino CLI in order to map to a group
-(see `lib/modules/security/file-access-control/resources/cluster/group.txt` for
-which users belong to which groups). Example:
+Provision the module:
 
 ```sh
-trino-cli --user admin
-trino-cli --user metadata-user
-trino-cli --user platform-user
+minitrino provision -m file-access-control
 ```
 
-## Policies
+Connect to the coordinator container's Trino CLI:
 
-The access policy is located in the `rules.json` file which defines groups of
-users that map to certain access control permissions. The users for the groups
-are defined in the `groups.txt` file.
+```sh
+minitrino exec -i 'trino-cli --user admin'
+```
 
-- Users in the `clusteradmins` group have full access to all objects in the
-  cluster
-- Users in the `metadata-users` group have access to the tables within the
-  `system.metadata`, `system.jdbc`, and `system.information_schema` schemas
-- Users in the `platform-users` group only have access to the tables within the
-  `system.runtime` schema
+Confirm catalog visibility:
 
-You can modify this module to further specify access control permissions to
-other catalogs provisioned with other Minitrino modules.
+```sql
+SHOW CATALOGS;
+```
+
+```text
+ Catalog 
+---------
+ jmx     
+ memory  
+ system  
+ tpcds   
+ tpch
+```
+
+Switch to a non-admin user:
+
+```sh
+minitrino exec -i 'trino-cli --user alice'
+```
+
+Confirm catalog visibility:
+
+```sql
+SHOW CATALOGS;
+```
+
+```text
+ Catalog 
+---------
+ system 
+```
+
+## Access Control Rules
+
+The access control rules are located in the `rules.json` file which defines
+groups of users that map to certain access control permissions. The users for
+the groups are defined in the `groups.txt` file (See the
+[`file-group-provider`](../admin/file-group-provider.md#file-group-provider)
+module for more information).
+
+```{table}
+| Group              | Access |
+|:-------------------|:---------------------------------|
+| `clusteradmins` | Full access to all objects in the cluster |
+| `metadata-users` | Access to the tables within the `system.metadata`, `system.jdbc`, and `system.information_schema` schemas |
+| `platform-users` | Access to the tables within the `system.runtime` schema |
+```
+
+## Dependent Modules
+
+- [`file-group-provider`](../admin/file-group-provider.md#file-group-provider):
+  Maps users to groups using a mapping file.

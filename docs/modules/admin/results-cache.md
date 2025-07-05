@@ -1,17 +1,29 @@
-# Results Cache Module
+# Results Cache
 
-This module deploys Starburst Enterprise result caching.
+Adds Starburst Enterprise [result
+caching](https://docs.starburst.io/latest/admin/result-caching.html) to the
+cluster.
 
 ## Usage
 
+{{ starburst_license_warning }}
+
+Provision the module:
+
 ```sh
-minitrino -v provision -m results-cache
-# Or specify cluster version
-minitrino -v -e CLUSTER_VER=${version} provision -m results-cache
-
-docker exec -it minitrino bash 
-trino-cli
-
-# Run query multiple times in a row - subsequent executions should be cached
-trino> SELECT * FROM <TABLE> LIMIT 10;
+minitrino -e CLUSTER_VER=${version}-e provision -i starburst -m results-cache
 ```
+
+{{ connect_trino_cli }}
+
+Run a query multiple times in a row. Subsequent executions should be cached:
+
+```sql
+SELECT * FROM tpch.tiny.customer LIMIT 10;
+```
+
+## Dependent Modules
+
+- [MinIO](./minio.md): Required for results cache storage.
+- [Insights](./insights.md): Enables the Starburst web UI and configures a
+  backend database for persisting results cache configuration.

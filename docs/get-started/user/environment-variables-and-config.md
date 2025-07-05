@@ -1,8 +1,8 @@
-# Environment Variables and Configuration
+# Environment Variables and Config
 
 ## Overview
 
-- [Environment Variables and Configuration](#environment-variables-and-configuration)
+- [Environment Variables and Config](#environment-variables-and-config)
   - [Overview](#overview)
   - [Command Line Options](#command-line-options)
   - [Shell Environment Variables](#shell-environment-variables)

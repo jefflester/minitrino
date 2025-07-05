@@ -10,7 +10,6 @@ import click
 from tests import common
 
 COLOR_OUTPUT = sys.stdout.isatty()
-TERMINAL_WIDTH = shutil.get_terminal_size(fallback=(80, 24)).columns
 
 SPECS = {
     "query": {
@@ -23,6 +22,7 @@ SPECS = {
             "contains": {"type": "array"},
             "rowCount": {"type": "number"},
             "env": {"type": "object"},
+            "retries": {"type": "number"},
         },
         "required": ["type", "name", "sql"],
     },
@@ -36,7 +36,7 @@ SPECS = {
             "contains": {"type": "array"},
             "exitCode": {"type": "number"},
             "env": {"type": "object"},
-            "healthCheck": {
+            "healthcheck": {
                 "type": "object",
                 "properties": {
                     "retries": {"type": "number"},
@@ -79,18 +79,22 @@ SPECS = {
     },
 }
 
+logger = common.logger
+
 
 def dump_container_logs(debug=False) -> None:
     """Dump logs from containers."""
-    if not debug:
+    # Only dump logs if debug is enabled and output is NOT a terminal.
+    # Dumping logs to an interactive terminal is obnoxious.
+    if not debug or sys.stdout.isatty():
         return
     containers = common.get_containers(all=True)
     for container in containers:
         log_msg = f"Dumping logs for container {container.name}:"
-        sep = "=" * TERMINAL_WIDTH
-        common.logger.info(f"{sep}\n{log_msg}\n{sep}")
+        sep = "=" * get_terminal_width()
+        logger.info(f"\n{sep}\n{log_msg}\n{sep}")
         logs = container.logs().decode("utf-8")  # Decode binary logs to string
-        common.logger.info(f"{logs}\n")
+        logger.info(f"{logs}\n")
 
 
 def record_failed_test(test_name: str, first: bool = False) -> None:
@@ -110,7 +114,7 @@ def record_failed_test(test_name: str, first: bool = False) -> None:
         with open(_file, "w+" if first else "a+") as f:
             f.write(f"{test_name}\n")
     except Exception as e:
-        common.logger.error(f"Failed to record failed test: {e}")
+        logger.error(f"Failed to record failed test: {e}")
         raise e
 
 
@@ -118,10 +122,10 @@ def get_failed_tests() -> list[str]:
     """Get the list of failed tests."""
     _file = os.path.join(common.MINITRINO_USER_DIR, ".lastfailed")
     try:
-        with open(_file, "r+") as f:
+        with open(_file, "r") as f:
             return f.read().splitlines()
     except Exception as e:
-        common.logger.error(f"Failed to get failed tests: {e}")
+        logger.error(f"Failed to get failed tests: {e}")
         raise e
 
 
@@ -135,9 +139,14 @@ def log_status(msg) -> None:
     click.echo(
         click.style(
             f"[{_timestamp()} GMT] [STATUS] ",
-            fg="yellow",
             bold=True,
+            fg="cyan",
         )
         + msg,
         color=COLOR_OUTPUT,
     )
+
+
+def get_terminal_width() -> int:
+    """Get the terminal width."""
+    return shutil.get_terminal_size(fallback=(80, 24)).columns

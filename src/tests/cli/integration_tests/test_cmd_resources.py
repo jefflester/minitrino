@@ -4,10 +4,10 @@ from typing import Any
 import pytest
 
 from tests import common
-from tests.cli import utils
 from tests.cli.constants import CLUSTER_NAME, CLUSTER_NAME_2
+from tests.cli.integration_tests import utils
 
-CMD_RESOURCES: common.BuildCmdArgs = {"base": "resources", "cluster": "all"}
+CMD_RESOURCES: utils.BuildCmdArgs = {"base": "resources", "cluster": "all"}
 CLUSTER_RESOURCES = [
     f"minitrino_{CLUSTER_NAME}",  # network
     f"minitrino-{CLUSTER_NAME}_test-data",  # volume
@@ -28,7 +28,7 @@ CLUSTER_2_RESOURCES = [
 pytestmark = pytest.mark.usefixtures(
     "log_test", "start_docker", "remove", "provision_clusters"
 )
-builder = common.CLICommandBuilder(utils.CLUSTER_NAME)
+executor = common.MinitrinoExecutor(utils.CLUSTER_NAME)
 
 
 @dataclass
@@ -94,15 +94,15 @@ resources_scenarios = [
 def test_resources_scenarios(scenario: ResourcesScenario) -> None:
     """Run each ResourcesScenario."""
     if scenario.cluster_count == 0:
-        common.cli_cmd(
-            builder.build_cmd("remove", "all", append=["--volumes", "--networks"])
+        executor.exec(
+            executor.build_cmd("remove", "all", append=["--volumes", "--networks"])
         )
         cmd_args = CMD_RESOURCES.copy()
-        result = common.cli_cmd(builder.build_cmd(**cmd_args))
+        result = executor.exec(executor.build_cmd(**cmd_args))
         utils.assert_exit_code(result)
         utils.assert_not_in_output(*CLUSTER_RESOURCES, result=result)
     cmd_args = CMD_RESOURCES.copy()
-    result = common.cli_cmd(builder.build_cmd(**cmd_args))
+    result = executor.exec(executor.build_cmd(**cmd_args))
     utils.assert_exit_code(result)
     if scenario.cluster_count == 1:
         utils.assert_in_output(*CLUSTER_RESOURCES, result=result)

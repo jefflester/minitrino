@@ -5,11 +5,11 @@ from typing import Optional
 import pytest
 
 from tests import common
-from tests.cli import utils
+from tests.cli.integration_tests import utils
 from tests.common import CONFIG_FILE
 
 pytestmark = pytest.mark.usefixtures("log_test")
-builder = common.CLICommandBuilder(utils.CLUSTER_NAME)
+executor = common.MinitrinoExecutor(utils.CLUSTER_NAME)
 
 
 @dataclass
@@ -87,7 +87,7 @@ daemon_off_scenarios = [
 def test_daemon_off_scenarios(scenario: DaemonOffScenario) -> None:
     """Run each DaemonOffScenario."""
     err_msg = "Error when pinging the Docker server"
-    result = common.cli_cmd(builder.build_cmd(**scenario.cmd), scenario.input_val)
+    result = executor.exec(executor.build_cmd(**scenario.cmd), scenario.input_val)
     utils.assert_exit_code(result, expected=scenario.expected_exit_code)
     utils.assert_in_output(err_msg, result=result)
 
@@ -167,22 +167,22 @@ env_scenarios = [
 def test_env_scenarios(scenario: EnvScenario) -> None:
     """Run each EnvScenario."""
     if scenario.source == "cli":
-        result = common.cli_cmd(
-            builder.build_cmd(
+        result = executor.exec(
+            executor.build_cmd(
                 "modules", prepend=["--env", f"{scenario.envvar}={scenario.envval}"]
             ),
         )
     elif scenario.source == "shell":
-        result = common.cli_cmd(
-            builder.build_cmd("modules"),
+        result = executor.exec(
+            executor.build_cmd("modules"),
             env={scenario.envvar: scenario.envval},
         )
     elif scenario.source == "config":
         utils.write_file(CONFIG_FILE, f"{scenario.envvar}={scenario.envval}", mode="a")
-        result = common.cli_cmd(builder.build_cmd("modules"))
+        result = executor.exec(executor.build_cmd("modules"))
         os.remove(CONFIG_FILE)
     else:  # unset
-        result = common.cli_cmd(builder.build_cmd("modules"))
+        result = executor.exec(executor.build_cmd("modules"))
     utils.assert_exit_code(result)
     if scenario.expected_present:
         utils.assert_in_output(scenario.envvar, scenario.envval, result=result)
@@ -233,8 +233,8 @@ invalid_env_scenarios = [
 @pytest.mark.usefixtures("cleanup_config")
 def test_invalid_env_scenarios(scenario: InvalidEnvScenario) -> None:
     """Run each InvalidEnvScenario."""
-    result = common.cli_cmd(
-        builder.build_cmd("modules", prepend=["--env", scenario.envflag])
+    result = executor.exec(
+        executor.build_cmd("modules", prepend=["--env", scenario.envflag])
     )
     utils.assert_exit_code(result, expected=2)
     utils.assert_in_output("Invalid key-value pair", result=result)
@@ -283,8 +283,8 @@ invalid_lib_scenarios = [
 @pytest.mark.usefixtures("cleanup_config")
 def test_invalid_lib_scenarios(scenario: InvalidLibScenario) -> None:
     """Run each InvalidLibScenario."""
-    result = common.cli_cmd(
-        builder.build_cmd(
+    result = executor.exec(
+        executor.build_cmd(
             "modules", prepend=["--env", f"LIB_PATH={scenario.lib_path}"]
         ),
     )
@@ -304,8 +304,8 @@ def test_multiple_env() -> None:
     Verify that multiple environment variables can be successfully
     passed in.
     """
-    result = common.cli_cmd(
-        builder.build_cmd(
+    result = executor.exec(
+        executor.build_cmd(
             "modules",
             prepend=[
                 "--env",

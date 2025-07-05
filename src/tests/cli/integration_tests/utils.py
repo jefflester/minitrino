@@ -3,7 +3,7 @@
 import json
 import os
 import re
-from typing import Optional
+from typing import Optional, TypedDict
 
 import docker
 from click.testing import Result
@@ -11,7 +11,8 @@ from click.testing import Result
 from tests import common
 from tests.cli.constants import CLUSTER_NAME
 
-builder = common.CLICommandBuilder(CLUSTER_NAME)
+logger = common.logger
+executor = common.MinitrinoExecutor(CLUSTER_NAME)
 
 
 def docker_client() -> tuple[docker.DockerClient, docker.APIClient]:
@@ -19,8 +20,18 @@ def docker_client() -> tuple[docker.DockerClient, docker.APIClient]:
     from minitrino.core.docker.socket import resolve_docker_socket
 
     socket = resolve_docker_socket()
-    common.logger.debug(f"Docker socket path: {socket}")
+    logger.debug(f"Docker socket path: {socket}")
     return docker.DockerClient(base_url=socket), docker.APIClient(base_url=socket)
+
+
+class BuildCmdArgs(TypedDict, total=False):
+    """Arguments for build_cmd."""
+
+    base: str
+    cluster: str
+    append: list[str]
+    prepend: list[str]
+    debug: bool
 
 
 # ------------------------
@@ -30,10 +41,10 @@ def docker_client() -> tuple[docker.DockerClient, docker.APIClient]:
 
 def cleanup_config():
     """Ensure a sample config file and directory exist."""
-    common.logger.debug(f"Ensuring directory exists: {common.MINITRINO_USER_DIR}")
+    logger.debug(f"Ensuring directory exists: {common.MINITRINO_USER_DIR}")
     os.makedirs(common.MINITRINO_USER_DIR, exist_ok=True)
     if os.path.isfile(common.CONFIG_FILE):
-        common.logger.debug(f"Removing existing config file: {common.CONFIG_FILE}")
+        logger.debug(f"Removing existing config file: {common.CONFIG_FILE}")
         os.remove(common.CONFIG_FILE)
     config = (
         "[config]\n"
@@ -43,7 +54,7 @@ def cleanup_config():
         "LIC_PATH=\n"
         "SECRET_KEY=abc123\n"
     )
-    common.logger.debug(f"Writing sample config to: {common.CONFIG_FILE}")
+    logger.debug(f"Writing sample config to: {common.CONFIG_FILE}")
     write_file(common.CONFIG_FILE, config)
 
 
@@ -67,7 +78,7 @@ def update_metadata_json(module: str, updates: Optional[list[dict]] = None) -> N
         for k, v in update.items():
             data[k] = v
     with open(path, "w") as f:
-        common.logger.debug(f"Updating {path} with {json.dumps(data)}")
+        logger.debug(f"Updating {path} with {json.dumps(data)}")
         json.dump(data, f, indent=4)
 
 
@@ -86,10 +97,10 @@ def get_metadata_json_path(module: str) -> str:
 
 def get_module_metadata(module: str) -> dict:
     """Fetch metadata for a given module."""
-    cmd = builder.build_cmd(
-        "modules", append=["--module", module, "--json"], verbose=False
+    cmd = executor.build_cmd(
+        "modules", append=["--module", module, "--json"], debug=False
     )
-    result = common.cli_cmd(cmd, log_output=False)
+    result = executor.exec(cmd, log_output=False)
     return json.loads(normalize(result.output))
 
 
@@ -309,18 +320,16 @@ def assert_not_in_output(*args: str, result: Result | common.CommandResult) -> N
 
 def shut_down() -> None:
     """Bring down all containers."""
-    common.logger.debug("Bringing down all containers.")
-    common.cli_cmd(
-        builder.build_cmd("down", "all", append=["--sig-kill"], verbose=False)
-    )
+    logger.debug("Bringing down all containers.")
+    executor.exec(executor.build_cmd("down", "all", append=["--sig-kill"], debug=False))
 
 
 def remove() -> None:
     """Remove all volumes and networks."""
     shut_down()
-    common.logger.debug("Removing all volumes and networks.")
-    cmd = builder.build_cmd("remove", "all", append=["--volumes", "--networks"])
-    common.cli_cmd(cmd, log_output=False)
+    logger.debug("Removing all volumes and networks.")
+    cmd = executor.build_cmd("remove", "all", append=["--volumes", "--networks"])
+    executor.exec(cmd, log_output=False)
 
 
 # ------------------------

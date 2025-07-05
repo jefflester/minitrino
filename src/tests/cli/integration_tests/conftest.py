@@ -9,10 +9,11 @@ import docker
 import pytest
 
 from tests import common
-from tests.cli import utils
 from tests.cli.constants import CLUSTER_NAME
+from tests.cli.integration_tests import utils
 
-builder = common.CLICommandBuilder(CLUSTER_NAME)
+executor = common.MinitrinoExecutor(CLUSTER_NAME)
+logger = common.get_logger()
 
 
 def pytest_sessionstart(session):
@@ -30,7 +31,9 @@ def docker_client() -> docker.DockerClient:
 @pytest.fixture(scope="session")
 def _logger() -> logging.Logger:
     """Session-scoped logger for test output."""
-    return common.get_logger()
+    # Use MINITRINO_TEST_LOG_LEVEL env var to set log level
+    common.logger = common.get_logger()
+    return common.logger
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -66,9 +69,9 @@ def log_test(log_msg: str) -> Generator:
     log_msg : str
         The log message for the test.
     """
-    common.logger.info(f"START: {log_msg}")
+    logger.info(f"START: {log_msg}")
     yield
-    common.logger.info(f"END: {log_msg}")
+    logger.info(f"END: {log_msg}")
 
 
 @pytest.fixture
@@ -106,8 +109,8 @@ def start_docker() -> Generator:
     -----
     Runs before the test.
     """
-    common.logger.debug("Starting Docker daemon.")
-    common.start_docker_daemon(common.logger)
+    logger.debug("Starting Docker daemon.")
+    common.start_docker_daemon()
     yield
 
 
@@ -120,10 +123,10 @@ def stop_docker() -> Generator:
     -----
     Runs before the test.
     """
-    common.logger.debug("Stopping Docker daemon.")
+    logger.debug("Stopping Docker daemon.")
     common.stop_docker_daemon()
     yield
-    common.start_docker_daemon(common.logger)
+    common.start_docker_daemon()
 
 
 @pytest.fixture
@@ -135,10 +138,10 @@ def cleanup_config() -> Generator:
     -----
     Runs before and after the test.
     """
-    common.logger.debug("Running initial config cleanup (before test)")
+    logger.debug("Running initial config cleanup (before test)")
     utils.cleanup_config()
     yield
-    common.logger.debug("Running config cleanup (after test)")
+    logger.debug("Running config cleanup (after test)")
     utils.cleanup_config()
 
 
@@ -169,7 +172,7 @@ def reset_metadata(request: pytest.FixtureRequest) -> Generator:
             "dependentClusters": [],
         }
         path = utils.get_metadata_json_path(module)
-        common.logger.debug(f"Resetting metadata for module: {module}")
+        logger.debug(f"Resetting metadata for module: {module}")
         utils.write_file(path, json.dumps(default, indent=2))
 
     _helper()
@@ -192,8 +195,8 @@ def provision_clusters(request: pytest.FixtureRequest) -> Generator:
     Shuts down the clusters after creation unless `keepalive` is set to
     `True`.
     """
-    common.logger.debug("Starting Docker daemon for cluster provisioning.")
-    common.start_docker_daemon(common.logger)
+    logger.debug("Starting Docker daemon for cluster provisioning.")
+    common.start_docker_daemon()
     param = getattr(request, "param", {})
     cluster_names = param.get("cluster_names", [CLUSTER_NAME])
     modules = param.get("modules", ["test"])
@@ -211,16 +214,16 @@ def provision_clusters(request: pytest.FixtureRequest) -> Generator:
             module_flags.extend(["--module", module])
 
     for cluster in cluster_names:
-        common.logger.debug(f"Provisioning cluster: {cluster}")
-        common.cli_cmd(
-            builder.build_cmd("provision", append=module_flags),
+        logger.debug(f"Provisioning cluster: {cluster}")
+        executor.exec(
+            executor.build_cmd("provision", append=module_flags),
             log_output=False,
         )
     if not keepalive:
         down_cluster = "all" if len(cluster_names) > 1 else cluster_names[0]
-        common.logger.debug(f"Bringing down cluster: {down_cluster}")
-        common.cli_cmd(
-            builder.build_cmd("down", append=["--sig-kill"]),
+        logger.debug(f"Bringing down cluster: {down_cluster}")
+        executor.exec(
+            executor.build_cmd("down", append=["--sig-kill"]),
             log_output=False,
         )
     yield

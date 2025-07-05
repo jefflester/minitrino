@@ -5,9 +5,9 @@ from typing import List
 import pytest
 
 from tests import common
-from tests.cli import utils
+from tests.cli.integration_tests import utils
 
-builder = common.CLICommandBuilder(utils.CLUSTER_NAME)
+executor = common.MinitrinoExecutor(utils.CLUSTER_NAME)
 
 
 @dataclass
@@ -94,7 +94,7 @@ def test_version_scenarios(scenario: VersionScenario) -> None:
     # Execute these tests directly in the shell since sys.argv doesn't
     # get passed through Click.testing.CliRunner, and we need those to
     # resolve env flags for early eval in the CLI.
-    cmd = builder.build_cmd(prepend=scenario.prepend, append=scenario.append)
+    cmd = executor.build_cmd(prepend=scenario.prepend, append=scenario.append)
     cmd.insert(0, "minitrino")
     result = common.execute_cmd(" ".join(cmd))
     utils.assert_exit_code(result, expected=scenario.expected_exit_code)

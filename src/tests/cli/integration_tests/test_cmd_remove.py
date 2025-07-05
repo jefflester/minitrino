@@ -16,18 +16,18 @@ from minitrino.settings import (
     ROOT_LABEL,
 )
 from tests import common
-from tests.cli import utils
 from tests.cli.constants import (
     CLUSTER_NAME,
     CLUSTER_NAME_2,
     GH_WORKFLOW_RUNNING,
     TEST_IMAGE_NAME,
 )
+from tests.cli.integration_tests import utils
 
-CMD_REMOVE: common.BuildCmdArgs = {"base": "remove"}
+CMD_REMOVE: utils.BuildCmdArgs = {"base": "remove"}
 
-CMD_DOWN: common.BuildCmdArgs = {"base": "down", "cluster": "all"}
-CMD_DOWN_KEEP: common.BuildCmdArgs = {
+CMD_DOWN: utils.BuildCmdArgs = {"base": "down", "cluster": "all"}
+CMD_DOWN_KEEP: utils.BuildCmdArgs = {
     "base": "down",
     "cluster": "all",
     "append": ["--sig-kill", "--keep"],
@@ -42,7 +42,8 @@ REMOVED_IMAGE = "Image removed:"
 FAILURE_VOLUME = "Cannot remove volume"
 FAILURE_NETWORK = "Cannot remove network"
 
-builder = common.CLICommandBuilder(utils.CLUSTER_NAME)
+logger = common.logger
+executor = common.MinitrinoExecutor(utils.CLUSTER_NAME)
 
 
 @pytest.fixture(scope="session")
@@ -77,31 +78,31 @@ def dummy_resources() -> Generator:
         for resource_type, name, action in remove:
             try:
                 action()
-                common.logger.debug(f"{resource_type.capitalize()} removed: {name}")
+                logger.debug(f"{resource_type.capitalize()} removed: {name}")
             except Exception as e:
-                common.logger.warning(
+                logger.warning(
                     f"Failed to remove {resource_type} {name}: {e}"
                     "It may have already been removed."
                 )
 
-    common.logger.debug("Starting Docker daemon for dummy resources")
-    common.start_docker_daemon(common.logger)
+    logger.debug("Starting Docker daemon for dummy resources")
+    common.start_docker_daemon()
     client, _ = utils.docker_client()
     _cleanup_resources(client)
     resources: dict[str, Any] = {}
-    common.logger.debug(f"Creating dummy volume: {volume}")
+    logger.debug(f"Creating dummy volume: {volume}")
     resources["volume"] = client.volumes.create(name=volume, labels=labels)
-    common.logger.debug("Pulling busybox:latest image")
+    logger.debug("Pulling busybox:latest image")
     client.images.pull("busybox:latest")
     dockerfile = "FROM busybox:latest\n\nLABEL org.minitrino=test"
-    common.logger.debug(f"Building dummy image: {image}")
+    logger.debug(f"Building dummy image: {image}")
     image_obj, _ = client.images.build(
         fileobj=io.BytesIO(dockerfile.encode()), tag=image, rm=True
     )
     resources["image"] = image_obj
-    common.logger.debug(f"Creating dummy network: {network}")
+    logger.debug(f"Creating dummy network: {network}")
     resources["network"] = client.networks.create(network, labels=labels)
-    common.logger.debug(f"Creating dummy container: {container}")
+    logger.debug(f"Creating dummy container: {container}")
     container_obj = client.containers.create(
         image=image,
         name=container,
@@ -214,8 +215,8 @@ def test_remove_all_scenarios(
     if scenario.cmd_flags:
         append_flags.extend(scenario.cmd_flags)
 
-    result = common.cli_cmd(
-        builder.build_cmd(base="remove", cluster="all", append=append_flags), "y\n"
+    result = executor.exec(
+        executor.build_cmd(base="remove", cluster="all", append=append_flags), "y\n"
     )
     utils.assert_exit_code(result)
     assert_resources_removed(
@@ -308,8 +309,8 @@ def test_remove_module_scenarios(
         append_flags.append(scenario.module_flag)
     if scenario.module_name:
         append_flags.append(scenario.module_name)
-    result = common.cli_cmd(
-        builder.build_cmd(base="remove", cluster="all", append=append_flags),
+    result = executor.exec(
+        executor.build_cmd(base="remove", cluster="all", append=append_flags),
     )
     utils.assert_exit_code(result)
     assert_resources_removed(
@@ -393,10 +394,10 @@ def test_remove_cluster_resource_scenarios(
     scenario: RemoveClusterResourceScenario,
 ) -> None:
     """Run each RemoveClusterResourceScenario."""
-    cmd = builder.build_cmd(
+    cmd = executor.build_cmd(
         base="remove", cluster=CLUSTER_NAME_2, append=scenario.cmd_flags
     )
-    result = common.cli_cmd(cmd)
+    result = executor.exec(cmd)
     utils.assert_exit_code(result)
     for resource_type in scenario.resource_types:
         utils.assert_in_output(
@@ -493,13 +494,13 @@ def test_remove_force_scenarios(
     """Run each RemoveForceScenario."""
     if scenario.id.endswith("_stopped"):
         cmd_args = CMD_DOWN_KEEP.copy()
-        common.cli_cmd(builder.build_cmd(**cmd_args))
-    cmd = builder.build_cmd(
+        executor.exec(executor.build_cmd(**cmd_args))
+    cmd = executor.build_cmd(
         base="remove",
         cluster="all",
         append=[scenario.cmd_flag, "--force"],
     )
-    result = common.cli_cmd(cmd)
+    result = executor.exec(cmd)
     utils.assert_exit_code(result)
     utils.assert_in_output(scenario.log_match, result=result)
     assert_docker_resource_count(
@@ -571,8 +572,8 @@ def test_remove_images_negative_scenarios(
     scenario: RemoveImagesNegativeScenario,
 ) -> None:
     """Run each RemoveImagesNegativeScenario."""
-    result = common.cli_cmd(
-        builder.build_cmd(
+    result = executor.exec(
+        executor.build_cmd(
             base="remove", cluster=scenario.cluster, append=scenario.append_flags
         )
     )
@@ -601,10 +602,10 @@ def test_remove_multiple_module_all(
 ) -> None:
     """Remove multiple modules from all clusters."""
     cmd_args = CMD_DOWN_KEEP.copy()
-    common.cli_cmd(builder.build_cmd(**cmd_args))
+    executor.exec(executor.build_cmd(**cmd_args))
     append = ["--module", "test", "--module", "postgres"]
-    cmd = builder.build_cmd(base="remove", cluster="all", append=append)
-    result = common.cli_cmd(cmd)
+    cmd = executor.build_cmd(base="remove", cluster="all", append=append)
+    result = executor.exec(cmd)
     utils.assert_exit_code(result)
     # Can't delete volumes tied to stopped containers. Networks are
     # mapped to clusters, so they are not deleted due to the module
@@ -616,8 +617,8 @@ def test_remove_multiple_module_all(
     # Both volumes are removed (one for each module), but the network
     # stays since it doesn't have a module label applied to it.
     cmd_args = CMD_DOWN.copy()
-    common.cli_cmd(builder.build_cmd(**cmd_args))
-    result = common.cli_cmd(cmd)
+    executor.exec(executor.build_cmd(**cmd_args))
+    result = executor.exec(cmd)
     utils.assert_exit_code(result)
     utils.assert_in_output(REMOVED_VOLUME, result=result)
     assert_docker_resource_count(
@@ -639,8 +640,8 @@ def test_remove_multiple_module_all(
 )
 def test_remove_module_invalid() -> None:
     """Try to remove an invalid module."""
-    result = common.cli_cmd(
-        builder.build_cmd(base="remove", append=["--module", "invalid"])
+    result = executor.exec(
+        executor.build_cmd(base="remove", append=["--module", "invalid"])
     )
     utils.assert_exit_code(result, expected=2)
     utils.assert_in_output("Module 'invalid' not found", result=result)

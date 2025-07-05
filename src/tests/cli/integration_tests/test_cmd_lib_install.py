@@ -6,12 +6,13 @@ from typing import Any, Optional
 import pytest
 
 from tests import common
-from tests.cli import utils
+from tests.cli.integration_tests import utils
 
 CMD_INSTALL = {"base": "lib-install", "append": ["--version", "0.0.0"]}
 LIB_DIR = os.path.join(common.MINITRINO_USER_DIR, "lib")
 
-builder = common.CLICommandBuilder(utils.CLUSTER_NAME)
+logger = common.logger
+executor = common.MinitrinoExecutor(utils.CLUSTER_NAME)
 
 
 @pytest.fixture(autouse=True, scope="module")
@@ -20,7 +21,7 @@ def clean_before_test():
 
     def _uninstall():
         if os.path.isdir(LIB_DIR):
-            common.logger.debug(f"Removing existing library directory: {LIB_DIR}")
+            logger.debug(f"Removing existing library directory: {LIB_DIR}")
             shutil.rmtree(LIB_DIR)
 
     _uninstall()
@@ -112,10 +113,10 @@ def test_lib_install_scenarios(
     scenario: LibInstallScenario,
 ) -> None:
     """Run each LibInstallScenario."""
-    cli_cmd = builder.build_cmd(**scenario.cmd)
-    result = common.cli_cmd(cli_cmd, scenario.input_val)
+    cli_cmd = executor.build_cmd(**scenario.cmd)
+    result = executor.exec(cli_cmd, scenario.input_val)
     if scenario.id == "install_overwrite":
-        result = common.cli_cmd(cli_cmd, scenario.input_val)
+        result = executor.exec(cli_cmd, scenario.input_val)
     utils.assert_exit_code(result, expected=scenario.expected_exit_code)
     utils.assert_is_dir(LIB_DIR)
     if scenario.expected_output:

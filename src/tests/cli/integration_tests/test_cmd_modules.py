@@ -9,10 +9,10 @@ from minitrino.settings import (
     MODULE_SECURITY,
 )
 from tests import common
-from tests.cli import utils
+from tests.cli.integration_tests import utils
 
 pytestmark = pytest.mark.usefixtures("log_test", "start_docker")
-builder = common.CLICommandBuilder(utils.CLUSTER_NAME)
+executor = common.MinitrinoExecutor(utils.CLUSTER_NAME)
 
 
 @dataclass
@@ -82,7 +82,7 @@ def test_module_name_scenarios(scenario: ModuleNameScenario) -> None:
     append = ["--module", scenario.module_name]
     if scenario.type_flag:
         append.extend(["--type", scenario.type_flag])
-    result = common.cli_cmd(builder.build_cmd(base="modules", append=append))
+    result = executor.exec(executor.build_cmd(base="modules", append=append))
     utils.assert_exit_code(result, expected=scenario.expected_exit_code)
     utils.assert_in_output(scenario.expected_output, result=result)
 
@@ -141,7 +141,7 @@ type_scenarios = [
 def test_type_scenarios(scenario: TypeScenario) -> None:
     """Run each TypeScenario."""
     append = ["--type", scenario.type_flag, "--json"]
-    result = common.cli_cmd(builder.build_cmd(base="modules", append=append))
+    result = executor.exec(executor.build_cmd(base="modules", append=append))
     utils.assert_exit_code(result)
     types = [MODULE_ADMIN, MODULE_CATALOG, MODULE_SECURITY]
     types.remove(scenario.validate_type)
@@ -162,7 +162,7 @@ def test_all_modules() -> None:
     Ensure all module metadata is printed to the console if no module
     name is passed.
     """
-    result = common.cli_cmd(builder.build_cmd(base="modules"))
+    result = executor.exec(executor.build_cmd(base="modules"))
     utils.assert_exit_code(result)
     expected_fields = [
         "Description:",
@@ -182,7 +182,7 @@ JSON_OUTPUT_MSG = "Output module metadata in JSON format"
 def test_json() -> None:
     """Ensure module metadata is outputted in JSON format."""
     append = ["--module", "test", "--json"]
-    result = common.cli_cmd(builder.build_cmd(base="modules", append=append))
+    result = executor.exec(executor.build_cmd(base="modules", append=append))
     utils.assert_exit_code(result)
     utils.assert_in_output(f'"type": "{MODULE_CATALOG}"', result=result)
     utils.assert_in_output('"test":', result=result)
@@ -195,8 +195,8 @@ TYPE_MODULE_MISMATCH_MSG = "Type + module mismatch returns no modules found"
 def test_type_module_mismatch() -> None:
     """Ensure type + module mismatch returns no modules found."""
     append = ["--module", "postgres", "--type", MODULE_SECURITY]
-    cmd = builder.build_cmd(base="modules", append=append)
-    result = common.cli_cmd(cmd)
+    cmd = executor.build_cmd(base="modules", append=append)
+    result = executor.exec(cmd)
     utils.assert_exit_code(result)
     utils.assert_in_output("No modules match the specified criteria", result=result)
 
@@ -210,8 +210,8 @@ def test_type_module_mismatch() -> None:
 def test_running() -> None:
     """Ensure the `module` command can output metadata for running
     modules."""
-    result = common.cli_cmd(
-        builder.build_cmd(base="modules", append=["--json", "--running"])
+    result = executor.exec(
+        executor.build_cmd(base="modules", append=["--json", "--running"])
     )
     utils.assert_exit_code(result)
     utils.assert_in_output(
@@ -236,8 +236,8 @@ def test_running_cluster() -> None:
     Ensure module metadata is outputted for running modules tied to a
     specific cluster.
     """
-    cmd = builder.build_cmd(base="modules", append=["--json", "--running"])
-    result = common.cli_cmd(cmd)
+    cmd = executor.build_cmd(base="modules", append=["--json", "--running"])
+    result = executor.exec(cmd)
     utils.assert_exit_code(result)
     utils.assert_in_output(
         f'"type": "{MODULE_CATALOG}"',

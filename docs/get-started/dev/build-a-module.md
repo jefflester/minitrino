@@ -26,10 +26,10 @@ Understanding the shape and functionality of the library will help conceptualize
 how modules are built.
 
 Minitrino's library is built around Docker Compose files and utilizes Docker's
-ability to [extend Compose
-files](https://docs.docker.com/compose/extends/#multiple-compose-files). The
-`trino` container is defined in the `docker-compose.yaml` file at the library
-root, and all nested module Compose files reference the root
+ability to
+[extend Compose files](https://docs.docker.com/compose/extends/#multiple-compose-files).
+The `trino` container is defined in the `docker-compose.yaml` file at the
+library root, and all nested module Compose files reference the root
 `docker-compose.yaml` file.
 
 The library structure:
@@ -81,12 +81,12 @@ connection-password=trinoRocks15
 EOF"
 ```
 
-______________________________________________________________________
+---
 
 **Note**: Passwords in default modules tend to be `trinoRocks15`. For
 consistency throughout the library, it is recommended to use this password.
 
-______________________________________________________________________
+---
 
 ## Add the Docker Compose YAML
 
@@ -148,8 +148,8 @@ EOF'
   alongside the module. The `*` wildcard is a supported convention if the module
   is incompatible with all other modules.
 - `dependentModules`: specifies which modules must be provisioned alongside the
-  target. Dependent modules will be automatically provisioned with the `provision`
-  command.
+  target. Dependent modules will be automatically provisioned with the
+  `provision` command.
 - `versions`: enforces version requirements. The first value indicates the
   minimum version, and the second value indicates the last version. If no second
   value is present, it is assumed that all versions >= the minimum version are
@@ -198,8 +198,7 @@ We will now define the `my-postgres.yaml` Docker Compose file:
 
 ```yaml
 services:
-
-  # Note: /etc/starburst is exposed as ${ETC} to make 
+  # Note: /etc/starburst is exposed as ${ETC} to make
   # volume definitions slightly shorter in length
   trino:
     volumes:
@@ -219,14 +218,14 @@ services:
 
 ### Path References for Volumes and Build Contexts
 
-Volumes mounted in Docker Compose files *are not relative to the Compose file
-itself*, they are relative to the base `docker-compose.yaml` file in the
+Volumes mounted in Docker Compose files _are not relative to the Compose file
+itself_, they are relative to the base `docker-compose.yaml` file in the
 library's root directory. This is because the CLI extends Compose files, meaning
 that all path references in child Compose files need to be relative to the
 positioning of the parent Compose file.
 
-Additional information can be found about extending Compose files in the [Docker
-docs](https://docs.docker.com/compose/extends/#multiple-compose-files).
+Additional information can be found about extending Compose files in the
+[Docker docs](https://docs.docker.com/compose/extends/#multiple-compose-files).
 
 ### Minitrino Docker Labels
 
@@ -235,17 +234,16 @@ volumes, and images with Minitrino and allow the CLI to target those objects
 when executing commands.
 
 Applying labels to the Trino container is only necessary when `trino` is the
-only service defined in the Compose file. The [`biac`
-module](https://github.com/jefflester/minitrino/blob/master/src/lib/modules/security/biac/biac.yaml)
+only service defined in the Compose file. The
+[`biac` module](https://github.com/jefflester/minitrino/blob/master/src/lib/modules/security/biac/biac.yaml)
 is an example of this.
 
 Labels should always be applied to the following objects:
 
 - Containers
 - Named volumes
-- Images built from a Dockerfile (similar to how it's defined in the [root
-  `docker-compose.yaml`
-  file](https://github.com/jefflester/minitrino/blob/master/src/lib/docker-compose.yaml))
+- Images built from a Dockerfile (similar to how it's defined in the
+  [root `docker-compose.yaml` file](https://github.com/jefflester/minitrino/blob/master/src/lib/docker-compose.yaml))
 
 Labels should be defined in pairs of two. The naming convention is:
 
@@ -257,21 +255,20 @@ Labels should be defined in pairs of two. The naming convention is:
     necessary
 
 In Compose files where multiple containers are defined, all containers should be
-labeled with the same label sets (as seen in the [`hive`
-module's](https://github.com/jefflester/minitrino/blob/master/src/lib/modules/catalog/hive/hive.yaml)
+labeled with the same label sets (as seen in the
+[`hive` module's](https://github.com/jefflester/minitrino/blob/master/src/lib/modules/catalog/hive/hive.yaml)
 Compose file).
 
-______________________________________________________________________
+---
 
 **Note**: A named volume is defined in a separate block within the Compose file,
 and they should have labels applied to them. Below is an example of the Compose
 file we created with a named volume added.
 
-______________________________________________________________________
+---
 
 ```yaml
 services:
-
   trino:
     volumes:
       - ./modules/catalog/my-postgres/resources/trino/postgres.properties:/etc/starburst/catalog/postgres.properties
@@ -303,7 +300,7 @@ minitrino -v provision -m my-postgres
 Open a shell session in the `trino` container and run some tests:
 
 ```sh
-docker exec -it trino bash 
+docker exec -it trino bash
 trino-cli
 
 trino> SHOW CATALOGS;

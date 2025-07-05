@@ -15,6 +15,6 @@ password-file
 tls
 ```
 
-______________________________________________________________________
+---
 
 [Minitrino GitHub repository](https://github.com/jefflester/minitrino).

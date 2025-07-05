@@ -10,6 +10,6 @@ user/index
 dev/index
 ```
 
-______________________________________________________________________
+---
 
 [Minitrino GitHub repository](https://github.com/jefflester/minitrino).

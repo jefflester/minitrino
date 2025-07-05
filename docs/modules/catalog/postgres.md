@@ -1,7 +1,8 @@
 # Postgres Catalog
 
-Add a [Postgres catalog](https://trino.io/docs/current/connector/postgresql.html) to the
-cluster along with a standalone Postgres service.
+Add a
+[Postgres catalog](https://trino.io/docs/current/connector/postgresql.html) to
+the cluster along with a standalone Postgres service.
 
 ## Usage
 

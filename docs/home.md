@@ -31,21 +31,18 @@ Slack](https://img.shields.io/static/v1?logo=slack&logoColor=959DA5&label=Slack&
 To learn more about the CLI and underlying library, visit the following wiki
 pages:
 
-- [Installation and
-  Upgrades](https://github.com/jefflester/minitrino/wiki/Installation-and-Upgrades)
-- [Workflow
-  Examples](https://github.com/jefflester/minitrino/wiki/Workflow-Examples)
-- [Environment Variables and
-  Config](https://github.com/jefflester/minitrino/wiki/Environment-Variables-and-Config)
+- [Installation and Upgrades](https://github.com/jefflester/minitrino/wiki/Installation-and-Upgrades)
+- [Workflow Examples](https://github.com/jefflester/minitrino/wiki/Workflow-Examples)
+- [Environment Variables and Config](https://github.com/jefflester/minitrino/wiki/Environment-Variables-and-Config)
 - [Build a Module](https://github.com/jefflester/minitrino/wiki/Build-a-Module)
 
 ## Why Starburst for the Base Image?
 
-Starburst offers an enterprise version of Trino called [Starburst Enterprise
-Platform](https://docs.starburst.io/latest/index.html) (SEP), and SEP images are
-used as the base for [Minitrino's
-image](https://github.com/jefflester/minitrino/tree/master/src/lib/image). There
-are a few reasons why it's advantageous to use SEP as the base image––some
+Starburst offers an enterprise version of Trino called
+[Starburst Enterprise Platform](https://docs.starburst.io/latest/index.html)
+(SEP), and SEP images are used as the base for
+[Minitrino's image](https://github.com/jefflester/minitrino/tree/master/src/lib/image).
+There are a few reasons why it's advantageous to use SEP as the base image––some
 personal and others community-facing.
 
 ### Community: Comprehensive Plugin Support

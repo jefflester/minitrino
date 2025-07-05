@@ -23,7 +23,7 @@ SHOW SCHEMAS FROM iceberg;
 Create a table:
 
 ```sql
-CREATE TABLE iceberg.minitrino.customer 
+CREATE TABLE iceberg.minitrino.customer
 WITH (
     location = 's3a://minitrino/minitrino_iceberg/minitrino/'
 )

@@ -2,8 +2,8 @@
 
 ## Reporting Bugs
 
-To report bugs and other issues, please file a [GitHub
-issue](https://github.com/jefflester/minitrino/issues). Issues should:
+To report bugs and other issues, please file a
+[GitHub issue](https://github.com/jefflester/minitrino/issues). Issues should:
 
 - Contain any relevant log messages (if the bug relates to a command, running
   with the `-v` flag will make debugging easier)
@@ -21,15 +21,13 @@ Contributors have two options:
 
 In either case, please provide a comprehensive description of your changes with
 the PR. PRs will never be merged directly to `master`; they are merged into a
-release branch. To learn more about PR and release workflows, visit the [GitHub
-workflows
-overview](https://github.com/jefflester/minitrino/wiki/GitHub-Workflows).
+release branch. To learn more about PR and release workflows, visit the
+[GitHub workflows overview](https://github.com/jefflester/minitrino/wiki/GitHub-Workflows).
 
 If your contribution modifies or adds modules to the library, you must add
-[library
-tests](https://github.com/jefflester/minitrino/wiki/CLI-and-Library-Tests#library-tests)
+[library tests](https://github.com/jefflester/minitrino/wiki/CLI-and-Library-Tests#library-tests)
 for all affected modules.
 
-If your contribution modifies the CLI, you must add [CLI
-tests](https://github.com/jefflester/minitrino/wiki/CLI-and-Library-Tests#cli-tests)
+If your contribution modifies the CLI, you must add
+[CLI tests](https://github.com/jefflester/minitrino/wiki/CLI-and-Library-Tests#cli-tests)
 to ensure your changes work.

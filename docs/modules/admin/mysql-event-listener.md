@@ -1,8 +1,8 @@
 # MySQL Event Listener
 
-Add a [MySQL event
-listener](https://trino.io/docs/current/admin/event-listeners-mysql.html) to the
-cluster.
+Add a
+[MySQL event listener](https://trino.io/docs/current/admin/event-listeners-mysql.html)
+to the cluster.
 
 ## Usage
 
@@ -19,7 +19,7 @@ minitrino provision -m mysql-event-listener
 Query is logged to event listener DB:
 
 ```sql
-SHOW SCHEMAS FROM tpch; 
+SHOW SCHEMAS FROM tpch;
 ```
 
 Query the event listener DB:

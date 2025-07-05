@@ -1,8 +1,8 @@
 # Stargate Parallel Catalog
 
-Add a [Stargate parallel
-catalog](https://docs.starburst.io/latest/connector/starburst-stargate.html) to
-the cluster along with a remote Stargate cluster for catalog access.
+Add a
+[Stargate parallel catalog](https://docs.starburst.io/latest/connector/starburst-stargate.html)
+to the cluster along with a remote Stargate cluster for catalog access.
 
 ## Usage
 

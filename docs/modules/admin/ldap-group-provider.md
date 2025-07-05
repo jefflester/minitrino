@@ -1,7 +1,7 @@
 # LDAP Group Provider
 
-Enable user-group mapping using the [LDAP group
-provider](https://docs.starburst.io/latest/security/ldap-group-provider.html).
+Enable user-group mapping using the
+[LDAP group provider](https://docs.starburst.io/latest/security/ldap-group-provider.html).
 
 ## Usage
 
@@ -32,7 +32,7 @@ minitrino exec -i 'trino-cli --user test'
 
 ```sql
 SELECT current_groups();
--- [clusteradmins, metadata-users, platform-users] 
+-- [clusteradmins, metadata-users, platform-users]
 ```
 
 With auth:
@@ -50,10 +50,10 @@ SELECT current_groups();
 
 ## Group Mapping
 
-| Group | Users |
-|:-------------------|:---------------------------------|
-| `clusteradmins` | `admin`, `cachesvc`, `test` |
-| `metadata-users` | `metadata-user`, `bob`, `test` |
+| Group            | Users                            |
+| :--------------- | :------------------------------- |
+| `clusteradmins`  | `admin`, `cachesvc`, `test`      |
+| `metadata-users` | `metadata-user`, `bob`, `test`   |
 | `platform-users` | `platform-user`, `alice`, `test` |
 
 ## Dependent Modules

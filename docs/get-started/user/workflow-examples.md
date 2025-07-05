@@ -114,9 +114,9 @@ minitrino modules
 List all modules of a given type (one of `admin`, `catalog`, `security`):
 
 ```sh
-minitrino modules --type admin 
-minitrino modules --type catalog 
-minitrino modules --type security 
+minitrino modules --type admin
+minitrino modules --type catalog
+minitrino modules --type security
 ```
 
 The `--json` option can be used to dump all metadata tied to a module(s), such
@@ -155,8 +155,8 @@ Provision a multi-node cluster with two worker nodes:
 minitrino -v provision --workers 2
 ```
 
-Provision the `postgres` catalog module with a specific [SEP
-version](https://docs.starburst.io/latest/release.html):
+Provision the `postgres` catalog module with a specific
+[SEP version](https://docs.starburst.io/latest/release.html):
 
 ```sh
 minitrino -v -e STARBURST_VER=${VER} provision -m postgres
@@ -197,7 +197,7 @@ DBeaver, to the `localhost` service.
 The `trino` coordinator container can be directly accessed via:
 
 ```sh
-docker exec -it trino bash 
+docker exec -it trino bash
 ```
 
 ### Worker Provisioning Overview
@@ -224,13 +224,13 @@ You can modify files inside a running container. For example:
 
 ```sh
 # Update coordinator logging settings
-docker exec -it trino bash 
+docker exec -it trino bash
 echo "io.trino=DEBUG" >> /etc/starburst/log.properties
 exit
 docker restart trino
 
 # Update worker logging settings
-docker exec -it trino-worker-1 bash 
+docker exec -it trino-worker-1 bash
 echo "io.trino=DEBUG" >> /etc/starburst/log.properties
 exit
 docker restart trino-worker-1
@@ -241,7 +241,7 @@ Restarting the container allows Trino to register the configuration change.
 ### Access the Trino CLI
 
 ```sh
-docker exec -it trino bash 
+docker exec -it trino bash
 trino-cli --debug --user admin --execute "SELECT * FROM tpch.tiny.customer LIMIT 10"
 ```
 
@@ -341,8 +341,8 @@ LIC_PATH=~/work/license/starburstdata.license
 minitrino provision -m insights
 ```
 
-More information about environment variables [can be found
-here](https://github.com/jefflester/minitrino/wiki/Environment-Variables-and-Config).
+More information about environment variables
+[can be found here](https://github.com/jefflester/minitrino/wiki/Environment-Variables-and-Config).
 
 ## Modify the Trino `config.properties` and `jvm.config` Files
 
@@ -414,8 +414,8 @@ the Minitrino library to the container, executed, and then removed from the
 container. Containers are restarted after each bootstrap script execution.
 
 If a bootstrap script has already executed in a container, Minitrino will not
-re-execute the bootstrap script *unless the contents of the script have
-changed*. The is useful after running `minitrino down --keep`––this way, the
+re-execute the bootstrap script _unless the contents of the script have
+changed_. The is useful after running `minitrino down --keep`––this way, the
 subsequent `provision` command will not re-execute the same bootstrap script(s).
 
 In general, if a bootstrap script is updated, it is recommended to destroy and
@@ -427,7 +427,6 @@ YAML file via the `MINITRINO_BOOTSTRAP` environment variable:
 
 ```yaml
 services:
-
   trino:
     environment:
       MINITRINO_BOOTSTRAP: bootstrap.sh

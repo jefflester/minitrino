@@ -10,6 +10,6 @@ troubleshooting
 workflow-examples
 ```
 
-______________________________________________________________________
+---
 
 [Minitrino GitHub repository](https://github.com/jefflester/minitrino).

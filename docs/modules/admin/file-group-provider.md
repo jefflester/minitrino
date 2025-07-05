@@ -1,7 +1,7 @@
 # File Group Provider
 
-Enable user-group mapping using the [file-based group
-provider](https://trino.io/docs/current/security/group-file.html).
+Enable user-group mapping using the
+[file-based group provider](https://trino.io/docs/current/security/group-file.html).
 
 ## Usage
 
@@ -33,8 +33,8 @@ SELECT current_groups();
 
 ## Group Mapping
 
-| Group | Users |
-|:-------------------|:---------------------------------|
-| `clusteradmins` | `admin`, `cachesvc`, `test` |
-| `metadata-users` | `metadata-user`, `bob`, `test` |
+| Group            | Users                            |
+| :--------------- | :------------------------------- |
+| `clusteradmins`  | `admin`, `cachesvc`, `test`      |
+| `metadata-users` | `metadata-user`, `bob`, `test`   |
 | `platform-users` | `platform-user`, `alice`, `test` |

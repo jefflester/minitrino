@@ -1,8 +1,8 @@
 # Results Cache
 
-Adds Starburst Enterprise [result
-caching](https://docs.starburst.io/latest/admin/result-caching.html) to the
-cluster.
+Adds Starburst Enterprise
+[result caching](https://docs.starburst.io/latest/admin/result-caching.html) to
+the cluster.
 
 ## Usage
 

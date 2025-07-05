@@ -21,6 +21,6 @@ stargate-parallel
 stargate
 ```
 
-______________________________________________________________________
+---
 
 [Minitrino GitHub repository](https://github.com/jefflester/minitrino).

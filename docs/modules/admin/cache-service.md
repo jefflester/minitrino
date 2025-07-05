@@ -3,10 +3,10 @@
 Add a [cache service](https://docs.starburst.io/latest/admin/cache-service.html)
 to the cluster.
 
-The module also configures [table scan
-redirections](https://docs.starburst.io/latest/admin/cache-service.html#enable-table-scan-redirections)
-and [materialized
-views](https://docs.starburst.io/latest/connector/starburst-hive.html#materialized-views).
+The module also configures
+[table scan redirections](https://docs.starburst.io/latest/admin/cache-service.html#enable-table-scan-redirections)
+and
+[materialized views](https://docs.starburst.io/latest/connector/starburst-hive.html#materialized-views).
 
 ## Usage
 

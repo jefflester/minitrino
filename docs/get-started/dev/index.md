@@ -8,6 +8,6 @@ cli-and-library-tests
 github-workflows
 ```
 
-______________________________________________________________________
+---
 
 [Minitrino GitHub repository](https://github.com/jefflester/minitrino).

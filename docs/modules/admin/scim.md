@@ -32,7 +32,7 @@ minitrino exec -i 'trino-cli --user test'
 
 ```sql
 SELECT current_groups();
--- [clusteradmins, metadata-users, platform-users] 
+-- [clusteradmins, metadata-users, platform-users]
 ```
 
 With auth:
@@ -57,10 +57,10 @@ API.
 The client runs continuously in the background, ensuring the group/user mapping
 is always up to date. By default, the mapping is:
 
-| Group | Users |
-|------------------|-------------------------------|
-| clusteradmins | admin, cachesvc, test |
-| metadata-users | metadata-user, bob, test |
+| Group          | Users                      |
+| -------------- | -------------------------- |
+| clusteradmins  | admin, cachesvc, test      |
+| metadata-users | metadata-user, bob, test   |
 | platform-users | platform-user, alice, test |
 
 The sync client is configured via the following environment variables:

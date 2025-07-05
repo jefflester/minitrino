@@ -1,8 +1,8 @@
 # LDAP Authentication
 
-Enable [LDAP password
-authentication](https://trino.io/docs/current/security/ldap.html) on the
-coordinator.
+Enable
+[LDAP password authentication](https://trino.io/docs/current/security/ldap.html)
+on the coordinator.
 
 ## Usage
 

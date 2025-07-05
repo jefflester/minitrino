@@ -1,8 +1,8 @@
 # OAuth2 Authentication
 
-Enable [OAuth2
-authentication](https://trino.io/docs/current/security/oauth2.html) on the
-coordinator.
+Enable
+[OAuth2 authentication](https://trino.io/docs/current/security/oauth2.html) on
+the coordinator.
 
 ## Usage
 

@@ -8,7 +8,13 @@
       "exitCode": 0,
       "contains": [
         "Bucket created successfully `minio/minitrino-lib-test`"
-      ]
+      ],
+      "healthcheck": {
+        "command": "mc admin info minio",
+        "container": "minio-client-lib-test",
+        "retries": 10,
+        "exitCode": 0
+      }
     },
     {
       "type": "shell",

@@ -3,7 +3,7 @@
     {
       "type": "logs",
       "name": "Ensure HMS is running",
-      "container": "metastore-delta-lake",
+      "container": "metastore-delta-lake-lib-test",
       "contains": [
         "Starting Metastore Server"
       ],

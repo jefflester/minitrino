@@ -5,7 +5,7 @@
       "name": "Test https endpoint",
       "sql": "SELECT 12345",
       "trinoCliArgs": [
-        "--server 'https://minitrino:8443'",
+        "--server 'https://localhost:8443'",
         "--truststore-path /etc/${CLUSTER_DIST}/tls/truststore.jks",
         "--truststore-password changeit"
       ],
@@ -18,10 +18,10 @@
       "type": "shell",
       "name": "Test https endpoint via curl",
       "container": "minitrino-lib-test",
-      "command": "curl -v -k https://minitrino:8443",
+      "command": "curl -v -k https://localhost:8443",
       "exitCode": 0,
       "contains": [
-        "Connected to minitrino",
+        "Connected to localhost",
         "port 8443",
         "subject: CN=*.minitrino.com"
       ]

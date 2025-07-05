@@ -7,7 +7,7 @@
       "command": "echo 'pass'",
       "exitCode": 0,
       "healthcheck": {
-        "command": "curl -v -k elasticsearch:9200/_cluster/health/user",
+        "command": "curl -s -k elasticsearch:9200/_cluster/health/user",
         "container": "minitrino-lib-test",
         "retries": 30,
         "exitCode": 0,

@@ -7,7 +7,7 @@
       "command": "echo 'pass'",
       "exitCode": 0,
       "healthcheck": {
-        "command": "curl -v -k https://host.docker.internal:8100/minitrino-issuer/.well-known/openid-configuration",
+        "command": "curl -s -k https://host.docker.internal:8100/minitrino-issuer/.well-known/openid-configuration",
         "container": "minitrino-lib-test",
         "retries": 30,
         "exitCode": 0,

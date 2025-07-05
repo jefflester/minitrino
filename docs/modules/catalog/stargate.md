@@ -1,58 +1,33 @@
-# Postgres Catalog Module
+# Stargate Parallel Catalog
 
-This module provisions a standalone Postgres service. By default, it is exposed
-both to the internal Docker network and the host via:
-
-```yaml
-ports:
-  - 5432:5432
-```
-
-This will allows users to connect to the service from any SQL client that
-supports Postgres drivers on `localhost:5432`.
+Add a [Stargate
+catalog](https://docs.starburst.io/latest/connector/starburst-stargate.html) to
+the cluster along with a remote Stargate cluster for catalog access.
 
 ## Usage
 
-```sh
-minitrino -v provision -m postgres
-# Or specify cluster version
-minitrino -v -e CLUSTER_VER=${version} provision -m postgres
+{{ starburst_license_warning }}
 
-docker exec -it minitrino bash 
-trino-cli
-
-trino> SHOW SCHEMAS FROM postgres;
-```
-
-## Persistent Storage
-
-This module uses named volumes to persist Postgres data:
-
-```yaml
-volumes:
-  postgres-data:
-    labels:
-      - org.minitrino.root=true
-      - org.minitrino.module.catalog.postgres=true
-```
-
-The user-facing implication is that Postgres data is retained even after
-shutting down and/or removing the environment's containers. Minitrino issues a
-warning about this whenever a module with named volumes is deployed––be sure to
-look out for these warnings:
-
-```text
-[w]  Module '<module>' has persistent volumes associated with it. To delete these volumes, remember to run `minitrino remove --volumes`.
-```
-
-To remove these volumes, run:
+Provision the module:
 
 ```sh
-minitrino -v remove --volumes --label org.minitrino.module.catalog.postgres=true
+minitrino -e CLUSTER_VER=${version}-e provision -i starburst -m stargate-parallel
 ```
 
-Or, remove them directly using the Docker CLI:
+This module spins up an additional cluster to serve as the remote Stargate
+cluster.
 
-```sh
-docker volume rm minitrino_postgres-data
+{{ connect_trino_cli }}
+
+Confirm Stargate is reachable:
+
+```sql
+SHOW SCHEMAS FROM stargate;
 ```
+
+## Dependent Modules
+
+The remote cluster depends on the following modules:
+
+- [`hive`](./hive.md#hive-catalog)
+- [`password-file`](../security/password-file.md#password-file-catalog)

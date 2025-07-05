@@ -1,4 +1,4 @@
-# Password File Authenticator Module
+# Password File Authentication
 
 Enable [password file
 authentication](https://trino.io/docs/current/security/password-file.html) on
@@ -12,11 +12,7 @@ Provision the module:
 minitrino provision -m password-file
 ```
 
-Open a shell to the coordinator:
-
-```sh
-minitrino exec -i
-```
+{{ coordinator_shell }}
 
 Authenticate to the coordinator using the Trino CLI:
 
@@ -38,6 +34,7 @@ sets of credentials listed below.
 
 ## Default Usernames and Passwords
 
+```{table}
 | Username | Password |
 |:-----------------|:---------------|
 | `admin` | `trinoRocks15` |
@@ -47,14 +44,11 @@ sets of credentials listed below.
 | `metadata-user` | `trinoRocks15` |
 | `platform-user` | `trinoRocks15` |
 | `test` | `trinoRocks15` |
-
-## Add a New User Credentials
-
-Open a shell to the coordinator:
-
-```sh
-minitrino exec -i
 ```
+
+## Add a New User Credential
+
+{{ coordinator_shell }}
 
 Add a new user to the password file using `htpasswd`:
 
@@ -79,4 +73,4 @@ htpasswd -bB -C 10 /etc/${CLUSTER_DIST}/password.db <user> <pass>
 
 ## Dependent Modules
 
-- [`tls`](../tls/readme.md): Required for securing credentials in transit.
+- [`tls`](tls.md#tls): Required for securing credentials in transit.

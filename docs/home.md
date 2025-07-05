@@ -1,7 +1,3 @@
-<p align="center">
-    <img alt="Minitrino Logo" src="../.img/minitrino-small.png" />
-</p>
-
 # Minitrino
 
 A command line tool that makes it easy to run modular Trino environments
@@ -72,3 +68,25 @@ test, experiment with, and learn almost any feature.
 
 I work at Starburst, and my colleagues and I find this tool to be generally
 useful.
+
+```{toctree}
+:caption: Getting Started
+
+get-started/index
+```
+
+```{toctree}
+:caption: Modules
+:hidden:
+
+modules/index
+```
+
+```{toctree}
+:caption: API Reference
+:maxdepth: 4
+:hidden:
+:glob:
+
+api/index
+```

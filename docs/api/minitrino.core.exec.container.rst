@@ -1,7 +1,7 @@
-minitrino.core.cluster.config module
+minitrino.core.exec.container module
 ====================================
 
-.. automodule:: minitrino.core.cluster.config
+.. automodule:: minitrino.core.exec.container
    :members:
    :show-inheritance:
    :undoc-members:

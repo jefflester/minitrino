@@ -1,18 +1,23 @@
-# Faker Catalog Module
+# Faker Catalog
 
-This module provisions the system with a [Faker
-catalog](https://docs.starburst.io/latest/connector/faker.html).
+Add a [Faker catalog](https://trino.io/docs/current/connector/faker.html) to the
+cluster.
 
 ## Usage
 
+Provision the module:
+
 ```sh
-minitrino -v provision -m faker
-# Or specify cluster version
-minitrino -v -e CLUSTER_VER=${version} provision -m faker
-
-docker exec -it minitrino bash 
-trino-cli
-
-trino> CREATE TABLE faker.default.test (a VARCHAR);
-trino> SELECT * FROM faker.default.test;
+minitrino provision -m faker
 ```
+
+{{ connect_trino_cli }}
+
+Create a table:
+
+```sql
+CREATE TABLE faker.default.test (a VARCHAR);
+SELECT * FROM faker.default.test;
+```
+
+`faker.default.test` should return fake data when queried.

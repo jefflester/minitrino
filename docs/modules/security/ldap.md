@@ -1,4 +1,4 @@
-# LDAP Password Authenticator Module
+# LDAP Authentication
 
 Enable [LDAP password
 authentication](https://trino.io/docs/current/security/ldap.html) on the
@@ -12,11 +12,7 @@ Provision the module:
 minitrino provision -m ldap
 ```
 
-Open a shell to the coordinator:
-
-```sh
-minitrino exec -i
-```
+{{ connect_trino_cli }}
 
 Authenticate to the coordinator using the Trino CLI:
 
@@ -38,6 +34,7 @@ sets of credentials listed below.
 
 ## Default Usernames and Passwords
 
+```{table}
 | Username | Password |
 |:-----------------|:---------------|
 | `admin` | `trinoRocks15` |
@@ -47,6 +44,7 @@ sets of credentials listed below.
 | `metadata-user` | `trinoRocks15` |
 | `platform-user` | `trinoRocks15` |
 | `test` | `trinoRocks15` |
+```
 
 ## Add a New LDAP User
 
@@ -116,4 +114,4 @@ group.
 
 ## Dependent Modules
 
-- [`tls`](../tls/readme.md): Required for securing credentials in transit.
+- [`tls`](tls.md#tls): Required for securing credentials in transit.

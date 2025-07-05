@@ -1,11 +1,11 @@
-# Build a Module (Tutorial)
+# Build a Module
 
 The following example demonstrates the creation of a new catalog module for a
 Postgres service.
 
 ## Overview
 
-- [Build a Module (Tutorial)](#build-a-module-tutorial)
+- [Build a Module](#build-a-module)
   - [Overview](#overview)
   - [Library Overview](#library-overview)
   - [Create the Module Directory](#create-the-module-directory)

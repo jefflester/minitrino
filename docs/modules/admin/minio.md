@@ -1,36 +1,30 @@
-# MinIO Module
+# MinIO
 
-This module deploys MinIO for a local object storage solution. It is used by
-other modules to store data files, such as the `hive`, `iceberg`, and
-`delta-lake` modules.
+Add a MinIO container for local object storage – used by other modules to store
+data files, such as the `hive`, `iceberg`, and `delta-lake` modules.
 
-The MinIO UI can be viewed at `http://localhost:${__PORT_MINIO}` using
-`access-key` and `secret-key` for credentials.
+## Usage
 
-## Persistent Storage
+{{ persistent_storage_warning }}
 
-This module uses named volumes to persist MinIO and metastore data:
-
-```yaml
-volumes:
-  minio-data:
-    labels:
-      - org.minitrino.root=true
-      - org.minitrino.module.admin.minio=true
-```
-
-The user-facing implication is that the data in the MinIO buckets are retained
-even after shutting down and/or removing the environment's containers.
-
-Minitrino issues a warning about this whenever a module with named volumes is
-deployed––be sure to look out for these warnings:
-
-```text
-[w]  Module '<module>' has persistent volumes associated with it. To delete these volumes, remember to run `minitrino remove --volumes`.
-```
-
-To remove these volumes, run:
+Provision the module:
 
 ```sh
-minitrino -v remove --volumes --label org.minitrino.module.admin.minio=true
+minitrino provision -m minio
+```
+
+The MinIO UI can be viewed at `http://localhost:9000` using `access-key` and
+`secret-key` for credentials.
+
+The default bucket is `minitrino`. The MinIO client can be accessed by utilizing
+the `minio-client` container:
+
+```sh
+minitrino exec -c minio-client -i
+mc ls minio/minitrino/
+```
+
+```text
+[2025-07-05 08:33:37 UTC]     0B minitrino_hive/
+[2025-07-05 08:33:37 UTC]     0B minitrino_iceberg/
 ```

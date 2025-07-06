@@ -1,7 +1,7 @@
-minitrino.core.exec.container module
+minitrino.core.logging.common module
 ====================================
 
-.. automodule:: minitrino.core.exec.container
+.. automodule:: minitrino.core.logging.common
    :members:
    :undoc-members:
    :show-inheritance:

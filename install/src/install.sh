@@ -18,13 +18,14 @@ if command -v realpath >/dev/null 2>&1; then
 else
     SCRIPT_PATH=$(python -c "import os; print(os.path.realpath('$0'))")
 fi
-SCRIPT_DIR=$(dirname "${SCRIPT_PATH}")
+
+REPO_ROOT=$(dirname "$(dirname "$(dirname "${SCRIPT_PATH}")")")
 
 VERBOSE=0
 FORCE=0
 
 show_help() {
-    echo "Usage: ./install.sh [options]"
+    echo "Usage: ./install/src/install.sh [options]"
     echo ""
     echo "Options:"
     echo "  -v            Enable verbose output"
@@ -47,21 +48,65 @@ for arg in "$@"; do
 done
 
 find_python() {
-    for py in python3 python /opt/homebrew/bin/python3 /usr/local/bin/python3 /usr/bin/python3; do
-        if command -v "${py}" >/dev/null 2>&1; then
-            version=$("${py}" -c 'import sys; print(f"{sys.version_info[0]}.{sys.version_info[1]}")')
-            echo "Detected Python version: ${version} (${py})"
-            major=$(echo "${version}" | cut -d. -f1)
-            minor=$(echo "${version}" | cut -d. -f2)
-            if [ "${major}" -eq 3 ] && [ "${minor}" -ge 10 ]; then
-                PYTHON="${py}"
-                return
-            fi
+    # Dynamically find all python3.1* binaries in PATH (deduped)
+    mapfile -t dynamic_candidates < <(command -v -a python3.1* 2>/dev/null | awk '!seen[$0]++')
+
+    # Find all python3.1* in common Homebrew and local bin dirs, even if not in PATH
+    mapfile -t homebrew_candidates < <(ls /opt/homebrew/bin/python3.1* 2>/dev/null || true)
+    mapfile -t usr_local_candidates < <(ls /usr/local/bin/python3.1* 2>/dev/null || true)
+
+    # Add generic candidates for robustness
+    static_candidates=(
+        python3
+        python
+    )
+
+    candidates=(
+        "${dynamic_candidates[@]}"
+        "${homebrew_candidates[@]}"
+        "${usr_local_candidates[@]}"
+        "${static_candidates[@]}"
+    )
+
+    best_py=""
+    best_major=0
+    best_minor=0
+    for py in "${candidates[@]}"; do
+        echo "Checking candidate: $py"
+        if ! [ -x "$py" ] && ! command -v "$py" >/dev/null 2>&1; then
+            continue
+        fi
+        version=$(
+            "$py" -c \
+            'import sys; print(f"{sys.version_info[0]}.{sys.version_info[1]}")' \
+            2>/dev/null || echo "0.0"
+        )
+        echo "Detected Python version: ${version} (${py})"
+        major=$(echo "${version}" | cut -d. -f1)
+        minor=$(echo "${version}" | cut -d. -f2)
+        if ! [[ "${major}" =~ ^[0-9]+$ ]] || ! [[ "${minor}" =~ ^[0-9]+$ ]]; then
+            continue
+        fi
+        if [ "${major}" -lt 3 ] || { [ "${major}" -eq 3 ] && [ "${minor}" -lt 10 ]; }; then
+            continue
+        fi
+        if [ "${major}" -gt "${best_major}" ] || \
+           { [ "${major}" -eq "${best_major}" ] && \
+             [ "${minor}" -gt "${best_minor}" ]; }; then
+            best_py="${py}"
+            best_major="${major}"
+            best_minor="${minor}"
         fi
     done
+    if [ -n "$best_py" ]; then
+        PYTHON="$best_py"
+        echo "Using Python interpreter: $PYTHON (${best_major}.${best_minor})"
+        return
+    fi
     echo "Error: Python 3.10+ is required but not found." >&2
     exit 1
 }
+
 
 check_wsl() {
     if [ "$(uname -s)" = "Linux" ] && grep -qEi "(Microsoft|WSL)" /proc/version 2>/dev/null; then
@@ -84,12 +129,12 @@ check_docker() {
 }
 
 handle_venv() {
-    local venv_dir="${SCRIPT_DIR}/venv"
+    local venv_dir="${REPO_ROOT}/venv"
     if [ ! -d "${venv_dir}" ]; then
-        echo "Creating virtual environment in ./venv..."
+        echo "Creating virtual environment in ${REPO_ROOT}/venv..."
         "${PYTHON}" -m venv "${venv_dir}"
     else
-        echo "Using existing virtual environment in ./venv"
+        echo "Using existing virtual environment in ${REPO_ROOT}/venv"
     fi
 
     # shellcheck source=/dev/null
@@ -107,25 +152,27 @@ pip_install() {
         exit 1
     }
 
-    "${PYTHON}" -m pip install -e "${SCRIPT_DIR}/.[dev]" --use-pep517 || {
-        echo "Error: Failed to install CLI module"
+    "${PYTHON}" -m pip install -e "${REPO_ROOT}/.[dev,docs]" --use-pep517 || {
+        echo "Error: Failed to install CLI module with [dev,docs] extras"
         exit 1
     }
 
-    "${PYTHON}" -m pip install -e "${SCRIPT_DIR}/src/tests/" --use-pep517 || {
+    "${PYTHON}" -m pip install -e "${REPO_ROOT}/src/tests/" --use-pep517 || {
         echo "Error: Failed to install test module"
         exit 1
     }
 }
 
 handle_path_and_symlink() {
-    MINITRINO_BIN=$(command -v minitrino 2>/dev/null || "${PYTHON}" -c "import os; print(os.path.realpath('${SCRIPT_DIR}/venv/bin/minitrino'))")
+    # Always symlink to the venv's minitrino binary to avoid circular symlinks
+    local venv_bin_dir="${REPO_ROOT}/venv/bin"
+    local minitrino_venv_bin="${venv_bin_dir}/minitrino"
     local target_bin_dir="${HOME}/.local/bin"
 
     mkdir -p "${target_bin_dir}"
 
-    if ln -sf "${MINITRINO_BIN}" "${target_bin_dir}/minitrino"; then
-        echo "Symlinked minitrino to: ${target_bin_dir}/minitrino"
+    if ln -sf "${minitrino_venv_bin}" "${target_bin_dir}/minitrino"; then
+        echo "Symlinked minitrino to: ${target_bin_dir}/minitrino (-> ${minitrino_venv_bin})"
 
         case ":${PATH}:" in
             *":${target_bin_dir}:"*) ;; # already in PATH
@@ -163,7 +210,7 @@ handle_path_and_symlink() {
 }
 
 symlink_test_runner() {
-    local test_runner_src="${SCRIPT_DIR}/src/tests/lib/runner.py"
+    local test_runner_src="${REPO_ROOT}/src/tests/lib/runner.py"
     local target_bin_dir="${HOME}/.local/bin"
     local target_link="${target_bin_dir}/minitrino-lib-test"
 
@@ -205,6 +252,12 @@ perform_install() {
 
 perform_install "$@"
 
+print_activation_help() {
+    echo -e "\033[1;33mFailed to run $1. You may need to activate the virtual environment first:"
+    echo "    source ./venv/bin/activate"
+    echo -e "Or ensure ~/.local/bin is in your PATH.\033[0m"
+}
+
 echo "
 Installation complete! Start with the CLI by configuring it with 'minitrino config'.
 Alternatively, get started immediately with 'minitrino provision'.
@@ -212,14 +265,14 @@ Alternatively, get started immediately with 'minitrino provision'.
 
 if command -v minitrino-lib-test >/dev/null 2>&1; then
     echo -e "Running minitrino-lib-test...\n"
-    minitrino-lib-test --help
+    minitrino-lib-test --help || print_activation_help "minitrino-lib-test"
 fi
 
 echo ""
 
 if command -v minitrino >/dev/null 2>&1; then
     echo -e "Running minitrino...\n"
-    minitrino
+    minitrino || print_activation_help "minitrino"
 else
     echo "You may now run minitrino by sourcing your venv or using the symlink:"
     echo "  source ./venv/bin/activate && minitrino"

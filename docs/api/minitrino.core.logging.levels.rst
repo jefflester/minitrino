@@ -1,7 +1,7 @@
-minitrino.core.exec.container module
+minitrino.core.logging.levels module
 ====================================
 
-.. automodule:: minitrino.core.exec.container
+.. automodule:: minitrino.core.logging.levels
    :members:
    :undoc-members:
    :show-inheritance:

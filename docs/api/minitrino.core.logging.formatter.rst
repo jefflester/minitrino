@@ -1,7 +1,7 @@
-minitrino.core.cluster.validator module
+minitrino.core.logging.formatter module
 =======================================
 
-.. automodule:: minitrino.core.cluster.validator
+.. automodule:: minitrino.core.logging.formatter
    :members:
    :undoc-members:
    :show-inheritance:

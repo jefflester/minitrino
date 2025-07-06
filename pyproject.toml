@@ -1,79 +1,90 @@
 [build-system]
-requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
+requires = ["setuptools", "wheel"]
 
 [project]
-name = "minitrino"
-version = "3.0.0"
-description = "A command line tool that makes it easy to run modular Trino environments locally."
-readme = "readme.md"
-requires-python = ">=3.10"
-license = {text = "Apache-2.0"}
 authors = [
   {name = "Jeff Lester", email = "jeff.lester.dev@gmail.com"}
 ]
-urls = {"Homepage" = "https://github.com/jefflester/minitrino"}
-keywords = ["trino", "starburst", "docker", "minitrino"]
-
+description = "A command line tool that makes it easy to run modular Trino environments locally."
 dependencies = [
-  "docker==7.1.0",
+  "PyYAML",
   "click==8.1.8",
   "colorama",
+  "docker==7.1.0",
   "humanize",
   "jsonschema",
   "python-dateutil",
-  "PyYAML",
   "requests>=2.32.2",
   "tabulate"
 ]
-
-[project.scripts]
-minitrino = "minitrino.cli:cli"
+keywords = ["docker", "minitrino", "starburst", "trino"]
+license = {text = "Apache-2.0"}
+name = "minitrino"
+readme = "readme.md"
+requires-python = ">=3.10"
+urls = {"Homepage" = "https://github.com/jefflester/minitrino"}
+version = "3.0.0"
 
 [project.optional-dependencies]
 dev = [
   "black",
   "flake8",
-  "furo",
   "isort",
+  "mdformat",
   "mypy",
-  "myst_parser",
+  "pre-commit",
   "pydocstyle",
   "setuptools",
-  "sphinx",
-  "sphinx_copybutton",
-  "sphinxext-opengraph",
   "tomli",
   "types-click",
   "types-docker",
-  "types-PyYAML",
   "types-jsonschema",
+  "types-PyYAML",
+  "types-python-dateutil",
   "types-setuptools",
   "types-tabulate",
-  "types-python-dateutil",
   "wheel",
   "yamllint"
 ]
+# Used for basis of docs requirements.txt:
+# Be sure to maintain these deps to keep things in sync.
+docs = [
+  "ablog",
+  "autoapi",
+  "myst_parser",
+  "numpydoc",
+  "pydata-sphinx-theme",
+  "sphinx",
+  "sphinx-copybutton",
+  "sphinx-design",
+  "sphinx-favicon",
+  "sphinx-togglebutton",
+  "sphinxext-opengraph"
+]
 
-[tool.setuptools]
-package-dir = {"" = "src/cli"}
+[project.scripts]
+minitrino = "minitrino.cli:cli"
 
 [tool.black]
 line-length = 88
 target-version = ['py310']
 
 [tool.isort]
-profile = "black"
-line_length = 88
-src_paths = ["src"]
 known_first_party = ["minitrino", "tests"]
+line_length = 88
+profile = "black"
+src_paths = ["src"]
 
 [tool.mypy]
-python_version = "3.10"
-ignore_missing_imports = true
 check_untyped_defs = true
 explicit_package_bases = true
+ignore_missing_imports = true
 mypy_path = "src"
+python_version = "3.10"
 
 [tool.pydocstyle]
 convention = "numpy"
+
+[tool.setuptools]
+package-dir = {"" = "src/cli"}

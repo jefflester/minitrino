@@ -19,5 +19,5 @@ Module contents
 
 .. automodule:: minitrino.core.cluster
    :members:
-   :show-inheritance:
    :undoc-members:
+   :show-inheritance:

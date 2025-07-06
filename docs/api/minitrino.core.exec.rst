@@ -18,5 +18,5 @@ Module contents
 
 .. automodule:: minitrino.core.exec
    :members:
-   :show-inheritance:
    :undoc-members:
+   :show-inheritance:

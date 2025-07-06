@@ -15,5 +15,5 @@ Module contents
 
 .. automodule:: minitrino.core.docker
    :members:
-   :show-inheritance:
    :undoc-members:
+   :show-inheritance:

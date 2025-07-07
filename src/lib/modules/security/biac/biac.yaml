@@ -1,6 +1,9 @@
 ---
 services:
 
+  # Mount bootstrap to special dir (000-run-first) to force early run This is a
+  # workaround for the fact that the bootstrap scripts are not run in any
+  # particular order, but can be loosely enforced using this hack.
   minitrino:
     environment:
       BIAC_CONFIG_PROPERTIES: |-
@@ -11,6 +14,6 @@ services:
         access-control.config-files=etc/biac.properties
     volumes:
       - ./modules/security/biac/resources/cluster/biac.properties:/mnt/etc/biac.properties:ro
-      - ./modules/security/biac/resources/cluster/bootstrap.sh:/mnt/bootstrap/biac/bootstrap.sh:ro
+      - ./modules/security/biac/resources/cluster/bootstrap.sh:/mnt/bootstrap/000-run-first/00-bootstrap-biac.sh:ro
     labels:
       - org.minitrino.module.security.biac=true

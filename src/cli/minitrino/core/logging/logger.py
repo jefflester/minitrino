@@ -1,187 +1,172 @@
-"""MinitrinoLogger and logging configuration."""
+"""Minitrino logger."""
 
 import inspect
 import logging
 from contextlib import contextmanager
-from types import FrameType
-from typing import Callable, Optional
+from types import FrameType, TracebackType
+from typing import Callable, Mapping, Optional
 
 from click import prompt, style
 
-from minitrino.core.logging.spinner import Spinner, SpinnerAwareHandler
-from minitrino.core.logging.utils import LogLevel, MinitrinoLogFormatter, SinkHandler
-
-DEFAULT_INDENT = " " * 5
-
-PY_LEVEL = {
-    LogLevel.DEBUG: logging.DEBUG,
-    LogLevel.INFO: logging.INFO,
-    LogLevel.WARN: logging.WARNING,
-    LogLevel.ERROR: logging.ERROR,
-}
+from minitrino.core import logging as lg
+from minitrino.core.errors import MinitrinoError
 
 
-class MinitrinoLogger:
-    """
-    Minitrino logging utility.
+class MinitrinoLogger(logging.Logger):
+    """Minitrino logger."""
 
-    Parameters
-    ----------
-    log_level : LogLevel, optional
-        Minimum log level to emit (default: INFO)
+    _instance = None
 
-    Methods
-    -------
-    log(*args, level=LogLevel.INFO) :
-        Log a message with optional styling and indentation.
-    info(*args) :
-        Log a message at the info level.
-    warn(*args) :
-        Log a message at the warning level.
-    error(*args) :
-        Log a message at the error level.
-    debug(*args) :
-        Log a message at the debug level.
-    prompt_msg(msg="") :
-        Prompt the user with a message and capture input.
-    spinner(message: str) :
-        Display a spinner and buffer the logs.
-    set_log_sink(sink: Callable[[str], None] | list[str]) :
-        Set a log sink (e.g., list or callback) for capturing log
-        output. Useful for testing.
-    styled_prefix(level=LogLevel.INFO) :
-        Return the ANSI-styled log prefix.
-    """
+    def __new__(cls, name, level=logging.NOTSET):
+        """Create a new logger or return the existing instance."""
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
 
-    def __init__(self, log_level: Optional[LogLevel] = None) -> None:
-        self._log_level = log_level if log_level is not None else LogLevel.INFO
-        self.logger = logging.getLogger("minitrino")
-        self.set_level(self._log_level)
+    def __init__(self, name: str, level: int = logging.NOTSET) -> None:
+        super().__init__(name, level)
+        self._log_level = lg.levels.LogLevel.INFO
+        self._user_log_level = lg.levels.LogLevel.INFO
+        self._log_sink: lg.sink.SinkCollector = lg.sink.SinkCollector()
+        self._formatter: lg.formatter.MinitrinoLogFormatter | None = None
+        self._spinner: lg.spinner.Spinner | None = None
 
-        self._log_sink: Optional[Callable[[str], None] | list[str]] = None
-        self._sink_handler: Optional[SinkHandler] = None
-        self._spinner = Spinner(self, self.set_log_sink)
+    def log(
+        self,
+        level: int,
+        msg: object,
+        *args: object,
+        exc_info: (
+            bool
+            | BaseException
+            | tuple[type[BaseException], BaseException, TracebackType | None]
+            | tuple[None, None, None]
+            | None
+        ) = None,
+        stack_info: bool = False,
+        stacklevel: int = 3,
+        extra: Mapping[str, object] | None = None,
+    ) -> None:
+        """Log a message."""
+        self._log_with_stacklevel(
+            super().log,
+            level,
+            msg,
+            *args,
+            exc_info=exc_info,
+            stack_info=stack_info,
+            stacklevel=stacklevel,
+            extra=extra,
+        )
 
-    def set_log_sink(self, sink: Callable[[str], None] | list[str] | None) -> None:
-        """Set a log sink (callback or list)."""
-        # Remove all SinkHandler instances to prevent duplicates
-        for handler in list(self.logger.handlers):
-            if isinstance(handler, SinkHandler):
-                self.logger.removeHandler(handler)
-        self._sink_handler = None
-        self._log_sink = sink
-        if sink is not None:
-            handler = SinkHandler(sink)
-            always_verbose = self._log_level == LogLevel.DEBUG
-            handler.setFormatter(MinitrinoLogFormatter(always_verbose=always_verbose))
-            self.logger.addHandler(handler)
-            self._sink_handler = handler
+    def info(self, msg: object, *args: object, **kwargs) -> None:
+        """Log an info message."""
+        lvl = logging.INFO
+        self._log_with_stacklevel(super().info, msg, *args, level=lvl, **kwargs)
 
-    def get_log_sink(self) -> Optional[Callable[[str], None] | list[str]]:
-        """Return the current log sink."""
-        return self._log_sink
+    def warn(self, msg: object, *args: object, **kwargs) -> None:
+        """Log a warning message."""
+        lvl = logging.WARN
+        self._log_with_stacklevel(super().warning, msg, *args, level=lvl, **kwargs)
 
-    def set_level(self, level: LogLevel) -> None:
+    def warning(self, msg: object, *args: object, **kwargs) -> None:
+        """Log a warning message."""
+        self.warn(msg, *args, **kwargs)
+
+    def error(self, msg: object, *args: object, **kwargs) -> None:
+        """Log an error message."""
+        lvl = logging.ERROR
+        self._log_with_stacklevel(super().error, msg, *args, level=lvl, **kwargs)
+
+    def debug(self, msg: object, *args: object, **kwargs) -> None:
+        """Log a debug message."""
+        lvl = logging.DEBUG
+        self._log_with_stacklevel(super().debug, msg, *args, level=lvl, **kwargs)
+
+    def set_log_sink(self, sink: Optional[Callable[[str, str, bool], None]]) -> None:
+        """Set the log sink."""
+        self._log_sink = sink or lg.sink.SinkCollector()
+
+    def enable_log_buffer(self) -> None:
+        """Enable internal buffering of all logs."""
+        self._log_sink = lg.sink.SinkCollector()
+        self.set_log_sink(self._log_sink)
+
+    @property
+    def log_buffer(self) -> list[tuple[str, str]]:
+        """Return the log buffer."""
+        return [
+            (msg, stream)
+            for msg, stream, is_spinner in self._log_sink.buffer
+            if not is_spinner
+        ]
+
+    def clear_log_buffer(self) -> None:
+        """Clear the log buffer."""
+        self._log_sink.buffer.clear()
+
+    def set_level(self, level: lg.levels.LogLevel) -> None:
         """Set the log level."""
         self._log_level = level
-        py_level = PY_LEVEL[level]
-        self.logger.setLevel(py_level)
-
-    def log(self, *args: str, level: LogLevel = LogLevel.INFO) -> None:
-        """Log a message."""
-        py_level = PY_LEVEL[level]
-        msg = " ".join(str(a) for a in args)
-        logger = self._get_caller_logger()
-        logger.log(py_level, msg, stacklevel=3)
-
-    def info(self, *args: str) -> None:
-        """Log an info message."""
-        self.log(*args, level=LogLevel.INFO)
-
-    def warn(self, *args: str) -> None:
-        """Log a warning message."""
-        self.log(*args, level=LogLevel.WARN)
-
-    def error(self, *args: str) -> None:
-        """Log an error message."""
-        self.log(*args, level=LogLevel.ERROR)
-
-    def debug(self, *args: str) -> None:
-        """Log a debug message."""
-        self.log(*args, level=LogLevel.DEBUG)
+        self.setLevel(lg.levels.PY_LEVEL[level])
+        # Update always_verbose on formatter and spinner if present
+        always_verbose = level == lg.levels.LogLevel.DEBUG
+        if self._formatter:
+            self._formatter.always_verbose = always_verbose
+        if self._spinner:
+            self._spinner.always_verbose = always_verbose
 
     def prompt_msg(self, msg: str = "") -> str:
-        """Prompt the user with a message and capture input."""
-        msg = str(msg)
-        styled_prefix = style(LogLevel.INFO.prefix, fg=LogLevel.INFO.color, bold=True)
+        """Prompt for a message."""
+        styled_prefix = style(
+            lg.levels.LogLevel.INFO.prefix, fg=lg.levels.LogLevel.INFO.color, bold=True
+        )
         return prompt(f"{styled_prefix}{msg}", type=str)
 
-    def styled_prefix(self, level: LogLevel = LogLevel.INFO) -> str:
-        """Return the ANSI-styled log prefix."""
+    def styled_prefix(self, level: lg.levels.LogLevel = lg.levels.LogLevel.INFO) -> str:
+        """Return a styled prefix."""
         return style(level.prefix, fg=level.color, bold=True)
+
+    def _log_with_stacklevel(self, super_method, *args: object, **kwargs) -> None:
+        """Log a message with stack level."""
+        level = kwargs.pop("level", self.level)
+        if not args:
+            return super_method(*args, **kwargs)
+
+        msg, *log_args = args
+        msg_str = str(msg).strip()
+        if not msg_str:
+            return
+
+        kwargs.setdefault("stacklevel", 3)
+
+        # Only attach fq_caller for debug/info logs at debug level
+        if self.isEnabledFor(logging.DEBUG) and level in (logging.DEBUG, logging.INFO):
+            fq_name = lg.utils.get_caller_fq_name(stacklevel=kwargs["stacklevel"])
+            kwargs.setdefault("extra", {})
+            kwargs["extra"]["fq_caller"] = fq_name
+
+        # Do NOT pass 'level' to super_method
+        super_method(msg_str, *log_args, **kwargs)
+
+        # The sink handler attached to the root logger will capture all
+        # logs. Do NOT call the sink directly here; this prevents double
+        # emission and log leaks.
 
     @contextmanager
     def spinner(self, message: str):
         """Display a spinner while a task is in progress."""
+        if not isinstance(self._spinner, lg.spinner.Spinner):
+            raise MinitrinoError(
+                f"Spinner is not of type Spinner, got: {type(self._spinner)}."
+            )
         with self._spinner.spinner(message):
             yield
 
     def _get_caller_logger(self) -> logging.Logger:
+        """Get the caller logger."""
         frame: Optional[FrameType] = inspect.currentframe()
-        if frame is None:
-            return logging.getLogger("minitrino")
         for _ in range(3):
-            if frame.f_back is None:
-                break
-            frame = frame.f_back
+            frame = frame.f_back if frame and frame.f_back else frame
         module = inspect.getmodule(frame)
-        logger_name = module.__name__ if module else "minitrino"
-        return logging.getLogger(logger_name)
-
-
-def configure_logging(
-    log_level: LogLevel,
-    logger: Optional[MinitrinoLogger] = None,
-    global_logging: bool = False,
-) -> None:
-    """
-    Configure logging for Minitrino and optionally globally.
-
-    Parameters
-    ----------
-    log_level : LogLevel
-        Minimum log level to emit.
-    logger : MinitrinoLogger, optional
-        The logger instance to use for spinner state. If None, a new
-        instance is created.
-    global_logging : bool, optional
-        If True, configure root logger as well.
-    """
-    root_logger = logging.getLogger()
-    minitrino_logger = logging.getLogger("minitrino")
-
-    for logger_obj in (root_logger, minitrino_logger):
-        for handler in list(logger_obj.handlers):
-            logger_obj.removeHandler(handler)
-
-    py_level = PY_LEVEL[log_level]
-    always_verbose = log_level == LogLevel.DEBUG
-
-    if logger is None:
-        logger = MinitrinoLogger(log_level)
-
-    handler = SpinnerAwareHandler(logger._spinner)
-    handler.setFormatter(MinitrinoLogFormatter(always_verbose=always_verbose))
-
-    if global_logging:
-        root_logger.addHandler(handler)
-        root_logger.setLevel(py_level)
-        minitrino_logger.propagate = True
-    else:
-        minitrino_logger.addHandler(handler)
-        minitrino_logger.setLevel(py_level)
-        minitrino_logger.propagate = False
-        root_logger.setLevel(logging.WARNING)
-        for name in logging.root.manager.loggerDict:
-            if not name.startswith("minitrino"):
-                logging.getLogger(name).setLevel(logging.WARNING)
+        return logging.getLogger(module.__name__ if module else "minitrino")

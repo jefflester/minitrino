@@ -1,102 +1,96 @@
 """Logging utilities for Minitrino."""
 
+import inspect
 import logging
 import os
-import sys
-from enum import Enum
-from typing import Callable
+import shutil
 
-from click import style
+from minitrino.core import logging as lg
 
 DEFAULT_INDENT = " " * 5
 
 
-class LogLevel(Enum):
-    """Logging levels for Minitrino."""
+def configure_logging(
+    log_level: lg.levels.LogLevel = lg.levels.LogLevel.INFO,
+) -> lg.logger.MinitrinoLogger:
+    """
+    Create a singleton Minitrino logger or return the existing one.
 
-    INFO = ("[i]  ", "cyan", False)
-    WARN = ("[w]  ", "yellow", False)
-    ERROR = ("[e]  ", "red", False)
-    DEBUG = ("[v]  ", "magenta", True)
+    Parameters
+    ----------
+    log_level : LogLevel
+        Minimum log level to emit.
 
-    def __init__(self, prefix: str, color: str, debug: bool):
-        self.prefix = prefix
-        self.color = color
-        self.debug = debug
+    Returns
+    -------
+    MinitrinoLogger
+        The configured minitrino logger.
+    """
+    logging.setLoggerClass(lg.logger.MinitrinoLogger)
+    logger: lg.logger.MinitrinoLogger = logging.getLogger("minitrino")
+    root_logger = logging.getLogger()
 
+    def _logger_is_configured(logger: logging.Logger) -> bool:
+        return isinstance(logger, lg.logger.MinitrinoLogger) and logger.handlers
 
-class SinkHandler(logging.Handler):
-    """Logging handler that sends log records to a sink."""
-
-    def __init__(
-        self, sink: Callable[[str, str, bool], None] | list[tuple[str, bool, str]]
+    def _setup_handlers_and_formatters(
+        logger: lg.logger.MinitrinoLogger,
+        root_logger: logging.Logger,
+        log_level: lg.levels.LogLevel,
     ):
-        super().__init__()
-        self.sink = sink
+        logger.handlers.clear()
+        root_logger.handlers.clear()
+        always_verbose = log_level == lg.levels.LogLevel.DEBUG
 
-    def emit(self, record: logging.LogRecord) -> None:
-        """
-        Emit a log record to the sink.
+        # Spinner, formatter, and minitrino handler
+        logger._spinner = lg.spinner.Spinner(
+            logger, logger.set_log_sink, always_verbose=always_verbose
+        )
+        from minitrino.core.logging.handler import MinitrinoLoggerHandler
 
-        Tags the log record with the stream and spinner artifact status.
-        """
-        msg = self.format(record)
-        stream = "stderr" if record.levelno >= logging.ERROR else "stdout"
-        is_spinner_artifact = getattr(record, "is_spinner_artifact", False)
-        if callable(self.sink):
-            self.sink(msg, stream, is_spinner_artifact)
-        elif isinstance(self.sink, list):
-            self.sink.append((msg, is_spinner_artifact, stream))
+        minitrino_handler = MinitrinoLoggerHandler(logger._spinner)
+        logger._formatter = lg.formatter.MinitrinoLogFormatter(
+            always_verbose=always_verbose
+        )
+        minitrino_handler.setFormatter(logger._formatter)
+        minitrino_handler.setLevel(lg.levels.PY_LEVEL[log_level])
+
+        # Sink handler for capturing all logs
+        sink_handler = lg.sink.SinkOnlyHandler(logger._log_sink, logger._formatter)
+        sink_handler.setLevel(logging.NOTSET)
+        root_logger.addHandler(sink_handler)
+        root_logger.addHandler(minitrino_handler)
+        root_logger.setLevel(logging.NOTSET)
+        logger.propagate = True
+
+    if _logger_is_configured(logger):
+        logger.debug("Found existing logger, returning to caller.")
+        return logger
+
+    logger.debug("No logger found, creating new singleton.")
+    _setup_handlers_and_formatters(logger, root_logger, log_level)
+
+    # Turn off urllib3 logging
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+
+    return logger
 
 
-class MinitrinoLogFormatter(logging.Formatter):
-    """Formatter for Minitrino logs."""
+def get_terminal_width() -> int:
+    """Get the terminal width."""
+    return shutil.get_terminal_size(fallback=(80, 24)).columns
 
-    COLORS = {
-        "DEBUG": "magenta",
-        "INFO": "cyan",
-        "WARNING": "yellow",
-        "ERROR": "red",
-        "CRITICAL": "red",
-    }
-    PREFIXES = {
-        "DEBUG": "[v]  ",
-        "INFO": "[i]  ",
-        "WARNING": "[w]  ",
-        "ERROR": "[e]  ",
-        "CRITICAL": "[e]  ",
-    }
 
-    def __init__(self, always_verbose=False):
-        super().__init__()
-        self.always_verbose = always_verbose
-        self.enable_color = sys.stdout.isatty()
-
-    def format(self, record: logging.LogRecord):
-        """Format a log record."""
-        logger_name = record.name
-        prefix = self.PREFIXES.get(record.levelname, "[i]  ")
-        color = self.COLORS.get(record.levelname, "cyan")
-        if self.enable_color:
-            styled_prefix = style(prefix, fg=color, bold=True)
-        else:
-            styled_prefix = prefix
-
-        msg = record.getMessage()
-
-        if self.always_verbose or record.levelno != logging.INFO:
-            if record.pathname:
-                filename = os.path.basename(record.pathname)
-            else:
-                filename = record.module
-            lineno = record.lineno
-            left = f"{styled_prefix} {logger_name}:{filename}:{lineno} "
-            lines = msg.splitlines()
-            if not lines:
-                return left
-            formatted = [f"{left}{lines[0]}"]
-            for line in lines[1:]:
-                formatted.append(f"{DEFAULT_INDENT}{line}")
-            return "\n".join(formatted)
-        else:
-            return f"{styled_prefix}{msg}"
+def get_caller_fq_name(stacklevel: int = 4) -> str:
+    """Get the fully qualified name of the caller."""
+    frame = inspect.currentframe()
+    for _ in range(stacklevel):
+        if frame is not None:
+            frame = frame.f_back
+    if frame is None:
+        return "<unknown>"
+    module = inspect.getmodule(frame)
+    module_name = module.__name__ if module else "<unknown>"
+    filename = os.path.basename(frame.f_code.co_filename)
+    lineno = frame.f_lineno
+    return f"{module_name}:{filename}:{lineno}"

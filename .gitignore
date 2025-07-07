@@ -58,3 +58,4 @@ yarn-error.log*
 .local
 .windsurf
 docs/_build/**
+node_modules

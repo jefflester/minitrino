@@ -139,6 +139,8 @@ handle_venv() {
 
     # shellcheck source=/dev/null
     . "${venv_dir}/bin/activate"
+    echo "Switching to venv python..."
+    PYTHON="$(which python)"
 }
 
 pip_install() {

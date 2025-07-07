@@ -5,6 +5,10 @@ repos:
     hooks:
       - id: black
         stages: [pre-commit, manual]
+        always_run: true
+        pass_filenames: false
+        args: ["."]
+        exclude: "venv/"
 
   - repo: https://github.com/pycqa/flake8
     rev: 7.3.0

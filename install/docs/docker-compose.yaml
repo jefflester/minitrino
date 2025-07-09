@@ -1,3 +1,4 @@
+---
 services:
   minitrino-docs:
     build:
@@ -15,8 +16,7 @@ services:
       - ../../docs/_build/html:/site:ro
     ports:
       - "8000:8000"
-    command: >
-      sh -c "cd /site && python -m http.server 8000"
+    entrypoint: ["bash", "-c", "cd /site && python -m http.server 8000"]
 
   minitrino-docs-build:
     build:

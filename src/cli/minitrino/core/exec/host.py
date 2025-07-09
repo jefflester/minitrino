@@ -9,7 +9,7 @@ import sys
 import time
 from typing import TYPE_CHECKING, Any, Iterator
 
-from minitrino import utils
+from minitrino.ansi import strip_ansi
 from minitrino.core.errors import MinitrinoError
 
 if TYPE_CHECKING:
@@ -75,7 +75,7 @@ class HostCommandExecutor:
                         started_stream = False
                         if process.stdout is not None:
                             for line in self._iter_lines(process):
-                                clean_line = utils.strip_ansi(line)
+                                clean_line = strip_ansi(line)
                                 if not started_stream:
                                     self._ctx.logger.debug("Command Output:")
                                     started_stream = True
@@ -104,7 +104,7 @@ class HostCommandExecutor:
         duration = time.monotonic() - start_time
         return CommandResult(
             command,
-            output=utils.strip_ansi(output),
+            output=strip_ansi(output),
             exit_code=rc,
             duration=duration,
             error=error,
@@ -132,7 +132,7 @@ class HostCommandExecutor:
                 self._ctx.logger.debug(f"Streaming command on host:\n{command}")
             if process.stdout is not None:
                 for line in self._iter_lines(process):
-                    clean_line = utils.strip_ansi(line)
+                    clean_line = strip_ansi(line)
                     if not suppress:
                         self._ctx.logger.debug(clean_line)
                     yield clean_line

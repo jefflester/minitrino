@@ -16,10 +16,10 @@ import docker
 from click.testing import CliRunner, Result
 from docker.models.containers import Container
 
+from minitrino.ansi import strip_ansi
 from minitrino.cli import cli
 from minitrino.core.docker.socket import resolve_docker_socket
 from minitrino.settings import ROOT_LABEL
-from minitrino.utils import strip_ansi
 
 USER_HOME_DIR = os.path.expanduser("~")
 MINITRINO_USER_DIR = os.path.abspath(os.path.join(USER_HOME_DIR, ".minitrino"))

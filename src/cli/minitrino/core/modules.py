@@ -13,7 +13,6 @@ from minitrino import utils
 from minitrino.core.errors import MinitrinoError, UserError
 from minitrino.settings import (
     COMPOSE_LABEL_KEY,
-    DUMMY_LIC_MOUNT_PATH,
     LIC_MOUNT_PATH,
     LIC_VOLUME_MOUNT,
     MODULE_ADMIN,
@@ -383,11 +382,8 @@ class Modules:
                     f"not exist or is not a file: {lic_path}."
                 )
             self._ctx.env.update({"LIC_MOUNT_PATH": LIC_MOUNT_PATH})
-        elif self._ctx.env.get("LIC_PATH", ""):
+        elif "dummy.license" not in self._ctx.env.get("LIC_PATH", ""):
             self._ctx.env.update({"LIC_MOUNT_PATH": LIC_MOUNT_PATH})
-        else:
-            self._ctx.env.update({"LIC_PATH": "./modules/resources/dummy.license"})
-            self._ctx.env.update({"LIC_MOUNT_PATH": DUMMY_LIC_MOUNT_PATH})
 
     def module_services(self, modules: Optional[list[str]] = None) -> list[list]:
         """

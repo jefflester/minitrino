@@ -51,7 +51,7 @@ class ContainerCommandExecutor:
             output_generator: Generator = self._ctx.api_client.exec_start(
                 exec_handler, stream=True
             )
-            for line in utils.buffer_exec_output_lines(
+            for line in self._buffer_exec_output_lines(
                 output_generator, kwargs.get("suppress_output", False)
             ):
                 output += line
@@ -108,7 +108,7 @@ class ContainerCommandExecutor:
         output_generator: Generator = self._ctx.api_client.exec_start(
             exec_handler, stream=True
         )
-        for line in utils.buffer_exec_output_lines(
+        for line in self._buffer_exec_output_lines(
             output_generator, kwargs.get("suppress_output", False)
         ):
             self._ctx.logger.debug(line)
@@ -119,3 +119,39 @@ class ContainerCommandExecutor:
         if self.shell is not None:
             return
         self.shell = detect_container_shell(self._ctx, container, user)
+
+    def _buffer_exec_output_lines(
+        self, output_generator: Generator[bytes, None, None], suppress_output: bool
+    ):
+        """
+        Buffer Docker exec_start output chunks into lines.
+
+        Yields lines as they are completed.
+
+        Parameters
+        ----------
+        output_generator : generator
+            Generator yielding bytes from Docker exec_start.
+        suppress_output : bool
+            If True, do not log output lines.
+
+        Yields
+        ------
+        str
+            Output lines as they are completed (including trailing newlines).
+        """
+        started_stream = False
+        full_line = ""
+        for chunk in output_generator:
+            decoded = chunk.decode(errors="replace")
+            lines = decoded.split("\n")
+            for i, part in enumerate(lines):
+                if i == 0:
+                    full_line += part
+                else:
+                    if not suppress_output and (started_stream or full_line):
+                        yield full_line + "\n"
+                    full_line = part
+                    started_stream = True
+        if full_line and (started_stream or not suppress_output):
+            yield full_line

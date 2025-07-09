@@ -1,3 +1,5 @@
+PYTHON := ./venv/bin/python
+
 # ----------------------------------------
 # Install
 # ----------------------------------------
@@ -26,7 +28,7 @@ reinstall:
 .PHONY: pre-commit
 pre-commit:
 	@echo "\033[1;32m🚀 Running pre-commit...\033[0m"
-	@pre-commit run --all-files --verbose &> .local/pre-commit.log || \
+	@$(PYTHON) -m pre_commit run --all-files --verbose &> .local/pre-commit.log || \
 		{ \
 			echo "\033[1;31m❌ Pre-commit failed, log stored at .local/pre-commit.log\033[0m"; \
 			exit 1; \
@@ -50,20 +52,3 @@ docs-up: docs
 docs-down:
 	docker compose -f install/docs/docker-compose.yml down --timeout 0
 	@echo "\033[1;32m🛑 Docs server stopped\033[0m"
-
-# ----------------------------------------
-# Tests
-# ----------------------------------------
-.PHONY: test-actions test
-
-test-actions:
-	@command -v act >/dev/null 2>&1 || { \
-		echo "act is not installed. Install it with 'brew install act' or see https://github.com/nektos/act#installation"; exit 1; }
-	@docker info >/dev/null 2>&1 || { \
-		echo "Docker is not running. Please start Docker."; exit 1; }
-	@echo "Running all GitHub Actions workflows locally with act..."
-	@act
-
-test: test-actions
-	@echo "Running Python/pytest tests..."
-	@pytest || { echo "pytest not found or tests failed."; exit 1; }

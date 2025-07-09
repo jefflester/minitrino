@@ -16,6 +16,7 @@ Submodules
 .. toctree::
    :maxdepth: 4
 
+   minitrino.ansi
    minitrino.cli
    minitrino.settings
    minitrino.shutdown

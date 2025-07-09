@@ -1,6 +1,5 @@
 """Minitrino CLI entrypoint."""
 
-import logging
 import os
 import sys
 from importlib import import_module
@@ -11,10 +10,9 @@ import click
 from minitrino import utils
 from minitrino.core.context import MinitrinoContext
 from minitrino.core.errors import UserError
-from minitrino.core.logging.logger import LogLevel, MinitrinoLogger, configure_logging
+from minitrino.core.logging.levels import LogLevel
+from minitrino.core.logging.utils import configure_logging
 
-# Singleton logger instantiated at entrypoint
-logging.setLoggerClass(MinitrinoLogger)
 logger = configure_logging()
 
 
@@ -106,8 +104,6 @@ def cli(
     ctx._user_env_args = env
     ctx.cluster_name = cluster_name
 
-    # 1) determine effective log level, 2) configure and set the
-    # context's logger, and 3) set the user log level
     effective_log_level = LogLevel.DEBUG if verbose else LogLevel[log_level.upper()]
     ctx.logger = configure_logging(effective_log_level)
     ctx.user_log_level = effective_log_level

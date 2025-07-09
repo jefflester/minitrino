@@ -106,10 +106,13 @@ class MinitrinoLogger(logging.Logger):
         self._log_sink.buffer.clear()
 
     def set_level(self, level: lg.levels.LogLevel) -> None:
-        """Set the log level."""
+        """Set the log level for the logger and all handlers."""
         self._log_level = level
-        self.setLevel(lg.levels.PY_LEVEL[level])
-        # Update always_verbose on formatter and spinner if present
+        py_level = lg.levels.PY_LEVEL[level]
+        self.setLevel(py_level)
+        for handler in self.handlers:
+            handler.setLevel(py_level)
+
         always_verbose = level == lg.levels.LogLevel.DEBUG
         if self._formatter:
             self._formatter.always_verbose = always_verbose

@@ -14,6 +14,7 @@ from tabulate import tabulate
 from minitrino import utils
 from minitrino.core.context import MinitrinoContext
 from minitrino.core.docker.wrappers import MinitrinoContainer
+from minitrino.shutdown import shutdown_event
 
 
 @click.command(
@@ -76,6 +77,11 @@ def cli(
                     executor.submit(get_container_stats, c): c for c in containers
                 }
                 for future in as_completed(future_to_container):
+                    if shutdown_event.is_set():
+                        ctx.logger.warn(
+                            "Shutdown detected. Aborting container stats fetch."
+                        )
+                        break
                     container = future_to_container[future]
                     try:
                         stats = future.result()

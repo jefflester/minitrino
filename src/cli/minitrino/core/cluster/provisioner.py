@@ -111,6 +111,9 @@ class ClusterProvisioner:
             _orchestrate()
         except Exception as e:
             crashdump = os.path.join(self._ctx.minitrino_user_dir, "crashdump.log")
+            self._ctx.logger.error(
+                f"{str(e)}\nFull provision log written to {crashdump}"
+            )
             with open(crashdump, "w") as f:
                 for msg, _, is_spinner in self._ctx.logger._log_sink.buffer:
                     if not is_spinner:
@@ -157,7 +160,7 @@ class ClusterProvisioner:
         self._ctx.modules.check_enterprise()
         self._ctx.modules.check_compatibility()
         self._ctx.modules.check_volumes()
-        self._ctx.cluster.ports.set_external_ports()
+        self._ctx.cluster.ports.set_external_ports(self.modules)
 
         try:
             module_yaml_paths = self._module_yaml_paths()
@@ -381,10 +384,17 @@ class ClusterProvisioner:
             finally:
                 compose_thread.join()
 
+        if self._compose_failed.is_set():
+            raise MinitrinoError(
+                "Docker Compose command failed after coordinator startup.",
+                self._compose_error,
+            )
+
     def _wait_for_coordinator_container(
         self,
         orig_container_id: str | None,
         compose_thread: threading.Thread,
+        timeout: int = 180,
     ) -> None:
         """
         Wait for the coordinator container to be running.
@@ -399,9 +409,9 @@ class ClusterProvisioner:
         timeout = (
             int(self._ctx.env.get("PROVISION_BUILD_TIMEOUT", 1200))
             if self.build
-            else 30
+            else 120
         )
-        default_timeout = 30
+        default_timeout = 120
         reset_timeout = False
         poll_start = time.time()
         while True:
@@ -418,8 +428,12 @@ class ClusterProvisioner:
                     f"Polling coordinator container: "
                     f"id={container.id}, status={container.status}"
                 )
-                # If any running container for fqcn, treat as success
-                if container.status == "running":
+                # If any running container for fqcn, treat as success;
+                # Wait for coordinator to actually be ready.
+                if (
+                    container.status == "running"
+                    and b"- CLUSTER IS READY -" in container.logs()
+                ):
                     if orig_container_id and container.id != orig_container_id:
                         self._ctx.logger.debug(
                             f"Coordinator container replaced: "

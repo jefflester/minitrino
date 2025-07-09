@@ -201,6 +201,4 @@ def cleanup(
         except Exception as e:
             errors.append(f"Failed to remove unpacked directory {unpacked_dir}: {e}")
     if errors and trigger_error:
-        for err in errors:
-            ctx.logger.error(err)
         raise MinitrinoError("Cleanup failed: " + "; ".join(errors))

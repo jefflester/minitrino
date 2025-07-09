@@ -5,7 +5,6 @@ from __future__ import annotations
 import time
 from typing import TYPE_CHECKING, Any, Generator, Iterator
 
-from minitrino import utils
 from minitrino.core.docker.wrappers import MinitrinoContainer
 from minitrino.core.errors import MinitrinoError
 from minitrino.core.exec.utils import detect_container_shell

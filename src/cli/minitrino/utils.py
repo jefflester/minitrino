@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import difflib
+import logging
 import os
 import sys
 import traceback
@@ -18,12 +19,17 @@ from docker.models.containers import Container
 from minitrino.core.docker.socket import resolve_docker_socket
 from minitrino.core.docker.wrappers import MinitrinoContainer
 from minitrino.core.errors import MinitrinoError, UserError
-from minitrino.core.logging.logger import LogLevel, MinitrinoLogger
+from minitrino.core.logging.levels import LogLevel
+from minitrino.core.logging.utils import configure_logging
+from minitrino.shutdown import shutdown_event
 
 if TYPE_CHECKING:
     from minitrino.core.context import MinitrinoContext
 
 
+# ----------------------------------------------------------------------
+# CLI Decorators & Exception Handling
+# ----------------------------------------------------------------------
 def pass_environment() -> Any:
     """
     Return a Click pass decorator for the MinitrinoContext.
@@ -39,7 +45,7 @@ def pass_environment() -> Any:
 
 
 def handle_exception(
-    error: Exception,
+    error: BaseException,
     ctx: Optional[Any] = None,
     additional_msg: str = "",
     skip_traceback: bool = False,
@@ -49,7 +55,7 @@ def handle_exception(
 
     Parameters
     ----------
-    error : Exception
+    error : BaseException
         The exception object.
     ctx : Optional[Any]
         Optional CLI context object with logger.
@@ -64,6 +70,9 @@ def handle_exception(
     SystemExit
         Exits the program with the appropriate exit code.
     """
+    # Set the shutdown event to signal to any running threads to exit
+    shutdown_event.set()
+
     if isinstance(error, UserError):
         error_msg = error.msg
         exit_code = error.exit_code
@@ -87,8 +96,8 @@ def handle_exception(
     else:
         origin = "unknown:unknown:0"
 
-    logger = getattr(ctx, "logger", MinitrinoLogger())
-    logger.error(f"[Origin: {origin}]", additional_msg, error_msg)
+    logger = getattr(ctx, "logger", logging.getLogger("minitrino"))
+    logger.error(f"[Origin: {origin}]{additional_msg} {error_msg}")
 
     if not skip_traceback:
         echo()  # Force a newline
@@ -117,19 +126,25 @@ def exception_handler(func: Any) -> Any:
         sig = signature(func)
         ctx = None
         if "ctx" in sig.parameters:
-            try:
-                ctx = kwargs.get("ctx") or args[list(sig.parameters).index("ctx")]
-            except Exception:
-                ctx = None
-
+            ctx = kwargs.get("ctx")
+            if ctx is None:
+                try:
+                    ctx_index = list(sig.parameters).index("ctx")
+                    if len(args) > ctx_index:
+                        ctx = args[ctx_index]
+                except Exception:
+                    ctx = None
         try:
             return func(*args, **kwargs)
-        except Exception as e:
+        except BaseException as e:
             handle_exception(e, ctx)
 
     return wrapper
 
 
+# ----------------------------------------------------------------------
+# Docker/Container Utilities
+# ----------------------------------------------------------------------
 def check_daemon(docker_client: Any) -> None:
     """
     Check if the Docker daemon is running.
@@ -155,18 +170,6 @@ def check_daemon(docker_client: Any) -> None:
             "(e.g. Colima or OrbStack). You can view existing contexts with `docker "
             "context ls` and switch with `docker context use <context>`.",
         )
-
-
-def check_lib(ctx: MinitrinoContext) -> None:
-    """
-    Check if a Minitrino library exists.
-
-    Parameters
-    ----------
-    ctx : MinitrinoContext
-        Context object containing library directory information.
-    """
-    ctx.lib_dir
 
 
 def container_user_and_id(
@@ -204,31 +207,31 @@ def container_user_and_id(
     Examples
     --------
     >>> _, uid = container_user_and_id("minintrino-default")
-    >>> cmd = "cat /etc/${CLUSTER_DIST}/config.properties"
-    >>> cmd_executor.execute(
-        f"bash -c '{cmd}'",
-        container="minintrino-default",
-        docker_user=uid,
-    )
+    >>> cmd = ["cat /etc/${CLUSTER_DIST}/config.properties"]
+    >>> cmd_executor.execute(cmd, container="minintrino-default", user=uid)
     """
     if not ctx:  # External call site, e.g. pytest
         from minitrino.core.context import MinitrinoContext
 
         ctx = MinitrinoContext()
-        ctx.initialize(log_level=LogLevel.DEBUG)
+        configure_logging(LogLevel.DEBUG)
+        ctx.initialize()
     if not container:
         raise MinitrinoError("Container object or container name must be provided")
     if isinstance(container, str):
         container = ctx.cluster.resource.container(container)
-    usr = ctx.cmd_executor.execute(
-        "bash -c 'echo ${SERVICE_USER}'", container=container
-    )[0].output.strip()
-    uid = ctx.cmd_executor.execute(f"bash -c 'id -u {usr}'", container=container)[
+    usr = ctx.cmd_executor.execute(["echo ${SERVICE_USER}"], container=container)[
+        0
+    ].output.strip()
+    uid = ctx.cmd_executor.execute([f"id -u {usr}"], container=container)[
         0
     ].output.strip()
     return usr, uid
 
 
+# ----------------------------------------------------------------------
+# Miscellaneous
+# ----------------------------------------------------------------------
 def generate_identifier(identifiers: Optional[Dict[str, Any]] = None) -> str:
     """
     Return an object identifier string used for creating log messages.
@@ -257,6 +260,21 @@ def generate_identifier(identifiers: Optional[Dict[str, Any]] = None) -> str:
     return " ".join(identifier)
 
 
+def check_lib(ctx: MinitrinoContext) -> None:
+    """
+    Check if a Minitrino library exists.
+
+    Parameters
+    ----------
+    ctx : MinitrinoContext
+        Context object containing library directory information.
+    """
+    ctx.lib_dir
+
+
+# ----------------------------------------------------------------------
+# Parsing & Validation Utilities
+# ----------------------------------------------------------------------
 def parse_key_value_pair(
     ctx: MinitrinoContext, pair: str, hard_fail: bool = False
 ) -> tuple[str, str]:
@@ -324,6 +342,30 @@ def closest_match_or_error(
     raise UserError(f"{context.capitalize()} '{name}' not found.{suggestion_msg}")
 
 
+def validate_yes(value: str) -> bool:
+    """
+    Validate if the input is an affirmative response.
+
+    Parameters
+    ----------
+    value : str
+        Value to validate.
+
+    Returns
+    -------
+    bool
+        `True` if the input is 'y' or 'yes' (case-insensitive), `False`
+        otherwise.
+    """
+    response = value.replace(" ", "")
+    if response.lower() == "y" or response.lower() == "yes":
+        return True
+    return False
+
+
+# ----------------------------------------------------------------------
+# Version Helpers
+# ----------------------------------------------------------------------
 def cli_ver() -> str:
     """
     Return the CLI version.
@@ -346,7 +388,7 @@ def lib_ver(ctx: Optional[MinitrinoContext] = None, lib_path: str = "") -> str:
         Library version.
     """
     if ctx is None and not lib_path:
-        raise ValueError("lib_path must be provided if ctx is None")
+        raise MinitrinoError("lib_path must be provided if ctx is None")
 
     if ctx is not None and not lib_path:
         lib_path = ctx.lib_dir
@@ -357,24 +399,3 @@ def lib_ver(ctx: Optional[MinitrinoContext] = None, lib_path: str = "") -> str:
             return next((line.strip() for line in f if line.strip()), "NOT INSTALLED")
     except Exception:
         return "NOT INSTALLED"
-
-
-def validate_yes(value: str) -> bool:
-    """
-    Validate if the input is an affirmative response.
-
-    Parameters
-    ----------
-    value : str
-        Value to validate.
-
-    Returns
-    -------
-    bool
-        `True` if the input is 'y' or 'yes' (case-insensitive), `False`
-        otherwise.
-    """
-    response = value.replace(" ", "")
-    if response.lower() == "y" or response.lower() == "yes":
-        return True
-    return False

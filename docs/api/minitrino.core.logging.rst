@@ -9,6 +9,7 @@ Submodules
 
    minitrino.core.logging.common
    minitrino.core.logging.formatter
+   minitrino.core.logging.handler
    minitrino.core.logging.levels
    minitrino.core.logging.logger
    minitrino.core.logging.sink

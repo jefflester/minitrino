@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 from configparser import ConfigParser
 from typing import TYPE_CHECKING, Any
@@ -44,7 +43,7 @@ class EnvironmentVariables(dict):
     def __init__(self, ctx: MinitrinoContext) -> None:
         super().__init__()
         self._ctx = ctx
-        self._parse_user_env()
+        self._parse_user_env_args()
         self._parse_os_env()
         self._parse_minitrino_config()
 
@@ -68,7 +67,7 @@ class EnvironmentVariables(dict):
         val = super().get(key, default)
         return str(val) if val is not None else ""
 
-    def _parse_user_env(self) -> None:
+    def _parse_user_env_args(self) -> None:
         """
         Parse user-specified environment variables from the config file.
 
@@ -77,12 +76,12 @@ class EnvironmentVariables(dict):
         This is the highest-precedence source for setting variables in
         the EnvironmentVariables mapping.
         """
-        if not self._ctx._user_env:
+        if not self._ctx._user_env_args:
             return
 
-        for env_var in self._ctx._user_env:
+        for env_var in self._ctx._user_env_args:
             k, v = utils.parse_key_value_pair(self._ctx, env_var, hard_fail=True)
-            self[k.upper()] = v
+            self[k.upper()] = str(v)
 
     def _parse_os_env(self) -> None:
         """
@@ -96,21 +95,24 @@ class EnvironmentVariables(dict):
         Environment variables parsed include common Minitrino-specific
         variables such as `CLUSTER_NAME`, `IMAGE`, and any library
         environment variable prefixed with `__PORT`. If a variable has
-        already been set by `_parse_user_env`, it will not be overridden
+        already been set by `_parse_user_env_args`, it will not be overridden
         here.
         """
         shell_source = [
             "CLUSTER_NAME",
             "CLUSTER_VER",
+            "COMPOSE_BAKE",
             "CONFIG_PROPERTIES",
-            "CONFIG_PROPERTIES_WORKER",
+            "WORKER_CONFIG_PROPERTIES",
             "DOCKER_HOST",
             "IMAGE",
             "JVM_CONFIG",
-            "JVM_CONFIG_WORKER",
+            "WORKER_JVM_CONFIG",
+            "KEEP_PLUGINS",
             "LIB_PATH",
             "LIC_PATH",
-            "POST_START_BOOTSTRAP_TIMEOUT",
+            "PROVISION_BUILD_TIMEOUT",
+            "STARTUP_SELECT_RETRIES",
             "TEXT_EDITOR",
         ]
         try:
@@ -123,7 +125,7 @@ class EnvironmentVariables(dict):
         for k, v in os.environ.items():
             k = k.upper()
             if k in shell_source and not self.get(k):
-                self[k] = v
+                self[k] = str(v)
 
     def _parse_minitrino_config(self) -> None:
         """
@@ -131,7 +133,7 @@ class EnvironmentVariables(dict):
 
         Notes
         -----
-        These values take third precedence, after `_parse_user_env` and
+        These values take third precedence, after `_parse_user_env_args` and
         `_parse_os_env`.
 
         Only variables from the `[config]` section of the config file
@@ -149,7 +151,7 @@ class EnvironmentVariables(dict):
             config.read(self._ctx.config_file)
             for k, v in config.items("config"):
                 if not self.get(k) and v:
-                    self[k.upper()] = v
+                    self[k.upper()] = str(v)
         except Exception as e:
             self._ctx.logger.warn(
                 f"Failed to parse config file {self._ctx.config_file} with error:"
@@ -200,8 +202,8 @@ class EnvironmentVariables(dict):
                 k, v = utils.parse_key_value_pair(self._ctx, env_var)
                 k = k.upper()
                 if not self.get(k):
-                    self[k] = v
-                    lib_env[k] = v
+                    self[k] = str(v)
+                    lib_env[k] = str(v)
 
         return lib_env
 
@@ -216,7 +218,14 @@ class EnvironmentVariables(dict):
         `debug` logger.
         """
         if self:
-            self._ctx.logger.debug(
-                f"Registered environment variables:\n"
-                f"{json.dumps(self, sort_keys=True)}",
-            )
+            sorted_items = sorted(self.items())
+            # Find max key length for alignment
+            max_key_len = max(len(str(k)) for k, _ in sorted_items)
+            env_lines = []
+            pad = 4  # extra spaces after the longest key
+            for k, v in sorted_items:
+                key_str = str(k)
+                spaces = " " * (max_key_len - len(key_str) + pad)
+                env_lines.append(f"\t{key_str}{spaces}{v}")
+            env_block = "\n".join(env_lines)
+            self._ctx.logger.debug(f"Registered environment variables:\n{env_block}")

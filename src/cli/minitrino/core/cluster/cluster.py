@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from minitrino.core.cluster.config import ClusterConfigManager
 from minitrino.core.cluster.ops import ClusterOperations
+from minitrino.core.cluster.ports import ClusterPortManager
 from minitrino.core.cluster.resource import ClusterResourceManager
 from minitrino.core.cluster.validator import ClusterValidator
 
@@ -27,8 +27,8 @@ class Cluster:
     ----------
     ops : ClusterOperations
         A cluster operations manager for the current cluster.
-    config : ClusterConfigManager
-        A cluster configuration manager for the current cluster.
+    ports : ClusterPortManager
+        A cluster port manager for the current cluster.
     resource : ClusterResourceManager
         A cluster resource manager for the current cluster.
     validator : ClusterValidator
@@ -38,6 +38,6 @@ class Cluster:
     def __init__(self, ctx: MinitrinoContext):
         self._ctx = ctx
         self.ops = ClusterOperations(ctx, self)
-        self.config = ClusterConfigManager(ctx, self)
+        self.ports = ClusterPortManager(ctx, self)
         self.resource = ClusterResourceManager(ctx)
         self.validator = ClusterValidator(ctx, self)

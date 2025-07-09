@@ -13,7 +13,8 @@ from minitrino.core.docker.socket import resolve_docker_socket
 from minitrino.core.envvars import EnvironmentVariables
 from minitrino.core.errors import MinitrinoError, UserError
 from minitrino.core.exec.cmd import CommandExecutor
-from minitrino.core.logging.logger import LogLevel, MinitrinoLogger
+from minitrino.core.logging.levels import LogLevel
+from minitrino.core.logging.logger import MinitrinoLogger
 from minitrino.core.modules import Modules
 
 

@@ -14,6 +14,7 @@ main() {
     python3 /usr/lib/"${CLUSTER_DIST}"/bin/gen_config.py
     /usr/lib/"${CLUSTER_DIST}"/bin/copy-config.sh
     /usr/lib/"${CLUSTER_DIST}"/bin/run-bootstraps.sh before_start
+    echo "---- PRE START BOOTSTRAPS COMPLETED ----"
 
     rm -f "${pipe}"
     mkfifo "${pipe}"

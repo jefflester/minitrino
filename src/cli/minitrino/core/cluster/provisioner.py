@@ -48,6 +48,8 @@ class ClusterProvisioner:
         self.no_rollback: bool = False
         self.build: bool = False
 
+        self._worker_safe_event: threading.Event = threading.Event()
+
     def provision(
         self,
         modules: list[str],
@@ -137,6 +139,8 @@ class ClusterProvisioner:
         if cluster is None:
             cluster = {}
 
+        self._worker_safe_event.clear()
+
         log_dist = self._ctx.env.get("CLUSTER_DIST")
         self._ctx.logger.info(f"Starting {log_dist.title()} cluster provisioning...")
 
@@ -165,22 +169,48 @@ class ClusterProvisioner:
         try:
             module_yaml_paths = self._module_yaml_paths()
             compose_cmd = self._build_compose_command(module_yaml_paths)
+
+            worker_thread = None
+            if self.workers > 0:
+                worker_thread = threading.Thread(
+                    target=self._provision_workers_when_safe,
+                    name="ProvisionWorkersThread",
+                    daemon=True,
+                )
+                worker_thread.start()
+
             self._run_compose_and_wait(compose_cmd)
 
-            if self.workers > 0:
-                with self._ctx.logger.spinner(
-                    f"Provisioning {self.workers} workers..."
-                ):
-                    self._ctx.cluster.ops.reconcile_workers(self.workers)
-                    self._ctx.logger.info(
-                        f"{self.workers} workers provisioned successfully."
-                    )
+            if worker_thread:
+                worker_thread.join()
 
             self._ctx.cluster.validator.check_dup_config()
 
         except Exception as e:
             self._rollback()
             raise MinitrinoError("Failed to provision cluster.", e)
+
+    def _provision_workers_when_safe(self) -> None:
+        """
+        Wait for the worker-safe event, then provision workers.
+
+        Notes
+        -----
+        This method is intended to be run in a background thread. It
+        waits until the coordinator container signals that workers can
+        be safely provisioned, then provisions the requested number of
+        workers.
+        """
+        self._ctx.logger.debug(
+            "Waiting for worker-safe signal before provisioning workers..."
+        )
+        self._worker_safe_event.wait()
+        self._ctx.logger.debug(
+            "Worker-safe signal received. Proceeding to provision workers."
+        )
+        with self._ctx.logger.spinner(f"Provisioning {self.workers} workers..."):
+            self._ctx.cluster.ops.reconcile_workers(self.workers)
+            self._ctx.logger.info(f"{self.workers} workers provisioned successfully.")
 
     def _set_distribution(self) -> None:
         """Determine the cluster distribution.
@@ -428,6 +458,14 @@ class ClusterProvisioner:
                     f"Polling coordinator container: "
                     f"id={container.id}, status={container.status}"
                 )
+                # If pre-start bootstraps complete, signal to workers
+                # that they can safely provision
+                if (
+                    container.status == "running"
+                    and b"- PRE START BOOTSTRAPS COMPLETED -" in container.logs()
+                ):
+                    self._ctx.logger.debug("Pre-start bootstraps completed.")
+                    self._worker_safe_event.set()
                 # If any running container for fqcn, treat as success;
                 # Wait for coordinator to actually be ready.
                 if (
@@ -445,7 +483,8 @@ class ClusterProvisioner:
                 if container.status == "exited":
                     exit_code = int(container.attrs.get("State", {}).get("ExitCode", 0))
                     if exit_code != 0:
-                        # Check if a newer running container exists for fqcn
+                        # Check if a newer running container exists for
+                        # fqcn
                         container = self._ctx.cluster.resource.container(fqcn)
                         running_found = False
                         if container.status == "running":

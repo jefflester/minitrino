@@ -464,7 +464,6 @@ class ClusterProvisioner:
                     container.status == "running"
                     and b"- PRE START BOOTSTRAPS COMPLETED -" in container.logs()
                 ):
-                    self._ctx.logger.debug("Pre-start bootstraps completed.")
                     self._worker_safe_event.set()
                 # If any running container for fqcn, treat as success;
                 # Wait for coordinator to actually be ready.

@@ -28,7 +28,8 @@ reinstall:
 .PHONY: pre-commit
 pre-commit:
 	@echo "\033[1;32m🚀 Running pre-commit...\033[0m"
-	@$(PYTHON) -m pre_commit run --all-files --verbose &> .local/pre-commit.log || \
+	@mkdir -p .local
+	@$(PYTHON) -m pre_commit run --all-files --verbose 2>&1 | tee .local/pre-commit.log || \
 		{ \
 			echo "\033[1;31m❌ Pre-commit failed, log stored at .local/pre-commit.log\033[0m"; \
 			exit 1; \

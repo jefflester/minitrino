@@ -3,12 +3,6 @@
 set -euxo pipefail
 
 before_start() {
-    :
-}
-
-after_start() {
-  sleep 5 # Let catalogs finish initialization
-
   echo "com.starburstdata.cache=DEBUG" >> /etc/"${CLUSTER_DIST}"/log.properties
 
   echo -e "jmx.dump-tables=com.starburstdata.cache.resource:name=cacheresource,\\
@@ -18,6 +12,10 @@ after_start() {
   com.starburstdata.cache:name=tableimportservice
   jmx.dump-period=10s
   jmx.max-entries=86400" >> /etc/"${CLUSTER_DIST}"/catalog/jmx.properties
+}
+
+after_start() {
+  sleep 5 # Let catalogs finish initialization
 
   echo "Creating Postgres tables..."
   trino-cli --user admin --output-format TSV_HEADER \

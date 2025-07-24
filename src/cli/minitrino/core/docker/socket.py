@@ -66,8 +66,10 @@ def resolve_docker_socket(ctx: Optional[MinitrinoContext] = None, env=None) -> s
                     raise MinitrinoError("No results from docker context inspect")
                 stdout = cmd_results[0].output
             except Exception as e:
-                raise MinitrinoError("Error raised trying to resolve Docker socket.", e)
+                raise MinitrinoError(
+                    "Error raised trying to resolve Docker socket."
+                ) from e
         context = json.loads(stdout)[0]
         return context["Endpoints"]["docker"].get("Host", "")
     except Exception as e:
-        raise MinitrinoError("Failed to determine Docker socket.", e)
+        raise MinitrinoError("Failed to determine Docker socket.") from e

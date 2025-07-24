@@ -251,7 +251,7 @@ class ClusterOperations:
                 try:
                     future.result()
                 except Exception as exc:
-                    raise MinitrinoError(f"Worker provisioning failed: {exc}")
+                    raise MinitrinoError(f"Worker provisioning failed") from exc
 
         # Remove the tar archive
         self._ctx.cmd_executor.execute(
@@ -309,8 +309,8 @@ class ClusterOperations:
                     future.result()
                 except Exception as e:
                     raise MinitrinoError(
-                        f"Error stopping container '{container.name}': {str(e)}"
-                    )
+                        f"Error stopping container '{container.name}'"
+                    ) from e
 
         if not keep:
             with ThreadPoolExecutor() as executor:
@@ -324,8 +324,8 @@ class ClusterOperations:
                         future.result()
                     except Exception as e:
                         raise MinitrinoError(
-                            f"Error removing container '{container.name}': {str(e)}"
-                        )
+                            f"Error removing container '{container.name}'"
+                        ) from e
 
         self._ctx.logger.info("Brought down all Minitrino containers.")
 
@@ -379,11 +379,11 @@ class ClusterOperations:
                 self._ctx.logger.debug(
                     f"Container '{container.name}' restarted successfully."
                 )
-            except NotFound:
+            except NotFound as e:
                 raise MinitrinoError(
                     f"Attempting to restart container '{container_name}', "
                     f"but the container was not found."
-                )
+                ) from e
 
         with ThreadPoolExecutor() as executor:
             futures = {
@@ -397,8 +397,8 @@ class ClusterOperations:
                     future.result()
                 except Exception as e:
                     raise MinitrinoError(
-                        f"Error while restarting container '{container_name}': {str(e)}"
-                    )
+                        f"Error while restarting container '{container_name}'"
+                    ) from e
 
     def remove(
         self, obj_type: str, force: bool, modules: Optional[list[str]] = None

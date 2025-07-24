@@ -91,7 +91,7 @@ def cli(
                 cmd, interactive=interactive, suppress_output=True, trigger_error=False
             )[0]
         except Exception as e:
-            raise MinitrinoError(f"Error while running TTY command in '{fqcn}': {e}")
+            raise MinitrinoError(f"Error while running TTY command in '{fqcn}'") from e
         if result.exit_code not in [0, 130, 137]:
             raise MinitrinoError(
                 f"Failed to execute TTY command in '{fqcn}':\n{cmd}\n"

@@ -48,24 +48,33 @@ def get_logger(log_level: int | None = None) -> logging.Logger:
         the `MINITRINO_TEST_LOG_LEVEL` environment variable, or
         `logging.INFO` if not set.
     """
-    logger = logging.getLogger("minitrino.test")
-    if isinstance(log_level, int):
-        logger.setLevel(log_level)
-    elif not logger.hasHandlers():
-        env_log_level: str | int = os.environ.get(
-            "MINITRINO_TEST_LOG_LEVEL", logging.INFO
-        )
-        if isinstance(env_log_level, str):
-            env_log_level = env_log_level.strip()
-        logger.setLevel(env_log_level)
-    if not logger.handlers:
-        handler = logging.StreamHandler(sys.stdout)
-        formatter = logging.Formatter(
-            "%(levelname)-8s %(name)s:%(filename)s:%(lineno)d %(message)s"
-        )
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-    return logger
+    # Reset logger class to standard Python logger to avoid conflicts
+    # with Minitrino's custom MinitrinoLogger class that may be set globally
+    original_logger_class = logging.getLoggerClass()
+    logging.setLoggerClass(logging.Logger)
+
+    try:
+        logger = logging.getLogger("minitrino.test")
+        if isinstance(log_level, int):
+            logger.setLevel(log_level)
+        elif not logger.hasHandlers():
+            env_log_level: str | int = os.environ.get(
+                "MINITRINO_TEST_LOG_LEVEL", logging.INFO
+            )
+            if isinstance(env_log_level, str):
+                env_log_level = env_log_level.strip()
+            logger.setLevel(env_log_level)
+        if not logger.handlers:
+            handler = logging.StreamHandler(sys.stdout)
+            formatter = logging.Formatter(
+                "%(levelname)-8s %(name)s:%(filename)s:%(lineno)d %(message)s"
+            )
+            handler.setFormatter(formatter)
+            logger.addHandler(handler)
+        return logger
+    finally:
+        # Restore the original logger class
+        logging.setLoggerClass(original_logger_class)
 
 
 logger: logging.Logger = get_logger()

@@ -11,37 +11,23 @@ class MinitrinoError(Exception):
     ----------
     msg : str, optional
         Message to log and include in the exception.
-    caught_error : BaseException | None, optional
-        The exception that was caught and re-raised.
 
     Attributes
     ----------
     msg : str
         Error message associated with the exception.
-    caught_error : BaseException | None
-        The exception that was caught and re-raised.
     exit_code : int
         Exit code for the error type. Defaults to 1.
     """
 
     exit_code = 1
 
-    def __init__(
-        self, msg: str = "", caught_error: BaseException | None = None
-    ) -> None:
+    def __init__(self, msg: str = "") -> None:
         super().__init__(msg)
         self.msg = msg
-        self.caught_error = caught_error
 
     def __str__(self) -> str:
         """Return the error message as a string."""
-        if self.caught_error:
-            tb = traceback.format_exception(
-                type(self.caught_error),
-                self.caught_error,
-                self.caught_error.__traceback__,
-            )
-            return f"{self.msg}\nCaught error: {tb}"
         return self.msg
 
 

@@ -50,8 +50,8 @@ def get_logger(log_level: int | None = None) -> logging.Logger:
     """
     # Reset logger class to standard Python logger to avoid conflicts
     # with Minitrino's custom MinitrinoLogger class that may be set globally
-    original_logger_class = logging.getLoggerClass()
-    logging.setLoggerClass(logging.Logger)
+    # original_logger_class = logging.getLoggerClass()
+    # logging.setLoggerClass(logging.Logger)
 
     try:
         logger = logging.getLogger("minitrino.test")

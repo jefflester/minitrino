@@ -45,7 +45,10 @@ dev = [
   "types-setuptools",
   "types-tabulate",
   "wheel",
-  "yamllint"
+  "yamllint",
+  "fastapi>=0.104.0",
+  "pydantic>=2.0.0",
+  "uvicorn[standard]>=0.24.0"
 ]
 # Used for basis of docs requirements.txt:
 # Be sure to maintain these deps to keep things in sync.

@@ -9,7 +9,7 @@ on:
       - src/cli/**
 
 jobs:
-  cli-tests:
+  cli-integration-tests:
     runs-on: ubuntu-22.04
     steps:
       - name: Check out code
@@ -25,6 +25,27 @@ jobs:
       - name: Run CLI tests
         env:
           GH_WORKFLOW_RUNNING: true
+          MINITRINO_TEST_LOG_LEVEL: DEBUG
         run: |-
           minitrino --help || exit 1
-          pytest src/test/cli
+          pytest -x --debug src/test/cli/integration_tests/
+  cli-unit-tests:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Install project dependencies
+        run: |-
+          pip install -e .
+          pip install -e ./src/test/
+      - name: Run CLI tests
+        env:
+          GH_WORKFLOW_RUNNING: true
+          MINITRINO_TEST_LOG_LEVEL: DEBUG
+        run: |-
+          minitrino --help || exit 1
+          pytest -x --debug src/test/cli/unit_tests/

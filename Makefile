@@ -53,3 +53,35 @@ docs-up: docs
 docs-down:
 	docker compose -f install/docs/docker-compose.yaml down --timeout 0
 	@echo "\033[1;32m🛑 Docs server stopped\033[0m"
+
+# ----------------------------------------
+# Tests
+# ----------------------------------------
+.PHONY: lib-tests integration-tests
+
+# ARGS passes in modules to test
+lib-tests:
+	@echo "\033[1;32m🚀 Running lib tests\033[0m"
+	@mkdir -p .local
+	@LIC_PATH=$(LIC_PATH) \
+	$(PYTHON) -m src.tests.lib.runner -x \
+		--debug --image starburst ${ARGS} 2>&1 | tee .local/lib-test.log || \
+		{ \
+			echo "\033[1;31m❌ Lib tests failed, log stored at .local/lib-test.log\033[0m"; \
+			exit 1; \
+		}
+	@echo "\033[1;32m✅ Lib tests completed, log stored at .local/lib-test.log\033[0m"
+
+# LF=1 to run last failed tests
+integration-tests:
+	@echo "\033[1;32m🚀 Running integration tests\033[0m"
+	@mkdir -p .local
+	@pytest \
+		-x $(if $(LF),--lf,) \
+		-s -vvv --log-level=DEBUG --tb=short \
+		src/tests/cli/integration_tests 2>&1 | tee .local/pytest.log || \
+		{ \
+			echo "\033[1;31m❌ Integration tests failed, log stored at .local/pytest.log\033[0m"; \
+			exit 1; \
+		}
+	@echo "\033[1;32m✅ Integration tests completed, log stored at .local/pytest.log\033[0m"

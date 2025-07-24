@@ -188,7 +188,7 @@ class ClusterProvisioner:
 
         except Exception as e:
             self._rollback()
-            raise MinitrinoError("Failed to provision cluster.", e)
+            raise MinitrinoError("Failed to provision cluster.") from e
 
     def _provision_workers_when_safe(self) -> None:
         """
@@ -416,9 +416,8 @@ class ClusterProvisioner:
 
         if self._compose_failed.is_set():
             raise MinitrinoError(
-                "Docker Compose command failed after coordinator startup.",
-                self._compose_error,
-            )
+                "Docker Compose command failed after coordinator startup."
+            ) from self._compose_error
 
     def _wait_for_coordinator_container(
         self,
@@ -446,8 +445,9 @@ class ClusterProvisioner:
         poll_start = time.time()
         while True:
             if self._compose_failed.is_set():
-                msg = "Docker Compose command failed."
-                raise MinitrinoError(msg, self._compose_error)
+                raise MinitrinoError(
+                    "Docker Compose command failed."
+                ) from self._compose_error
             if shutdown_event.is_set():
                 self._ctx.logger.warn("Shutdown event detected, aborting compose wait.")
                 return

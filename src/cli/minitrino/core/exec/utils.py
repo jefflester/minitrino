@@ -60,9 +60,8 @@ def detect_container_shell(
             continue
     raise MinitrinoError(
         f"Container '{fqcn}' could not accept commands or does not have a shell "
-        f"installed within {timeout:.1f} seconds.",
-        last_e,
-    )
+        f"installed within {timeout:.1f} seconds."
+    ) from last_e
 
 
 def _get_container(

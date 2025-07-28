@@ -128,7 +128,7 @@ def download_and_extract(ctx: MinitrinoContext, version: str = "") -> None:
         try:
             download_file(uri, tarball)
         except requests.HTTPError as e:
-            raise MinitrinoError(f"Failed to download Minitrino library") from e
+            raise MinitrinoError("Failed to download Minitrino library") from e
         if not os.path.isfile(tarball):
             raise MinitrinoError(
                 f"Failed to download Minitrino library ({tarball} not found)."
@@ -144,7 +144,7 @@ def download_and_extract(ctx: MinitrinoContext, version: str = "") -> None:
         cleanup(tarball, file_basename)
     except Exception as e:
         cleanup(tarball, file_basename, False)
-        raise MinitrinoError(f"Failed to install Minitrino library") from e
+        raise MinitrinoError("Failed to install Minitrino library") from e
 
 
 def download_file(url: str, dest_path: str) -> None:

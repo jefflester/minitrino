@@ -1,7 +1,5 @@
 """Error classes for Minitrino CLI."""
 
-import traceback
-
 
 class MinitrinoError(Exception):
     """

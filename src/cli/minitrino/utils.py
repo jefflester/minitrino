@@ -102,6 +102,8 @@ def handle_exception(
     if not skip_traceback:
         echo()  # Force a newline
         echo(f"{traceback.format_exc()}", err=True)
+    else:
+        sys.tracebacklimit = 0
 
     sys.exit(exit_code)
 

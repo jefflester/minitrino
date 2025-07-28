@@ -111,6 +111,8 @@ class ClusterProvisioner:
 
         try:
             _orchestrate()
+        except UserError as e:
+            raise e
         except Exception as e:
             crashdump = os.path.join(self._ctx.minitrino_user_dir, "crashdump.log")
             self._ctx.logger.error(

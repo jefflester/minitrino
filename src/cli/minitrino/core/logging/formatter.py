@@ -123,14 +123,25 @@ class MinitrinoLogFormatter(logging.Formatter):
         str
             The wrapped message.
         """
-        wrapper = textwrap.TextWrapper(
+        # First line gets the prefix, subsequent lines get default indent
+        first_wrapper = textwrap.TextWrapper(
             width=get_terminal_width(),
             initial_indent=left,
-            subsequent_indent=left,
+            subsequent_indent=DEFAULT_INDENT,
         )
+        # Subsequent original lines get default indent
+        other_wrapper = textwrap.TextWrapper(
+            width=get_terminal_width(),
+            initial_indent=DEFAULT_INDENT,
+            subsequent_indent=DEFAULT_INDENT,
+        )
+
         wrapped_lines = []
-        for line in lines:
-            wrapped_lines.append(wrapper.fill(line))
+        for i, line in enumerate(lines):
+            if i == 0:
+                wrapped_lines.append(first_wrapper.fill(line))
+            else:
+                wrapped_lines.append(other_wrapper.fill(line))
         return "\n".join(wrapped_lines)
 
     def _wrap_lines_plain(self, lines: list[str], left: str) -> str:

@@ -251,7 +251,7 @@ class ClusterOperations:
                 try:
                     future.result()
                 except Exception as exc:
-                    raise MinitrinoError(f"Worker provisioning failed") from exc
+                    raise MinitrinoError("Worker provisioning failed") from exc
 
         # Remove the tar archive
         self._ctx.cmd_executor.execute(

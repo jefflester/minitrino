@@ -49,11 +49,21 @@ done
 
 find_python() {
     # Dynamically find all python3.1* binaries in PATH (deduped)
-    mapfile -t dynamic_candidates < <(command -v -a python3.1* 2>/dev/null | awk '!seen[$0]++')
+    dynamic_candidates=()
+    while IFS= read -r line; do
+        dynamic_candidates+=("$line")
+    done < <(command -v -a python3.1* 2>/dev/null | awk '!seen[$0]++')
 
     # Find all python3.1* in common Homebrew and local bin dirs, even if not in PATH
-    mapfile -t homebrew_candidates < <(ls /opt/homebrew/bin/python3.1* 2>/dev/null || true)
-    mapfile -t usr_local_candidates < <(ls /usr/local/bin/python3.1* 2>/dev/null || true)
+    homebrew_candidates=()
+    while IFS= read -r line; do
+        [ -n "$line" ] && homebrew_candidates+=("$line")
+    done < <(ls /opt/homebrew/bin/python3.1* 2>/dev/null || true)
+    
+    usr_local_candidates=()
+    while IFS= read -r line; do
+        [ -n "$line" ] && usr_local_candidates+=("$line")
+    done < <(ls /usr/local/bin/python3.1* 2>/dev/null || true)
 
     # Add generic candidates for robustness
     static_candidates=(

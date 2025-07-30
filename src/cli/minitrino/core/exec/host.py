@@ -7,7 +7,7 @@ import signal
 import subprocess
 import sys
 import time
-from typing import TYPE_CHECKING, Any, Iterator
+from typing import TYPE_CHECKING, Any, Iterator, Optional
 
 from minitrino.ansi import strip_ansi
 from minitrino.core.errors import MinitrinoError
@@ -39,10 +39,7 @@ class HostCommandExecutor:
         error: MinitrinoError | None = None
         try:
             if interactive:
-                env = os.environ.copy()
-                env_override = kwargs.get("environment")
-                if env_override:
-                    env.update(env_override)
+                env = self._handle_env(kwargs.get("environment", {}))
                 completed = subprocess.run(
                     command,
                     env=env,
@@ -52,10 +49,7 @@ class HostCommandExecutor:
                 )
                 rc = completed.returncode
             else:
-                env = os.environ.copy()
-                env_override = kwargs.get("environment")
-                if env_override:
-                    env.update(env_override)
+                env = self._handle_env(kwargs.get("environment", {}))
                 process = subprocess.Popen(
                     command,
                     env=env,
@@ -119,9 +113,12 @@ class HostCommandExecutor:
         """Stream output lines from a subprocess."""
         if interactive:
             raise NotImplementedError("Interactive streaming not supported.")
+
+        env = self._handle_env(kwargs.get("environment", {}))
+
         process = subprocess.Popen(
             command,
-            env=kwargs.get("environment", {}),
+            env=env,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             universal_newlines=True,
@@ -139,6 +136,28 @@ class HostCommandExecutor:
             process.wait()
         finally:
             process.stdout and process.stdout.close()
+
+    def _handle_env(
+        self, env_override: Optional[dict[str, Any]] = None
+    ) -> dict[str, str]:
+        """
+        Handle environment variables for subprocess execution.
+
+        Parameters
+        ----------
+        env_override : dict[str, Any], optional
+            Environment variables to override or add to the current
+            environment. Defaults to None.
+
+        Returns
+        -------
+        dict[str, str]
+            Complete environment dictionary for subprocess execution.
+        """
+        env = os.environ.copy()
+        if env_override:
+            env.update(env_override)
+        return env
 
     def _iter_lines(self, process: subprocess.Popen):
         """

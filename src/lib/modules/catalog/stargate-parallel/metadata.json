@@ -14,7 +14,8 @@
         "password-file",
         "spooling-protocol"
       ],
-      "workers": 2
+      "workers": 2,
+      "env": {}
     }
   ]
 }

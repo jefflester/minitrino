@@ -49,6 +49,7 @@ class ClusterProvisioner:
         self.build: bool = False
 
         self._worker_safe_event: threading.Event = threading.Event()
+        self._dep_cluster_env: dict[str, str] = {}
 
     def provision(
         self,
@@ -159,6 +160,12 @@ class ClusterProvisioner:
             )
             self.workers = cluster.get("workers", 0)
             self._ctx.cluster_name = cluster.get("name", "")
+            if cluster and cluster.get("env"):
+                self._dep_cluster_env.clear()
+                self._ctx.logger.debug(
+                    f"Loading dependent cluster env vars: {cluster['env']}"
+                )
+                self._dep_cluster_env.update(cluster.get("env", {}))
 
         self._set_env_vars()
         self._ctx.provisioned_clusters.append(self._ctx.cluster_name)
@@ -380,8 +387,10 @@ class ClusterProvisioner:
 
         def _run_compose() -> None:
             try:
+                env = self._ctx.env.copy()
+                env.update(self._dep_cluster_env)
                 for line in self._ctx.cmd_executor.stream_execute(
-                    compose_cmd, environment=self._ctx.env.copy(), suppress_output=True
+                    compose_cmd, environment=env, suppress_output=True
                 ):
                     self._ctx.logger.debug(line)
             except Exception as exc:

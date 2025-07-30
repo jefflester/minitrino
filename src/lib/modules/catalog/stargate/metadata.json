@@ -9,7 +9,8 @@
         "hive",
         "password-file"
       ],
-      "workers": 0
+      "workers": 0,
+      "env": {}
     }
   ]
 }

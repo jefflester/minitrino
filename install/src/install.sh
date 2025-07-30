@@ -51,7 +51,9 @@ find_python() {
     # Dynamically find all python3.1* binaries in PATH (deduped)
     dynamic_candidates=()
     while IFS= read -r line; do
-        dynamic_candidates+=("$line")
+        if [[ -n "$line" ]]; then
+            dynamic_candidates+=("$line")
+        fi
     done < <(command -v -a python3.1* 2>/dev/null | awk '!seen[$0]++')
 
     # Find all python3.1* in common Homebrew and local bin dirs, even if not in PATH
@@ -71,12 +73,25 @@ find_python() {
         python
     )
 
-    candidates=(
-        "${dynamic_candidates[@]}"
-        "${homebrew_candidates[@]}"
-        "${usr_local_candidates[@]}"
-        "${static_candidates[@]}"
-    )
+    candidates=()
+    
+    # Add dynamic candidates if any
+    if [[ ${#dynamic_candidates[@]} -gt 0 ]]; then
+        candidates+=("${dynamic_candidates[@]}")
+    fi
+    
+    # Add homebrew candidates if any
+    if [[ ${#homebrew_candidates[@]} -gt 0 ]]; then
+        candidates+=("${homebrew_candidates[@]}")
+    fi
+    
+    # Add usr/local candidates if any
+    if [[ ${#usr_local_candidates[@]} -gt 0 ]]; then
+        candidates+=("${usr_local_candidates[@]}")
+    fi
+    
+    # Add static candidates
+    candidates+=("${static_candidates[@]}")
 
     best_py=""
     best_major=0

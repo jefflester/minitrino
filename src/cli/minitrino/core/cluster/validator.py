@@ -147,6 +147,23 @@ class ClusterValidator:
             if module_dependent_clusters:
                 _helper(module_dependent_clusters)
 
+        # Circular dependency check: dependent clusters cannot list
+        # their parent module as a dependency (would cause infinite
+        # recursion)
+        for parent_module in modules:
+            parent_module_data: dict = self._ctx.modules.data.get(parent_module, {})
+            module_dependent_clusters = parent_module_data.get("dependentClusters", [])
+            for cluster in module_dependent_clusters:
+                cluster_modules = cluster.get("modules", [])
+                if parent_module in cluster_modules:
+                    raise UserError(
+                        f"Circular dependency detected: Dependent cluster "
+                        f"'{cluster.get('name', 'unknown')}' of module "
+                        f"'{parent_module}' cannot list '{parent_module}' "
+                        "as one of its modules. This would cause infinite "
+                        "recursion during provisioning."
+                    )
+
         return list(dependent_clusters)
 
     def check_dup_config(self, cluster_cfgs=None, jvm_cfgs=None) -> None:

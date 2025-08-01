@@ -147,14 +147,6 @@ class ClusterValidator:
             if module_dependent_clusters:
                 _helper(module_dependent_clusters)
 
-        for cluster in dependent_clusters:
-            for module in cluster.get("modules", []):
-                if module in modules:
-                    raise UserError(
-                        f"Circular dependency detected: Module {module} is both a "
-                        f"dependency of cluster {self._ctx.cluster_name} and is "
-                        "being provisioned."
-                    )
         return list(dependent_clusters)
 
     def check_dup_config(self, cluster_cfgs=None, jvm_cfgs=None) -> None:

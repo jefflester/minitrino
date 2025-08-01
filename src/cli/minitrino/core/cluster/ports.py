@@ -76,7 +76,11 @@ class ClusterPortManager:
     def _is_port_in_use(self, port: int) -> bool:
         """Check if a port is in use on the local machine."""
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            return s.connect_ex(("0.0.0.0", port)) == 0
+            try:
+                s.bind(("127.0.0.1", port))
+                return False
+            except OSError:
+                return True
 
     def _is_docker_port_in_use(self, port: int) -> bool:
         """Check if a port is in use by any running Docker container."""
@@ -90,13 +94,15 @@ class ClusterPortManager:
                             return True
         return False
 
-    def _find_next_available_port(self, default_port: int) -> int:
+    def _find_next_available_port(
+        self, default_port: int, exclude_var: Optional[str] = None
+    ) -> int:
         """Find the next available port on the host."""
         candidate_port = default_port
         while (
             self._is_port_in_use(candidate_port)
             or self._is_docker_port_in_use(candidate_port)
-            or self._is_port_assigned_in_session(candidate_port)
+            or self._is_port_assigned_in_session(candidate_port, exclude_var)
         ):
             self._ctx.logger.debug(
                 f"Port {candidate_port} is already in use. "
@@ -105,10 +111,14 @@ class ClusterPortManager:
             candidate_port += 1
         return candidate_port
 
-    def _is_port_assigned_in_session(self, port: int) -> bool:
+    def _is_port_assigned_in_session(
+        self, port: int, exclude_var: Optional[str] = None
+    ) -> bool:
         """Check if a port has been assigned in the current session."""
         for env_var, env_value in self._ctx.env.items():
             if env_var.startswith("__PORT_") and env_value == str(port):
+                if exclude_var and env_var == exclude_var:
+                    continue  # Skip the variable we're currently assigning
                 return True
         return False
 
@@ -116,7 +126,7 @@ class ClusterPortManager:
         self, container_name: str, host_port_var: str, default_port: int
     ) -> None:
         """Assign an available host port to a container."""
-        candidate_port = self._find_next_available_port(default_port)
+        candidate_port = self._find_next_available_port(default_port, host_port_var)
         fq_container_name = self._cluster.resource.fq_container_name(container_name)
         self._ctx.logger.info(
             f"Found available port {candidate_port} for container '"

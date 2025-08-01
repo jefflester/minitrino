@@ -98,17 +98,27 @@ class ClusterProvisioner:
             self._ctx.modules.check_module_version_requirements(self.modules)
             self.modules = self._append_running_modules(self.modules)
             self.modules = self._ctx.modules.check_dep_modules(self.modules)
-            self._ensure_shared_network()
-            self._runner()
 
             dependent_clusters = self._ctx.cluster.validator.check_dependent_clusters(
                 self.modules
             )
-            for cluster in dependent_clusters:
-                self._runner(cluster=cluster)
 
-            self._record_image_src_checksum()
-            self._ctx.logger.info("Environment provisioning complete.")
+            clusters_to_provision = [None]  # None represents main cluster
+            clusters_to_provision.extend(dependent_clusters)
+
+            try:
+                self._ensure_shared_network()
+                self._runner()  # Provisions main cluster
+                for cluster in dependent_clusters:
+                    self._runner(cluster=cluster)
+                self._record_image_src_checksum()
+                self._ctx.logger.info("Environment provisioning complete.")
+            except Exception as e:
+                self._ctx.logger.error(
+                    "Provisioning failed. Rolling back all provisioned clusters..."
+                )
+                self._rollback()
+                raise e
 
         try:
             _orchestrate()

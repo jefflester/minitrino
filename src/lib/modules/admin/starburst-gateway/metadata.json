@@ -14,7 +14,6 @@
       "workers": 0,
       "env": {
         "__PORT_MINITRINO": "60801",
-        "__PORT_MINITRINO_TLS": "60444",
         "CONFIG_PROPERTIES": "http-server.process-forwarded=true",
         "INSIGHTS_JDBC_URL": "jdbc:postgresql://postgres-backend-svc-default:5432/sep"
       }

@@ -93,8 +93,10 @@ class ClusterPortManager:
     def _find_next_available_port(self, default_port: int) -> int:
         """Find the next available port on the host."""
         candidate_port = default_port
-        while self._is_port_in_use(candidate_port) or self._is_docker_port_in_use(
-            candidate_port
+        while (
+            self._is_port_in_use(candidate_port)
+            or self._is_docker_port_in_use(candidate_port)
+            or self._is_port_assigned_in_session(candidate_port)
         ):
             self._ctx.logger.debug(
                 f"Port {candidate_port} is already in use. "
@@ -102,6 +104,13 @@ class ClusterPortManager:
             )
             candidate_port += 1
         return candidate_port
+
+    def _is_port_assigned_in_session(self, port: int) -> bool:
+        """Check if a port has been assigned in the current session."""
+        for env_var, env_value in self._ctx.env.items():
+            if env_var.startswith("__PORT_") and env_value == str(port):
+                return True
+        return False
 
     def _assign_port(
         self, container_name: str, host_port_var: str, default_port: int

@@ -1,0 +1,32 @@
+---
+serverConfig:
+    node.environment: minitrino
+    http-server.http.port: 9080
+    http-server.http.enabled: true
+    http-server.process-forwarded: true
+
+dataStore:
+    jdbcUrl: "jdbc:postgresql://starburst-gateway-postgres-${ENV:CLUSTER_NAME}:5432/gateway"
+    user: "admin"
+    password: "trinoRocks15"
+    driver: org.postgresql.Driver
+
+clusterStatsConfiguration:
+    monitorType: INFO_API
+
+routingRules:
+    rulesEngineEnabled: true
+    rulesType: FILE
+    rulesConfigPath: "/etc/starburst-gateway/routing-rules.yaml"
+    rulesRefreshPeriod: "1m"
+
+extraWhitelistPaths:
+    - "/"
+    - "/ui/insights"
+    - "/api/v1/biac"
+    - "/api/v1/dataProduct"
+    - "/api/v1/dataproduct"
+    - "/ext/faster"
+
+routing:
+    addXForwardedHeaders: true

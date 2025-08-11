@@ -14,6 +14,7 @@ import docker
 from click import echo, make_pass_decorator
 from docker.models.containers import Container
 
+from minitrino.cmd import lib_install
 from minitrino.core.docker.socket import resolve_docker_socket
 from minitrino.core.docker.wrappers import MinitrinoContainer
 from minitrino.core.errors import MinitrinoError, UserError
@@ -166,12 +167,13 @@ def check_lib(ctx: MinitrinoContext) -> None:
         Context object containing library directory information.
     """
     if not ctx:
-       raise ValueError("MinitrinoContext must be provided for library version check")  
+        raise ValueError("MinitrinoContext must be provided for library version check")
 
     if not ctx.lib_dir:
         _auto_install_or_update_libraries(ctx)
-    
+
     ctx.lib_dir
+
 
 def _auto_install_or_update_libraries(ctx: MinitrinoContext) -> None:
     """
@@ -195,19 +197,32 @@ def _auto_install_or_update_libraries(ctx: MinitrinoContext) -> None:
     4. Log appropriate messages for each scenario
     """
     cli_version = cli_ver()
-    library_version = lib_ver(ctx=ctx, lib_path=ctx.lib_dir) 
+    library_version = lib_ver(ctx=ctx, lib_path=ctx.lib_dir)
     if library_version == "NOT INSTALLED":
-        ctx.logger.warn("Minitrino library is not installed. Installing Minitrino libraries... ")
+        ctx.logger.warn(
+            "Minitrino library is not installed. Installing Minitrino libraries... "
+        )
         ctx.invoke(lib_install, version=cli_version)
     if cli_version != library_version:
-        response = ctx.logger.prompt("The current CLI version is ${cli_version} which does not match the installed library version ${lib_version}. Install library version ${cli_version}? [Y/N])")
+        response = ctx.logger.prompt_msg(
+            f"The current CLI version is {cli_version} which does not match "
+            f"the installed library version {library_version}. "
+            f"Install library version {cli_version}? [Y/N]"
+        )
         if validate_yes(response):
-            ctx.logger.info(f"Overwriting existing Minitrino library to version ${cli_version}")
+            ctx.logger.info(
+                f"Overwriting existing Minitrino library to version {cli_version}"
+            )
             ctx.invoke(lib_install, version=cli_version)
         else:
-            ctx.logger.warn("It is highly recommended to use matching CLI and library versions. Mismatched versions are likely to cause errors. To install the library manually, run `minitrino lib-install`.")
+            ctx.logger.warn(
+                "It is highly recommended to use matching CLI and library versions. "
+                "Mismatched versions are likely to cause errors. "
+                "To install the library manually, run `minitrino lib-install`."
+            )
     else:
         ctx.logger.debug("CLI and library versions match. No action required.")
+
 
 def container_user_and_id(
     ctx: Optional[MinitrinoContext] = None,

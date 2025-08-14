@@ -19,16 +19,26 @@ def prune_plugins(cluster_dist: str, keep_plugins_env: Optional[str] = None) -> 
     Remove unused plugins from the plugin directory.
 
     Keep only those in the static list and any specified by
-    KEEP_PLUGINS.
+    KEEP_PLUGINS. If KEEP_PLUGINS is "ALL", keeps all plugins.
 
     Parameters
     ----------
     cluster_dist : str
         Cluster distribution name ("trino" or "starburst").
     keep_plugins_env : str or None, optional
-        Comma- or space-separated list of additional plugins to keep
-        (default is None).
+        Comma- or space-separated list of additional plugins to keep,
+        or "ALL" to keep all plugins (default is None).
     """
+    plugin_dir = f"/usr/lib/{cluster_dist}/plugin"
+    if not os.path.isdir(plugin_dir):
+        print(f"{LOG_PREFIX} Plugin dir {plugin_dir} does not exist; skipping prune.")
+        return
+
+    # Check if ALL is specified
+    if keep_plugins_env and keep_plugins_env.strip().upper() == "ALL":
+        print(f"{LOG_PREFIX} KEEP_PLUGINS=ALL specified; keeping all plugins.")
+        return
+
     keep = [
         "audit-log",
         "clickhouse",
@@ -78,10 +88,6 @@ def prune_plugins(cluster_dist: str, keep_plugins_env: Optional[str] = None) -> 
         ]
         keep.extend(extra)
         print(f"{LOG_PREFIX} Additional plugins to keep from KEEP_PLUGINS: {extra}")
-    plugin_dir = f"/usr/lib/{cluster_dist}/plugin"
-    if not os.path.isdir(plugin_dir):
-        print(f"{LOG_PREFIX} Plugin dir {plugin_dir} does not exist; skipping prune.")
-        return
     for name in os.listdir(plugin_dir):
         if name not in keep:
             path = os.path.join(plugin_dir, name)

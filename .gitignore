@@ -55,8 +55,5 @@ yarn-error.log*
 *minio.sys*
 *.tar.gz
 .mypy_cache
-.local
-.windsurf
 docs/_build/**
 node_modules
-CLAUDE.md

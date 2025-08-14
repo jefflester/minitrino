@@ -57,7 +57,7 @@ docs-down:
 # ----------------------------------------
 # Tests
 # ----------------------------------------
-.PHONY: lib-tests integration-tests
+.PHONY: lib-tests integration-tests unit-tests coverage all-tests
 
 # ARGS passes in modules to test
 lib-tests:
@@ -85,3 +85,38 @@ integration-tests:
 			exit 1; \
 		}
 	@echo "\033[1;32m✅ Integration tests completed, log stored at .local/pytest.log\033[0m"
+
+# Run unit tests with coverage
+unit-tests:
+	@echo "\033[1;32m🚀 Running unit tests\033[0m"
+	@mkdir -p .local
+	@pytest \
+		-x $(if $(LF),--lf,) \
+		-s -vv --log-level=DEBUG --tb=short \
+		--cov=minitrino --cov-report=term-missing \
+		src/tests/cli/unit_tests 2>&1 | tee .local/unit-test.log || \
+		{ \
+			echo "\033[1;31m❌ Unit tests failed, log stored at .local/unit-test.log\033[0m"; \
+			exit 1; \
+		}
+	@echo "\033[1;32m✅ Unit tests completed, log stored at .local/unit-test.log\033[0m"
+
+# Generate coverage report
+coverage:
+	@echo "\033[1;32m📊 Generating coverage report\033[0m"
+	@mkdir -p .local
+	@pytest \
+		--cov=minitrino \
+		--cov-report=html \
+		--cov-report=term-missing:skip-covered \
+		--cov-fail-under=90 \
+		src/tests/cli/unit_tests 2>&1 | tee .local/coverage.log || \
+		{ \
+			echo "\033[1;31m❌ Coverage below 90%, see .local/coverage.log\033[0m"; \
+			exit 1; \
+		}
+	@echo "\033[1;32m✅ Coverage report generated at htmlcov/index.html\033[0m"
+
+# Run all test suites
+all-tests: unit-tests integration-tests lib-tests
+	@echo "\033[1;32m✅ All tests completed successfully\033[0m"

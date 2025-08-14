@@ -13,6 +13,7 @@ from minitrino.core.cmd_exec import CommandExecutor
 from minitrino.core.docker.socket import resolve_docker_socket
 from minitrino.core.envvars import EnvironmentVariables
 from minitrino.core.errors import UserError
+from minitrino.core.library import LibraryManager
 from minitrino.core.logger import LogLevel, MinitrinoLogger
 from minitrino.core.modules import Modules
 
@@ -71,6 +72,7 @@ class MinitrinoContext:
     cmd_executor: CommandExecutor
     docker_client: Optional[docker.DockerClient]
     api_client: Optional[docker.APIClient]
+    library_manager: LibraryManager
     all_clusters: bool
     provisioned_clusters: list[str]
     user_home_dir: str
@@ -96,6 +98,7 @@ class MinitrinoContext:
         self.cmd_executor: Optional[CommandExecutor] = None
         self.docker_client: Optional[docker.DockerClient] = None
         self.api_client: Optional[docker.APIClient] = None
+        self._library_manager = LibraryManager(self)
 
         self.user_home_dir = os.path.expanduser("~")
         self.minitrino_user_dir = self._handle_minitrino_user_dir()

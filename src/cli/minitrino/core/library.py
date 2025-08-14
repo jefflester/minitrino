@@ -4,18 +4,21 @@ import os
 import re
 import shutil
 import tarfile
+from typing import TYPE_CHECKING
 
 import requests
 
 from minitrino import utils
-from minitrino.core.context import MinitrinoContext
 from minitrino.core.errors import MinitrinoError, UserError
+
+if TYPE_CHECKING:
+    from minitrino.core.context import MinitrinoContext
 
 
 class LibraryManager:
     """Handles installation and management of Minitrino libraries."""
 
-    def __init__(self, ctx: MinitrinoContext):
+    def __init__(self, ctx: "MinitrinoContext"):
         self.ctx = ctx
         self.releases_url = "https://api.github.com/repos/jefflester/minitrino/releases"
 
@@ -100,6 +103,42 @@ class LibraryManager:
         """Extract a .tar.gz file to the given directory."""
         with tarfile.open(tarball_path, "r:gz") as tar:
             tar.extractall(path=extract_dir, filter="fully_trusted")
+
+    def auto_install_or_update(self) -> None:
+        """
+        Automatically install or update Minitrino libraries to match the CLI version.
+
+        This method checks if the Minitrino library is installed and if its version
+        matches the CLI version. If not installed, it will automatically install the
+        library. If versions don't match, it will prompt the user to update.
+        """
+        cli_version = utils.cli_ver()
+        library_version = utils.lib_ver(ctx=self.ctx, lib_path=self.ctx.lib_dir)
+
+        if library_version == "NOT INSTALLED":
+            self.ctx.logger.warn(
+                "Minitrino library is not installed. Installing Minitrino libraries... "
+            )
+            self.install(version=cli_version)
+        elif cli_version != library_version:
+            response = self.ctx.logger.prompt_msg(
+                f"The current CLI version is {cli_version} which does not match "
+                f"the installed library version {library_version}. "
+                f"Install library version {cli_version}? [Y/N]"
+            )
+            if utils.validate_yes(response):
+                self.ctx.logger.info(
+                    f"Overwriting existing Minitrino library to version {cli_version}"
+                )
+                self.install(version=cli_version)
+            else:
+                self.ctx.logger.warn(
+                    "It is highly recommended to use matching CLI and library versions."
+                    " Mismatched versions are likely to cause errors."
+                    " To install the library manually, run `minitrino lib-install`."
+                )
+        else:
+            self.ctx.logger.debug("CLI and library versions match. No action required.")
 
     def _cleanup(
         self, tarball: str = "", file_basename: str = "", trigger_error: bool = True

@@ -1,15 +1,14 @@
 # Starburst Gateway
 
-Configures [Starburst
-Gateway](https://docs.starburst.io/latest/admin/starburst-gateway/index.html) to
-load balance access to multiple SEP clusters.
+Configures
+[Starburst Gateway](https://docs.starburst.io/latest/admin/starburst-gateway/index.html)
+to load balance access to multiple SEP clusters.
 
 ## Usage
 
 {{ starburst_license_warning }}
 
-:::{admonition} Harbor Registry Auth Required
-:class: warning
+:::{admonition} Harbor Registry Auth Required :class: warning
 
 This module requires authentication to Starburst's image registry. You must
 authenticate to the Harbor registry specified in the module's YAML file before

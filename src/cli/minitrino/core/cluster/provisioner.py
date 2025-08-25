@@ -461,7 +461,8 @@ class ClusterProvisioner:
             if self.build
             else 120
         )
-        default_timeout = 120
+        # Use longer timeout for builds even after container creation
+        default_timeout = 300 if self.build else 120
         reset_timeout = False
         poll_start = time.time()
         while True:
@@ -521,13 +522,27 @@ class ClusterProvisioner:
                 pass
 
             if not compose_thread.is_alive() and not reset_timeout:
-                timeout = default_timeout
-                reset_timeout = True
-                self._ctx.logger.debug(
-                    f"Compose thread finished, reducing "
-                    f"coordinator wait timeout to {default_timeout} seconds."
-                )
-                self._ctx.logger.info("Waiting for coordinator container to start...")
+                try:
+                    fqcn = self._ctx.cluster.resource.fq_container_name("minitrino")
+                    container = self._ctx.cluster.resource.container(fqcn)
+                    # Container exists, safe to reduce timeout
+                    timeout = default_timeout
+                    reset_timeout = True
+                    self._ctx.logger.debug(
+                        f"Compose thread finished and container exists, reducing "
+                        f"coordinator wait timeout to {default_timeout} seconds."
+                    )
+                    self._ctx.logger.info(
+                        "Waiting for coordinator container to start..."
+                    )
+                except NotFound:
+                    # Container doesn't exist yet, likely still pulling
+                    # image. Keep the original timeout and check again
+                    # next iteration
+                    self._ctx.logger.debug(
+                        "Compose thread finished but container not found yet, "
+                        "likely still pulling image. Maintaining original timeout."
+                    )
 
             if time.time() - poll_start > timeout:
                 raise MinitrinoError(
@@ -555,13 +570,29 @@ class ClusterProvisioner:
 
     def _determine_build(self) -> bool:
         """Determine if the image should be built."""
+        # Check if image source has changed
         if self._image_src_changed():
             self._ctx.logger.debug(
                 "Image source has changed. "
                 "--build flag will be appended to compose command."
             )
             return True
-        return False
+
+        # Check if the image exists at all
+        ver = self._ctx.env.get("CLUSTER_VER")
+        dist = self._ctx.env.get("CLUSTER_DIST")
+        image_tag = f"minitrino/cluster:{ver}-{dist}"
+
+        try:
+            self._ctx.docker_client.images.get(image_tag)
+            self._ctx.logger.debug(f"Image {image_tag} exists, no build required.")
+            return False
+        except Exception:
+            self._ctx.logger.debug(
+                f"Image {image_tag} does not exist. "
+                "--build flag will be appended to compose command."
+            )
+            return True
 
     @property
     def _image_src_checksum(self) -> str:

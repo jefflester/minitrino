@@ -1,0 +1,100 @@
+---
+services:
+
+  minitrino:
+    volumes:
+      - ./modules/catalog/iceberg-hms/resources/cluster/iceberg.properties:/mnt/etc/catalog/iceberg.properties:ro
+      - ./modules/catalog/iceberg-hms/resources/bootstrap/458-native-fs-workaround.sh:/mnt/bootstrap/iceberg/458-native-fs-workaround.sh:ro
+
+  postgres-hive:
+      image: postgres:${POSTGRES_HMS_VER}
+      container_name: postgres-hive-${CLUSTER_NAME}
+      healthcheck:
+        test: ['CMD-SHELL', 'pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}']
+        interval: 10s
+        timeout: 5s
+        retries: 5
+      env_file:
+        - ./modules/catalog/hive/resources/postgres/postgres.env
+      volumes:
+        - postgres-hive-data:/var/lib/postgresql/data
+      labels:
+        - org.minitrino.root=true
+        - org.minitrino.module.catalog.hive=true
+ 
+  metastore-hive:
+    image: jefflester/hive-metastore:${HMS_VER}
+    container_name: metastore-hive-${CLUSTER_NAME}
+    depends_on:
+      postgres-hive:
+        condition: service_healthy
+    env_file:
+      - ./modules/catalog/hive/resources/hms/hms.env
+    ports:
+      - :9083
+    labels:
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.hive=true
+
+  # ---------------------------------------------------------------------------
+  # I couldn't get path-style access to work with
+  # `org.apache.iceberg.aws.s3.S3FileIO`, even after setting the property that
+  # supposedly enables that feature. As a fallback, I have configured MinIO to
+  # use virtual-style paths for S3, which is the default path style used by the
+  # Iceberg S3 filesystem.
+
+  # Virtual-style path solution for MinIO:
+  # https://stackoverflow.com/a/73393416
+  # ---------------------------------------------------------------------------
+
+  minio-iceberg-hive:
+    image: minio/minio:${MINIO_VER}
+    container_name: minio-iceberg-${CLUSTER_NAME}
+    environment:
+      MINIO_ROOT_USER: access-key
+      MINIO_ROOT_PASSWORD: secret-key
+      MINIO_DOMAIN: s3.us-east-1.minio.com
+    command: server --address :9000 --console-address :9001 /data
+    networks:
+      default:
+        aliases:
+          - sample-bucket.s3.us-east-1.minio-hive.com
+    ports:
+      - :9000
+      - ${__PORT_MINIO_ICEBERG}:9001
+    volumes:
+      - minio-iceberg-data:/data
+    labels:
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.iceberg=true
+
+  create-minio-iceberg-buckets:
+    image: minio/mc:${MINIO_MC_VER}
+    container_name: create-minio-iceberg-buckets-${CLUSTER_NAME}
+    entrypoint: |-
+      /bin/sh -c "
+      wfi=wait-for-it && \
+      curl -fsSL \\
+        https://raw.githubusercontent.com/vishnubob/$$wfi/master/$$wfi.sh \\
+        > /tmp/$$wfi.sh && \
+      chmod +x /tmp/$$wfi.sh && \
+      echo 'Waiting for MinIO to come up...' && \
+      /tmp/$$wfi.sh minio-iceberg-hive:9000 --strict --timeout=60 && \
+      /usr/bin/mc alias set minio \\
+        http://minio-iceberg-hive:9000 access-key secret-key && \
+      /usr/bin/mc mb minio/sample-bucket/wh/ && \
+      tail -f /dev/null
+      "
+    labels:
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.iceberg=true
+
+volumes:
+  minio-iceberg-data:
+    labels:
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.iceberg=true
+  postgres-hive-data:
+    labels:
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.hive=true

@@ -1,0 +1,5 @@
+{
+  "description": "Iceberg catalog module (uses Iceberg HMS catalog for metadata management)",
+  "incompatibleModules": [],
+  "enterprise": false
+}

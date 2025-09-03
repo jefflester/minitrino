@@ -3,38 +3,39 @@ services:
 
   minitrino:
     volumes:
-      - ./modules/catalog/iceberg-hms/resources/cluster/iceberg.properties:/mnt/etc/catalog/iceberg.properties:ro
+      - ./modules/catalog/iceberg-hms/resources/cluster/iceberg_hms.properties:/mnt/etc/catalog/iceberg_hms.properties:ro
+      - ./modules/catalog/iceberg-hms/resources/bootstrap/create-schema.sh:/mnt/bootstrap/hive/create-schema.sh:ro
       - ./modules/catalog/iceberg-hms/resources/bootstrap/458-native-fs-workaround.sh:/mnt/bootstrap/iceberg/458-native-fs-workaround.sh:ro
 
-  postgres-hive:
+  postgres-iceberg-hms:
       image: postgres:${POSTGRES_HMS_VER}
-      container_name: postgres-hive-${CLUSTER_NAME}
+      container_name: postgres-iceberg-hms-${CLUSTER_NAME}
       healthcheck:
         test: ['CMD-SHELL', 'pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}']
         interval: 10s
         timeout: 5s
         retries: 5
       env_file:
-        - ./modules/catalog/hive/resources/postgres/postgres.env
+        - ./modules/catalog/iceberg-hms/resources/postgres/postgres.env
       volumes:
-        - postgres-hive-data:/var/lib/postgresql/data
+        - postgres-iceberg-hms-data:/var/lib/postgresql/data
       labels:
         - org.minitrino.root=true
-        - org.minitrino.module.catalog.hive=true
+        - org.minitrino.module.catalog.iceberg-hms=true
  
-  metastore-hive:
+  metastore-iceberg-hms:
     image: jefflester/hive-metastore:${HMS_VER}
-    container_name: metastore-hive-${CLUSTER_NAME}
+    container_name: metastore-iceberg-hms-${CLUSTER_NAME}
     depends_on:
-      postgres-hive:
+      postgres-iceberg-hms:
         condition: service_healthy
     env_file:
-      - ./modules/catalog/hive/resources/hms/hms.env
-    ports:
-      - :9083
+      - ./modules/catalog/iceberg-hms/resources/hms/hms.env
+    expose:
+      - 9083
     labels:
       - org.minitrino.root=true
-      - org.minitrino.module.catalog.hive=true
+      - org.minitrino.module.catalog.iceberg-hms=true
 
   # ---------------------------------------------------------------------------
   # I couldn't get path-style access to work with
@@ -46,55 +47,8 @@ services:
   # Virtual-style path solution for MinIO:
   # https://stackoverflow.com/a/73393416
   # ---------------------------------------------------------------------------
-
-  minio-iceberg-hive:
-    image: minio/minio:${MINIO_VER}
-    container_name: minio-iceberg-${CLUSTER_NAME}
-    environment:
-      MINIO_ROOT_USER: access-key
-      MINIO_ROOT_PASSWORD: secret-key
-      MINIO_DOMAIN: s3.us-east-1.minio.com
-    command: server --address :9000 --console-address :9001 /data
-    networks:
-      default:
-        aliases:
-          - sample-bucket.s3.us-east-1.minio-hive.com
-    ports:
-      - :9000
-      - ${__PORT_MINIO_ICEBERG}:9001
-    volumes:
-      - minio-iceberg-data:/data
-    labels:
-      - org.minitrino.root=true
-      - org.minitrino.module.catalog.iceberg=true
-
-  create-minio-iceberg-buckets:
-    image: minio/mc:${MINIO_MC_VER}
-    container_name: create-minio-iceberg-buckets-${CLUSTER_NAME}
-    entrypoint: |-
-      /bin/sh -c "
-      wfi=wait-for-it && \
-      curl -fsSL \\
-        https://raw.githubusercontent.com/vishnubob/$$wfi/master/$$wfi.sh \\
-        > /tmp/$$wfi.sh && \
-      chmod +x /tmp/$$wfi.sh && \
-      echo 'Waiting for MinIO to come up...' && \
-      /tmp/$$wfi.sh minio-iceberg-hive:9000 --strict --timeout=60 && \
-      /usr/bin/mc alias set minio \\
-        http://minio-iceberg-hive:9000 access-key secret-key && \
-      /usr/bin/mc mb minio/sample-bucket/wh/ && \
-      tail -f /dev/null
-      "
-    labels:
-      - org.minitrino.root=true
-      - org.minitrino.module.catalog.iceberg=true
-
 volumes:
-  minio-iceberg-data:
+  postgres-iceberg-hms-data:
     labels:
       - org.minitrino.root=true
-      - org.minitrino.module.catalog.iceberg=true
-  postgres-hive-data:
-    labels:
-      - org.minitrino.root=true
-      - org.minitrino.module.catalog.hive=true
+      - org.minitrino.module.catalog.iceberg-hms=true

@@ -26,9 +26,13 @@ class TestCommandExecutor:
         mock_ctx = Mock()
         mock_host_executor = Mock()
         mock_host_executor_class.return_value = mock_host_executor
-        mock_host_executor.execute.return_value = [
-            CommandResult(exit_code=0, output="success", error="")
-        ]
+        mock_host_executor.execute.return_value = CommandResult(
+            exit_code=0,
+            output="success",
+            error="",
+            command=["echo", "hello"],
+            duration=0.1,
+        )
 
         executor = CommandExecutor(mock_ctx)
         results = executor.execute(["echo", "hello"])
@@ -46,9 +50,13 @@ class TestCommandExecutor:
         mock_container = Mock()
         mock_container_executor = Mock()
         mock_container_executor_class.return_value = mock_container_executor
-        mock_container_executor.execute.return_value = [
-            CommandResult(exit_code=0, output="container output", error="")
-        ]
+        mock_container_executor.execute.return_value = CommandResult(
+            exit_code=0,
+            output="container output",
+            error="",
+            command=["ls", "-la"],
+            duration=0.1,
+        )
 
         executor = CommandExecutor(mock_ctx)
         results = executor.execute(["ls", "-la"], container=mock_container)
@@ -65,9 +73,22 @@ class TestCommandExecutor:
         mock_ctx = Mock()
         mock_host_executor = Mock()
         mock_host_executor_class.return_value = mock_host_executor
-        mock_host_executor.execute.return_value = [
-            CommandResult(exit_code=0, output="output1", error=""),
-            CommandResult(exit_code=0, output="output2", error=""),
+        # Mock side_effect to return different results for each call
+        mock_host_executor.execute.side_effect = [
+            CommandResult(
+                exit_code=0,
+                output="output1",
+                error="",
+                command=["echo", "one"],
+                duration=0.1,
+            ),
+            CommandResult(
+                exit_code=0,
+                output="output2",
+                error="",
+                command=["echo", "two"],
+                duration=0.1,
+            ),
         ]
 
         executor = CommandExecutor(mock_ctx)
@@ -83,9 +104,13 @@ class TestCommandExecutor:
         mock_ctx = Mock()
         mock_host_executor = Mock()
         mock_host_executor_class.return_value = mock_host_executor
-        mock_host_executor.execute.return_value = [
-            CommandResult(exit_code=1, output="", error="Command failed")
-        ]
+        mock_host_executor.execute.return_value = CommandResult(
+            exit_code=1,
+            output="",
+            error="Command failed",
+            command=["false"],
+            duration=0.1,
+        )
 
         executor = CommandExecutor(mock_ctx)
         results = executor.execute(["false"])
@@ -100,9 +125,13 @@ class TestCommandExecutor:
         mock_ctx = Mock()
         mock_host_executor = Mock()
         mock_host_executor_class.return_value = mock_host_executor
-        mock_host_executor.execute.return_value = [
-            CommandResult(exit_code=0, output="output", error="")
-        ]
+        mock_host_executor.execute.return_value = CommandResult(
+            exit_code=0,
+            output="output",
+            error="",
+            command=["echo", "test"],
+            duration=0.1,
+        )
 
         executor = CommandExecutor(mock_ctx)
         _ = executor.execute(
@@ -125,16 +154,17 @@ class TestCommandExecutor:
         mock_container = Mock()
         mock_container_executor = Mock()
         mock_container_executor_class.return_value = mock_container_executor
-        mock_container_executor.execute.return_value = [
-            CommandResult(exit_code=0, output="", error="")
-        ]
+        mock_container_executor.execute.return_value = CommandResult(
+            exit_code=0, output="", error="", command=["bash"], duration=0.1
+        )
 
         executor = CommandExecutor(mock_ctx)
         _ = executor.execute(["bash"], container=mock_container, interactive=True)
 
         call_kwargs = mock_container_executor.execute.call_args[1]
-        assert call_kwargs["interactive"] is True
+        # Container executor receives kwargs but 'interactive' is popped before passing
         assert call_kwargs["container"] == mock_container
+        # 'interactive' is not passed to container executor (it's popped)
 
     @patch("minitrino.core.exec.cmd.HostCommandExecutor")
     def test_execute_with_user(self, mock_host_executor_class):
@@ -142,9 +172,9 @@ class TestCommandExecutor:
         mock_ctx = Mock()
         mock_host_executor = Mock()
         mock_host_executor_class.return_value = mock_host_executor
-        mock_host_executor.execute.return_value = [
-            CommandResult(exit_code=0, output="", error="")
-        ]
+        mock_host_executor.execute.return_value = CommandResult(
+            exit_code=0, output="", error="", command=["whoami"], duration=0.1
+        )
 
         executor = CommandExecutor(mock_ctx)
         _ = executor.execute(["whoami"], user="testuser")

@@ -7,7 +7,7 @@ import os
 import shutil
 import threading
 import time
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Callable, Optional
 
 from docker.errors import NotFound
 
@@ -392,17 +392,39 @@ class ClusterProvisioner:
         if "COMPOSE_BAKE" not in self._ctx.env:
             self._ctx.env["COMPOSE_BAKE"] = "true"
 
+        env = self._ctx.env.copy()
+        env.update(self._dep_cluster_env)
+
+        # Use the new stream_execute_with_result API for fast failure detection
+        output_iterator, completion_event, get_result = (
+            self._ctx.cmd_executor.stream_execute_with_result(
+                compose_cmd, environment=env, suppress_output=True
+            )
+        )
+
         self._compose_failed = threading.Event()
         self._compose_error: Optional[BaseException] = None
+        self._compose_output_lines: list[str] = []
 
         def _run_compose() -> None:
+            """Stream compose output and capture errors."""
             try:
-                env = self._ctx.env.copy()
-                env.update(self._dep_cluster_env)
-                for line in self._ctx.cmd_executor.stream_execute(
-                    compose_cmd, environment=env, suppress_output=True
-                ):
+                for line in output_iterator:
                     self._ctx.logger.debug(line)
+                    self._compose_output_lines.append(line)
+
+                    # Check if the process failed quickly (validation errors, etc.)
+                    if completion_event.is_set():
+                        result = get_result()
+                        if result.exit_code != 0:
+                            self._compose_failed.set()
+                            self._compose_error = MinitrinoError(
+                                f"Docker Compose command failed with exit code "
+                                f"{result.exit_code}.\n"
+                                f"Command: {' '.join(compose_cmd)}\n"
+                                f"Output:\n{''.join(self._compose_output_lines)}"
+                            )
+                            return
             except Exception as exc:
                 self._compose_failed.set()
                 self._compose_error = exc
@@ -431,19 +453,35 @@ class ClusterProvisioner:
                 self._wait_for_coordinator_container(
                     orig_container_id,
                     compose_thread,
+                    completion_event,
+                    get_result,
                 )
             finally:
                 compose_thread.join()
 
+        # Final check after thread completion
         if self._compose_failed.is_set():
             raise MinitrinoError(
-                "Docker Compose command failed after coordinator startup."
+                "Docker Compose command failed."
             ) from self._compose_error
+
+        # Check final result if not already failed
+        if completion_event.is_set():
+            result = get_result()
+            if result.exit_code != 0:
+                raise MinitrinoError(
+                    f"Docker Compose command failed with exit code "
+                    f"{result.exit_code}.\n"
+                    f"Command: {' '.join(compose_cmd)}\n"
+                    f"Output:\n{''.join(self._compose_output_lines)}"
+                )
 
     def _wait_for_coordinator_container(
         self,
         orig_container_id: str | None,
         compose_thread: threading.Thread,
+        completion_event: threading.Event,
+        get_result: Callable,
         timeout: int = 180,
     ) -> None:
         """
@@ -455,6 +493,10 @@ class ClusterProvisioner:
             ID of the original coordinator container.
         compose_thread : threading.Thread
             Thread running the compose command.
+        completion_event : threading.Event
+            Event signaling compose command completion.
+        get_result : Callable
+            Function to get the final command result.
         """
         timeout = (
             int(self._ctx.env.get("PROVISION_BUILD_TIMEOUT", 1200))
@@ -466,6 +508,17 @@ class ClusterProvisioner:
         reset_timeout = False
         poll_start = time.time()
         while True:
+            # Check for early compose failure (e.g., validation errors)
+            if completion_event.is_set() and not compose_thread.is_alive():
+                result = get_result()
+                if result.exit_code != 0:
+                    # Docker Compose failed quickly - likely validation error
+                    raise MinitrinoError(
+                        f"Docker Compose failed with exit code {result.exit_code}.\n"
+                        f"This often indicates a configuration or validation error.\n"
+                        f"Output:\n{''.join(self._compose_output_lines)}"
+                    )
+
             if self._compose_failed.is_set():
                 raise MinitrinoError(
                     "Docker Compose command failed."

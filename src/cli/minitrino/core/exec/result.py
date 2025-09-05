@@ -1,7 +1,7 @@
 """CommandResult dataclass for command execution results."""
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional
 
 
 @dataclass
@@ -21,6 +21,12 @@ class CommandResult:
         Duration in seconds for the command execution.
     error : Optional[BaseException]
         Error if command failed, else None.
+    process_handle : Optional[Any]
+        Optional handle to the underlying process (subprocess.Popen or exec_id).
+        Used for streaming contexts to check process status.
+    is_completed : bool
+        Whether the command has completed execution.
+        Used in streaming contexts to signal completion.
     """
 
     command: list[str]
@@ -28,3 +34,5 @@ class CommandResult:
     exit_code: int
     duration: float
     error: Optional[BaseException] = None
+    process_handle: Optional[Any] = None
+    is_completed: bool = True

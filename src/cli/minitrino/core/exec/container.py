@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
+import threading
 import time
-from typing import TYPE_CHECKING, Any, Generator, Iterator
+from typing import TYPE_CHECKING, Any, Callable, Generator, Iterator, Optional, Tuple
 
 from minitrino.core.docker.wrappers import MinitrinoContainer
 from minitrino.core.errors import MinitrinoError
+from minitrino.core.exec.result import CommandResult
 from minitrino.core.exec.utils import detect_container_shell
 
 if TYPE_CHECKING:
     from minitrino.core.context import MinitrinoContext
-    from minitrino.core.exec.result import CommandResult
 
 
 class ContainerCommandExecutor:
@@ -28,6 +29,10 @@ class ContainerCommandExecutor:
     ) -> "CommandResult":
         """Execute a command inside a container."""
         container: MinitrinoContainer = kwargs.get("container", None)
+        if not container:
+            raise ValueError(
+                "Container parameter is required for ContainerCommandExecutor"
+            )
         user: str = kwargs.get("user", "root")
         self._set_shell(container, user)
         docker_cmd = [self.shell, "-c", " ".join(command)]
@@ -91,6 +96,10 @@ class ContainerCommandExecutor:
     ) -> Iterator[str]:
         """Stream output from a command inside a container."""
         container: MinitrinoContainer = kwargs.get("container", None)
+        if not container:
+            raise ValueError(
+                "Container parameter is required for ContainerCommandExecutor"
+            )
         user: str = kwargs.get("user", "root")
         self._set_shell(container, user)
         docker_cmd = [self.shell, "-c", " ".join(command)]
@@ -112,6 +121,175 @@ class ContainerCommandExecutor:
         ):
             self._ctx.logger.debug(line)
             yield line
+
+    def stream_execute_with_result(
+        self,
+        command: list[str],
+        **kwargs: Any,
+    ) -> Tuple[Iterator[str], threading.Event, Callable[[], CommandResult]]:
+        """
+        Stream output from a container command with access to exit code.
+
+        Returns a tuple of:
+        - Iterator[str]: Yields output lines as they are produced
+        - threading.Event: Signals when the command has completed
+        - Callable[[], CommandResult]: Returns the final CommandResult
+
+        This method enables fast failure detection by providing both streaming
+        output and immediate access to command completion status and exit code.
+
+        Parameters
+        ----------
+        command : list[str]
+            The command to execute.
+        **kwargs : Any
+            Additional keyword arguments including container, user, etc.
+
+        Returns
+        -------
+        Tuple[Iterator[str], threading.Event, Callable[[], CommandResult]]
+            A tuple containing the output iterator, completion event, and
+            result callable.
+        """
+        container: MinitrinoContainer = kwargs.get("container", None)
+        if not container:
+            raise ValueError(
+                "Container parameter is required for ContainerCommandExecutor"
+            )
+        user: str = kwargs.get("user", "root")
+        self._set_shell(container, user)
+        docker_cmd = [self.shell, "-c", " ".join(command)]
+
+        start_time = time.monotonic()
+        output_lines: list[str] = []
+        exit_code_holder: dict[str, int] = {"exit_code": -1}
+        error_holder: dict[str, Optional[BaseException]] = {"error": None}
+        exec_id_holder: dict[str, Optional[str]] = {"exec_id": None}
+        completion_event = threading.Event()
+
+        self._ctx.logger.debug(
+            f"Streaming command '{docker_cmd}' in container '{container.name}' "
+            f"with result tracking"
+        )
+
+        try:
+            exec_handler = self._ctx.api_client.exec_create(
+                container.name,
+                cmd=docker_cmd,
+                environment=kwargs.get("environment", None),
+                privileged=True,
+                user=user,
+            )
+            exec_id_holder["exec_id"] = exec_handler["Id"]
+
+            output_generator: Generator = self._ctx.api_client.exec_start(
+                exec_handler, stream=True
+            )
+
+            def monitor_exec() -> None:
+                """Monitor exec completion in a separate thread."""
+                try:
+                    # Poll exec_inspect periodically to check if command completed
+                    while not completion_event.is_set():
+                        try:
+                            exec_info = self._ctx.api_client.exec_inspect(
+                                exec_id_holder["exec_id"]
+                            )
+                            if not exec_info.get("Running", True):
+                                exit_code = exec_info.get("ExitCode", -1)
+                                exit_code_holder["exit_code"] = exit_code
+                                if exit_code != 0:
+                                    error_holder["error"] = MinitrinoError(
+                                        f"Command failed with exit code {exit_code}"
+                                    )
+                                completion_event.set()
+                                break
+                        except Exception:
+                            pass  # Ignore errors during polling
+                        threading.Event().wait(0.1)  # Small delay between polls
+                except Exception as e:
+                    exit_code_holder["exit_code"] = -1
+                    error_holder["error"] = e
+                    completion_event.set()
+
+            monitor_thread = threading.Thread(target=monitor_exec, daemon=True)
+            monitor_thread.start()
+
+            def output_iterator() -> Iterator[str]:
+                """Yield output lines from the container command."""
+                suppress = kwargs.get("suppress_output", False)
+                try:
+                    for line in self._buffer_exec_output_lines(
+                        output_generator, False  # Always get all lines
+                    ):
+                        output_lines.append(line)
+                        if not suppress:
+                            self._ctx.logger.debug(line)
+                        yield line
+                finally:
+                    # Signal completion if not already done
+                    if not completion_event.is_set():
+                        # Final check for exit code
+                        try:
+                            exec_info = self._ctx.api_client.exec_inspect(
+                                exec_id_holder["exec_id"]
+                            )
+                            exit_code_holder["exit_code"] = exec_info.get(
+                                "ExitCode", -1
+                            )
+                        except Exception:
+                            pass
+                        completion_event.set()
+                    monitor_thread.join(timeout=1)
+
+            def get_result() -> CommandResult:
+                """Get the final command result."""
+                duration = time.monotonic() - start_time
+                output = "".join(output_lines)
+
+                # Final exit code check if not already set
+                if exit_code_holder["exit_code"] == -1 and exec_id_holder["exec_id"]:
+                    try:
+                        exec_info = self._ctx.api_client.exec_inspect(
+                            exec_id_holder["exec_id"]
+                        )
+                        exit_code_holder["exit_code"] = exec_info.get("ExitCode", -1)
+                    except Exception:
+                        pass
+
+                return CommandResult(
+                    command=docker_cmd,
+                    output=output,
+                    exit_code=exit_code_holder["exit_code"],
+                    duration=duration,
+                    error=error_holder["error"],
+                    process_handle=exec_id_holder["exec_id"],
+                    is_completed=completion_event.is_set(),
+                )
+
+            return output_iterator(), completion_event, get_result
+
+        except Exception as e:
+            # If we fail to even start the exec, return error immediately
+            completion_event.set()
+            error_holder["error"] = e
+
+            def empty_iterator() -> Iterator[str]:
+                return
+                yield  # Make it a generator
+
+            def get_error_result() -> CommandResult:
+                duration = time.monotonic() - start_time
+                return CommandResult(
+                    command=docker_cmd,
+                    output="",
+                    exit_code=-1,
+                    duration=duration,
+                    error=error_holder["error"],
+                    is_completed=True,
+                )
+
+            return empty_iterator(), completion_event, get_error_result
 
     def _set_shell(self, container: MinitrinoContainer, user: str = "root") -> None:
         """Set the shell for the container."""

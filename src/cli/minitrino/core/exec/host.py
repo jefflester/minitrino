@@ -6,8 +6,9 @@ import os
 import signal
 import subprocess
 import sys
+import threading
 import time
-from typing import TYPE_CHECKING, Any, Iterator, Optional
+from typing import TYPE_CHECKING, Any, Callable, Iterator, Optional, Tuple
 
 from minitrino.ansi import strip_ansi
 from minitrino.core.errors import MinitrinoError
@@ -158,6 +159,102 @@ class HostCommandExecutor:
         if env_override:
             env.update(env_override)
         return env
+
+    def stream_execute_with_result(
+        self,
+        command: list[str],
+        **kwargs: Any,
+    ) -> Tuple[Iterator[str], threading.Event, Callable[[], CommandResult]]:
+        """
+        Stream output lines from a subprocess with access to exit code.
+
+        Returns a tuple of:
+        - Iterator[str]: Yields output lines as they are produced
+        - threading.Event: Signals when the process has completed
+        - Callable[[], CommandResult]: Returns the final CommandResult
+
+        This method enables fast failure detection by providing both streaming
+        output and immediate access to process completion status and exit code.
+
+        Parameters
+        ----------
+        command : list[str]
+            The command to execute.
+        **kwargs : Any
+            Additional keyword arguments for subprocess execution.
+
+        Returns
+        -------
+        Tuple[Iterator[str], threading.Event, Callable[[], CommandResult]]
+            A tuple containing the output iterator, completion event, and
+            result callable.
+        """
+        env = self._handle_env(kwargs.get("environment", {}))
+        start_time = time.monotonic()
+        output_lines: list[str] = []
+        exit_code_holder: dict[str, int] = {"exit_code": -1}
+        error_holder: dict[str, Optional[BaseException]] = {"error": None}
+        completion_event = threading.Event()
+
+        process = subprocess.Popen(
+            command,
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True,
+        )
+
+        def monitor_process() -> None:
+            """Monitor process completion in a separate thread."""
+            try:
+                exit_code = process.wait()
+                exit_code_holder["exit_code"] = exit_code
+                if exit_code != 0:
+                    error_holder["error"] = MinitrinoError(
+                        f"Command failed with exit code {exit_code}"
+                    )
+            except Exception as e:
+                exit_code_holder["exit_code"] = -1
+                error_holder["error"] = e
+            finally:
+                completion_event.set()
+
+        monitor_thread = threading.Thread(target=monitor_process, daemon=True)
+        monitor_thread.start()
+
+        def output_iterator() -> Iterator[str]:
+            """Yield output lines from the process."""
+            suppress = kwargs.get("suppress_output", False)
+            try:
+                if not suppress:
+                    self._ctx.logger.debug(f"Streaming command on host:\n{command}")
+                if process.stdout is not None:
+                    for line in self._iter_lines(process):
+                        clean_line = strip_ansi(line)
+                        if not suppress:
+                            self._ctx.logger.debug(clean_line)
+                        output_lines.append(clean_line)
+                        yield clean_line
+            finally:
+                if process.stdout:
+                    process.stdout.close()
+                monitor_thread.join(timeout=1)  # Wait briefly for exit code
+
+        def get_result() -> CommandResult:
+            """Get the final command result."""
+            duration = time.monotonic() - start_time
+            output = "".join(output_lines)
+            return CommandResult(
+                command=command,
+                output=output,
+                exit_code=exit_code_holder["exit_code"],
+                duration=duration,
+                error=error_holder["error"],
+                process_handle=process,
+                is_completed=completion_event.is_set(),
+            )
+
+        return output_iterator(), completion_event, get_result
 
     def _iter_lines(self, process: subprocess.Popen):
         """

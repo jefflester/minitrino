@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Iterator
+import threading
+from typing import TYPE_CHECKING, Any, Callable, Iterator, Tuple
 
 from minitrino.core.errors import MinitrinoError
 from minitrino.core.exec.container import ContainerCommandExecutor
@@ -117,3 +118,53 @@ class CommandExecutor:
                     interactive=interactive,
                     **kwargs,
                 )
+
+    def stream_execute_with_result(
+        self,
+        command: list[str],
+        **kwargs: Any,
+    ) -> Tuple[Iterator[str], threading.Event, Callable[[], CommandResult]]:
+        """
+        Stream output with immediate access to exit code and completion status.
+
+        This method enables fast failure detection by providing both streaming
+        output and immediate access to process/command completion status and
+        exit code.
+
+        Parameters
+        ----------
+        command : list[str]
+            The command to execute.
+        **kwargs : dict
+            Keyword arguments including:
+            - container: If provided, executes in container
+            - user: User for container execution
+            - environment: Environment variables
+            - suppress_output: Whether to suppress logging
+
+        Returns
+        -------
+        Tuple[Iterator[str], threading.Event, Callable[[], CommandResult]]
+            A tuple containing:
+            - Iterator[str]: Yields output lines as produced
+            - threading.Event: Signals when command has completed
+            - Callable[[], CommandResult]: Returns the final CommandResult
+
+        Raises
+        ------
+        MinitrinoError
+            If the command is not a list for host execution.
+        """
+        if kwargs.get("container", None):
+            return ContainerCommandExecutor(self._ctx).stream_execute_with_result(
+                command, **kwargs
+            )
+        else:
+            if not isinstance(command, list):
+                raise MinitrinoError(
+                    "Host commands must be passed as a list of arguments. "
+                    f"Got: {command!r}"
+                )
+            return HostCommandExecutor(self._ctx).stream_execute_with_result(
+                command, **kwargs
+            )

@@ -17,5 +17,9 @@ def strip_ansi(value: str = "") -> str:
     str
         The cleaned string with ANSI codes removed.
     """
-    ansi_regex = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
-    return ansi_regex.sub("", value)
+    # Handle OSC sequences first (terminal title, hyperlinks, etc.)
+    # OSC sequences can be terminated with \x07 (BEL) or \x1b\\ (ST)
+    value = re.sub(r"\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)", "", value)
+    # Handle CSI sequences and other escape codes
+    value = re.sub(r"\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])", "", value)
+    return value

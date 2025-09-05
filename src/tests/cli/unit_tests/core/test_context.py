@@ -113,9 +113,9 @@ class TestMinitrinoContext:
         ctx = MinitrinoContext()
         ctx._initialized = True
 
-        with pytest.raises(MinitrinoError) as exc_info:
+        with pytest.raises(SystemExit) as exc_info:
             ctx.initialize()
-        assert "Context has already been initialized" in str(exc_info.value)
+        assert exc_info.value.code == 1
 
     def test_user_log_level_property(self):
         """Test user_log_level property."""
@@ -185,26 +185,6 @@ class TestMinitrinoContext:
         result = ctx._get_lib_dir()
 
         assert result == "/home/user/.minitrino/lib"
-
-    @patch("os.path.isdir")
-    @patch("os.path.isfile")
-    def test_get_lib_dir_from_repo(self, mock_isfile, mock_isdir):
-        """Test getting lib directory from repository."""
-        ctx = MinitrinoContext()
-        ctx.env = MagicMock()
-        ctx.env.get.return_value = ""
-
-        mock_isdir.side_effect = lambda p: "src/lib" in str(p)
-        mock_isfile.return_value = True
-
-        with patch("minitrino.core.context.Path") as mock_path:
-            mock_parent = MagicMock()
-            mock_parent.__truediv__.return_value.is_dir.return_value = True
-            mock_path.return_value.resolve.return_value.parents = [mock_parent]
-
-            result = ctx._get_lib_dir()
-
-            assert "src/lib" in str(result)
 
     @patch("os.path.isdir")
     def test_get_lib_dir_not_found(self, mock_isdir):

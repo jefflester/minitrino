@@ -138,19 +138,19 @@ class TestClusterResourceManager:
             "org.minitrino.root": "true",
             "com.docker.compose.project": "minitrino-dev",
         }
+        mock_container.name = "test-container"
         mock_ctx.docker_client.containers.list.return_value = [mock_container]
         mock_ctx.docker_client.networks.list.return_value = []
         mock_ctx.docker_client.volumes.list.return_value = []
         mock_ctx.docker_client.images.list.return_value = []
 
         manager = ClusterResourceManager(mock_ctx)
+        resources = manager.resources()
 
-        with patch.object(manager, "_group_resources_by_cluster") as mock_group:
-            mock_group.return_value = {"dev": {"containers": [mock_container]}}
-            manager.resources()
-
-            # Should call grouping method
-            mock_group.assert_called_once()
+        # Should return resources for the dev cluster
+        containers = list(resources.containers())
+        assert len(containers) == 1
+        assert containers[0].name == "test-container"
 
     def test_resources_for_all_clusters(self):
         """Test fetching resources when cluster name is 'all'."""
@@ -162,11 +162,13 @@ class TestClusterResourceManager:
             "org.minitrino.root": "true",
             "com.docker.compose.project": "minitrino-cluster1",
         }
+        mock_container1.name = "container1"
         mock_container2 = Mock()
         mock_container2.labels = {
             "org.minitrino.root": "true",
             "com.docker.compose.project": "minitrino-cluster2",
         }
+        mock_container2.name = "container2"
 
         mock_ctx.docker_client.containers.list.return_value = [
             mock_container1,
@@ -177,16 +179,14 @@ class TestClusterResourceManager:
         mock_ctx.docker_client.images.list.return_value = []
 
         manager = ClusterResourceManager(mock_ctx)
+        resources = manager.resources()
 
-        # When cluster_name is "all", should fetch all clusters
-        with patch.object(manager, "_group_resources_by_cluster") as mock_group:
-            mock_group.return_value = {
-                "cluster1": {"containers": [mock_container1]},
-                "cluster2": {"containers": [mock_container2]},
-            }
-            manager.resources()
-
-            mock_group.assert_called_once()
+        # When cluster_name is "all", should return all containers
+        containers = list(resources.containers())
+        assert len(containers) == 2
+        container_names = [c.name for c in containers]
+        assert "container1" in container_names
+        assert "container2" in container_names
 
     def test_resources_with_additional_labels(self):
         """Test fetching resources with additional label filters."""

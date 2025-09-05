@@ -21,7 +21,8 @@ class TestMinitrinoContainer:
         mock_container = Mock()
         mock_container.id = "container123"
         mock_container.name = "test-container"
-        mock_container.__dict__ = {"status": "running"}
+        mock_container.status = "running"
+        mock_container.attrs = {"State": {"Status": "running"}}
 
         wrapper = MinitrinoContainer(mock_container, cluster_name="test-cluster")
 
@@ -215,13 +216,13 @@ class TestMinitrinoImage:
 
         assert wrapper.kind == "image"
 
-    def test_image_cluster_name_always_none(self):
-        """Test that images don't have cluster names."""
+    def test_image_cluster_name_always_images(self):
+        """Test that images always have cluster name 'images'."""
         mock_image = Mock()
 
-        wrapper = MinitrinoImage(mock_image, cluster_name="should-be-ignored")
+        wrapper = MinitrinoImage(mock_image)
 
-        assert wrapper.cluster_name is None
+        assert wrapper.cluster_name == "images"
 
     def test_image_labels_from_attrs(self):
         """Test getting labels from image attrs."""
@@ -307,7 +308,7 @@ class TestMinitrinoVolume:
     def test_volume_id_property(self):
         """Test volume ID property."""
         mock_volume = Mock()
-        mock_volume.name = "vol789"  # Volumes use name as ID
+        mock_volume.id = "vol789"
 
         wrapper = MinitrinoVolume(mock_volume)
 
@@ -342,9 +343,9 @@ class TestMinitrinoVolume:
         assert wrapper.cluster_name == "staging"
 
     def test_volume_id_fallback(self):
-        """Test volume ID fallback when name is None."""
+        """Test volume ID fallback when id is None."""
         mock_volume = Mock()
-        mock_volume.name = None
+        mock_volume.id = None
 
         wrapper = MinitrinoVolume(mock_volume)
 

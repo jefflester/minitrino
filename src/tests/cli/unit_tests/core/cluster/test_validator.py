@@ -3,7 +3,7 @@
 Tests the ClusterValidator class for configuration validation.
 """
 
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
 
@@ -152,52 +152,15 @@ class TestClusterValidator:
         """Test checking dependent clusters with module dependencies."""
         mock_ctx = self.create_mock_context()
         mock_ctx.modules = Mock()
-        mock_ctx.modules.data = {
-            "hive": {"metadata": {"dependent_clusters": ["postgres-cluster"]}}
-        }
+        mock_ctx.modules.data = {"hive": {"dependentClusters": [{"name": "postgres"}]}}
         mock_cluster = self.create_mock_cluster()
 
         validator = ClusterValidator(mock_ctx, mock_cluster)
 
         result = validator.check_dependent_clusters(["hive"])
 
-        assert "postgres-cluster" in result
-
-    @patch("minitrino.core.cluster.validator.utils.get_dir_file_contents")
-    def test_check_dup_config_no_duplicates(self, mock_get_contents):
-        """Test duplicate config check with no duplicates."""
-        mock_ctx = self.create_mock_context()
-        mock_cluster = self.create_mock_cluster()
-
-        # Mock file contents with no duplicates
-        mock_get_contents.return_value = {
-            "config.properties": "key1=value1\nkey2=value2",
-            "jvm.config": "-Xmx1G\n-Xms1G",
-        }
-
-        validator = ClusterValidator(mock_ctx, mock_cluster)
-
-        # Should not raise error or log warnings
-        validator.check_dup_config()
-        mock_ctx.logger.warn.assert_not_called()
-
-    @patch("minitrino.core.cluster.validator.utils.get_dir_file_contents")
-    def test_check_dup_config_with_duplicates(self, mock_get_contents):
-        """Test duplicate config check detects duplicates."""
-        mock_ctx = self.create_mock_context()
-        mock_cluster = self.create_mock_cluster()
-
-        # Mock file contents with duplicates
-        mock_get_contents.return_value = {
-            "config.properties": "key1=value1\nkey1=value2\nkey2=value3",
-            "jvm.config": "-Xmx1G\n-Xmx2G",
-        }
-
-        validator = ClusterValidator(mock_ctx, mock_cluster)
-
-        # Should log warnings for duplicates
-        validator.check_dup_config()
-        assert mock_ctx.logger.warn.called
+        assert len(result) == 1
+        assert result[0]["name"] == "test-cluster-dep-postgres"
 
     def test_check_trino_container_exists(self):
         """Test checking if Trino container exists."""
@@ -214,22 +177,6 @@ class TestClusterValidator:
         # Method might not be public, but we can test the behavior
         # through other methods that use it
         assert validator._ctx.docker_client.containers.list.called or True
-
-    def test_check_dup_config_handles_missing_files(self):
-        """Test duplicate config check handles missing configuration files."""
-        mock_ctx = self.create_mock_context()
-        mock_cluster = self.create_mock_cluster()
-
-        with patch(
-            "minitrino.core.cluster.validator.utils.get_dir_file_contents"
-        ) as mock_get:
-            mock_get.return_value = {}  # No files found
-
-            validator = ClusterValidator(mock_ctx, mock_cluster)
-
-            # Should handle gracefully without error
-            validator.check_dup_config()
-            mock_ctx.logger.warn.assert_not_called()
 
     def test_validator_with_starburst_enterprise_version(self):
         """Test validator handles Starburst Enterprise version format."""

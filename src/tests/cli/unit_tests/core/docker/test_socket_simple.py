@@ -19,10 +19,18 @@ class TestResolveDockerSocket:
         mock_ctx = Mock()
         mock_ctx.logger = Mock()
 
+        # Mock cmd_executor to return proper result
+        mock_result = Mock()
+        mock_result.output = (
+            '[{"Endpoints": {"docker": {"Host": "unix:///var/run/docker.sock"}}}]'
+        )
+        mock_ctx.cmd_executor = Mock()
+        mock_ctx.cmd_executor.execute.return_value = [mock_result]
+
         socket = resolve_docker_socket(ctx=mock_ctx)
 
         assert socket is not None
-        assert "docker.sock" in socket or socket == "unix://var/run/docker.sock"
+        assert "docker.sock" in socket or socket == "unix:///var/run/docker.sock"
 
     @patch("os.path.exists")
     def test_socket_not_exists(self, mock_exists):
@@ -30,6 +38,14 @@ class TestResolveDockerSocket:
         mock_exists.return_value = False
         mock_ctx = Mock()
         mock_ctx.logger = Mock()
+
+        # Mock cmd_executor to return proper result
+        mock_result = Mock()
+        mock_result.output = (
+            '[{"Endpoints": {"docker": {"Host": "unix:///var/run/docker.sock"}}}]'
+        )
+        mock_ctx.cmd_executor = Mock()
+        mock_ctx.cmd_executor.execute.return_value = [mock_result]
 
         # Should still return something (fallback or error)
         socket = resolve_docker_socket(ctx=mock_ctx)
@@ -64,6 +80,14 @@ class TestResolveDockerSocket:
         mock_ctx = Mock()
         mock_ctx.logger = Mock()
 
+        # Mock cmd_executor to return proper result
+        mock_result = Mock()
+        mock_result.output = (
+            '[{"Endpoints": {"docker": {"Host": "unix:///var/run/docker.sock"}}}]'
+        )
+        mock_ctx.cmd_executor = Mock()
+        mock_ctx.cmd_executor.execute.return_value = [mock_result]
+
         socket = resolve_docker_socket(ctx=mock_ctx)
 
         # Should check macOS-specific locations
@@ -77,6 +101,14 @@ class TestResolveDockerSocket:
         mock_exists.return_value = True
         mock_ctx = Mock()
         mock_ctx.logger = Mock()
+
+        # Mock cmd_executor to return proper result
+        mock_result = Mock()
+        mock_result.output = (
+            '[{"Endpoints": {"docker": {"Host": "unix:///var/run/docker.sock"}}}]'
+        )
+        mock_ctx.cmd_executor = Mock()
+        mock_ctx.cmd_executor.execute.return_value = [mock_result]
 
         socket = resolve_docker_socket(ctx=mock_ctx)
 

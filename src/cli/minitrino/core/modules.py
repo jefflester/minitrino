@@ -252,7 +252,7 @@ class Modules:
         """
         modules = modules or []
         for module in modules:
-            versions = self._ctx.modules.data.get(module, {}).get("versions", [])
+            versions = self.data.get(module, {}).get("versions", [])
 
             if not versions:
                 continue

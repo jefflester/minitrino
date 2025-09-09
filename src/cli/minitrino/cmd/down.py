@@ -48,4 +48,5 @@ def cli(ctx: MinitrinoContext, sig_kill: bool, keep: bool) -> None:
     ctx.initialize()
     utils.check_daemon(ctx.docker_client)
     utils.check_lib(ctx)
-    ctx.cluster.ops.down(sig_kill=sig_kill, keep=keep)
+    with ctx.logger.spinner("Stopping containers..."):
+        ctx.cluster.ops.down(sig_kill=sig_kill, keep=keep)

@@ -7,16 +7,13 @@ services:
       - ./modules/admin/cache-service/resources/cluster/cache.properties:/mnt/etc/cache.properties:ro
       - ./modules/admin/cache-service/resources/cluster/cache_svc.properties:/mnt/etc/catalog/cache_svc.properties:ro
       - ./modules/admin/cache-service/resources/cluster/hive_mv_tsr.properties:/mnt/etc/catalog/hive_mv_tsr.properties:ro
-      - ./modules/admin/cache-service/resources/bootstrap/bootstrap-cluster.sh:/mnt/bootstrap/cache-service/bootstrap-cluster.sh:ro
-      - ./modules/admin/cache-service/resources/bootstrap/458-native-fs-workaround.sh:/mnt/bootstrap/cache-service/458-native-fs-workaround.sh:ro
+      - ./modules/admin/cache-service/resources/cluster/bootstrap.sh:/mnt/bootstrap/cache-service/bootstrap.sh:ro
+      - ./modules/admin/cache-service/resources/cluster/458-native-fs-workaround.sh:/mnt/bootstrap/cache-service/458-native-fs-workaround.sh:ro
     ports:
       - ${__PORT_CACHE_SERVICE}:8180
-
-  cache-svc-backend:
-    image: postgres:${POSTGRES_SEP_CACHE_SVC_VER}
-    container_name: cache-svc-backend-${CLUSTER_NAME}
-    env_file:
-      - ./modules/admin/cache-service/resources/postgres/cache-svc.env
     labels:
-      - org.minitrino.root=true
       - org.minitrino.module.admin.cache-service=true
+
+  postgres-backend-svc:
+    volumes:
+      - ./modules/admin/cache-service/resources/postgres/create-cachesvc-db.sql:/docker-entrypoint-initdb.d/create-cachesvc-db.sql

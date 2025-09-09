@@ -1,0 +1,12 @@
+# metadata-user, minitrino.com
+dn: uid=metadata-user,dc=minitrino,dc=com
+changetype: add
+uid: metadata-user
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: metadata-user
+sn: metadata-user
+mail: metadata-user@minitrino.com
+userPassword: trinoRocks15

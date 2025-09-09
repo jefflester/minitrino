@@ -1,0 +1,31 @@
+# groups organizational unit
+dn: ou=groups,dc=minitrino,dc=com
+objectClass: organizationalUnit
+ou: groups
+
+# clusteradmins group
+
+dn: cn=clusteradmins,ou=groups,dc=minitrino,dc=com
+objectClass: groupOfNames
+cn: clusteradmins
+member: uid=admin,dc=minitrino,dc=com
+member: uid=cachesvc,dc=minitrino,dc=com
+member: uid=test,dc=minitrino,dc=com
+
+# metadata-users group
+
+dn: cn=metadata-users,ou=groups,dc=minitrino,dc=com
+objectClass: groupOfNames
+cn: metadata-users
+member: uid=metadata-user,dc=minitrino,dc=com
+member: uid=bob,dc=minitrino,dc=com
+member: uid=test,dc=minitrino,dc=com
+
+# platform-users group
+
+dn: cn=platform-users,ou=groups,dc=minitrino,dc=com
+objectClass: groupOfNames
+cn: platform-users
+member: uid=platform-user,dc=minitrino,dc=com
+member: uid=alice,dc=minitrino,dc=com
+member: uid=test,dc=minitrino,dc=com

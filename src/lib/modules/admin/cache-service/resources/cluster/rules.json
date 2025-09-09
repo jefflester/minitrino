@@ -7,14 +7,14 @@
       "catalogName": "postgres",
       "schemaName": "public",
       "tableName": "customer",
-      "refreshInterval": "90s",
+      "refreshInterval": "61s",
       "gracePeriod": "5m"
     },
     {
       "catalogName": "postgres",
       "schemaName": "public",
       "tableName": "orders",
-      "refreshInterval": "90s",
+      "refreshInterval": "61s",
       "gracePeriod": "5m",
       "columns": [
         "orderkey",

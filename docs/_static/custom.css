@@ -1,0 +1,4 @@
+/* Hide the color mode (theme switch) button in both navbar and sidebar */
+.theme-switch-button {
+    display: none !important;
+}

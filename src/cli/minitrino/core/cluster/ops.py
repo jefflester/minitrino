@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import concurrent.futures
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import TYPE_CHECKING, Optional
@@ -9,6 +10,7 @@ from typing import TYPE_CHECKING, Optional
 from docker.errors import APIError, NotFound
 
 from minitrino import utils
+from minitrino.core.cluster.provisioner import ClusterProvisioner
 from minitrino.core.docker.wrappers import (
     MinitrinoContainer,
     MinitrinoDockerObject,
@@ -16,12 +18,8 @@ from minitrino.core.docker.wrappers import (
     MinitrinoNetwork,
 )
 from minitrino.core.errors import MinitrinoError, UserError
-from minitrino.core.logger import LogLevel
-from minitrino.settings import (
-    CLUSTER_CONFIG,
-    ETC_DIR,
-    WORKER_CONFIG_PROPS,
-)
+from minitrino.settings import ETC_DIR
+from minitrino.shutdown import shutdown_event
 
 if TYPE_CHECKING:
     from minitrino.core.cluster.cluster import Cluster
@@ -42,13 +40,14 @@ class ClusterOperations:
 
     Methods
     -------
+    provision()
+        Provisions the cluster.
+    reconcile_workers(workers: int)
+        Provisions or adjusts worker containers based on the specified
+        number.
     down(sig_kill: bool = False, keep: bool = False)
         Stops and optionally removes all containers for the current
         cluster.
-    remove(obj_type: str, force: bool, labels: Optional[list[str]] =
-    None)
-        Removes Docker objects (images, volumes, or networks) associated
-        with the current cluster.
     restart()
         Restarts all cluster containers (coordinator and workers).
     restart_containers(c_restart: Optional[list[str]] = None, log_level:
@@ -56,16 +55,210 @@ class ClusterOperations:
         Restarts all the containers in the provided list. Can apply to
         any container in the environment, not just the coordinator and
         workers.
+    remove(obj_type: str, force: bool, labels: Optional[list[str]] =
+    None)
+        Removes Docker objects (images, volumes, or networks) associated
+        with the current cluster.
     rollback()
         Terminates the provision operations and removes the cluster.
-    provision_workers(workers: int)
-        Provisions or adjusts worker containers based on the specified
-        number.
     """
 
     def __init__(self, ctx: MinitrinoContext, cluster: Cluster):
         self._ctx = ctx
         self._cluster = cluster
+        self._provisioner = ClusterProvisioner(ctx, cluster)
+
+    def provision(
+        self,
+        modules: list[str],
+        image: str,
+        workers: int,
+        no_rollback: bool,
+    ) -> None:
+        """
+        Provision the cluster and environment dependencies.
+
+        Dependencies include any service/configuration that is defined
+        in the module(s) that are to be provisioned.
+
+        Parameters
+        ----------
+        modules : list[str]
+            One or more modules to provision in the cluster.
+        image : str
+            Cluster image type (trino or starburst).
+        workers : int
+            Number of cluster workers to provision.
+        no_rollback : bool
+            If True, disables rollback on failure.
+
+        Notes
+        -----
+        - If no options are provided, a standalone coordinator is
+          provisioned.
+        - Supports Trino or Starburst distributions.
+        - Dependent modules are automatically added to the environment.
+        - Dependent clusters are automatically provisioned after the
+          primary cluster is launched.
+        """
+        self._provisioner.provision(modules, image, workers, no_rollback)
+
+    def reconcile_workers(self, workers: int = 0) -> None:
+        """
+        Reconcile the number of workers in the cluster.
+
+        Notes
+        -----
+        Handles five scenarios:
+
+         1. No `workers` value is provided and no workers are currently
+            running — does nothing.
+         2. A positive `workers` value is provided and no workers exist
+            — provisions new workers.
+         3. No `workers` value is provided but some are already running
+            — uses current count.
+         4. Provided `workers` value is greater than running workers —
+            provisions more workers.
+         5. Provided `workers` value is less than running workers —
+            removes excess workers.
+
+        Parallelism is set to 4 for worker provisioning.
+        """
+        pattern = rf"minitrino-worker-\d+-{self._ctx.cluster_name}"
+        worker_containers = [
+            c.name
+            for c in self._cluster.resource.resources().containers()
+            if c.name
+            and re.match(pattern, c.name)
+            and c.name.startswith("minitrino-worker-")
+            and c.labels.get("org.minitrino.root") == "true"
+        ]
+        running_workers = len(worker_containers)
+
+        # Scenario 1
+        if workers == 0 and running_workers == 0:
+            return
+
+        # Scenario 3
+        if workers == 0 and running_workers > 0:
+            workers = running_workers
+
+        # Scenario 4
+        if workers > running_workers:
+            self._ctx.logger.info(f"Adding {workers} workers...")
+
+        # Scenario 5
+        if workers < running_workers:
+            worker_containers.sort(reverse=True)
+            excess = running_workers - workers
+            remove = [name for name in worker_containers[:excess] if name]
+            for name in remove:
+                container_obj = self._cluster.resource.container(name)
+                container_obj.kill()
+                container_obj.remove()
+                identifier = utils.generate_identifier(
+                    {"ID": container_obj.short_id, "Name": container_obj.name}
+                )
+                self._ctx.logger.warn(f"Removed excess worker: {identifier}")
+
+        ver = self._ctx.env.get("CLUSTER_VER")
+        dist = self._ctx.env.get("CLUSTER_DIST")
+        worker_img = f"minitrino/cluster:{ver}-{dist}"
+
+        compose_project_name = self._cluster.resource.compose_project_name()
+        network_name = f"minitrino_{self._ctx.cluster_name}"
+        fq_container_name = self._cluster.resource.fq_container_name("minitrino")
+        coordinator = self._cluster.resource.container(fq_container_name)
+
+        # Create tar archive of coordinator's /etc/${CLUSTER_DIST};
+        user = self._ctx.env.get("SERVICE_USER")
+        tar_path = "/tmp/${CLUSTER_DIST}.tar.gz"
+        self._ctx.cmd_executor.execute(
+            ["rm -rf /tmp/${CLUSTER_DIST}_copy"],
+            ["rm /tmp/${CLUSTER_DIST}.tar.gz"],
+            ["cp -a /etc/${CLUSTER_DIST} /tmp/${CLUSTER_DIST}_copy"],
+            ["rm /tmp/${CLUSTER_DIST}_copy/config.properties"],
+            ["rm /tmp/${CLUSTER_DIST}_copy/jvm.config"],
+            [f"tar czf {tar_path} -C /tmp/${{CLUSTER_DIST}}_copy ."],
+            ["rm -rf /tmp/${CLUSTER_DIST}_copy"],
+            container=coordinator,
+            user=user,
+        )
+
+        def _provision_worker(i: int) -> None:
+            if shutdown_event.is_set():
+                self._ctx.logger.warn(f"Shutdown signal detected. Skipping worker {i}.")
+                return
+            fq_worker_name = self._cluster.resource.fq_container_name(
+                f"minitrino-worker-{i}",
+            )
+            try:
+                worker = self._cluster.resource.container(fq_worker_name)
+            except NotFound:
+                env_list = coordinator.attrs["Config"]["Env"]
+                env_dict = dict(item.split("=", 1) for item in env_list if "=" in item)
+                env_dict["WORKER"] = "true"
+                env_dict["COORDINATOR"] = "false"
+                worker_base = self._ctx.docker_client.containers.run(
+                    worker_img,
+                    name=fq_worker_name,
+                    environment=env_dict,
+                    detach=True,
+                    hostname=fq_worker_name,
+                    network=network_name,
+                    labels={
+                        "org.minitrino.root": "true",
+                        "org.minitrino.module.minitrino": "true",
+                        "com.docker.compose.project": compose_project_name,
+                        "com.docker.compose.service": f"minitrino-worker-{i}",
+                    },
+                )
+                shared_network = self._ctx.docker_client.networks.get("cluster_shared")
+                shared_network.connect(worker_base)
+
+                worker = MinitrinoContainer(worker_base, self._ctx.cluster_name)
+                self._ctx.logger.debug(
+                    f"Created and started worker container: '{fq_worker_name}' "
+                    f"in network '{network_name}'."
+                )
+
+            # Copy the tar archive from the coordinator container
+            bits, _ = coordinator.get_archive(
+                f"/tmp/{self._ctx.env.get('CLUSTER_DIST')}.tar.gz"
+            )
+            tar_stream = b"".join(bits)
+
+            worker.put_archive("/tmp", tar_stream)
+
+            # Extract the tar archive into the new worker container
+            self._ctx.cmd_executor.execute(
+                [f"tar xzf {tar_path} -C /etc/${{CLUSTER_DIST}}"],
+                container=worker,
+                user=user,
+            )
+            self._ctx.logger.debug(f"Copied {ETC_DIR} to '{fq_worker_name}'")
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+            futures = [
+                executor.submit(_provision_worker, i) for i in range(1, workers + 1)
+            ]
+            for future in concurrent.futures.as_completed(futures):
+                if shutdown_event.is_set():
+                    self._ctx.logger.warn(
+                        "Shutdown detected. Aborting remaining worker provisioning."
+                    )
+                    break
+                try:
+                    future.result()
+                except Exception as exc:
+                    raise MinitrinoError("Worker provisioning failed") from exc
+
+        # Remove the tar archive
+        self._ctx.cmd_executor.execute(
+            ["rm /tmp/${CLUSTER_DIST}.tar.gz"],
+            container=coordinator,
+            user=user,
+        )
 
     def down(self, sig_kill: bool = False, keep: bool = False) -> None:
         """
@@ -115,9 +308,9 @@ class ClusterOperations:
                 try:
                     future.result()
                 except Exception as e:
-                    self._ctx.logger.error(
-                        f"Error stopping container '{container.name}': {str(e)}"
-                    )
+                    raise MinitrinoError(
+                        f"Error stopping container '{container.name}'"
+                    ) from e
 
         if not keep:
             with ThreadPoolExecutor() as executor:
@@ -130,11 +323,82 @@ class ClusterOperations:
                     try:
                         future.result()
                     except Exception as e:
-                        self._ctx.logger.error(
-                            f"Error removing container '{container.name}': {str(e)}"
-                        )
+                        raise MinitrinoError(
+                            f"Error removing container '{container.name}'"
+                        ) from e
 
         self._ctx.logger.info("Brought down all Minitrino containers.")
+
+    def restart(self) -> None:
+        """Restart all cluster containers (coordinator and workers)."""
+        cluster_resources = self._cluster.resource.resources()
+        containers = cluster_resources.containers()
+
+        if len(containers) == 0:
+            self._ctx.logger.info("No cluster containers to restart.")
+            return
+
+        cluster_containers = [c.name for c in containers if c.name]
+        self.restart_containers(cluster_containers)
+        self._ctx.logger.info(
+            f"Restarted containers in cluster '{self._ctx.cluster_name}'."
+        )
+
+    def restart_containers(self, c_restart: Optional[list[str]] = None) -> None:
+        """
+        Restart all the containers in the provided list.
+
+        Parameters
+        ----------
+        c_restart : Optional[list[str]], optional
+            List of fully-qualified container names to restart, by
+            default None.
+        """
+        if c_restart is None:
+            return
+        c_restart = list(set(c_restart))
+
+        def _restart_container(container_name: str) -> None:
+            """
+            Restart a single container by name.
+
+            Parameters
+            ----------
+            container_name : str
+                The name of the container to restart.
+
+            Raises
+            ------
+            MinitrinoError
+                If the container is not found.
+            """
+            try:
+                container = self._ctx.docker_client.containers.get(container_name)
+                self._ctx.logger.debug(f"Restarting container '{container.name}'...")
+                container.restart()
+                self._ctx.logger.debug(
+                    f"Container '{container.name}' restarted successfully."
+                )
+            except NotFound as e:
+                raise MinitrinoError(
+                    f"Attempting to restart container '{container_name}', "
+                    f"but the container was not found."
+                ) from e
+
+        with ThreadPoolExecutor() as executor:
+            futures = {
+                executor.submit(_restart_container, container): container
+                for container in c_restart
+            }
+
+            for future in as_completed(futures):
+                container_name = futures[future]
+                try:
+                    future.result()
+                except Exception as e:
+                    raise MinitrinoError(
+                        f"Error while restarting container '{container_name}'"
+                    ) from e
 
     def remove(
         self, obj_type: str, force: bool, modules: Optional[list[str]] = None
@@ -196,88 +460,6 @@ class ClusterOperations:
         for label in module_labels:
             self._remove(obj_type, label, force)
 
-    def restart(self) -> None:
-        """Restart all cluster containers (coordinator and workers)."""
-        cluster_resources = self._cluster.resource.resources()
-        containers = cluster_resources.containers()
-
-        if len(containers) == 0:
-            self._ctx.logger.info("No cluster containers to restart.")
-            return
-
-        cluster_containers = [c.name for c in containers if c.name]
-
-        self.restart_containers(cluster_containers, log_level=LogLevel.INFO)
-        self._ctx.logger.info(
-            f"Restarted containers in cluster '{self._ctx.cluster_name}'."
-        )
-
-    def restart_containers(
-        self,
-        c_restart: Optional[list[str]] = None,
-        log_level: LogLevel = LogLevel.DEBUG,
-    ) -> None:
-        """
-        Restart all the containers in the provided list.
-
-        Parameters
-        ----------
-        c_restart : Optional[list[str]], optional
-            List of fully-qualified container names to restart, by
-            default None.
-        log_level : LogLevel, optional
-            Log level for restart messages, by default LogLevel.DEBUG.
-        """
-        if c_restart is None:
-            return
-
-        c_restart = list(set(c_restart))
-
-        def _restart_container(container_name: str) -> None:
-            """
-            Restart a single container by name.
-
-            Parameters
-            ----------
-            container_name : str
-                The name of the container to restart.
-
-            Raises
-            ------
-            MinitrinoError
-                If the container is not found.
-            """
-            try:
-                container = self._ctx.docker_client.containers.get(container_name)
-                self._ctx.logger.log(
-                    f"Restarting container '{container.name}'...", level=log_level
-                )
-                container.restart()
-                self._ctx.logger.log(
-                    f"Container '{container.name}' restarted successfully.",
-                    level=log_level,
-                )
-            except NotFound:
-                raise MinitrinoError(
-                    f"Attempting to restart container '{container_name}', "
-                    f"but the container was not found."
-                )
-
-        with ThreadPoolExecutor() as executor:
-            futures = {
-                executor.submit(_restart_container, container): container
-                for container in c_restart
-            }
-
-            for future in as_completed(futures):
-                container_name = futures[future]
-                try:
-                    future.result()
-                except MinitrinoError as e:
-                    self._ctx.logger.error(
-                        f"Error while restarting container '{container_name}': {str(e)}"
-                    )
-
     def rollback(self) -> None:
         """Terminate the provision operations and remove the cluster."""
         self._ctx.logger.warn(
@@ -297,133 +479,6 @@ class ClusterOperations:
             except Exception:
                 pass
 
-    def provision_workers(self, workers: int = 0) -> None:
-        """Reconcile number of workers with the specified number."""
-        # Handles five scenarios:
-        #  1. No `workers` value is provided and no workers are
-        #     currently running — does nothing.
-        #  2. A positive `workers` value is provided and no workers
-        #     exist — provisions new workers.
-        #  3. No `workers` value is provided but some are already
-        #     running — uses current count.
-        #  4. Provided `workers` value is greater than running workers —
-        #     provisions more workers.
-        #  5. Provided `workers` value is less than running workers —
-        #     removes excess workers.
-
-        pattern = rf"minitrino-worker-\d+-{self._ctx.cluster_name}"
-        worker_containers = [
-            c.name
-            for c in self._cluster.resource.resources().containers()
-            if c.name
-            and re.match(pattern, c.name)
-            and c.name.startswith("minitrino-worker-")
-            and c.labels.get("org.minitrino.root") == "true"
-        ]
-        running_workers = len(worker_containers)
-
-        # Scenario 1
-        if workers == 0 and running_workers == 0:
-            return
-
-        # Scenario 3
-        if workers == 0 and running_workers > 0:
-            workers = running_workers
-
-        # Scenario 4
-        if workers > running_workers:
-            self._ctx.logger.info(f"Adding {workers} workers...")
-
-        # Scenario 5
-        if workers < running_workers:
-            worker_containers.sort(reverse=True)
-            excess = running_workers - workers
-            remove = [name for name in worker_containers[:excess] if name]
-            for name in remove:
-                container_obj = self._cluster.resource.container(name)
-                container_obj.kill()
-                container_obj.remove()
-                identifier = utils.generate_identifier(
-                    {"ID": container_obj.short_id, "Name": container_obj.name}
-                )
-                self._ctx.logger.warn(f"Removed excess worker: {identifier}")
-
-        ver = self._ctx.env.get("CLUSTER_VER")
-        dist = self._ctx.env.get("CLUSTER_DIST")
-        worker_img = f"minitrino/cluster:{ver}-{dist}"
-
-        compose_project_name = self._cluster.resource.compose_project_name()
-        network_name = f"minitrino_{self._ctx.cluster_name}"
-        fq_container_name = self._cluster.resource.fq_container_name("minitrino")
-        coordinator = self._cluster.resource.container(fq_container_name)
-
-        restart = []
-        for i in range(1, workers + 1):
-            fq_worker_name = self._cluster.resource.fq_container_name(
-                f"minitrino-worker-{i}",
-            )
-            try:
-                worker = self._cluster.resource.container(fq_worker_name)
-            except NotFound:
-                worker_base = self._ctx.docker_client.containers.run(
-                    worker_img,
-                    name=fq_worker_name,
-                    detach=True,
-                    network=network_name,
-                    labels={
-                        "org.minitrino.root": "true",
-                        "org.minitrino.module.minitrino": "true",
-                        "com.docker.compose.project": compose_project_name,
-                        "com.docker.compose.service": "minitrino-worker",
-                    },
-                )
-                worker = MinitrinoContainer(worker_base, self._ctx.cluster_name)
-                self._ctx.logger.debug(
-                    f"Created and started worker container: '{fq_worker_name}' "
-                    f"in network '{network_name}'"
-                )
-
-            user = self._ctx.env.get("SERVICE_USER")
-            tar_path = "/tmp/${CLUSTER_DIST}.tar.gz"
-
-            # Create tar archive of coordinator's /etc/${CLUSTER_DIST}
-            self._ctx.cmd_executor.execute(
-                "bash -c 'rm -rf /tmp/${CLUSTER_DIST}_copy'",
-                "bash -c 'cp -a /etc/${CLUSTER_DIST} /tmp/${CLUSTER_DIST}_copy'",
-                f"bash -c 'tar czf {tar_path} -C /tmp ${{CLUSTER_DIST}}_copy'",
-                "bash -c 'rm -rf /tmp/${CLUSTER_DIST}_copy'",
-                container=coordinator,
-                docker_user=user,
-            )
-
-            # Copy the tar archive from the coordinator container
-            bits, _ = coordinator.get_archive(
-                f"/tmp/{self._ctx.env.get('CLUSTER_DIST')}.tar.gz"
-            )
-            tar_stream = b"".join(bits)
-
-            worker.put_archive("/tmp", tar_stream)
-
-            # Extract the tar archive into the new worker container
-            self._ctx.cmd_executor.execute(
-                f"bash -c 'tar xzf {tar_path} -C /etc'",
-                container=worker,
-                docker_user=user,
-            )
-
-            # Overwrite worker config.properties
-            self._ctx.cmd_executor.execute(
-                f"bash -c \"echo '{WORKER_CONFIG_PROPS}' "
-                f'> {ETC_DIR}/{CLUSTER_CONFIG}"',
-                container=worker,
-                docker_user=user,
-            )
-
-            restart.append(fq_worker_name)
-            self._ctx.logger.debug(f"Copied {ETC_DIR} to '{fq_worker_name}'")
-
-        self.restart_containers(restart)
-
     def _remove(self, obj_type: str, label: str | None, force: bool) -> None:
         resources = self._cluster.resource.resources([label] if label else None)
         items: list[MinitrinoDockerObject]
@@ -434,7 +489,7 @@ class ClusterOperations:
         elif obj_type == "network":
             items = list(resources.networks())
         else:
-            raise ValueError(f"Invalid object type: {obj_type}")
+            raise MinitrinoError(f"Invalid object type: {obj_type}")
         for obj in items:
             identifier = "<unknown>"
             try:

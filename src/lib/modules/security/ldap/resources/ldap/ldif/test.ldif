@@ -1,0 +1,12 @@
+# test, minitrino.com
+dn: uid=test,dc=minitrino,dc=com
+changetype: add
+uid: test
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: test
+sn: test
+mail: test@minitrino.com
+userPassword: trinoRocks15

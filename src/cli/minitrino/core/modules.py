@@ -6,13 +6,13 @@ import json
 import os
 from typing import TYPE_CHECKING, Optional
 
+import jsonschema
 import yaml
 
 from minitrino import utils
 from minitrino.core.errors import MinitrinoError, UserError
 from minitrino.settings import (
     COMPOSE_LABEL_KEY,
-    DUMMY_LIC_MOUNT_PATH,
     LIC_MOUNT_PATH,
     LIC_VOLUME_MOUNT,
     MODULE_ADMIN,
@@ -24,6 +24,36 @@ from minitrino.settings import (
 
 if TYPE_CHECKING:
     from minitrino.core.context import MinitrinoContext
+
+MODULE_METADATA_SPEC = {
+    "type": "object",
+    "properties": {
+        "description": {"type": "string"},
+        "incompatibleModules": {"type": "array", "items": {"type": "string"}},
+        "enterprise": {"type": "boolean"},
+        "versions": {
+            "type": "array",
+            "items": {"type": "string"},
+            "minItems": 0,
+            "maxItems": 2,
+        },
+        "dependentModules": {"type": "array", "items": {"type": "string"}},
+        "dependentClusters": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "modules": {"type": "array", "items": {"type": "string"}},
+                    "workers": {"type": "number"},
+                    "env": {"type": "object"},
+                },
+                "required": ["name", "modules", "workers", "env"],
+            },
+        },
+    },
+    "required": ["description"],
+}
 
 
 class Modules:
@@ -45,6 +75,8 @@ class Modules:
     -------
     running_modules() :
         Returns a dictionary of modules that are currently running.
+    validate_module_name(name: str) :
+        Return the module name or raise UserError with a suggestion.
     check_dep_modules(modules: Optional[list[str]] = None) :
         Check if provided modules have dependencies and include them.
     check_module_version_requirements(modules: Optional[list[str]] =
@@ -144,6 +176,31 @@ class Modules:
                 )
         return modules
 
+    def validate_module_name(self, name: str) -> str:
+        """
+        Return the module name or raise UserError with a suggestion.
+
+        Always use this method to validate any user-provided module
+        name(s).
+
+        Parameters
+        ----------
+        name : str
+            User-supplied module name.
+
+        Returns
+        -------
+        str
+            Validated module name.
+
+        Raises
+        ------
+        UserError
+            If the module name is not found, with a suggestion.
+        """
+        valid_names = list(self.data.keys())
+        return utils.closest_match_or_error(name, valid_names, "module")
+
     def check_dep_modules(self, modules: Optional[list[str]] = None) -> list[str]:
         """
         Recursively collect all direct and transitive module deps.
@@ -195,7 +252,7 @@ class Modules:
         """
         modules = modules or []
         for module in modules:
-            versions = self._ctx.modules.data.get(module, {}).get("versions", [])
+            versions = self.data.get(module, {}).get("versions", [])
 
             if not versions:
                 continue
@@ -310,7 +367,7 @@ class Modules:
                     f"Module(s) {enterprise_modules} are only compatible with "
                     f"Starburst Enterprise. Please specify the image type with "
                     f"the '-i' option. ",
-                    "Example: minitrino provision -i starburst",
+                    "minitrino provision -i starburst",
                 )
             if not self._ctx.env.get("LIC_PATH", ""):
                 raise UserError(
@@ -326,11 +383,8 @@ class Modules:
                     f"not exist or is not a file: {lic_path}."
                 )
             self._ctx.env.update({"LIC_MOUNT_PATH": LIC_MOUNT_PATH})
-        elif self._ctx.env.get("LIC_PATH", ""):
+        elif "dummy.license" not in self._ctx.env.get("LIC_PATH", ""):
             self._ctx.env.update({"LIC_MOUNT_PATH": LIC_MOUNT_PATH})
-        else:
-            self._ctx.env.update({"LIC_PATH": "./modules/resources/dummy.license"})
-            self._ctx.env.update({"LIC_MOUNT_PATH": DUMMY_LIC_MOUNT_PATH})
 
     def module_services(self, modules: Optional[list[str]] = None) -> list[list]:
         """
@@ -475,17 +529,22 @@ class Modules:
                         f, Loader=yaml.FullLoader
                     )
 
-                # Get metadata.json if present
                 json_basename = "metadata.json"
                 json_file = os.path.join(module_dir, json_basename)
                 metadata = {}
-                if os.path.isfile(json_file):
-                    with open(json_file) as f:
-                        metadata = json.load(f)
-                else:
-                    self._ctx.logger.debug(
-                        f"No JSON metadata file for module '{module_name}'. "
-                        f"Will not load metadata for module.",
+                if not os.path.isfile(json_file):
+                    raise MinitrinoError(
+                        f"Missing required metadata.json file for "
+                        f"module '{module_name}'."
+                    )
+                with open(json_file) as f:
+                    metadata = json.load(f)
+                try:
+                    jsonschema.validate(metadata, MODULE_METADATA_SPEC)
+                except jsonschema.ValidationError as e:
+                    raise UserError(
+                        f"Invalid metadata.json in module '{module_name}': {e.message}",
+                        f"File: {json_file}",
                     )
                 for k, v in metadata.items():
                     self.data[module_name][k] = v

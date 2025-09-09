@@ -1,0 +1,31 @@
+{
+  "tests": [
+    {
+      "type": "query",
+      "name": "Test kerberos authentication",
+      "sql": "SELECT current_user",
+      "trinoCliArgs": [
+        "--server https://minitrino-${CLUSTER_NAME}:8443",
+        "--user admin",
+        "--truststore-path /etc/${CLUSTER_DIST}/tls/truststore.jks",
+        "--truststore-password changeit",
+        "--krb5-principal admin@MINITRINO.COM",
+        "--krb5-config-path /etc/${CLUSTER_DIST}/krb5/krb5.conf",
+        "--krb5-keytab-path /etc/${CLUSTER_DIST}/krb5/keytabs/admin.keytab",
+        "--krb5-remote-service-name HTTP"
+      ],
+      "contains": [
+        "admin"
+      ]
+    },
+    {
+      "type": "logs",
+      "name": "Ensure cluster is running",
+      "container": "minitrino-lib-test",
+      "contains": [
+        "=== SERVER STARTED ==="
+      ],
+      "timeout": 60
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "minitrino-tests"
+version = "0.0.0"
+description = "Integration tests for the Minitrino CLI"
+requires-python = ">=3.10"
+
+dependencies = [
+  "minitrino",
+  "pytest",
+  "pytest-cov",
+  "PyYAML",
+  "requests>=2.32.2"
+]
+
+[tool.setuptools]
+package-dir = {"" = "."}
+
+[tool.coverage.run]
+branch = true
+source = ["minitrino"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+[tool.pytest.ini_options]
+addopts = "--cov=minitrino --cov-report=term-missing --cov-report=html"
+testpaths = ["src/tests"]

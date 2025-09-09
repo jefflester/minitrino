@@ -25,9 +25,10 @@ for script in \
     /tmp/minitrino/bootstrap/*.sh \
     /tmp/minitrino/bootstrap/*/*.sh; do
     [ -e "$script" ] || continue
+    # shellcheck source=/dev/null
     source "$script"
     if declare -f "$FUNC" > /dev/null; then
-        "$FUNC" || true
+        "$FUNC"
     fi
     unset -f before_start || true
     unset -f after_start || true

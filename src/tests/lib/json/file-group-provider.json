@@ -1,0 +1,65 @@
+{
+  "tests": [
+    {
+      "type": "query",
+      "name": "Test clusteradmins group",
+      "sql": "SELECT current_groups()",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'",
+        "--user admin"
+      ],
+      "contains": [
+        "clusteradmins"
+      ]
+    },
+    {
+      "type": "query",
+      "name": "Test metadata-users groups",
+      "sql": "SELECT current_groups()",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'",
+        "--user metadata-user"
+      ],
+      "contains": [
+        "metadata-users"
+      ]
+    },
+    {
+      "type": "query",
+      "name": "Test platform-users group",
+      "sql": "SELECT current_groups()",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'",
+        "--user platform-user"
+      ],
+      "contains": [
+        "platform-users"
+      ]
+    },
+    {
+      "type": "query",
+      "name": "Test 'test' user",
+      "sql": "SELECT current_groups()",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'",
+        "--user test"
+      ],
+      "contains": [
+        "clusteradmins",
+        "metadata-users",
+        "platform-users"
+      ]
+    },
+    {
+      "type": "query",
+      "name": "Test empty group",
+      "sql": "SELECT current_groups()",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'"
+      ],
+      "contains": [
+        "[]"
+      ]
+    }
+  ]
+}

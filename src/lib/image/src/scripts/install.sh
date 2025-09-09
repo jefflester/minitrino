@@ -30,9 +30,10 @@ create_directories() {
 
 copy_scripts() {
     echo "Copying entrypoint scripts..."
+    cp /tmp/run-minitrino.sh /usr/lib/"${CLUSTER_DIST}"/bin/
+    cp /tmp/gen_config.py /usr/lib/"${CLUSTER_DIST}"/bin/
     cp /tmp/copy-config.sh /usr/lib/"${CLUSTER_DIST}"/bin/
     cp /tmp/run-bootstraps.sh /usr/lib/"${CLUSTER_DIST}"/bin/
-    cp /tmp/run-minitrino.sh /usr/lib/"${CLUSTER_DIST}"/bin/
 }
 
 set_ownership_and_perms() {
@@ -58,9 +59,21 @@ configure_jvm() {
         https://raw.githubusercontent.com/trinodb/trino/"${TRINO_VER}"/core/docker/default/etc/jvm.config
     chmod g+w jvm.config
     chown "${SERVICE_USER}":"${SERVICE_GROUP}" jvm.config
+
     sed -i '/^-agentpath:\/usr\/lib\/trino\/bin\/libjvmkill\.so$/d' jvm.config
     echo "-Djavax.net.ssl.trustStore=/etc/${CLUSTER_DIST}/tls-jvm/cacerts" >> jvm.config
     echo "-Djavax.net.ssl.trustStorePassword=changeit" >> jvm.config
+
+    if grep -qE '^-XX:(InitialRAMPercentage|MaxRAMPercentage)' jvm.config; then
+        line_num=$(grep -nE '^-XX:(InitialRAMPercentage|MaxRAMPercentage)' \
+            jvm.config | head -n1 | cut -d: -f1)
+        sed -i '/^-XX:InitialRAMPercentage/d' jvm.config
+        sed -i '/^-XX:MaxRAMPercentage/d' jvm.config
+        sed -i "${line_num}i-Xmx1G\n-Xms1G" jvm.config
+    else
+        echo "-Xmx1G" >> jvm.config
+        echo "-Xms1G" >> jvm.config
+    fi
 }
 
 configure_node_props() {
@@ -78,11 +91,20 @@ install_java() {
 
 install_trino_cli() {
     echo "Installing trino-cli..."
-    TRINO_CLI_PATH="/usr/local/bin/trino-cli"
-    curl -#LfS -o "${TRINO_CLI_PATH}" \
+    local trino_cli_jar="/usr/local/bin/trino-cli.jar"
+    local trino_cli_wrapper="/usr/local/bin/trino-cli"
+
+    curl -#LfS -o "${trino_cli_jar}" \
         "https://repo1.maven.org/maven2/io/trino/trino-cli/${TRINO_VER}/trino-cli-${TRINO_VER}-executable.jar"
-    chmod +x "${TRINO_CLI_PATH}"
-    chown "${SERVICE_USER}":"${SERVICE_GROUP}" "${TRINO_CLI_PATH}"
+
+    # Wrapper with logging disabled
+    cat <<-EOF > "${trino_cli_wrapper}"
+	#!/bin/bash
+	exec java -Djava.util.logging.config.file=/dev/null -jar "${trino_cli_jar}" "\$@"
+EOF
+
+    chmod +x "${trino_cli_wrapper}" "${trino_cli_jar}"
+    chown "${SERVICE_USER}:${SERVICE_GROUP}" "${trino_cli_wrapper}" "${trino_cli_jar}"
 }
 
 install_wait_for_it() {

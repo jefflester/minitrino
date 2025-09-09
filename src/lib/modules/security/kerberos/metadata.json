@@ -1,0 +1,8 @@
+{
+  "description": "Kerberos",
+  "incompatibleModules": [],
+  "dependentModules": [
+    "tls"
+  ],
+  "enterprise": false
+}

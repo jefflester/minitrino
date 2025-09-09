@@ -3,55 +3,15 @@ services:
 
   minitrino:
     environment:
-      CONFIG_PROPERTIES: |-
+      RESULTS_CACHE_CONFIG_PROPERTIES: |-
         results-cache.enabled=true
-        results-cache.s3.endpoint=http://minio-results-cache:9000
+        results-cache.s3.endpoint=http://minio:9000
         results-cache.s3.aws-access-key=access-key
         results-cache.s3.aws-secret-key=secret-key
-        results-cache.s3.bucket=sample-bucket
+        results-cache.s3.bucket=minitrino
         results-cache.s3.region=us-east-1
         results-cache.s3.path-style-access=true
         results-cache.s3.prefix=sep-results-cache
-
-  minio-results-cache:
-    image: minio/minio:${MINIO_VER}
-    container_name: minio-results-cache-${CLUSTER_NAME}
-    environment:
-      MINIO_ROOT_USER: access-key
-      MINIO_ROOT_PASSWORD: secret-key
-    command: server --address :9000 --console-address :9001 /data
-    ports:
-      - :9000
-      - ${__PORT_MINIO_RESULTS_CACHE}:9001
-    volumes:
-      - minio-results-cache-data:/data
-    labels:
-      - org.minitrino.root=true
-      - org.minitrino.module.admin.results-cache=true
-
-  create-minio-results-cache-buckets:
-    image: minio/mc:${MINIO_MC_VER}
-    container_name: create-minio-results-cache-buckets-${CLUSTER_NAME}
-    entrypoint: |-
-      /bin/sh -c "
-      wfi=wait-for-it && \
-      curl -fsSL \\
-        https://raw.githubusercontent.com/vishnubob/$$wfi/master/$$wfi.sh \\
-        > /tmp/$$wfi.sh && \
-      chmod +x /tmp/$$wfi.sh && \
-      echo 'Waiting for MinIO to come up...' && \
-      /tmp/$$wfi.sh minio-results-cache:9000 --strict --timeout=60 && \
-      /usr/bin/mc alias set minio \\
-        http://minio-results-cache:9000 access-key secret-key && \
-      /usr/bin/mc mb minio/sample-bucket/wh/ && \
-      tail -f /dev/null
-      "
-    labels:
-      - org.minitrino.root=true
-      - org.minitrino.module.admin.results-cache=true
-
-volumes:
-  minio-results-cache-data:
     labels:
       - org.minitrino.root=true
       - org.minitrino.module.admin.results-cache=true

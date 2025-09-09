@@ -2,10 +2,18 @@
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, Optional
 
+from minitrino import utils
+from minitrino.core.docker.wrappers import MinitrinoContainer
 from minitrino.core.errors import UserError
-from minitrino.settings import CLUSTER_CONFIG, CLUSTER_JVM_CONFIG, MIN_CLUSTER_VER
+from minitrino.settings import (
+    CLUSTER_CONFIG,
+    CLUSTER_JVM_CONFIG,
+    ETC_DIR,
+    MIN_CLUSTER_VER,
+)
 
 if TYPE_CHECKING:
     from minitrino.core.cluster.cluster import Cluster
@@ -26,6 +34,8 @@ class ClusterValidator:
 
     Methods
     -------
+    check_cluster_name()
+        Validate that the cluster name is valid.
     check_cluster_ver()
         Validate that the current `CLUSTER_VER` and `CLUSTER_DIST`
         environment variables meet minimum requirements for either Trino
@@ -40,6 +50,29 @@ class ClusterValidator:
     def __init__(self, ctx: MinitrinoContext, cluster: Cluster):
         self._ctx = ctx
         self._cluster = cluster
+
+    def check_cluster_name(self) -> None:
+        """
+        Validate that the cluster name is valid.
+
+        Raises
+        ------
+        UserError
+            If the cluster name is invalid.
+        """
+        if self._ctx.cluster_name == "images" or self._ctx.cluster_name == "system":
+            raise UserError(
+                f"Cluster name '{self._ctx.cluster_name}' is reserved for "
+                "internal use. Please use a different cluster name."
+            )
+
+        if not re.fullmatch(r"[A-Za-z0-9_\-\*]+", self._ctx.cluster_name):
+            raise UserError(
+                f"Invalid cluster name '{self._ctx.cluster_name}'. Cluster names can "
+                "only contain alphanumeric characters, underscores, dashes, or "
+                "asterisks (asterisks are for filtering operations only and will "
+                "not work with the `provision` command)."
+            )
 
     def check_cluster_ver(self) -> None:
         """
@@ -104,7 +137,7 @@ class ClusterValidator:
 
         def _helper(module_dependent_clusters):
             for cluster in module_dependent_clusters:
-                cluster_name = f"dep-cluster-{self._ctx.cluster_name}-{cluster['name']}"
+                cluster_name = f"{self._ctx.cluster_name}-dep-{cluster['name']}"
                 cluster["name"] = cluster_name
                 dependent_clusters.append(cluster)
 
@@ -114,14 +147,23 @@ class ClusterValidator:
             if module_dependent_clusters:
                 _helper(module_dependent_clusters)
 
-        for cluster in dependent_clusters:
-            for module in cluster.get("modules", []):
-                if module in modules:
+        # Circular dependency check: dependent clusters cannot list
+        # their parent module as a dependency (would cause infinite
+        # recursion)
+        for parent_module in modules:
+            parent_module_data: dict = self._ctx.modules.data.get(parent_module, {})
+            module_dependent_clusters = parent_module_data.get("dependentClusters", [])
+            for cluster in module_dependent_clusters:
+                cluster_modules = cluster.get("modules", [])
+                if parent_module in cluster_modules:
                     raise UserError(
-                        f"Circular dependency detected: Module {module} is both a "
-                        f"dependency of cluster {self._ctx.cluster_name} and is "
-                        "being provisioned."
+                        f"Circular dependency detected: Dependent cluster "
+                        f"'{cluster.get('name', 'unknown')}' of module "
+                        f"'{parent_module}' cannot list '{parent_module}' "
+                        "as one of its modules. This would cause infinite "
+                        "recursion during provisioning."
                     )
+
         return list(dependent_clusters)
 
     def check_dup_config(self, cluster_cfgs=None, jvm_cfgs=None) -> None:
@@ -161,11 +203,59 @@ class ClusterValidator:
                             msg.append(f"    - {entry}")
                 self._ctx.logger.warn("\n".join(msg))
 
-        if cluster_cfgs is None or jvm_cfgs is None:
-            current_cluster_cfgs, current_jvm_cfg = (
-                self._cluster.config._current_config()
-            )
-            cluster_cfgs = cluster_cfgs or current_cluster_cfgs
-            jvm_cfgs = jvm_cfgs or current_jvm_cfg
-        log_duplicates(cluster_cfgs, CLUSTER_CONFIG)
-        log_duplicates(jvm_cfgs, CLUSTER_JVM_CONFIG)
+        containers = self._cluster.resource.cluster_containers()
+        for container in containers:
+            if cluster_cfgs is None or jvm_cfgs is None:
+                current_cluster_cfgs, current_jvm_cfg = self._current_config(container)
+                cluster_cfgs = cluster_cfgs or current_cluster_cfgs
+                jvm_cfgs = jvm_cfgs or current_jvm_cfg
+            log_duplicates(cluster_cfgs, CLUSTER_CONFIG)
+            log_duplicates(jvm_cfgs, CLUSTER_JVM_CONFIG)
+
+    def _current_config(
+        self, container: MinitrinoContainer
+    ) -> tuple[list[tuple], list[tuple]]:
+        """
+        Fetch current cluster configs from a cluster container.
+
+        Parameters
+        ----------
+        container : MinitrinoContainer
+            The container to fetch configs from.
+
+        Returns
+        -------
+        tuple[list[tuple], list[tuple]]
+            A tuple of parsed config tuples for both files.
+        """
+        _, uid = utils.container_user_and_id(self._ctx, container)
+        current_cfgs = self._ctx.cmd_executor.execute(
+            [f"cat {ETC_DIR}/{CLUSTER_CONFIG}"],
+            [f"cat {ETC_DIR}/{CLUSTER_JVM_CONFIG}"],
+            container=container,
+            suppress_output=True,
+            user=uid,
+        )
+
+        current_cluster_cfgs = self._split_config(current_cfgs[0].output)
+        current_jvm_cfg = self._split_config(current_cfgs[1].output)
+
+        return current_cluster_cfgs, current_jvm_cfg
+
+    def _split_config(self, cfgs: str = "") -> list[tuple]:
+        """
+        Split raw config strings into an ordered list of tuples.
+
+        Each tuple is either ('key_value', key, value) or ('unified',
+        line). Preserves the original ordering and comments.
+        """
+        cfgs_list = cfgs.strip().split("\n")
+        parsed = []
+        for cfg in cfgs_list:
+            cfg = re.sub(r"\s*=\s*", "=", cfg)
+            parts = cfg.split("=", 1)
+            if len(parts) == 2:
+                parsed.append(("key_value", parts[0], parts[1]))
+            else:
+                parsed.append(("unified", cfg, ""))
+        return parsed

@@ -1,0 +1,12 @@
+# Auto-generated from pyproject.toml [project.optional-dependencies.docs]
+ablog
+autoapi
+myst_parser
+numpydoc
+pydata-sphinx-theme
+sphinx
+sphinx-copybutton
+sphinx-design
+sphinx-favicon
+sphinx-togglebutton
+sphinxext-opengraph

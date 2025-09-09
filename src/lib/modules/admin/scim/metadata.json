@@ -1,0 +1,11 @@
+{
+  "description": "SCIM user/group synchronization module",
+  "incompatibleModules": [
+    "ldap-group-provider",
+    "file-group-provider"
+  ],
+  "dependentModules": [
+    "biac"
+  ],
+  "enterprise": true
+}

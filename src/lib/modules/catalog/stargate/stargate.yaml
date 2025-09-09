@@ -1,0 +1,8 @@
+---
+services:
+
+  minitrino:
+    volumes:
+      - ./modules/catalog/stargate/resources/cluster/stargate.properties:/mnt/etc/catalog/stargate.properties:ro
+    labels:
+      - org.minitrino.module.catalog.stargate=true

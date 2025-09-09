@@ -3,12 +3,15 @@ services:
 
   minitrino:
     environment:
-      CONFIG_PROPERTIES: |-
-        insights.jdbc.url=jdbc:postgresql://postgres-backend-svc:5432/sep
+      INSIGHTS_CONFIG_PROPERTIES: |-
+        insights.jdbc.url=$${ENV:INSIGHTS_JDBC_URL}
         insights.jdbc.user=admin
         insights.jdbc.password=trinoRocks15
         insights.persistence-enabled=true
         insights.metrics-persistence-enabled=true
+      # Expose as environment variable to allow external clusters to leverage
+      # the same Insights backend service
+      INSIGHTS_JDBC_URL: jdbc:postgresql://postgres-backend-svc-${CLUSTER_NAME}:5432/sep
     volumes:
       - ./modules/admin/insights/resources/cluster/backend_svc.properties:/mnt/etc/catalog/backend_svc.properties:ro
 

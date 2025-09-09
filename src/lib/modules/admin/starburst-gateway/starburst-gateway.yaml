@@ -1,0 +1,58 @@
+---
+services:
+
+  minitrino:
+    environment:
+      STARBURST_GATEWAY_CONFIG_PROPERTIES: http-server.process-forwarded=true
+      STARBURST_GATEWAY_WORKER_CONFIG_PROPERTIES: http-server.process-forwarded=true
+    ports:
+      - 60800:8080
+    depends_on:
+      starburst-gateway-postgres:
+        condition: service_healthy
+    volumes:
+      - ./modules/admin/starburst-gateway/resources/cluster/configure-gateway.sh:/mnt/bootstrap/starburst-gateway/configure-gateway.sh:ro
+
+  starburst-gateway:
+    image: harbor.starburstdata.net/starburstdata/starburst-gateway:${STARBURST_GATEWAY_VER}
+    container_name: starburst-gateway-${CLUSTER_NAME}
+    environment:
+      CLUSTER_NAME: ${CLUSTER_NAME}
+    depends_on:
+      starburst-gateway-postgres:
+        condition: service_healthy
+    ports:
+      - ${__PORT_STARBURST_GATEWAY}:9080
+    networks:
+      - default
+      - cluster_shared
+    volumes:
+      - ./modules/admin/starburst-gateway/resources/gateway/config.yaml:/etc/starburst-gateway/config.yaml
+      - ./modules/admin/starburst-gateway/resources/gateway/routing-rules.yaml:/etc/starburst-gateway/routing-rules.yaml
+    labels:
+      - org.minitrino.root=true
+      - org.minitrino.module.admin.starburst-gateway=true
+
+  starburst-gateway-postgres:
+    image: postgres:${POSTGRES_VER}
+    container_name: starburst-gateway-postgres-${CLUSTER_NAME}
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    expose:
+      - 5432
+    env_file:
+      - ./modules/admin/starburst-gateway/resources/gateway/postgres.env
+    volumes:
+      - postgres-starburst-gateway-data:/var/lib/postgresql/data
+    labels:
+      - org.minitrino.root=true
+      - org.minitrino.module.admin.starburst-gateway=true
+
+volumes:
+  postgres-starburst-gateway-data:
+    labels:
+      - org.minitrino.root=true
+      - org.minitrino.module.admin.starburst-gateway=true

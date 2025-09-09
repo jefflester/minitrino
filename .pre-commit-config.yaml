@@ -4,9 +4,14 @@ repos:
     rev: 25.1.0
     hooks:
       - id: black
+        stages: [pre-commit, manual]
+        always_run: true
+        pass_filenames: false
+        args: ["."]
+        exclude: "venv/"
 
   - repo: https://github.com/pycqa/flake8
-    rev: 7.2.0
+    rev: 7.3.0
     hooks:
       - id: flake8
         args: [
@@ -16,13 +21,30 @@ repos:
           "src/"
         ]
 
+  - repo: local
+    hooks:
+      - id: gen-docs-requirements
+        name: Generate docs/requirements.txt from pyproject.toml
+        entry: python .precommit/gen_docs_requirements.py
+        language: python
+        files: ^pyproject\.toml$
+        additional_dependencies: [tomli]
+        pass_filenames: false
+
   - repo: https://github.com/pycqa/isort
     rev: 6.0.1
     hooks:
       - id: isort
 
+  - repo: https://github.com/executablebooks/mdformat
+    rev: 0.7.22
+    hooks:
+      - id: mdformat
+        files: ^docs/
+        exclude: docs/index.md
+
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.15.0
+    rev: v1.16.1
     hooks:
       - id: mypy
         additional_dependencies:
@@ -34,19 +56,47 @@ repos:
           - types-setuptools
           - types-tabulate
           - types-python-dateutil
+        exclude: docs/conf.py
+
+  # npm install --save-dev prettier
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+        files: ^docs/.*\.md$
+        args: ["--prose-wrap", "always", "--print-width", "80"]
 
   - repo: https://github.com/pycqa/pydocstyle
     rev: 6.3.0
     hooks:
       - id: pydocstyle
         additional_dependencies: [tomli]
+        exclude: 'docs/conf.py|.precommit/.*'
+
+  # brew install shellcheck (or: sudo apt-get install shellcheck, etc.)
+  - repo: https://github.com/koalaman/shellcheck-precommit
+    rev: v0.10.0
+    hooks:
+      - id: shellcheck
+        name: shellcheck
+        entry: shellcheck
+        language: system
+        types: [shell]
+
+  - repo: local
+    hooks:
+      - id: update-switcher-json
+        name: Update Sphinx Switcher JSON
+        entry: python .precommit/update_switcher_json.py
+        language: python
+        pass_filenames: false
 
   - repo: https://github.com/adrienverge/yamllint
     rev: v1.37.1
     hooks:
       - id: yamllint
-        args: ["src/"]
 
+  # brew install jq (or: sudo apt-get install jq, etc.)
   - repo: local
     hooks:
       - id: jq-format
@@ -54,7 +104,9 @@ repos:
         entry: |-
           bash -c '
           modified=()
-          for file in $(find src/ -type d -name ".*" -prune -o -name "*.json" -print); do
+          for file in $(
+            find src/ -type d -name ".*" -prune -o -name "*.json" -print
+          ); do
             tmpfile=$(mktemp)
             if ! jq . "$file" > "$tmpfile"; then
               echo "Failed to process $file"
@@ -74,3 +126,11 @@ repos:
         files: \.json$
         always_run: true
         pass_filenames: false
+
+  - repo: local
+    hooks:
+      - id: sync-cluster-version
+        name: Sync cluster version across files
+        entry: python .precommit/sync_cluster_version.py
+        language: python
+        files: ^src/lib/minitrino.env|src/lib/docker-compose.yaml|src/cli/minitrino/settings.py

@@ -1,4 +1,4 @@
-# Iceberg Catalog
+# Iceberg Hive Catalog
 
 Add an [Iceberg catalog](https://trino.io/docs/current/connector/iceberg.html)
 to the cluster along with MinIO object storage for storing Iceberg data and an

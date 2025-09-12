@@ -58,3 +58,5 @@ yarn-error.log*
 docs/_build/**
 node_modules
 .local
+.windsurf
+.python-version

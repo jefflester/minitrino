@@ -9,7 +9,7 @@ import click
 from minitrino import utils
 from minitrino.core.context import MinitrinoContext
 from minitrino.core.errors import UserError
-from minitrino.core.logger import LogLevel
+from minitrino.core.logging.levels import LogLevel
 from minitrino.settings import MODULE_ADMIN, MODULE_CATALOG, MODULE_SECURITY
 
 
@@ -79,6 +79,10 @@ def cli(
     else:
         ctx.initialize()
 
+    modules = list(modules) or []
+    for module in modules:
+        ctx.modules.validate_module_name(module)
+
     utils.check_lib(ctx)
     valid_types = {MODULE_ADMIN, MODULE_CATALOG, MODULE_SECURITY}
     if module_type and module_type not in valid_types:
@@ -112,6 +116,9 @@ def cli(
     else:
         for module, module_metadata in sorted(filtered_modules.items()):
             log_info(module, module_metadata)
+
+    # Reset logger
+    ctx.logger.set_level(ctx.user_log_level)
 
 
 @utils.pass_environment()

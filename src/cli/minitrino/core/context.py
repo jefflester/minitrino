@@ -1,7 +1,7 @@
 """Core context and controls for Minitrino CLI."""
 
+import logging
 import os
-import re
 from pathlib import Path
 from typing import Optional, cast
 
@@ -9,12 +9,13 @@ import docker
 
 from minitrino import utils
 from minitrino.core.cluster.cluster import Cluster
-from minitrino.core.cmd_exec import CommandExecutor
 from minitrino.core.docker.socket import resolve_docker_socket
 from minitrino.core.envvars import EnvironmentVariables
-from minitrino.core.errors import UserError
+from minitrino.core.errors import MinitrinoError, UserError
 from minitrino.core.library import LibraryManager
-from minitrino.core.logger import LogLevel, MinitrinoLogger
+from minitrino.core.exec.cmd import CommandExecutor
+from minitrino.core.logging.levels import LogLevel
+from minitrino.core.logging.logger import MinitrinoLogger
 from minitrino.core.modules import Modules
 
 
@@ -83,15 +84,15 @@ class MinitrinoContext:
     def __init__(self):
         # ------------------------------
         # ---- User-provided inputs ----
-        self._log_level = LogLevel.INFO
-        self._user_env = []
         self.cluster_name = "default"
+        self._user_env_args = []
+        self._user_log_level = LogLevel.INFO
         # ------------------------------
 
         self.all_clusters = False
         self.provisioned_clusters = []
 
-        self.logger = MinitrinoLogger(self._log_level)
+        self.logger: MinitrinoLogger = logging.getLogger("minitrino")
         self.cluster: Optional[Cluster] = None
         self.env: Optional[EnvironmentVariables] = None
         self.modules: Optional[Modules] = None
@@ -114,9 +115,9 @@ class MinitrinoContext:
     @utils.exception_handler
     def initialize(
         self,
-        log_level: Optional[LogLevel] = None,
         cluster_name: str = "",
         version_only: bool = False,
+        log_level: Optional[LogLevel] = None,
     ) -> None:
         """
         Initialize core CLI context attributes.
@@ -128,21 +129,17 @@ class MinitrinoContext:
 
         Parameters
         ----------
-        log_level : LogLevel, optional
-            Minimum log level to emit (default: INFO)
         cluster_name : str, optional
             The cluster name to scope operations to. Defaults to
             "default".
         version_only : bool, optional
             If True, initializes only the attributes required for
             version fetching (e.g. `minitrino --version`).
+        log_level : LogLevel, optional
+            The log level to set for the logger.
         """
         if self._initialized:
-            raise RuntimeError("Context has already been initialized.")
-
-        if isinstance(log_level, LogLevel):
-            self._log_level = log_level
-        self.logger = MinitrinoLogger(self._log_level)
+            raise MinitrinoError("Context has already been initialized.")
         self.env = EnvironmentVariables(self)
         self._lib_safe = True
         if version_only:
@@ -158,8 +155,43 @@ class MinitrinoContext:
             self._set_cluster_attrs(self.cluster_name)
         self._set_docker_clients(env=self.env.copy())
         self.env._log_env_vars()
-
+        if log_level:
+            self.logger.set_level(log_level)
         self._initialized = True
+
+    @property
+    def user_log_level(self) -> LogLevel:
+        """
+        The user-configured log level for this context.
+
+        Immutable once set.
+
+        Returns
+        -------
+        LogLevel
+            The immutable log level set by the user or default (INFO).
+        """
+        return self._user_log_level
+
+    @user_log_level.setter
+    def user_log_level(self, value: LogLevel) -> None:
+        """
+        Set the user log level once. Further attempts to set will raise.
+
+        Parameters
+        ----------
+        value : LogLevel
+            The log level to set.
+
+        Raises
+        ------
+        RuntimeError
+            If the log level has already been set to a non-default
+            value.
+        """
+        if self._user_log_level != LogLevel.INFO:
+            raise MinitrinoError("user_log_level is immutable once set.")
+        self._user_log_level = value
 
     @property
     def lib_dir(self) -> str:
@@ -182,7 +214,7 @@ class MinitrinoContext:
         assuming the project is running in a repository context.
         """
         if not self._lib_safe:
-            raise RuntimeError("lib_dir accessed before initialization")
+            raise MinitrinoError("lib_dir accessed before initialization")
         if not self._lib_dir:
             self._lib_dir = self._get_lib_dir()
         return self._lib_dir
@@ -305,8 +337,8 @@ class MinitrinoContext:
         cluster_name : str
             The name of the cluster to set.
         """
-        self._set_cluster_name(cluster_name)
         self.cluster = Cluster(self)
+        self._set_cluster_name(cluster_name)
         self.env.update(
             {
                 "COMPOSE_PROJECT_NAME": self.cluster.resource.compose_project_name(
@@ -331,22 +363,10 @@ class MinitrinoContext:
         else:
             self.cluster_name = "default"
 
+        self.cluster.validator.check_cluster_name()
+
         if self.cluster_name == "all":
             self.all_clusters = True
-
-        if self.cluster_name == "images":
-            raise UserError(
-                "Cluster name 'images' is reserved for internal use. "
-                "Please use a different cluster name."
-            )
-
-        if not re.fullmatch(r"[A-Za-z0-9_\-\*]+", self.cluster_name):
-            raise UserError(
-                f"Invalid cluster name '{self.cluster_name}'. Cluster names can only "
-                f"contain alphanumeric characters, underscores, dashes, or asterisks "
-                f"(asterisks are for filtering operations only and will not work with "
-                f"the `provision` command)."
-            )
 
         self.env.update({"CLUSTER_NAME": self.cluster_name})
         self.logger.debug(f"Cluster name set to: {self.cluster_name}")

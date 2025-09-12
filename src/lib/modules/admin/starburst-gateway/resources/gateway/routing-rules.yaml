@@ -1,0 +1,7 @@
+---
+name: "Default to adhoc group"
+description: "All queries not matching other rules go to the adhoc group"
+priority: 1000
+condition: "true"
+actions:
+  - 'result.put("routingGroup", "adhoc")'

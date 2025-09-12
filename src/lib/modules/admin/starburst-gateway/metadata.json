@@ -1,0 +1,22 @@
+{
+  "description": "Starburst Gateway module",
+  "incompatibleModules": [],
+  "dependentModules": [
+    "insights"
+  ],
+  "enterprise": true,
+  "dependentClusters": [
+    {
+      "name": "starburst-gateway-replica",
+      "modules": [
+        "insights"
+      ],
+      "workers": 0,
+      "env": {
+        "__PORT_MINITRINO": "60801",
+        "CONFIG_PROPERTIES": "http-server.process-forwarded=true",
+        "INSIGHTS_JDBC_URL": "jdbc:postgresql://postgres-backend-svc-default:5432/sep"
+      }
+    }
+  ]
+}

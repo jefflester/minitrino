@@ -1,6 +1,5 @@
 """Minitrino CLI entrypoint."""
 
-import difflib
 import os
 import sys
 from importlib import import_module
@@ -9,15 +8,18 @@ from typing import Any
 import click
 
 from minitrino import utils
-from minitrino.core import logger as minitrino_logger
 from minitrino.core.context import MinitrinoContext
-from minitrino.core.logger import LogLevel, MinitrinoLogger
+from minitrino.core.errors import UserError
+from minitrino.core.logging.levels import LogLevel
+from minitrino.core.logging.utils import configure_logging
+
+logger = configure_logging()
 
 
 class CommandLineInterface(click.MultiCommand):
     """Click MultiCommand class for loading and executing commands."""
 
-    def list_commands(self, ctx) -> list[str]:
+    def list_commands(self, ctx: click.Context) -> list[str]:
         """List available commands."""
         cmd_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "cmd"))
         commands = [
@@ -27,22 +29,20 @@ class CommandLineInterface(click.MultiCommand):
         ]
         return sorted(commands)
 
-    def get_command(self, ctx, name) -> Any:
+    @utils.exception_handler
+    def get_command(self, ctx: click.Context, name: str) -> Any:
         """Load and return the command module."""
-        logger = MinitrinoLogger()
         mod_name = name.replace("-", "_")
         try:
             mod = import_module(f"minitrino.cmd.{mod_name}")
         except ModuleNotFoundError:
-            all_commands = self.list_commands(ctx)
-            suggestion = difflib.get_close_matches(name, all_commands, n=1)
-            suggestion_msg = f" Did you mean '{suggestion[0]}'?" if suggestion else ""
-            logger.error(f"Command '{name}' not found.{suggestion_msg}")
-            sys.exit(1)
+            suggestion = utils.closest_match_or_error(
+                name, self.list_commands(ctx), "command"
+            )
+            raise UserError(f"Command '{name}' not found. {suggestion}")
         cmd = getattr(mod, "cli", None)
         if cmd is None:
-            logger.error(f"No 'cli' object in {mod_name}")
-            sys.exit(1)
+            raise UserError(f"No 'cli' object in {mod_name}")
         return cmd
 
 
@@ -72,12 +72,6 @@ class CommandLineInterface(click.MultiCommand):
     help="Set the minimum log level (ERROR, WARN, INFO, DEBUG).",
 )
 @click.option(
-    "--global-logging",
-    is_flag=True,
-    default=False,
-    help="Enable logging for all dependencies.",
-)
-@click.option(
     "-e",
     "--env",
     default=[],
@@ -99,7 +93,6 @@ def cli(
     ctx: MinitrinoContext,
     verbose: bool,
     log_level: str,
-    global_logging: bool,
     env: list[str],
     cluster_name: str,
 ) -> None:
@@ -108,19 +101,16 @@ def cli(
     To report issues or contribute, please visit:
     https://github.com/jefflester/minitrino
     """
-    ctx._user_env = env
+    ctx._user_env_args = env
     ctx.cluster_name = cluster_name
 
     effective_log_level = LogLevel.DEBUG if verbose else LogLevel[log_level.upper()]
-    ctx._log_level = effective_log_level
-    minitrino_logger.configure_logging(
-        effective_log_level, global_logging=global_logging
-    )
+    ctx.logger = configure_logging(effective_log_level)
+    ctx.user_log_level = effective_log_level
 
 
 def display_version(ctx: click.Context) -> None:
     """Return the version of the CLI and the library as a string."""
-    minitrino_logger.configure_logging(LogLevel.INFO)
     env = []
     args = sys.argv
     i = 0
@@ -132,7 +122,7 @@ def display_version(ctx: click.Context) -> None:
         else:
             i += 1
     minitrino_ctx: MinitrinoContext = ctx.ensure_object(MinitrinoContext)
-    minitrino_ctx._user_env = env
+    minitrino_ctx._user_env_args = env
     minitrino_ctx.initialize(version_only=True)
     cli_version = utils.cli_ver()
     try:

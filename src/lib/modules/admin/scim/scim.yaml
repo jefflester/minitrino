@@ -1,0 +1,30 @@
+---
+services:
+
+  minitrino:
+    environment:
+      SCIM_CONFIG_PROPERTIES: |-
+        starburst.users.provisioning.type=SCIM
+        starburst.users.provisioning.scim.secret-token=secret-token
+    volumes:
+      - ./modules/admin/scim/resources/cluster/group-provider.properties:/mnt/etc/group-provider.properties:ro
+    labels:
+      - org.minitrino.module.admin.scim=true
+
+  scim-sync:
+    image: python:${SCIM_PYTHON_VER}
+    container_name: scim-sync-${CLUSTER_NAME}
+    environment:
+      CLUSTER_NAME: ${CLUSTER_NAME}
+      SCIM_TOKEN: secret-token
+      SYNC_INTERVAL: 60
+    depends_on:
+      minitrino:
+        condition: service_healthy
+    volumes:
+      - ./modules/admin/scim/resources/scim/scim_sync.py:/mnt/scim_sync.py:ro
+    command: >
+      sh -c "pip install requests && python /mnt/scim_sync.py"
+    labels:
+      - org.minitrino.root=true
+      - org.minitrino.module.admin.scim=true

@@ -4,7 +4,8 @@ services:
   minitrino:
     volumes:
       - ./modules/catalog/hive/resources/cluster/hive.properties:/mnt/etc/catalog/hive.properties:ro
-      - ./modules/catalog/hive/resources/bootstrap/458-native-fs-workaround.sh:/mnt/bootstrap/hive/458-native-fs-workaround.sh:ro
+      - ./modules/catalog/hive/resources/cluster/create-schema.sh:/mnt/bootstrap/hive/create-schema.sh:ro
+      - ./modules/catalog/hive/resources/cluster/458-native-fs-workaround.sh:/mnt/bootstrap/hive/458-native-fs-workaround.sh:ro
 
   postgres-hive:
     image: postgres:${POSTGRES_HMS_VER}
@@ -30,55 +31,14 @@ services:
         condition: service_healthy
     env_file:
       - ./modules/catalog/hive/resources/hms/hms.env
-    ports:
-      - :9083
-    labels:
-      - org.minitrino.root=true
-      - org.minitrino.module.catalog.hive=true
-
-  minio:
-    image: minio/minio:${MINIO_VER}
-    container_name: minio-${CLUSTER_NAME}
-    environment:
-      MINIO_ROOT_USER: access-key
-      MINIO_ROOT_PASSWORD: secret-key
-    command: server --address :9000 --console-address :9001 /data
-    ports:
-      - :9000
-      - ${__PORT_HIVE_MINIO}:9001
-    volumes:
-      - minio-hive-data:/data
-    labels:
-      - org.minitrino.root=true
-      - org.minitrino.module.catalog.hive=true
-
-  create-minio-buckets:
-    image: minio/mc:${MINIO_MC_VER}
-    container_name: create-minio-buckets-${CLUSTER_NAME}
-    entrypoint: |-
-      /bin/sh -c "
-      wfi=wait-for-it && \
-      curl -fsSL \\
-        https://raw.githubusercontent.com/vishnubob/$$wfi/master/$$wfi.sh \\
-        > /tmp/$$wfi.sh && \
-      chmod +x /tmp/$$wfi.sh && \
-      echo 'Waiting for MinIO to come up...' && \
-      /tmp/$$wfi.sh minio:9000 --strict --timeout=60 && \
-      /usr/bin/mc alias set minio \\
-        http://minio:9000 access-key secret-key && \
-      /usr/bin/mc mb minio/sample-bucket/wh/ && \
-      tail -f /dev/null
-      "
+    expose:
+      - 9083
     labels:
       - org.minitrino.root=true
       - org.minitrino.module.catalog.hive=true
 
 volumes:
   postgres-hive-data:
-    labels:
-      - org.minitrino.root=true
-      - org.minitrino.module.catalog.hive=true
-  minio-hive-data:
     labels:
       - org.minitrino.root=true
       - org.minitrino.module.catalog.hive=true

@@ -5,28 +5,54 @@ services:
     build:
       context: ./image/
       args:
-        UBUNTU_VER: ${UBUNTU_VER}
-        CLUSTER_VER: ${CLUSTER_VER}
-        CLUSTER_DIST: ${CLUSTER_DIST}
-        SERVICE_USER: ${SERVICE_USER}
+        UBUNTU_VER: ${UBUNTU_VER:-22.04}
+        CLUSTER_VER: ${CLUSTER_VER:-474}
+        CLUSTER_DIST: ${CLUSTER_DIST:-trino}
+        SERVICE_USER: ${SERVICE_USER:-trino}
       labels:
         - org.minitrino.root=true
         - org.minitrino.module.minitrino=true
-    image: minitrino/cluster:${CLUSTER_VER}-${CLUSTER_DIST}
-    container_name: minitrino-${CLUSTER_NAME}
+    image: minitrino/cluster:${CLUSTER_VER:-474}-${CLUSTER_DIST:-trino}
+    container_name: minitrino-${CLUSTER_NAME:-default}
     restart: 'no'
+    environment:
+      COORDINATOR: true
+      CLUSTER_NAME: ${CLUSTER_NAME:-default}
+      WORKERS: ${WORKERS:-0}
+      CONFIG_PROPERTIES: ${CONFIG_PROPERTIES:-}
+      JVM_CONFIG: ${JVM_CONFIG:-}
+      WORKER_CONFIG_PROPERTIES: ${WORKER_CONFIG_PROPERTIES:-}
+      WORKER_JVM_CONFIG: ${WORKER_JVM_CONFIG:-}
+      MINITRINO_MODULES: ${MINITRINO_MODULES:-}
+      STARTUP_SELECT_RETRIES: ${STARTUP_SELECT_RETRIES:-30}
+      PROVISION_BUILD_TIMEOUT: ${PROVISION_BUILD_TIMEOUT:-1200}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/info"]
+      interval: 5s
+      timeout: 4s
+      retries: 20
+      start_period: 10s
     ports:
-      - ${__PORT_MINITRINO}:8080
+      - ${__PORT_MINITRINO:-8080}:8080
     volumes:
-      - ${LIC_PATH}:${LIC_MOUNT_PATH}
+      - ${LIC_PATH:-./modules/resources/dummy.license}:${LIC_MOUNT_PATH:-/mnt/etc/dummy.license:ro}
+    hostname: minitrino-${CLUSTER_NAME:-default}
+    networks:
+      - default
+      - cluster_shared
     labels:
       - org.minitrino.root=true
       - org.minitrino.module.minitrino=true
 
 networks:
   default:
-    name: minitrino_${CLUSTER_NAME}
+    name: minitrino_${CLUSTER_NAME:-default}
     driver: bridge
+    labels:
+      - org.minitrino.root=true
+      - org.minitrino.module.minitrino=true
+  cluster_shared:
+    external: true
     labels:
       - org.minitrino.root=true
       - org.minitrino.module.minitrino=true

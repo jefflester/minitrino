@@ -22,4 +22,5 @@ def cli(ctx: MinitrinoContext):
     """Restart cluster containers."""
     ctx.initialize()
     utils.check_daemon(ctx.docker_client)
-    ctx.cluster.ops.restart()
+    with ctx.logger.spinner("Restarting containers..."):
+        ctx.cluster.ops.restart()

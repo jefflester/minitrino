@@ -2,10 +2,8 @@
 services:
 
   minitrino:
-    environment:
-      MINITRINO_BOOTSTRAP: bootstrap-env-var.sh
     volumes:
-      - ./modules/catalog/test/resources/bootstrap/bootstrap-before-after.sh:/mnt/bootstrap/test/bootstrap-before-after.sh:ro
+      - ./modules/catalog/test/resources/cluster/bootstrap-before-after.sh:/mnt/bootstrap/test/bootstrap-before-after.sh:ro
 
   test:
     build:
@@ -15,8 +13,6 @@ services:
     command: [tail, -f, /dev/null]
     image: minitrino/test:latest
     container_name: test-${CLUSTER_NAME}
-    environment:
-      MINITRINO_BOOTSTRAP: bootstrap-test.sh
     volumes:
       - test-data:/etc/test/
     labels:

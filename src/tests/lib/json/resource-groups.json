@@ -1,0 +1,124 @@
+{
+  "tests": [
+    {
+      "type": "query",
+      "name": "Confirm admin resource group",
+      "sql": "SELECT 'admin'",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'",
+        "--user admin"
+      ],
+      "contains": [
+        "admin"
+      ]
+    },
+    {
+      "type": "query",
+      "name": "Confirm admin resource group from completed query",
+      "sql": "SELECT resource_group_id FROM system.runtime.queries WHERE query = 'SELECT ''admin''' AND user = 'admin'",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'",
+        "--user admin"
+      ],
+      "contains": [
+        "[admin]"
+      ]
+    },
+    {
+      "type": "query",
+      "name": "Confirm metadataQueriesSkipTheQueue resource group",
+      "sql": "SHOW CREATE TABLE tpch.tiny.customer",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'",
+        "--user foo"
+      ],
+      "contains": [
+        "custkey"
+      ]
+    },
+    {
+      "type": "query",
+      "name": "Confirm metadataQueriesSkipTheQueue resource group from completed query",
+      "sql": "SELECT resource_group_id FROM system.runtime.queries WHERE query = 'SHOW CREATE TABLE tpch.tiny.customer' AND user = 'foo'",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'",
+        "--user admin"
+      ],
+      "contains": [
+        "[metadataQueriesSkipTheQueue]"
+      ]
+    },
+    {
+      "type": "query",
+      "name": "Confirm global.systemMetadata resource group",
+      "sql": "SELECT * FROM system.jdbc.tables LIMIT 1",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'",
+        "--user metadata-user"
+      ],
+      "contains": [
+        "table_cat"
+      ]
+    },
+    {
+      "type": "query",
+      "name": "Confirm global.systemMetadata resource group from completed query",
+      "sql": "SELECT resource_group_id FROM system.runtime.queries WHERE query = 'SELECT * FROM system.jdbc.tables LIMIT 1' AND user = 'metadata-user'",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'",
+        "--user admin"
+      ],
+      "contains": [
+        "[global, systemMetadata, metadata-user]"
+      ]
+    },
+    {
+      "type": "query",
+      "name": "Confirm global.systemRuntime resource group",
+      "sql": "SELECT * FROM system.runtime.queries LIMIT 1",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'",
+        "--user platform-user"
+      ],
+      "contains": [
+        "query_id"
+      ]
+    },
+    {
+      "type": "query",
+      "name": "Confirm global.systemRuntime resource group from completed query",
+      "sql": "SELECT resource_group_id FROM system.runtime.queries WHERE query = 'SELECT * FROM system.runtime.queries LIMIT 1' AND user = 'platform-user'",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'",
+        "--user admin"
+      ],
+      "contains": [
+        "[global, systemRuntime, platform-user]"
+      ]
+    },
+    {
+      "type": "query",
+      "name": "Confirm global.other resource group",
+      "sql": "SELECT 'foo'",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'",
+        "--user foo"
+      ],
+      "contains": [
+        "foo"
+      ]
+    },
+    {
+      "type": "query",
+      "name": "Confirm global.other resource group from completed query",
+      "sql": "SELECT resource_group_id FROM system.runtime.queries WHERE query = 'SELECT ''foo''' AND user = 'foo'",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'",
+        "--user admin"
+      ],
+      "contains": [
+        "[global, other, foo]"
+      ]
+    }
+  ]
+}

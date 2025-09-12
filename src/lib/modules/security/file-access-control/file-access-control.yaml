@@ -3,7 +3,7 @@ services:
 
   minitrino:
     volumes:
-      - ./modules/security/file-access-control/resources/cluster/access-control.properties:/mnt/etc/access-control.properties:ro
       - ./modules/security/file-access-control/resources/cluster/rules.json:/mnt/etc/rules.json:ro
+      - ./modules/security/file-access-control/resources/cluster/access-control.properties:/mnt/etc/access-control.properties:ro
     labels:
       - org.minitrino.module.security.file-access-control=true

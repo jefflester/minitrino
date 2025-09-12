@@ -57,3 +57,4 @@ yarn-error.log*
 .mypy_cache
 docs/_build/**
 node_modules
+.local

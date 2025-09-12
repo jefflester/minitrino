@@ -4,7 +4,6 @@ import click
 
 from minitrino import utils
 from minitrino.core.context import MinitrinoContext
-from minitrino.core.library import LibraryManager
 
 
 @click.command(
@@ -44,12 +43,12 @@ def cli(ctx: MinitrinoContext, version: str, list_releases: bool) -> None:
         If True, list all available releases and exit.
     """
     ctx.initialize()
-    installer = LibraryManager(ctx)
+    ctx.lib_manager()
 
     if list_releases:
-        releases = installer.list_releases()
+        releases = ctx.lib_manager.list_releases()
         ctx.logger.info("Available Minitrino releases:")
         ctx.logger.info(*releases)
         return
 
-    installer.install(version)
+    ctx.lib_manager.install(version)

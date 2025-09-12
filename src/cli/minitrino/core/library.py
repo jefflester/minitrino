@@ -19,7 +19,7 @@ class LibraryManager:
     """Handles installation and management of Minitrino libraries."""
 
     def __init__(self, ctx: "MinitrinoContext"):
-        self.ctx = ctx
+        self._ctx = ctx
         self.releases_url = "https://api.github.com/repos/jefflester/minitrino/releases"
 
     def install(self, version: str = "") -> None:
@@ -28,21 +28,21 @@ class LibraryManager:
             version = utils.cli_ver()
 
         self.validate(version)
-        lib_dir = os.path.join(self.ctx.minitrino_user_dir, "lib")
+        lib_dir = os.path.join(self._ctx.minitrino_user_dir, "lib")
 
         if os.path.isdir(lib_dir):
-            response = self.ctx.logger.prompt_msg(
+            response = self._ctx.logger.prompt_msg(
                 f"The Minitrino library at {lib_dir} will be overwritten. "
                 f"Continue? [Y/N]"
             )
             if not utils.validate_yes(response):
-                self.ctx.logger.info("Opted to skip library installation.")
+                self._ctx.logger.info("Opted to skip library installation.")
                 return
-            self.ctx.logger.debug("Removing existing library directory...")
+            self._ctx.logger.debug("Removing existing library directory...")
             shutil.rmtree(lib_dir)
 
         self.download_and_extract(version)
-        self.ctx.logger.info("Library installation complete.")
+        self._ctx.logger.info("Library installation complete.")
 
     def list_releases(self) -> list[str]:
         """List all available releases from GitHub."""
@@ -76,14 +76,16 @@ class LibraryManager:
         """Download and extract the library tarball."""
         base_url = "https://github.com/jefflester/minitrino"
         uri = f"{base_url}/archive/refs/tags/{version}.tar.gz"
-        tarball = os.path.join(self.ctx.minitrino_user_dir, f"{version}.tar.gz")
+        tarball = os.path.join(self._ctx.minitrino_user_dir, f"{version}.tar.gz")
         file_basename = f"minitrino-{version}"
-        lib_dir = os.path.join(self.ctx.minitrino_user_dir, file_basename, "src", "lib")
+        lib_dir = os.path.join(
+            self._ctx.minitrino_user_dir, file_basename, "src", "lib"
+        )
 
         try:
             self._download_file(uri, tarball)
-            self._extract_tarball(tarball, self.ctx.minitrino_user_dir)
-            shutil.move(lib_dir, os.path.join(self.ctx.minitrino_user_dir, "lib"))
+            self._extract_tarball(tarball, self._ctx.minitrino_user_dir)
+            shutil.move(lib_dir, os.path.join(self._ctx.minitrino_user_dir, "lib"))
             self._cleanup(tarball, file_basename)
         except Exception as e:
             self._cleanup(tarball, file_basename, False)
@@ -113,32 +115,34 @@ class LibraryManager:
         library. If versions don't match, it will prompt the user to update.
         """
         cli_version = utils.cli_ver()
-        library_version = utils.lib_ver(ctx=self.ctx, lib_path=self.ctx.lib_dir)
+        library_version = utils.lib_ver(ctx=self._ctx, lib_path=self._ctx.lib_dir)
 
         if library_version == "NOT INSTALLED":
-            self.ctx.logger.warn(
+            self._ctx.logger.warn(
                 "Minitrino library is not installed. Installing Minitrino libraries... "
             )
             self.install(version=cli_version)
         elif cli_version != library_version:
-            response = self.ctx.logger.prompt_msg(
+            response = self._ctx.logger.prompt_msg(
                 f"The current CLI version is {cli_version} which does not match "
                 f"the installed library version {library_version}. "
                 f"Install library version {cli_version}? [Y/N]"
             )
             if utils.validate_yes(response):
-                self.ctx.logger.info(
+                self._ctx.logger.info(
                     f"Overwriting existing Minitrino library to version {cli_version}"
                 )
                 self.install(version=cli_version)
             else:
-                self.ctx.logger.warn(
+                self._ctx.logger.warn(
                     "It is highly recommended to use matching CLI and library versions."
                     " Mismatched versions are likely to cause errors."
                     " To install the library manually, run `minitrino lib-install`."
                 )
         else:
-            self.ctx.logger.debug("CLI and library versions match. No action required.")
+            self._ctx.logger.debug(
+                "CLI and library versions match. No action required."
+            )
 
     def _cleanup(
         self, tarball: str = "", file_basename: str = "", trigger_error: bool = True
@@ -146,7 +150,7 @@ class LibraryManager:
         """Clean up downloaded and extracted files."""
         tarball_path = tarball
         unpacked_dir = (
-            os.path.join(self.ctx.minitrino_user_dir, file_basename)
+            os.path.join(self._ctx.minitrino_user_dir, file_basename)
             if file_basename
             else None
         )

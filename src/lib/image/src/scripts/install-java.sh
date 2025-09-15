@@ -3,7 +3,8 @@
 # Trino versions and their corresponding Java versions:
 # >= 436 <= 446: Java 21
 # >= 447 <= 463: Java 22
-# >= 464: Java 23
+# >= 464 <= 467: Java 23
+# >= 468: Java 24
 
 set -euxo pipefail
 
@@ -16,8 +17,10 @@ if [ "${TRINO_VER}" -ge 436 ] && [ "${TRINO_VER}" -le 446 ]; then
     JAVA_VER=21.0.5
 elif [ "${TRINO_VER}" -ge 447 ] && [ "${TRINO_VER}" -le 463 ]; then
     JAVA_VER=22.0.2
-elif [ "${TRINO_VER}" -ge 464 ]; then
+elif [ "${TRINO_VER}" -ge 464 ] && [ "${TRINO_VER}" -le 467 ]; then
     JAVA_VER=23.0.2
+elif [ "${TRINO_VER}" -ge 468 ]; then
+    JAVA_VER=24.0.2
 else
     echo "Unsupported Trino version. Exiting..."
     exit 1

@@ -1,7 +1,7 @@
 {
   "description": "Iceberg catalog module (uses Iceberg HMS catalog for metadata management)",
   "incompatibleModules": [],
-   "dependentModules": [
+  "dependentModules": [
     "minio"
   ],
   "enterprise": true

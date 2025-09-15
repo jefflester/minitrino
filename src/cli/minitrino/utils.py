@@ -192,7 +192,6 @@ def check_lib(ctx: MinitrinoContext) -> None:
     ctx.lib_dir
 
 
-
 def container_user_and_id(
     ctx: Optional[MinitrinoContext] = None,
     container: Container | MinitrinoContainer | str = "",

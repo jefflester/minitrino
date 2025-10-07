@@ -1,6 +1,7 @@
 """Cluster operations and resource management for Minitrino clusters."""
 
 from __future__ import annotations
+from minitrinotelemetry import MinitrinoTelemetry
 
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -26,6 +27,8 @@ from minitrino.settings import (
 if TYPE_CHECKING:
     from minitrino.core.cluster.cluster import Cluster
     from minitrino.core.context import MinitrinoContext
+
+telemetry = MinitrinoTelemetry()
 
 
 class ClusterOperations:
@@ -296,7 +299,8 @@ class ClusterOperations:
                 self._ctx.logger.debug(f"Rolled back {repr(c)}")
             except Exception:
                 pass
-
+    
+    @tele.telemetrize()
     def provision_workers(self, workers: int = 0) -> None:
         """Reconcile number of workers with the specified number."""
         # Handles five scenarios:

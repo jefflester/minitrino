@@ -101,27 +101,33 @@ such as the SQL Server and Db2 images.
 ## A Note on Module Compatibility
 
 For any given Minitrino release, all modules are tested and verified to work
-with the default Starburst (Trino) version. This version is specified in the
+with the default Trino/Starburst version. This version is specified in the
 `src/lib/minitrino.env`
 [file](https://github.com/jefflester/minitrino/blob/master/src/lib/minitrino.env)
-via the `STARBURST_VER` variable. Consequently, modules are not guaranteed to
-work on older or newer versions due to configuration incompatibilities or
-outdated, dependent services (like a minimum server version for a data source,
-e.g. MySQL). If you run into issues with a module on an older or newer Starburst
-version, you may edit the module source to work with the version you're
-attempting to deploy. See the
-[module building wiki](https://github.com/jefflester/minitrino/wiki/Build-a-Module)
-for instructions on creating/editing modules.
+via the `CLUSTER_VER` variable. Consequently, modules are not guaranteed to work
+on older or newer versions due to configuration incompatibilities or outdated,
+dependent services (like a minimum server version for a data source, e.g.
+MySQL). If you run into issues with a module on an older or newer Trino or
+Starburst version, you may edit the module source to work with the version
+you're attempting to deploy. See the [module building guide](build-a-module) for
+instructions on creating/editing modules.
 
 ## Developer Installation
 
-In the project's root directory, run `./install.sh` to install the Minitrino CLI
+In the project's root directory, run `make install` to install the Minitrino CLI
 and test packages. If you encounter errors during installation, try running
-`/install.sh -v` for verbose output.
+`make install-debug` for verbose output.
+
+Alternatively, you can call the install script directly:
+
+```sh
+./install/src/install.sh
+./install/src/install.sh -v  # For verbose output
+```
 
 Using this installation method, the `LIB_PATH` variable will point to
 `${REPO_DIRECTORY}/src/lib/`. To test local changes, edit the code and then
-recompile the packages by running the `install.sh` script again.
+recompile the packages by running `make install` again.
 
 **Note**: If you encounter dependency version conflicts, consider using a
 virtual environment to isolate the installation. To set up a virtual

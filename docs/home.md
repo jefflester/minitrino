@@ -22,49 +22,53 @@ version](https://img.shields.io/pypi/v/minitrino)](https://pypi.org/project/mini
 ![CLI
 Tests](https://github.com/jefflester/minitrino/actions/workflows/cli-tests.yaml/badge.svg)
 ![Library
-Tests](https://github.com/jefflester/minitrino/actions/workflows/lib-tests.yaml/badge.svg)
+Tests](https://github.com/jefflester/minitrino/actions/workflows/lib-tests-trino.yaml/badge.svg)
 [![Trino
 Slack](https://img.shields.io/static/v1?logo=slack&logoColor=959DA5&label=Slack&labelColor=333a41&message=join%20conversation&color=3AC358)](https://trinodb.io/slack.html)
 
 ## Quick Start
 
-To learn more about the CLI and underlying library, visit the following wiki
-pages:
+To learn more about the CLI and underlying library, visit the following
+documentation pages:
 
-- [Installation and Upgrades](https://github.com/jefflester/minitrino/wiki/Installation-and-Upgrades)
-- [Workflow Examples](https://github.com/jefflester/minitrino/wiki/Workflow-Examples)
-- [Environment Variables and Config](https://github.com/jefflester/minitrino/wiki/Environment-Variables-and-Config)
-- [Build a Module](https://github.com/jefflester/minitrino/wiki/Build-a-Module)
+- [Installation and Upgrades](get-started/user/installation-and-upgrades)
+- [Workflow Examples](get-started/user/workflow-examples)
+- [Environment Variables and Config](get-started/user/environment-variables-and-config)
+- [Build a Module](get-started/dev/build-a-module)
 
-## Why Starburst for the Base Image?
+## Why Support Both Trino and Starburst?
 
-Starburst offers an enterprise version of Trino called
+Minitrino 3.0.0 introduces native support for both [Trino](https://trino.io/)
+(open-source) and
 [Starburst Enterprise Platform](https://docs.starburst.io/latest/index.html)
-(SEP), and SEP images are used as the base for
-[Minitrino's image](https://github.com/jefflester/minitrino/tree/master/src/lib/image).
-There are a few reasons why it's advantageous to use SEP as the base image––some
-personal and others community-facing.
+(SEP), giving users flexibility to work with either distribution.
 
-### Community: Comprehensive Plugin Support
+### Unified Developer Experience
 
-Starburst offers almost all of the open source Trino plugins as part of its
-distribution, and those plugins are free to be used without any licensing.
+Whether you're working with Trino or Starburst, Minitrino provides a consistent,
+easy-to-use interface for local development and testing. Switch between
+distributions simply by setting the `IMAGE` environment variable.
 
-### Community: Accessible Entry Point
+### Community Support
 
-Trino can be complicated, especially for beginners. This tool provides a way for
-them to quickly grasp the fundamentals at little or no cost (e.g. no cloud
-expenses) and with a lower time commitment.
+Both Trino and Starburst have vibrant communities. This tool serves users across
+the entire ecosystem—from open-source enthusiasts to enterprise
+developers—making it easier to experiment, learn, and test features regardless
+of your chosen distribution.
 
-### Community: Growing User Base
+### Flexible Enterprise Testing
 
-The number of Starburst users continues to grow, and this tool can help them
-test, experiment with, and learn almost any feature.
+For Starburst users, Minitrino enables local testing of Enterprise features
+using a license file, while Trino users can leverage the full open-source
+ecosystem. Both distributions share the same modular architecture, allowing for
+consistent workflows.
 
-### Personal: Practicality and Familiarity
+### Practical Benefits
 
-I work at Starburst, and my colleagues and I find this tool to be generally
-useful.
+The tool accommodates diverse use cases: testing Trino plugins, evaluating
+Starburst Enterprise features, learning SQL-on-anything fundamentals, or
+validating configurations before production deployment—all with minimal setup
+and no cloud costs.
 
 ```{toctree}
 :caption: Getting Started

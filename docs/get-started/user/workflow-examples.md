@@ -12,7 +12,7 @@ that the tool is best suited for.
     - [Catalog Modules](#catalog-modules)
     - [Security Modules](#security-modules)
   - [CLI Examples](#cli-examples)
-    - [Choosing a Starburst Version](#choosing-a-starburst-version)
+    - [Choosing a Trino or Starburst Version](#choosing-a-trino-or-starburst-version)
     - [Run Commands in Verbose Mode](#run-commands-in-verbose-mode)
     - [List Modules](#list-modules)
     - [Provision an Environment](#provision-an-environment)
@@ -20,6 +20,8 @@ that the tool is best suited for.
     - [Worker Provisioning Overview](#worker-provisioning-overview)
     - [Modify Files in a Running Container](#modify-files-in-a-running-container)
     - [Access the Trino CLI](#access-the-trino-cli)
+    - [Restart Cluster Containers](#restart-cluster-containers)
+    - [View Cluster Resources](#view-cluster-resources)
     - [Shut Down an Environment](#shut-down-an-environment)
     - [Remove Minitrino Resources](#remove-minitrino-resources)
     - [Snapshot a Customized Module](#snapshot-a-customized-module)
@@ -72,16 +74,17 @@ Each module has a `readme` associated with it. The list below points to the
 
 ## CLI Examples
 
-### Choosing a Starburst Version
+### Choosing a Trino or Starburst Version
 
-Each Minitrino release uses a default Starburst version, specified in
-`lib/minitrino.env` via the `STARBURST_VER` variable. Unless overridden by an
+Each Minitrino release uses a default Trino version, specified in
+`lib/minitrino.env` via the `CLUSTER_VER` variable. Unless overridden by an
 environment variable, this is the version that will be used for all `provision`
 commands.
 
-Starburst Enterprise (SEP) releases are based on Trino releases. So, SEP release
-`400-e` directly maps to Trino release `400`. To clearly demonstrate the
-relationship, here are few more examples:
+To use Starburst instead of Trino, set the `IMAGE` environment variable to
+`starburst`. Starburst Enterprise (SEP) releases are based on Trino releases.
+So, SEP release `400-e` directly maps to Trino release `400`. To clearly
+demonstrate the relationship, here are few more examples:
 
 - SEP `413-e.9` -> Trino `413`
 - SEP `446-e` -> Trino `446`
@@ -138,12 +141,12 @@ minitrino modules -m ${module} --json | jq .${module}.yaml_dict
 
 ### Provision an Environment
 
-When a certain `STARBURST_VER` is deployed for the first time, Minitrino must
+When a certain `CLUSTER_VER` is deployed for the first time, Minitrino must
 first build the image. This typically takes ~ 5 minutes depending on the quality
-of your network. Once a given `STARBURST_VER` is built, it will be reused for
-all future commands specifying the same version.
+of your network. Once a given `CLUSTER_VER` is built, it will be reused for all
+future commands specifying the same version.
 
-Provision a single-node cluster using the default SEP version:
+Provision a single-node cluster using the default Trino version:
 
 ```sh
 minitrino -v provision
@@ -155,11 +158,16 @@ Provision a multi-node cluster with two worker nodes:
 minitrino -v provision --workers 2
 ```
 
-Provision the `postgres` catalog module with a specific
-[SEP version](https://docs.starburst.io/latest/release.html):
+Provision the `postgres` catalog module with a specific Trino version:
 
 ```sh
-minitrino -v -e STARBURST_VER=${VER} provision -m postgres
+minitrino -v -e CLUSTER_VER=${VER} provision -m postgres
+```
+
+Provision with Starburst instead of Trino:
+
+```sh
+minitrino -v -e IMAGE=starburst -e CLUSTER_VER=474-e provision -m postgres
 ```
 
 Provision the `hive` catalog module with two worker nodes:
@@ -194,11 +202,15 @@ All environments expose the Starburst service on `localhost:8080`, meaning you
 can visit the web UI directly, or you can connect external clients, such as
 DBeaver, to the `localhost` service.
 
-The `trino` coordinator container can be directly accessed via:
+The coordinator container can be directly accessed via:
 
 ```sh
-docker exec -it trino bash
+docker exec -it minitrino-default bash
 ```
+
+**Note**: The default cluster name is `default`. If you provisioned with a
+custom cluster name (e.g., `--cluster my-cluster`), replace `minitrino-default`
+with `minitrino-my-cluster`.
 
 ### Worker Provisioning Overview
 
@@ -209,8 +221,8 @@ take place:
   executed inside of it.
 - The coordinator is restarted.
 - Once the coordinator is up, the worker containers are deployed, and the
-  coordinator's `/etc/starburst/` directory is compressed, copied, and extracted
-  to all of the worker containers.
+  coordinator's `/mnt/etc/` directory is compressed, copied, and extracted to
+  all of the worker containers.
 - The workers' `config.properties` files are overwritten with basic
   configurations for connectivity to the coordinator.
 
@@ -224,25 +236,62 @@ You can modify files inside a running container. For example:
 
 ```sh
 # Update coordinator logging settings
-docker exec -it trino bash
-echo "io.trino=DEBUG" >> /etc/starburst/log.properties
+docker exec -it minitrino-default bash
+echo "io.trino=DEBUG" >> /mnt/etc/log.properties
 exit
-docker restart trino
+docker restart minitrino-default
 
-# Update worker logging settings
-docker exec -it trino-worker-1 bash
-echo "io.trino=DEBUG" >> /etc/starburst/log.properties
+# Update worker logging settings (assuming default cluster name)
+docker exec -it minitrino-worker-1-default bash
+echo "io.trino=DEBUG" >> /mnt/etc/log.properties
 exit
-docker restart trino-worker-1
+docker restart minitrino-worker-1-default
 ```
 
 Restarting the container allows Trino to register the configuration change.
 
+**Note**: Replace `default` with your cluster name if using a custom cluster.
+
 ### Access the Trino CLI
 
 ```sh
-docker exec -it trino bash
+docker exec -it minitrino-default bash
 trino-cli --debug --user admin --execute "SELECT * FROM tpch.tiny.customer LIMIT 10"
+```
+
+### Restart Cluster Containers
+
+Restart all containers in the cluster without reprovisioning:
+
+```sh
+minitrino restart
+```
+
+This is useful when you've made configuration changes and need to reload the
+cluster without tearing it down completely.
+
+### View Cluster Resources
+
+View all resources associated with your cluster:
+
+```sh
+minitrino resources
+```
+
+Filter by specific resource types:
+
+```sh
+# View only containers
+minitrino resources --container
+
+# View only volumes
+minitrino resources --volume
+
+# View only images
+minitrino resources --image
+
+# View only networks
+minitrino resources --network
 ```
 
 ### Shut Down an Environment
@@ -281,7 +330,7 @@ Remove images from a specific module:
 
 ```sh
 minitrino remove --images \
-  --label com.starburst.tests.module.${MODULE}=${MODULE_TYPE}-${MODULE}
+  --label org.minitrino.module.${MODULE_TYPE}.${MODULE}=true
 ```
 
 Where `${MODULE_TYPE}` is one of: `admin`, `catalog`, `security`.
@@ -296,7 +345,7 @@ Remove volumes from a specific module:
 
 ```sh
 minitrino remove --volumes \
-  --label com.starburst.tests.module.${MODULE}=${MODULE_TYPE}-${MODULE}
+  --label org.minitrino.module.${MODULE_TYPE}.${MODULE}=true
 ```
 
 ### Snapshot a Customized Module
@@ -356,7 +405,7 @@ Minitrino has special support for two Trino-specific environment variables:
 variables in a Docker Compose file:
 
 ```yaml
-trino:
+minitrino:
   environment:
     CONFIG_PROPERTIES: |-
       insights.jdbc.url=jdbc:postgresql://postgresdb:5432/insights
@@ -427,7 +476,7 @@ YAML file via the `MINITRINO_BOOTSTRAP` environment variable:
 
 ```yaml
 services:
-  trino:
+  minitrino:
     environment:
       MINITRINO_BOOTSTRAP: bootstrap.sh
 ```

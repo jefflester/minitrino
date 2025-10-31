@@ -63,17 +63,17 @@ cd lib/modules/catalog/my-postgres/
 
 All resources for a module go inside of the `resources/` directory within the
 module's directory (`lib/modules/${type}/${module}/`). Inside this directory,
-place Trino-specific resources into a `trino/` directory, then mount the
+place Trino-specific resources into a `cluster/` directory, then mount the
 resources to the Trino container defined in the root `docker-compose.yaml` file.
 
 ```sh
-mkdir -p resources/trino/
+mkdir -p resources/cluster/
 ```
 
-In the newly-created `resources/trino/` directory, add a properties file.
+In the newly-created `resources/cluster/` directory, add a properties file.
 
 ```sh
-bash -c "cat << EOF > postgres.properties
+bash -c "cat << EOF > resources/cluster/postgres.properties
 connector.name=postgresql
 connection-url=jdbc:postgresql://postgres:5432/minitrino
 connection-user=admin
@@ -135,7 +135,6 @@ bash -c 'cat << EOF > metadata.json
   "description": "Example Postgres catalog module",
   "incompatibleModules": [],
   "dependentModules": [],
-  "versions": [],
   "enterprise": false
 }
 EOF'
@@ -150,10 +149,6 @@ EOF'
 - `dependentModules`: specifies which modules must be provisioned alongside the
   target. Dependent modules will be automatically provisioned with the
   `provision` command.
-- `versions`: enforces version requirements. The first value indicates the
-  minimum version, and the second value indicates the last version. If no second
-  value is present, it is assumed that all versions >= the minimum version are
-  supported. Example: `{"versions": [413, 465]}`, `{"versions": [429]}`
 - `enterprise`: requires a Starburst license file (`starburstdata.license`).
 
 The metadata can be exposed via the `modules` command.
@@ -186,10 +181,10 @@ my-postgres
 ├── my-postgres.yaml
 ├── readme.md
 └── resources
-    ├── postgres
-    │   └── postgres.env
-    └── trino
-        └── postgres.properties
+    ├── cluster
+    │   └── postgres.properties
+    └── postgres
+        └── postgres.env
 ```
 
 ## Configure the Docker Compose YAML File
@@ -198,20 +193,28 @@ We will now define the `my-postgres.yaml` Docker Compose file:
 
 ```yaml
 services:
-  # Note: /etc/starburst is exposed as ${ETC} to make
-  # volume definitions slightly shorter in length
-  trino:
+  minitrino:
     volumes:
-      - ./modules/catalog/my-postgres/resources/trino/postgres.properties:${ETC}/catalog/postgres.properties
+      - ./modules/catalog/my-postgres/resources/cluster/postgres.properties:/mnt/etc/catalog/postgres.properties:ro
 
   postgres:
     image: postgres:${POSTGRES_VER}
-    container_name: postgres
+    container_name: postgres-${CLUSTER_NAME}
     env_file:
       - ./modules/catalog/my-postgres/resources/postgres/postgres.env
+    ports:
+      - ${__PORT_POSTGRES}:5432
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.my-postgres=catalog-my-postgres
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.my-postgres=true
+
+volumes:
+  postgres-data:
+    labels:
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.my-postgres=true
 ```
 
 ## Important Implementation Details: Paths and Labels
@@ -233,8 +236,8 @@ All Minitrino Docker Compose files use labels. The labels associate containers,
 volumes, and images with Minitrino and allow the CLI to target those objects
 when executing commands.
 
-Applying labels to the Trino container is only necessary when `trino` is the
-only service defined in the Compose file. The
+Applying labels to the `minitrino` container is only necessary when `minitrino`
+is the only service defined in the Compose file. The
 [`biac` module](https://github.com/jefflester/minitrino/blob/master/src/lib/modules/security/biac/biac.yaml)
 is an example of this.
 
@@ -247,9 +250,9 @@ Labels should always be applied to the following objects:
 
 Labels should be defined in pairs of two. The naming convention is:
 
-- The standard Minitrino resource label: `com.starburst.tests=minitrino`
+- The standard Minitrino resource label: `org.minitrino.root=true`
 - A module-specific resource label:
-  `com.starburst.tests.module.${MODULE_NAME}=${MODULE_TYPE}-${MODULE_NAME}`
+  `org.minitrino.module.${MODULE_TYPE}.${MODULE_NAME}=true`
   - Module type can be one of: `admin`, `catalog`, or `security`
   - This applies a unique label to the module, allowing it to be isolated when
     necessary
@@ -261,33 +264,9 @@ Compose file).
 
 ---
 
-**Note**: A named volume is defined in a separate block within the Compose file,
-and they should have labels applied to them. Below is an example of the Compose
-file we created with a named volume added.
-
----
-
-```yaml
-services:
-  trino:
-    volumes:
-      - ./modules/catalog/my-postgres/resources/trino/postgres.properties:/etc/starburst/catalog/postgres.properties
-
-  postgres:
-    image: postgres:${POSTGRES_VER}
-    container_name: postgres
-    env_file:
-      - ./modules/catalog/my-postgres/resources/postgres/postgres.env
-    labels: # These labels are applied to the service/container
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.my-postgres=catalog-my-postgres
-
-volumes:
-  postgres-data:
-    labels: # These labels are applied to the named volume
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.my-postgres=catalog-my-postgres
-```
+**Note**: The example above already includes a named volume (`postgres-data`) in
+the Compose file. Named volumes should always have labels applied to them, as
+shown in the example.
 
 ## Test the New Catalog
 
@@ -297,11 +276,15 @@ Provision the new catalog with the CLI:
 minitrino -v provision -m my-postgres
 ```
 
-Open a shell session in the `trino` container and run some tests:
+Open a shell session in the `minitrino` container and run some tests:
 
 ```sh
-docker exec -it trino bash
+docker exec -it minitrino-default bash
 trino-cli
 
 trino> SHOW CATALOGS;
 ```
+
+**Note**: If you provisioned with a custom cluster name (e.g.,
+`--cluster my-cluster`), replace `minitrino-default` with
+`minitrino-my-cluster`.

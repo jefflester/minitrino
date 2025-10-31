@@ -12,13 +12,14 @@ elasticsearch
 faker
 hive
 iceberg
+iceberg-hms
 mariadb
 mysql
 pinot
 postgres
 sqlserver
-stargate-parallel
 stargate
+stargate-parallel
 ```
 
 ---

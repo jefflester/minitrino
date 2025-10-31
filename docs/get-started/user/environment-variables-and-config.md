@@ -24,8 +24,9 @@ Environment variables can be passed to any Minitrino command with the `--env` /
 `-e` options:
 
 ```sh
-minitrino -e STARBURST_VER=427-e provision
-minitrino -e LIC_PATH=~/starburstdata.license -e STARBURST_VER=429-e provision
+minitrino -e CLUSTER_VER=474 provision
+minitrino -e IMAGE=starburst -e CLUSTER_VER=474-e provision
+minitrino -e LIC_PATH=~/starburstdata.license -e CLUSTER_VER=474-e provision
 ```
 
 These variables have the highest order of precedence and will override all other
@@ -35,13 +36,15 @@ variables.
 
 The following shell environment variables are picked up by the CLI:
 
-- `CONFIG_PROPERTIES`
-- `DOCKER_HOST`
-- `JVM_CONFIG`
-- `LIB_PATH`
-- `STARBURST_VER`
-- `TEXT_EDITOR`
-- `LIC_PATH`
+- `CLUSTER_NAME` - Name of the cluster (defaults to `default`)
+- `CLUSTER_VER` - Version of Trino or Starburst to use (e.g., `474` or `474-e`)
+- `CONFIG_PROPERTIES` - Additional Trino/Starburst config properties
+- `DOCKER_HOST` - Docker daemon socket location
+- `IMAGE` - Distribution to use: `trino` or `starburst` (defaults to `trino`)
+- `JVM_CONFIG` - Additional JVM configuration
+- `LIB_PATH` - Path to Minitrino library files
+- `LIC_PATH` - Path to Starburst license file (for Enterprise modules)
+- `TEXT_EDITOR` - Text editor to use for config commands
 
 All other shell variables are ignored.
 
@@ -54,9 +57,17 @@ The following represents the default configuration file:
 # defaults to ~/.minitrino/lib
 LIB_PATH=
 
-STARBURST_VER=
-TEXT_EDITOR=
+# 'trino' or 'starburst'
+IMAGE=
+
+# defaults to 'default'
+CLUSTER_NAME=
+
+# Starburst license file path
 LIC_PATH=
+
+CLUSTER_VER=
+TEXT_EDITOR=
 ```
 
 This file can be directly edited by running:
@@ -71,17 +82,15 @@ The library's `minitrino.env` file defines image tags used by modules. Here is
 an example of the file's contents:
 
 ```text
-COMPOSE_PROJECT_NAME=minitrino
-
-ELASTICSEARCH_VER=8.11.0
+CLUSTER_VER=474
+ELASTICSEARCH_VER=8.18.2
 HMS_VER=3.1.3
 MYSQL_VER=8
-POSTGRES_VER=11
-STARBURST_VER=423-e.6
+POSTGRES_VER=13
 ...
 ```
 
-Based on the `.env` file above, this Docker Compose snippet would register `11`
+Based on the `.env` file above, this Docker Compose snippet would register `13`
 for `${POSTGRES_VER}`
 
 ```yaml
@@ -96,6 +105,7 @@ them to the CLI with the `-e` option, e.g.:
 
 ```sh
 minitrino -e POSTGRES_VER=15 provision -m postgres
+minitrino -e CLUSTER_VER=475 provision
 ```
 
 ## Text Editor

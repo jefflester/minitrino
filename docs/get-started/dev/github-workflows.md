@@ -17,7 +17,7 @@ branch, then commits the changes to the new branch:
 
 - `readme.md`
 - `src/lib/version`
-- `src/cli/setup.py`
+- `pyproject.toml`
 
 Developers must run `git pull` after this workflow completes to ensure the local
 branch remains in sync with the remote branch.
@@ -35,11 +35,13 @@ git pull
 When a PR is created from a release branch and targets `master`, the following
 workflows are triggered:
 
-- `lib-tests.yaml`
 - `cli-tests.yaml`
+- `lib-tests-trino.yaml` - Library tests for Trino distributions
+- `lib-tests-sep.yaml` - Library tests for Starburst Enterprise Platform (SEP)
+  distributions
 - `test-release.yaml`
 
-The first two workflows automate the tests described in
+The first three workflows automate the tests described in
 [testing overview](https://github.com/jefflester/minitrino/wiki/CLI-and-Library-Tests).
 The `test-release.yaml` workflow creates a draft release and tag (`0.0.0`) with
 the release branch as its target. This allows for the testing suite to have

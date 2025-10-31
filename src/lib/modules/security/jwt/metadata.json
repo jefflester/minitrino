@@ -1,8 +1,0 @@
-{
-  "description": "JWT",
-  "incompatibleModules": [],
-  "dependentModules": [
-    "oauth2"
-  ],
-  "enterprise": false
-}

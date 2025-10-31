@@ -7,7 +7,6 @@ Learn about security modules.
 
 biac
 file-access-control
-jwt
 kerberos
 ldap
 oauth2

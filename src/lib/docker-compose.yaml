@@ -6,13 +6,13 @@ services:
       context: ./image/
       args:
         UBUNTU_VER: ${UBUNTU_VER:-22.04}
-        CLUSTER_VER: ${CLUSTER_VER:-474}
+        CLUSTER_VER: ${CLUSTER_VER:-476}
         CLUSTER_DIST: ${CLUSTER_DIST:-trino}
         SERVICE_USER: ${SERVICE_USER:-trino}
       labels:
         - org.minitrino.root=true
         - org.minitrino.module.minitrino=true
-    image: minitrino/cluster:${CLUSTER_VER:-474}-${CLUSTER_DIST:-trino}
+    image: minitrino/cluster:${CLUSTER_VER:-476}-${CLUSTER_DIST:-trino}
     container_name: minitrino-${CLUSTER_NAME:-default}
     restart: 'no'
     environment:

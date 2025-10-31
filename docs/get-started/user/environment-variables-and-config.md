@@ -24,9 +24,9 @@ Environment variables can be passed to any Minitrino command with the `--env` /
 `-e` options:
 
 ```sh
-minitrino -e CLUSTER_VER=474 provision
-minitrino -e IMAGE=starburst -e CLUSTER_VER=474-e provision
-minitrino -e LIC_PATH=~/starburstdata.license -e CLUSTER_VER=474-e provision
+minitrino -e CLUSTER_VER=476 provision
+minitrino -e IMAGE=starburst -e CLUSTER_VER=476-e provision
+minitrino -e LIC_PATH=~/starburstdata.license -e CLUSTER_VER=476-e provision
 ```
 
 These variables have the highest order of precedence and will override all other
@@ -37,7 +37,7 @@ variables.
 The following shell environment variables are picked up by the CLI:
 
 - `CLUSTER_NAME` - Name of the cluster (defaults to `default`)
-- `CLUSTER_VER` - Version of Trino or Starburst to use (e.g., `474` or `474-e`)
+- `CLUSTER_VER` - Version of Trino or Starburst to use (e.g., `476` or `476-e`)
 - `CONFIG_PROPERTIES` - Additional Trino/Starburst config properties
 - `DOCKER_HOST` - Docker daemon socket location
 - `IMAGE` - Distribution to use: `trino` or `starburst` (defaults to `trino`)
@@ -82,7 +82,7 @@ The library's `minitrino.env` file defines image tags used by modules. Here is
 an example of the file's contents:
 
 ```text
-CLUSTER_VER=474
+CLUSTER_VER=476
 ELASTICSEARCH_VER=8.18.2
 HMS_VER=3.1.3
 MYSQL_VER=8

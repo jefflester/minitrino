@@ -167,7 +167,7 @@ minitrino -v -e CLUSTER_VER=${VER} provision -m postgres
 Provision with Starburst instead of Trino:
 
 ```sh
-minitrino -v -e IMAGE=starburst -e CLUSTER_VER=474-e provision -m postgres
+minitrino -v -e IMAGE=starburst -e CLUSTER_VER=476-e provision -m postgres
 ```
 
 Provision the `hive` catalog module with two worker nodes:

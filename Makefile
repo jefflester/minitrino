@@ -72,12 +72,12 @@ lib-tests:
 		}
 	@echo "\033[1;32m✅ Lib tests completed, log stored at .local/lib-test.log\033[0m"
 
-# LF=1 to run last failed tests
+# FF=1 to run last failed tests first, then continue with all tests
 integration-tests:
 	@echo "\033[1;32m🚀 Running integration tests\033[0m"
 	@mkdir -p .local
 	@pytest \
-		-x $(if $(LF),--lf,) \
+		-x $(if $(FF),--ff,) \
 		-s -vvv --log-level=DEBUG --tb=short \
 		src/tests/cli/integration_tests 2>&1 | tee .local/pytest.log || \
 		{ \
@@ -91,7 +91,7 @@ unit-tests:
 	@echo "\033[1;32m🚀 Running unit tests\033[0m"
 	@mkdir -p .local
 	@pytest \
-		-x $(if $(LF),--lf,) \
+		-x $(if $(FF),--ff,) \
 		-s -vv --log-level=DEBUG --tb=short \
 		--cov=minitrino --cov-report=term-missing \
 		src/tests/cli/unit_tests 2>&1 | tee .local/unit-test.log || \

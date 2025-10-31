@@ -12,6 +12,7 @@ dependencies = [
   "minitrino",
   "pytest",
   "pytest-cov",
+  "pytest-rerunfailures",
   "PyYAML",
   "requests>=2.32.2"
 ]
@@ -31,5 +32,11 @@ skip_covered = true
 directory = "htmlcov"
 
 [tool.pytest.ini_options]
-addopts = "--cov=minitrino --cov-report=term-missing --cov-report=html"
+addopts = """
+    --cov=minitrino
+    --cov-report=term-missing
+    --cov-report=html
+    --reruns 3
+    --reruns-delay 2
+"""
 testpaths = ["src/tests"]

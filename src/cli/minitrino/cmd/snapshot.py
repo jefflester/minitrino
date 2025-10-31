@@ -135,7 +135,7 @@ def cli(
     else:
         running = ctx.modules.running_modules()
         if not running:
-            ctx.logger.debug(
+            ctx.logger.info(
                 "No running Minitrino modules to snapshot. Snapshotting "
                 "root resources only.",
             )

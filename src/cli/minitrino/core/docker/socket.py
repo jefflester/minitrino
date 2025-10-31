@@ -17,6 +17,56 @@ if TYPE_CHECKING:
     from minitrino.core.context import MinitrinoContext
 
 
+def get_docker_context_name(ctx: Optional[MinitrinoContext] = None, env=None) -> str:
+    """
+    Return the name of the active Docker context.
+
+    Parameters
+    ----------
+    ctx : MinitrinoContext, optional
+        The MinitrinoContext object to use for executing commands.
+        Defaults to None.
+    env : dict, optional
+        Dictionary of environment variables to use when resolving the
+        Docker context. Defaults to None.
+
+    Returns
+    -------
+    str
+        The name of the active Docker context (e.g., "orbstack",
+        "desktop-linux", "default"). Returns empty string if unable to
+        determine.
+    """
+    if env is None:
+        env = os.environ
+    try:
+        if ctx is None:
+            subproc_result = subprocess.run(
+                ["docker", "context", "inspect"],
+                capture_output=True,
+                check=True,
+                text=True,
+                env=env,
+            )
+            stdout = subproc_result.stdout
+        else:
+            try:
+                cmd_results = ctx.cmd_executor.execute(
+                    ["docker", "context", "inspect"],
+                    environment=env,
+                    suppress_output=True,
+                )
+                if not cmd_results:
+                    return ""
+                stdout = cmd_results[0].output
+            except Exception:
+                return ""
+        context = json.loads(stdout)[0]
+        return context.get("Name", "")
+    except Exception:
+        return ""
+
+
 def resolve_docker_socket(ctx: Optional[MinitrinoContext] = None, env=None) -> str:
     """
     Return the Docker socket to use, preferring DOCKER_HOST if set.

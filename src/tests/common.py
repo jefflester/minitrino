@@ -18,7 +18,7 @@ from docker.models.containers import Container
 
 from minitrino.ansi import strip_ansi
 from minitrino.cli import cli
-from minitrino.core.docker.socket import resolve_docker_socket
+from minitrino.core.docker.socket import get_docker_context_name, resolve_docker_socket
 from minitrino.settings import ROOT_LABEL
 
 USER_HOME_DIR = os.path.expanduser("~")
@@ -54,7 +54,7 @@ def get_logger(log_level: int | None = None) -> logging.Logger:
     logging.setLoggerClass(logging.Logger)
 
     try:
-        logger = logging.getLogger("minitrino.test")
+        logger = logging.getLogger("test.minitrino")
         if isinstance(log_level, int):
             logger.setLevel(log_level)
         elif not logger.hasHandlers():
@@ -154,9 +154,12 @@ class MinitrinoExecutor:
         """
         append = append or []
         prepend = prepend or []
-        if not base:
-            raise ValueError("Base command is required")
-        cmd = ["--cluster", cluster or self.cluster, *prepend, base, *append]
+        # Build command - base is optional for flags like --version
+        if base:
+            cmd = ["--cluster", cluster or self.cluster, *prepend, base, *append]
+        else:
+            # No base command - omit --cluster (e.g., for --version flag)
+            cmd = [*prepend, *append]
         if self.debug or debug:
             cmd = ["-v"] + cmd
         cmd = [  # Filter invalid arguments
@@ -203,7 +206,8 @@ class MinitrinoExecutor:
                     " with input: %s" % input if input else "",
                 )
             )
-        runner = CliRunner()
+        # Mix stderr into stdout so logs are captured in result.output
+        runner = CliRunner(mix_stderr=True)
         env = env or {}
         result = runner.invoke(cli, cmd, input=input, env=env)
         if log_output:
@@ -258,14 +262,16 @@ def try_start(cmd: list[str]) -> bool:
         return False
 
 
-def start_docker_daemon() -> None:
+def start_docker_daemon(context: Optional[str] = None) -> None:
     """
     Start the Docker daemon on macOS or Linux.
 
     Parameters
     ----------
-    logger : Optional[logging.Logger]
-        The logger to use for logging.
+    context : str, optional
+        The Docker context name to use (e.g., "orbstack", "desktop-linux").
+        If provided, will start the backend matching this context.
+        If not provided, will detect the active context.
 
     Raises
     ------
@@ -282,24 +288,58 @@ def start_docker_daemon() -> None:
     This function will detect the available Docker backend and attempt
     to start it if Docker is not already running. It waits up to 60
     seconds for Docker to become available.
+
+    The function respects the active Docker context and will prioritize
+    starting the backend associated with that context.
     """
     if is_docker_running():
         return
 
     started = False
     if sys.platform.lower() == "darwin":
-        if shutil.which("docker") and shutil.which("open"):
-            started = try_start(["open", "--background", "-a", "Docker"])
-        if not started and shutil.which("orbstack"):
+        # Use provided context or detect the active context
+        active_context = context if context else get_docker_context_name()
+
+        # Try to start the backend matching the active context first
+        if "orbstack" in active_context.lower() and shutil.which("orbstack"):
             started = try_start(["open", "-a", "OrbStack"])
-        if not started and shutil.which("colima"):
+        elif "colima" in active_context.lower() and shutil.which("colima"):
             started = try_start(["colima", "start"])
-        if not started and shutil.which("rancher-desktop"):
+        elif "rancher" in active_context.lower() and shutil.which("rancher-desktop"):
             started = try_start(["open", "-a", "Rancher Desktop"])
+        elif (
+            ("desktop" in active_context.lower() or "default" in active_context.lower())
+            and shutil.which("docker")
+            and shutil.which("open")
+        ):
+            started = try_start(["open", "--background", "-a", "Docker"])
+
+        # Fallback: Only retry the backend that matches the active context
+        # Don't switch to a different backend automatically
+        if not started:
+            if "orbstack" in active_context.lower() and shutil.which("orbstack"):
+                started = try_start(["open", "-a", "OrbStack"])
+            elif "colima" in active_context.lower() and shutil.which("colima"):
+                started = try_start(["colima", "start"])
+            elif "rancher" in active_context.lower() and shutil.which(
+                "rancher-desktop"
+            ):
+                started = try_start(["open", "-a", "Rancher Desktop"])
+            elif (
+                (
+                    "desktop" in active_context.lower()
+                    or "default" in active_context.lower()
+                )
+                and shutil.which("docker")
+                and shutil.which("open")
+            ):
+                started = try_start(["open", "--background", "-a", "Docker"])
+
         if not started:
             raise RuntimeError(
-                "No supported Docker backend found "
-                "(Docker Desktop, OrbStack, Colima, Rancher Desktop)."
+                f"Failed to start Docker backend for context "
+                f"'{active_context}'. Supported backends: Docker Desktop, "
+                f"OrbStack, Colima, Rancher Desktop."
             )
     elif "linux" in sys.platform.lower():
         if shutil.which("systemctl"):

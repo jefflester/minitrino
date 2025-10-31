@@ -138,7 +138,7 @@ def exception_handler(func: Any) -> Any:
                     ctx = None
         try:
             return func(*args, **kwargs)
-        except BaseException as e:
+        except Exception as e:
             handle_exception(e, ctx)
 
     return wrapper
@@ -278,18 +278,6 @@ def generate_identifier(identifiers: Optional[Dict[str, Any]] = None) -> str:
     for key, value in identifiers.items():
         identifier.append(f"[{key}: {value}]")
     return " ".join(identifier)
-
-
-def check_lib(ctx: MinitrinoContext) -> None:
-    """
-    Check if a Minitrino library exists.
-
-    Parameters
-    ----------
-    ctx : MinitrinoContext
-        Context object containing library directory information.
-    """
-    ctx.lib_dir
 
 
 # ----------------------------------------------------------------------

@@ -8,21 +8,24 @@ services:
       - ./modules/catalog/iceberg-hms/resources/bootstrap/458-native-fs-workaround.sh:/mnt/bootstrap/iceberg/458-native-fs-workaround.sh:ro
 
   postgres-iceberg-hms:
-      image: postgres:${POSTGRES_HMS_VER}
-      container_name: postgres-iceberg-hms-${CLUSTER_NAME}
-      healthcheck:
-        test: ['CMD-SHELL', 'pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}']
-        interval: 10s
-        timeout: 5s
-        retries: 5
-      env_file:
-        - ./modules/catalog/iceberg-hms/resources/postgres/postgres.env
-      volumes:
-        - postgres-iceberg-hms-data:/var/lib/postgresql/data
-      labels:
-        - org.minitrino.root=true
-        - org.minitrino.module.catalog.iceberg-hms=true
- 
+    image: postgres:${POSTGRES_HMS_VER}
+    container_name: postgres-iceberg-hms-${CLUSTER_NAME}
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    env_file:
+      - ./modules/catalog/iceberg-hms/resources/postgres/postgres.env
+    volumes:
+      - postgres-iceberg-hms-data:/var/lib/postgresql/data
+    labels:
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.iceberg-hms=true
   metastore-iceberg-hms:
     image: jefflester/hive-metastore:${HMS_VER}
     container_name: metastore-iceberg-hms-${CLUSTER_NAME}

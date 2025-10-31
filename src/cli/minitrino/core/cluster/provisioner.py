@@ -180,8 +180,8 @@ class ClusterProvisioner:
         self._set_env_vars()
         self._ctx.provisioned_clusters.append(self._ctx.cluster_name)
 
-        self._ctx.modules.check_enterprise()
-        self._ctx.modules.check_compatibility()
+        self._ctx.modules.check_enterprise(self.modules)
+        self._ctx.modules.check_compatibility(self.modules)
         self._ctx.modules.check_volumes()
         self._ctx.cluster.ports.set_external_ports(self.modules)
 
@@ -525,6 +525,26 @@ class ClusterProvisioner:
                 ) from self._compose_error
             if shutdown_event.is_set():
                 self._ctx.logger.warn("Shutdown event detected, aborting compose wait.")
+                # Check if coordinator container failed before returning
+                try:
+                    fqcn_shutdown = self._ctx.cluster.resource.fq_container_name(
+                        "minitrino"
+                    )
+                    container_shutdown = self._ctx.cluster.resource.container(
+                        fqcn_shutdown
+                    )
+                    if container_shutdown.status == "exited":
+                        exit_code_shutdown = int(
+                            container_shutdown.attrs.get("State", {}).get("ExitCode", 0)
+                        )
+                        if exit_code_shutdown != 0:
+                            raise MinitrinoError(
+                                "Failed to provision cluster. "
+                                f"Coordinator container exited with code "
+                                f"{exit_code_shutdown}."
+                            )
+                except NotFound:
+                    pass
                 return
             try:
                 fqcn = self._ctx.cluster.resource.fq_container_name("minitrino")

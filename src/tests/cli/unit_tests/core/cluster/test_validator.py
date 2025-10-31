@@ -19,7 +19,7 @@ class TestClusterValidator:
         mock_ctx = Mock()
         mock_ctx.cluster_name = "test-cluster"
         mock_ctx.logger = Mock()
-        mock_ctx.env = {"CLUSTER_VER": "474", "CLUSTER_DIST": "trino"}
+        mock_ctx.env = {"CLUSTER_VER": "476", "CLUSTER_DIST": "trino"}
         mock_ctx.lib_dir = "/mock/lib"
         mock_ctx.docker_client = Mock()
         return mock_ctx
@@ -88,7 +88,7 @@ class TestClusterValidator:
     def test_check_cluster_ver_valid_trino(self):
         """Test cluster version validation for valid Trino version."""
         mock_ctx = self.create_mock_context()
-        mock_ctx.env["CLUSTER_VER"] = "474"
+        mock_ctx.env["CLUSTER_VER"] = "476"
         mock_ctx.env["CLUSTER_DIST"] = "trino"
         mock_cluster = self.create_mock_cluster()
 

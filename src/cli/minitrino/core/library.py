@@ -38,7 +38,7 @@ class LibraryManager:
             if not utils.validate_yes(response):
                 self._ctx.logger.info("Opted to skip library installation.")
                 return
-            self._ctx.logger.debug("Removing existing library directory...")
+            self._ctx.logger.info("Removing existing library directory...")
             shutil.rmtree(lib_dir)
 
         self.download_and_extract(version)

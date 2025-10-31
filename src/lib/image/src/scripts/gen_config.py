@@ -13,6 +13,64 @@ discovery.uri=http://minitrino-${ENV:CLUSTER_NAME}:8080
 internal-communication.shared-secret=bWluaXRyaW5vUm9ja3MxNQo="""
 
 
+def get_java_version() -> int:
+    """
+    Get the Java major version based on the Trino/Starburst version.
+
+    Uses the same version mapping as install-java.sh:
+    - >= 436 <= 446: Java 21
+    - >= 447 <= 463: Java 22
+    - >= 464 <= 467: Java 23
+    - >= 468: Java 24
+
+    Returns
+    -------
+    int
+        Java major version number (e.g., 21, 22, 23, 24).
+    """
+    cluster_ver = os.environ.get("CLUSTER_VER", "")
+    if not cluster_ver:
+        return 21  # Default to Java 21 if version not available
+    trino_ver = int(cluster_ver[:3])
+    if 436 <= trino_ver <= 446:
+        return 21
+    elif 447 <= trino_ver <= 463:
+        return 22
+    elif 464 <= trino_ver <= 467:
+        return 23
+    elif trino_ver >= 468:
+        return 24
+    else:
+        return 21  # Default for older versions
+
+
+def is_security_manager_option(jvm_flag: str) -> bool:
+    """
+    Check if a JVM flag is related to Security Manager.
+
+    The Security Manager was deprecated in Java 17 and removed in Java 21+.
+    This function identifies JVM options that attempt to enable or configure
+    the Security Manager.
+
+    Parameters
+    ----------
+    jvm_flag : str
+        The JVM flag to check (e.g., "-Djava.security.manager=allow").
+
+    Returns
+    -------
+    bool
+        True if the flag is Security Manager-related, False otherwise.
+    """
+    flag = jvm_flag.strip()
+    # Check for Security Manager options
+    security_manager_patterns = [
+        "-Djava.security.manager=",
+        "-Djava.security.manager",
+    ]
+    return any(flag.startswith(pattern) for pattern in security_manager_patterns)
+
+
 def split_config(content: str) -> list[tuple]:
     """
     Split config file content into tuples for merging.
@@ -128,6 +186,38 @@ def merge_configs(
     list[tuple]
         Merged, deduplicated, and order-preserving config tuples.
     """
+    # Filter out Security Manager options for Java 21+ when processing JVM configs
+    if is_jvm:
+        java_version = get_java_version()
+        if java_version >= 21:
+            # Filter base configs
+            filtered_base = []
+            for entry in base_cfgs:
+                if entry[0] == "key_value":
+                    flag = entry[1]
+                    if is_security_manager_option(flag):
+                        print(
+                            f"{LOG_PREFIX} Filtering Security Manager option "
+                            f"(incompatible with Java {java_version}): {flag}"
+                        )
+                        continue
+                filtered_base.append(entry)
+            base_cfgs = filtered_base
+
+            # Filter user configs
+            filtered_user = []
+            for entry in user_cfgs:
+                if entry[0] == "key_value":
+                    flag = entry[1]
+                    if is_security_manager_option(flag):
+                        print(
+                            f"{LOG_PREFIX} Filtering Security Manager option "
+                            f"(incompatible with Java {java_version}): {flag}"
+                        )
+                        continue
+                filtered_user.append(entry)
+            user_cfgs = filtered_user
+
     key_fn = extract_jvm_flag_key if is_jvm else (lambda k: k)
     # Build user overrides map
     user_kv = {}
@@ -293,7 +383,7 @@ def generate_coordinator_config(modules: list[str], workers: int) -> None:
             )
     user_cfgs = merge_password_authenticators(user_cfgs)
     final_cfgs = merge_configs(base_cfgs, user_cfgs)
-    final_jvm_cfgs = merge_configs(base_jvm_cfgs, user_jvm_cfg)
+    final_jvm_cfgs = merge_configs(base_jvm_cfgs, user_jvm_cfg, is_jvm=True)
     write_config_file(f"{ETC_DIR}/config.properties", final_cfgs)
     write_config_file(f"{ETC_DIR}/jvm.config", final_jvm_cfgs)
     print(f"{LOG_PREFIX} Coordinator config generation complete.")

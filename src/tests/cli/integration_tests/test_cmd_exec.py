@@ -77,7 +77,7 @@ exec_scenarios = [
         cmd_flags=[],
         cmd="foo",
         expected_exit_code=1,
-        expected_output=["executable file not found"],
+        expected_output=["command not found"],
         log_msg="Run exec with invalid command",
     ),
     ExecScenario(

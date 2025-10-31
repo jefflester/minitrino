@@ -31,7 +31,14 @@ def configure_logging(
     root_logger = logging.getLogger()
 
     def _logger_is_configured(logger: logging.Logger) -> bool:
-        return isinstance(logger, lg.logger.MinitrinoLogger) and logger.handlers
+        # Check if logger is MinitrinoLogger and root has MinitrinoLoggerHandler
+        if not isinstance(logger, lg.logger.MinitrinoLogger):
+            return False
+        root_logger = logging.getLogger()
+        for handler in root_logger.handlers:
+            if handler.__class__.__name__ == "MinitrinoLoggerHandler":
+                return True
+        return False
 
     def _setup_handlers_and_formatters(
         logger: lg.logger.MinitrinoLogger,
@@ -64,7 +71,9 @@ def configure_logging(
         logger.propagate = True
 
     if _logger_is_configured(logger):
-        logger.debug("Found existing logger, returning to caller.")
+        # Found existing logger, returning to caller.
+        # Update logger level to requested level when returning existing logger.
+        logger.set_level(log_level)
         return logger
 
     logger.debug("No logger found, creating new singleton.")

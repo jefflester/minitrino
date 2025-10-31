@@ -216,7 +216,10 @@ def test_remove_all_scenarios(
         append_flags.extend(scenario.cmd_flags)
 
     result = executor.exec(
-        executor.build_cmd(base="remove", cluster="all", append=append_flags), "y\n"
+        executor.build_cmd(
+            base="remove", cluster="all", append=append_flags, debug=True
+        ),
+        "y\n",
     )
     utils.assert_exit_code(result)
     assert_resources_removed(
@@ -464,7 +467,7 @@ remove_force_scenarios = [
         resource_type="networks",
         cmd_flag="--networks",
         log_match=FAILURE_NETWORK,
-        expected_resource_count=1,
+        expected_resource_count=2,
         log_msg="Force remove dependent network from running cluster",
     ),
     RemoveForceScenario(

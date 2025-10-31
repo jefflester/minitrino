@@ -10,34 +10,36 @@ from unittest.mock import MagicMock, call, patch
 
 import pytest
 
-from minitrino.core.context import MinitrinoContext
 from minitrino.core.errors import MinitrinoError, UserError
 from minitrino.core.library import LibraryManager
 
-
-class TestLibraryManagerBase:
-    """Base test class with common fixtures and utilities."""
-
-    @pytest.fixture
-    def mock_ctx(self):
-        """Create a mock MinitrinoContext with common attributes."""
-        ctx = MagicMock(spec=MinitrinoContext)
-        ctx.logger = MagicMock()
-        ctx.lib_dir = "/path/to/lib"
-        ctx.minitrino_user_dir = "/path/to/minitrino"
-        ctx.config = MagicMock()
-        ctx.config.get_library_version.return_value = None
-        return ctx
-
-    @pytest.fixture
-    def library_manager(self, mock_ctx):
-        """Create a LibraryManager instance with a mock context."""
-        manager = LibraryManager(mock_ctx)
-        manager._ctx = mock_ctx  # Ensure _ctx is properly set
-        return manager
+# Import fixtures from the fixtures module
+from tests.cli.unit_tests.fixtures import mock_logger  # noqa: F401
 
 
-class TestAutoInstallOrUpdate(TestLibraryManagerBase):
+@pytest.fixture
+def mock_ctx(tmp_path, mock_logger):
+    """Create a mock MinitrinoContext with common attributes."""
+    from minitrino.core.context import MinitrinoContext
+
+    ctx = MagicMock(spec=MinitrinoContext)
+    ctx.logger = mock_logger
+    ctx.lib_dir = str(tmp_path / "lib")
+    ctx.minitrino_user_dir = str(tmp_path / "minitrino")
+    ctx.config = MagicMock()
+    ctx.config.get_library_version.return_value = None
+    return ctx
+
+
+@pytest.fixture
+def library_manager(mock_ctx):
+    """Create a LibraryManager instance with a mock context."""
+    manager = LibraryManager(mock_ctx)
+    manager._ctx = mock_ctx  # Ensure _ctx is properly set
+    return manager
+
+
+class TestAutoInstallOrUpdate:
     """Tests for the auto_install_or_update method."""
 
     @patch("minitrino.core.library.utils.cli_ver", return_value="1.0.0")
@@ -108,7 +110,7 @@ class TestAutoInstallOrUpdate(TestLibraryManagerBase):
         )
 
 
-class TestLibraryReleases(TestLibraryManagerBase):
+class TestLibraryReleases:
     """Tests for library release management."""
 
     @patch("minitrino.core.library.requests.get")
@@ -141,7 +143,7 @@ class TestLibraryReleases(TestLibraryManagerBase):
         mock_get.assert_called_once()
 
 
-class TestLibraryValidation(TestLibraryManagerBase):
+class TestLibraryValidation:
     """Tests for library version validation."""
 
     def test_validate_valid_version(self, library_manager):
@@ -161,7 +163,7 @@ class TestLibraryValidation(TestLibraryManagerBase):
                 library_manager.validate("9.9.9")
 
 
-class TestFileOperations(TestLibraryManagerBase):
+class TestFileOperations:
     """Tests for file operations like download, extract, and cleanup."""
 
     @patch("minitrino.core.library.LibraryManager._download_file")
@@ -183,8 +185,8 @@ class TestFileOperations(TestLibraryManagerBase):
         version = "1.0.0"
         library_manager.download_and_extract(version)
 
-        expected_tarball = f"/path/to/minitrino/{version}.tar.gz"
-        expected_lib_dir = f"/path/to/minitrino/minitrino-{version}/src/lib"
+        expected_tarball = f"{mock_ctx.minitrino_user_dir}/{version}.tar.gz"
+        expected_lib_dir = f"{mock_ctx.minitrino_user_dir}/minitrino-{version}/src/lib"
 
         mock_download.assert_called_once()
         mock_extract.assert_called_once_with(

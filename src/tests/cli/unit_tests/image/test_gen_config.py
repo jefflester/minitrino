@@ -13,7 +13,9 @@ from gen_config import (  # noqa: E402
     extract_jvm_flag_key,
     generate_coordinator_config,
     generate_worker_config,
+    get_java_version,
     get_modules_and_roles,
+    is_security_manager_option,
     main,
     merge_configs,
     merge_password_authenticators,
@@ -520,3 +522,137 @@ class TestMain:
 
         mock_gen_coord.assert_called_once_with(["ldap"], 3)
         mock_gen_worker.assert_called_once_with(["ldap"])
+
+
+class TestGetJavaVersion:
+    """Test get_java_version function."""
+
+    def test_java_21_mapping(self):
+        """Test Java 21 version mapping (Trino 436-446)."""
+        with patch.dict("os.environ", {"CLUSTER_VER": "440"}):
+            assert get_java_version() == 21
+
+    def test_java_22_mapping(self):
+        """Test Java 22 version mapping (Trino 447-463)."""
+        with patch.dict("os.environ", {"CLUSTER_VER": "450"}):
+            assert get_java_version() == 22
+
+    def test_java_23_mapping(self):
+        """Test Java 23 version mapping (Trino 464-467)."""
+        with patch.dict("os.environ", {"CLUSTER_VER": "466"}):
+            assert get_java_version() == 23
+
+    def test_java_24_mapping(self):
+        """Test Java 24 version mapping (Trino 468+)."""
+        with patch.dict("os.environ", {"CLUSTER_VER": "468"}):
+            assert get_java_version() == 24
+        with patch.dict("os.environ", {"CLUSTER_VER": "476"}):
+            assert get_java_version() == 24
+
+    def test_no_cluster_ver_defaults_to_21(self):
+        """Test that missing CLUSTER_VER defaults to Java 21."""
+        with patch.dict("os.environ", {}, clear=True):
+            assert get_java_version() == 21
+
+    def test_old_version_defaults_to_21(self):
+        """Test that Trino versions < 436 default to Java 21."""
+        with patch.dict("os.environ", {"CLUSTER_VER": "400"}):
+            assert get_java_version() == 21
+
+
+class TestIsSecurityManagerOption:
+    """Test is_security_manager_option function."""
+
+    def test_security_manager_with_value(self):
+        """Test detection of -Djava.security.manager= with value."""
+        assert is_security_manager_option("-Djava.security.manager=allow")
+        assert is_security_manager_option("-Djava.security.manager=default")
+
+    def test_security_manager_without_value(self):
+        """Test detection of -Djava.security.manager without value."""
+        assert is_security_manager_option("-Djava.security.manager")
+
+    def test_security_manager_with_whitespace(self):
+        """Test detection with leading/trailing whitespace."""
+        assert is_security_manager_option("  -Djava.security.manager=allow  ")
+
+    def test_non_security_manager_options(self):
+        """Test that non-Security Manager options are not detected."""
+        assert not is_security_manager_option("-Xmx1G")
+        assert not is_security_manager_option("-XX:+UseG1GC")
+        assert not is_security_manager_option(
+            "-Djava.security.krb5.conf=/etc/krb5.conf"
+        )
+        assert not is_security_manager_option("-Dlog.enable-console=true")
+        assert not is_security_manager_option("-server")
+
+
+class TestSecurityManagerFiltering:
+    """Test Security Manager filtering in merge_configs."""
+
+    def test_filter_security_manager_java_24(self):
+        """Test that Security Manager options are filtered for Java 24."""
+        base_jvm = [
+            ("key_value", "-Xmx", "2G"),
+            ("key_value", "-Djava.security.manager", "allow"),
+            ("key_value", "-XX:+UseG1GC", ""),
+        ]
+        user_jvm = [
+            ("key_value", "-Xms", "1G"),
+        ]
+
+        with patch.dict("os.environ", {"CLUSTER_VER": "468"}):
+            result = merge_configs(base_jvm, user_jvm, is_jvm=True)
+
+        # Security Manager option should be filtered out
+        result_keys = [entry[1] for entry in result if entry[0] == "key_value"]
+        assert "-Djava.security.manager" not in result_keys
+        assert "-Xmx" in result_keys
+        assert "-XX:+UseG1GC" in result_keys
+        assert "-Xms" in result_keys
+
+    def test_filter_security_manager_java_21(self):
+        """Test that Security Manager options are filtered for Java 21."""
+        base_jvm = [
+            ("key_value", "-Xmx", "2G"),
+            ("key_value", "-Djava.security.manager", "allow"),
+        ]
+        user_jvm: list[tuple] = []
+
+        with patch.dict("os.environ", {"CLUSTER_VER": "440"}):
+            result = merge_configs(base_jvm, user_jvm, is_jvm=True)
+
+        # Security Manager option should be filtered out
+        result_keys = [entry[1] for entry in result if entry[0] == "key_value"]
+        assert "-Djava.security.manager" not in result_keys
+        assert "-Xmx" in result_keys
+
+    def test_no_filter_non_jvm_configs(self):
+        """Test that filtering only applies to JVM configs."""
+        base_cfg = [
+            ("key_value", "coordinator", "true"),
+        ]
+        user_cfg: list[tuple] = []
+
+        with patch.dict("os.environ", {"CLUSTER_VER": "468"}):
+            result = merge_configs(base_cfg, user_cfg, is_jvm=False)
+
+        # Should not filter anything since is_jvm=False
+        assert len(result) == 1
+        assert result[0] == ("key_value", "coordinator", "true")
+
+    def test_filter_from_user_configs_too(self):
+        """Test Security Manager options filtered from user configs."""
+        base_jvm: list[tuple] = []
+        user_jvm = [
+            ("key_value", "-Xmx", "4G"),
+            ("key_value", "-Djava.security.manager", "allow"),
+        ]
+
+        with patch.dict("os.environ", {"CLUSTER_VER": "476"}):
+            result = merge_configs(base_jvm, user_jvm, is_jvm=True)
+
+        # Security Manager option from user should be filtered out
+        result_keys = [entry[1] for entry in result if entry[0] == "key_value"]
+        assert "-Djava.security.manager" not in result_keys
+        assert "-Xmx" in result_keys

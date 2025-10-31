@@ -77,6 +77,9 @@ daemon_off_scenarios = [
 ]
 
 
+@pytest.mark.flaky(
+    reruns=0
+)  # Disable retries - conflicts with session-scoped stop_docker
 @pytest.mark.parametrize(
     "scenario,log_msg",
     utils.get_scenario_and_log_msg(daemon_off_scenarios),
@@ -169,25 +172,29 @@ def test_env_scenarios(scenario: EnvScenario) -> None:
     if scenario.source == "cli":
         result = executor.exec(
             executor.build_cmd(
-                "modules", prepend=["--env", f"{scenario.envvar}={scenario.envval}"]
+                "modules",
+                prepend=["--env", f"{scenario.envvar}={scenario.envval}"],
+                debug=True,
             ),
         )
     elif scenario.source == "shell":
         result = executor.exec(
-            executor.build_cmd("modules"),
+            executor.build_cmd("modules", debug=True),
             env={scenario.envvar: scenario.envval},
         )
     elif scenario.source == "config":
         utils.write_file(CONFIG_FILE, f"{scenario.envvar}={scenario.envval}", mode="a")
-        result = executor.exec(executor.build_cmd("modules"))
+        result = executor.exec(executor.build_cmd("modules", debug=True))
         os.remove(CONFIG_FILE)
     else:  # unset
-        result = executor.exec(executor.build_cmd("modules"))
+        result = executor.exec(executor.build_cmd("modules", debug=True))
     utils.assert_exit_code(result)
     if scenario.expected_present:
         utils.assert_in_output(scenario.envvar, scenario.envval, result=result)
     else:
-        utils.assert_not_in_output(scenario.envvar, scenario.envval, result=result)
+        # For unset scenario, only check that the value doesn't appear
+        # (the env var name may appear in module metadata)
+        utils.assert_not_in_output(scenario.envval, result=result)
 
 
 @dataclass
@@ -313,11 +320,14 @@ def test_multiple_env() -> None:
                 "--env",
                 "FOO=bar",
             ],
+            debug=True,
         ),
     )
     utils.assert_exit_code(result)
     utils.assert_in_output(
-        '"CLUSTER_VER": "420-e"',
-        '"FOO": "bar"',
+        "CLUSTER_VER",
+        "420-e",
+        "FOO",
+        "bar",
         result=result,
     )

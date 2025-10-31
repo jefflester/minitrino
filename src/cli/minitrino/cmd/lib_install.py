@@ -43,10 +43,13 @@ def cli(ctx: MinitrinoContext, version: str, list_releases: bool) -> None:
         If True, list all available releases and exit.
     """
     ctx.initialize()
-    ctx.lib_manager()
 
     if list_releases:
         releases = ctx.lib_manager.list_releases()
         ctx.logger.info("Available Minitrino releases:")
-        ctx.logger.info(*sorted(releases))
+        for release in sorted(releases):
+            ctx.logger.info(release)
         return
+
+    # Install the library
+    ctx.lib_manager.install(version)

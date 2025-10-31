@@ -3,11 +3,13 @@
 import json
 import logging
 import sys
+import time
 from typing import Generator
 
 import docker
 import pytest
 
+from minitrino.shutdown import shutdown_event
 from tests import common
 from tests.cli.constants import CLUSTER_NAME
 from tests.cli.integration_tests import utils
@@ -39,6 +41,21 @@ def _logger() -> logging.Logger:
 @pytest.fixture(autouse=True, scope="session")
 def _setup_logger(_logger):
     pass
+
+
+@pytest.fixture(autouse=True)
+def _clear_shutdown_event() -> Generator:
+    """
+    Clear the global shutdown_event before each test.
+
+    The shutdown_event is a global threading.Event that gets set when
+    errors occur. Without clearing it between tests, it can contaminate
+    subsequent tests with stale state, causing non-deterministic failures.
+    """
+    shutdown_event.clear()
+    yield
+    # Also clear after test to ensure clean state
+    shutdown_event.clear()
 
 
 @pytest.fixture
@@ -81,9 +98,12 @@ def down() -> Generator:
 
     Notes
     -----
-    Runs after the test.
+    Runs after the test. Includes a brief delay to allow any
+    background worker provisioning threads to complete before
+    killing containers.
     """
     yield
+    time.sleep(2)  # Allow background worker threads to complete
     utils.shut_down()
 
 
@@ -121,12 +141,18 @@ def stop_docker() -> Generator:
 
     Notes
     -----
-    Runs before the test.
+    Runs before the test. Docker is NOT restarted after the test
+    session to avoid conflicts with pytest-rerunfailures. The next
+    test run will start Docker via the start_docker fixture.
     """
     logger.debug("Stopping Docker daemon.")
     common.stop_docker_daemon()
     yield
-    common.start_docker_daemon()
+    # Intentionally not restarting Docker - let next test run handle it
+    logger.debug(
+        "Docker daemon was stopped for daemon-off tests. "
+        "Will be restarted in next test run."
+    )
 
 
 @pytest.fixture
@@ -216,22 +242,39 @@ def provision_clusters(request: pytest.FixtureRequest) -> Generator:
     for cluster in cluster_names:
         logger.debug(f"Provisioning cluster: {cluster}")
         executor.exec(
-            executor.build_cmd("provision", append=module_flags),
+            executor.build_cmd("provision", cluster=cluster, append=module_flags),
             log_output=False,
         )
     if not keepalive:
         down_cluster = "all" if len(cluster_names) > 1 else cluster_names[0]
         logger.debug(f"Bringing down cluster: {down_cluster}")
         executor.exec(
-            executor.build_cmd("down", append=["--sig-kill"]),
+            executor.build_cmd("down", cluster=down_cluster, append=["--sig-kill"]),
             log_output=False,
         )
     yield
 
 
 def pytest_runtest_logreport(report: pytest.TestReport):
-    """Force pytest "PASS"/"FAIL" to log on its own line."""
+    """
+    Force pytest "PASS"/"FAIL" to log on its own line.
+
+    Enhanced to detect and log test reruns from pytest-rerunfailures.
+    """
     if report.when == "call":
+        # Detect reruns from pytest-rerunfailures plugin
+        if hasattr(report, "rerun") and report.rerun > 0:
+            if report.failed:
+                logger.warning(
+                    f"⚠️  RETRYING TEST (attempt {report.rerun + 1}): "
+                    f"{report.nodeid} - Note potential flakiness"
+                )
+            elif report.passed:
+                logger.info(
+                    f"✓ Test PASSED after retry: {report.nodeid} "
+                    f"(succeeded on attempt {report.rerun + 1})"
+                )
+
         if report.passed:
             sys.stdout.write("\n")
         elif report.failed:

@@ -92,6 +92,12 @@ class MinitrinoLogger(logging.Logger):
         self._log_sink = lg.sink.SinkCollector()
         self.set_log_sink(self._log_sink)
 
+        # Update the SinkOnlyHandler on the root logger to use the new sink
+        root_logger = logging.getLogger()
+        for handler in root_logger.handlers:
+            if isinstance(handler, lg.sink.SinkOnlyHandler):
+                handler.sink = self._log_sink
+
     @property
     def log_buffer(self) -> list[tuple[str, str]]:
         """Return the log buffer."""
@@ -110,8 +116,15 @@ class MinitrinoLogger(logging.Logger):
         self._log_level = level
         py_level = lg.levels.PY_LEVEL[level]
         self.setLevel(py_level)
+        # Update handlers on this logger
         for handler in self.handlers:
             handler.setLevel(py_level)
+        # Also update MinitrinoLoggerHandler on root logger if propagating
+        if self.propagate:
+            root = logging.getLogger()
+            for handler in root.handlers:
+                if handler.__class__.__name__ == "MinitrinoLoggerHandler":
+                    handler.setLevel(py_level)
 
         always_verbose = level == lg.levels.LogLevel.DEBUG
         if self._formatter:

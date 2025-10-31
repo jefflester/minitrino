@@ -203,14 +203,22 @@ class ClusterValidator:
                             msg.append(f"    - {entry}")
                 self._ctx.logger.warn("\n".join(msg))
 
-        containers = self._cluster.resource.cluster_containers()
-        for container in containers:
-            if cluster_cfgs is None or jvm_cfgs is None:
-                current_cluster_cfgs, current_jvm_cfg = self._current_config(container)
-                cluster_cfgs = cluster_cfgs or current_cluster_cfgs
-                jvm_cfgs = jvm_cfgs or current_jvm_cfg
+        # If configs are provided, just check them without needing containers
+        if cluster_cfgs is not None and jvm_cfgs is not None:
             log_duplicates(cluster_cfgs, CLUSTER_CONFIG)
             log_duplicates(jvm_cfgs, CLUSTER_JVM_CONFIG)
+        else:
+            # Need to fetch configs from containers
+            containers = self._cluster.resource.cluster_containers()
+            for container in containers:
+                if cluster_cfgs is None or jvm_cfgs is None:
+                    current_cluster_cfgs, current_jvm_cfg = self._current_config(
+                        container
+                    )
+                    cluster_cfgs = cluster_cfgs or current_cluster_cfgs
+                    jvm_cfgs = jvm_cfgs or current_jvm_cfg
+                log_duplicates(cluster_cfgs, CLUSTER_CONFIG)
+                log_duplicates(jvm_cfgs, CLUSTER_JVM_CONFIG)
 
     def _current_config(
         self, container: MinitrinoContainer

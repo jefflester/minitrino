@@ -118,6 +118,8 @@ def test_lib_install_scenarios(
     if scenario.id == "install_overwrite":
         result = executor.exec(cli_cmd, scenario.input_val)
     utils.assert_exit_code(result, expected=scenario.expected_exit_code)
-    utils.assert_is_dir(LIB_DIR)
+    # Only check library directory exists for successful install scenarios
+    if scenario.id in ["install", "install_overwrite"]:
+        utils.assert_is_dir(LIB_DIR)
     if scenario.expected_output:
         utils.assert_in_output(scenario.expected_output, result=result)

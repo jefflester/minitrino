@@ -99,11 +99,24 @@ def cli(
                 f"Command output: {result.output}"
             )
     else:
-        for line in ctx.cmd_executor.stream_execute(
-            cmd, interactive=interactive, suppress_output=True
-        ):
+        stream_iter, completion_event, get_result = (
+            ctx.cmd_executor.stream_execute_with_result(
+                cmd, interactive=interactive, suppress_output=True
+            )
+        )
+        for line in stream_iter:
             if line.strip():
                 ctx.logger.info(line)
+
+        # Wait for command completion and get the result
+        completion_event.wait()
+        result = get_result()
+
+        # Propagate the exit code from the executed command
+        if result.exit_code != 0:
+            raise click.ClickException(
+                f"Command failed with exit code {result.exit_code}"
+            )
 
 
 @utils.pass_environment()

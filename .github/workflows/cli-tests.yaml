@@ -21,14 +21,19 @@ jobs:
       - name: Install project dependencies
         run: |-
           pip install -e .
-          pip install -e ./src/test/
-      - name: Run CLI tests
+          pip install -e ./src/tests/
+      - name: Run CLI integration tests
         env:
           GH_WORKFLOW_RUNNING: true
           MINITRINO_TEST_LOG_LEVEL: DEBUG
         run: |-
           minitrino --help || exit 1
-          pytest -x --debug src/test/cli/integration_tests/
+          pytest -x --debug \
+            --cov=minitrino \
+            --cov-report=term-missing \
+            --cov-report=xml \
+            --cov-fail-under=90 \
+            src/tests/cli/integration_tests/
   cli-unit-tests:
     runs-on: ubuntu-22.04
     steps:

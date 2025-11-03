@@ -549,10 +549,24 @@ class ClusterProvisioner:
             try:
                 fqcn = self._ctx.cluster.resource.fq_container_name("minitrino")
                 container = self._ctx.cluster.resource.container(fqcn)
+                # Refresh container state to avoid checking stale/old containers
+                container.reload()
                 self._ctx.logger.debug(
                     f"Polling coordinator container: "
-                    f"id={container.id}, status={container.status}"
+                    f"id={container.id[:12]}, status={container.status}"
                 )
+
+                # If we're expecting a container replacement (build/recreate),
+                # skip checks on the old container
+                if orig_container_id and container.id == orig_container_id:
+                    self._ctx.logger.debug(
+                        f"Still seeing old container (id={container.id[:12]}), "
+                        "waiting for replacement..."
+                    )
+                    # Don't check logs on old container, wait for new one
+                    time.sleep(0.5)
+                    continue
+
                 # If pre-start bootstraps complete, signal to workers
                 # that they can safely provision
                 if (
@@ -569,7 +583,8 @@ class ClusterProvisioner:
                     if orig_container_id and container.id != orig_container_id:
                         self._ctx.logger.debug(
                             f"Coordinator container replaced: "
-                            f"old id={orig_container_id}, new id={container.id}"
+                            f"old id={orig_container_id[:12]}, "
+                            f"new id={container.id[:12]}"
                         )
                     break
                 # If current container is exited with nonzero exit code,
@@ -577,19 +592,26 @@ class ClusterProvisioner:
                 if container.status == "exited":
                     exit_code = int(container.attrs.get("State", {}).get("ExitCode", 0))
                     if exit_code != 0:
-                        # Check if a newer running container exists for
-                        # fqcn
-                        container = self._ctx.cluster.resource.container(fqcn)
-                        running_found = False
-                        if container.status == "running":
-                            self._ctx.logger.debug(
-                                f"Found newer running coordinator container: "
-                                f"id={container.id}"
-                            )
-                            running_found = True
-                        if not running_found:
+                        # Check if a newer running container exists for fqcn
+                        try:
+                            container = self._ctx.cluster.resource.container(fqcn)
+                            container.reload()
+                            running_found = False
+                            if container.status == "running":
+                                self._ctx.logger.debug(
+                                    f"Found newer running coordinator container: "
+                                    f"id={container.id[:12]}"
+                                )
+                                running_found = True
+                            if not running_found:
+                                raise MinitrinoError(
+                                    f"Coordinator container exited with code "
+                                    f"{exit_code}."
+                                )
+                        except NotFound:
                             raise MinitrinoError(
-                                f"Coordinator container exited with code {exit_code}."
+                                f"Coordinator container exited with code "
+                                f"{exit_code}."
                             )
             except NotFound:
                 pass
@@ -598,16 +620,26 @@ class ClusterProvisioner:
                 try:
                     fqcn = self._ctx.cluster.resource.fq_container_name("minitrino")
                     container = self._ctx.cluster.resource.container(fqcn)
-                    # Container exists, safe to reduce timeout
-                    timeout = default_timeout
-                    reset_timeout = True
-                    self._ctx.logger.debug(
-                        f"Compose thread finished and container exists, reducing "
-                        f"coordinator wait timeout to {default_timeout} seconds."
-                    )
-                    self._ctx.logger.info(
-                        "Waiting for coordinator container to start..."
-                    )
+                    container.reload()
+
+                    # If this is still the old container, wait for replacement
+                    if orig_container_id and container.id == orig_container_id:
+                        self._ctx.logger.debug(
+                            f"Compose finished but still seeing old container "
+                            f"(id={container.id[:12]}), waiting for replacement..."
+                        )
+                    else:
+                        # New container exists, safe to reduce timeout
+                        timeout = default_timeout
+                        reset_timeout = True
+                        self._ctx.logger.debug(
+                            f"Compose thread finished and new container exists "
+                            f"(id={container.id[:12]}), reducing coordinator wait "
+                            f"timeout to {default_timeout} seconds."
+                        )
+                        self._ctx.logger.info(
+                            "Waiting for coordinator container to start..."
+                        )
                 except NotFound:
                     # Container doesn't exist yet, likely still pulling
                     # image. Keep the original timeout and check again

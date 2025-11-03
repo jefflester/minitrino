@@ -38,16 +38,13 @@ copy_scripts() {
 
 set_ownership_and_perms() {
     echo "Setting directory ownership and permissions..."
+    # Note: /usr/lib/${CLUSTER_DIST} and /etc/${CLUSTER_DIST} are handled by COPY --chown in Dockerfile
     chown -R "${SERVICE_USER}":"${SERVICE_GROUP}" \
-        /usr/lib/"${CLUSTER_DIST}" \
         /data/"${CLUSTER_DIST}" \
-        /etc/"${CLUSTER_DIST}" \
         /home/"${CLUSTER_DIST}" \
         /mnt/etc
     chmod -R g=u \
-        /usr/lib/"${CLUSTER_DIST}" \
         /data/"${CLUSTER_DIST}" \
-        /etc/"${CLUSTER_DIST}" \
         /home/"${CLUSTER_DIST}" \
         /mnt/etc
 }
@@ -82,11 +79,6 @@ configure_node_props() {
     -e "s|^node\.data-dir=.*|node.data-dir=/data/${CLUSTER_DIST}|" \
     -e "s|^plugin\.dir=.*|plugin.dir=/usr/lib/${CLUSTER_DIST}/plugin|" \
     "/etc/${CLUSTER_DIST}/node.properties"
-}
-
-install_java() {
-    echo "Installing Java..."
-    bash /tmp/install-java.sh "${SERVICE_USER}" "${SERVICE_GROUP}"
 }
 
 install_trino_cli() {
@@ -129,7 +121,6 @@ main() {
     set_ownership_and_perms
     configure_jvm
     configure_node_props
-    install_java
     install_trino_cli
     install_wait_for_it
     cleanup

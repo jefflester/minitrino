@@ -25,12 +25,6 @@ RUN python3 /tmp/prune_plugins.py ${CLUSTER_DIST}
 
 FROM ubuntu:${UBUNTU_VER} AS base
 
-ARG SERVICE_USER
-
-ENV SDKMAN_DIR="/home/${SERVICE_USER}/.sdkman"
-ENV JAVA_HOME="${SDKMAN_DIR}/candidates/java/current"
-ENV PATH="${JAVA_HOME}/bin:${PATH}"
-
 RUN \
     apt-get -y update && \
     DEBIAN_FRONTEND=noninteractive apt-get -y upgrade && \
@@ -53,6 +47,17 @@ RUN \
         python3 python-is-python3 python3-pip && \
     locale-gen en_US.UTF-8
 
+FROM base AS java-builder
+
+ARG CLUSTER_VER
+ARG SERVICE_USER
+
+RUN useradd -m ${SERVICE_USER}
+
+COPY ./src/scripts/install-java-builder.sh /tmp/
+RUN chmod +x /tmp/install-java-builder.sh && \
+    /tmp/install-java-builder.sh ${SERVICE_USER} ${CLUSTER_VER}
+
 FROM base AS final
 
 ARG CLUSTER_VER
@@ -66,9 +71,15 @@ ENV SERVICE_USER=${SERVICE_USER}
 ENV CLUSTER_VER=${CLUSTER_VER}
 ENV CLUSTER_DIST=${CLUSTER_DIST}
 
+COPY --from=java-builder /home/${SERVICE_USER}/.sdkman/candidates/java/current /opt/java
+COPY --from=java-builder --chown=${SERVICE_USER}:${SERVICE_GROUP} /tmp/tls-jvm /etc/${CLUSTER_DIST}/tls-jvm
+ENV JAVA_HOME="/opt/java"
+ENV PATH="${JAVA_HOME}/bin:${PATH}"
+
 COPY ./src/scripts /tmp/
-COPY ./src/etc/app-config /etc/${CLUSTER_DIST}
-COPY --from=pruned /usr/lib/${CLUSTER_DIST} /usr/lib/${CLUSTER_DIST}
+# Use --chown to set ownership during copy, avoiding duplication in RUN layer
+COPY --chown=${SERVICE_USER}:${SERVICE_GROUP} ./src/etc/app-config /etc/${CLUSTER_DIST}
+COPY --from=pruned --chown=${SERVICE_USER}:${SERVICE_GROUP} /usr/lib/${CLUSTER_DIST} /usr/lib/${CLUSTER_DIST}
 
 RUN chmod +x /tmp/*.sh && \
     /tmp/install.sh ${SERVICE_USER} ${SERVICE_GROUP} ${SERVICE_UID} ${SERVICE_GID}

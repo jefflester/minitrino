@@ -9,9 +9,12 @@
 set -euxo pipefail
 
 SERVICE_USER="${1}"
-SERVICE_GROUP="${2}"
-USER_HOME=$(eval echo "~${SERVICE_USER}")
-TRINO_VER="${CLUSTER_VER:0:3}"
+CLUSTER_VER="${2}"
+
+# Extract numeric version from version string (e.g., "474-e" -> "474")
+TRINO_VER=$(echo "${CLUSTER_VER}" | sed 's/-.*//' | head -c 3)
+
+echo "Detected Trino version: ${TRINO_VER}"
 
 if [ "${TRINO_VER}" -ge 436 ] && [ "${TRINO_VER}" -le 446 ]; then
     JAVA_VER=21.0.5
@@ -22,7 +25,7 @@ elif [ "${TRINO_VER}" -ge 464 ] && [ "${TRINO_VER}" -le 467 ]; then
 elif [ "${TRINO_VER}" -ge 468 ]; then
     JAVA_VER=24.0.2
 else
-    echo "Unsupported Trino version. Exiting..."
+    echo "Unsupported Trino version: ${TRINO_VER}. Exiting..."
     exit 1
 fi
 
@@ -31,16 +34,21 @@ su - "${SERVICE_USER}" -c "bash -lc 'curl -s https://get.sdkman.io | bash'"
 su - "${SERVICE_USER}" -c \
     "bash -lc 'source ~/.sdkman/bin/sdkman-init.sh && \
     sdk install java ${JAVA_VER}-tem --disableUsage && \
-    sdk flush temp'"
+    sdk flush temp && \
+    sdk flush archives && \
+    sdk flush broadcast && \
+    rm -rf ~/.sdkman/tmp/* ~/.sdkman/archives/*'"
 
-echo "Copying cacerts..."
-CACERTS_PATH=$(find "${USER_HOME}/.sdkman/candidates/java/" -type f -name 'cacerts' 2> /dev/null | head -n 1)
+echo "Copying cacerts for TLS..."
+USER_HOME=$(eval echo "~${SERVICE_USER}")
+CACERTS_PATH=$(find "${USER_HOME}/.sdkman/candidates/java/" -type f -name 'cacerts' 2>/dev/null | head -n 1)
 if [[ -z "${CACERTS_PATH}" ]]; then
     echo "Could not find cacerts file. Exiting..."
     exit 1
 fi
 
-mkdir -p /etc/"${CLUSTER_DIST}"/tls-jvm/
-cp "${CACERTS_PATH}" /etc/"${CLUSTER_DIST}"/tls-jvm/
-chown -R "${SERVICE_USER}":"${SERVICE_GROUP}" /etc/"${CLUSTER_DIST}"/tls-jvm
-chmod 644 /etc/"${CLUSTER_DIST}"/tls-jvm/cacerts
+mkdir -p /tmp/tls-jvm/
+cp "${CACERTS_PATH}" /tmp/tls-jvm/
+chmod 644 /tmp/tls-jvm/cacerts
+
+echo "Java installation complete!"

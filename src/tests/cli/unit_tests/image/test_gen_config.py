@@ -1,12 +1,16 @@
 """Unit tests for gen_config.py script."""
 
+import os
 import sys
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-# Add the image scripts directory to path for imports
-sys.path.insert(0, "/Users/jlester/work/repos/minitrino/src/lib/image/src/scripts")
+# Add the image scripts directory to path for imports dynamically
+SCRIPT_PATH = os.path.realpath(__file__)
+HERE = os.path.dirname(SCRIPT_PATH)
+SCRIPTS_DIR = os.path.abspath(os.path.join(HERE, "../../../../lib/image/src/scripts"))
+sys.path.insert(0, SCRIPTS_DIR)
 from gen_config import (  # noqa: E402
     WORKER_CONFIG_PROPS,
     collect_configs,

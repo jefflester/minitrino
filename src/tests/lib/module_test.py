@@ -190,9 +190,11 @@ class ModuleTest:
         """
         cmd_result = common.execute_cmd(
             f"minitrino modules -m {self.module} --json | "
-            f"jq --arg module {self.module} '.[$module].enterprise'",
+            f'python3 -c "import sys, json; '
+            f"data = json.load(sys.stdin); "
+            f"print(data.get('{self.module}', {{}}).get('enterprise', False))\"",
         )
-        if self.image == "trino" and cmd_result.output.strip() == "true":
+        if self.image == "trino" and cmd_result.output.strip() == "True":
             utils.log_status(
                 f"Module '{self.module}' is an enterprise module, skipping test"
             )

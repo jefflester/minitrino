@@ -1,3 +1,4 @@
+import os
 from dataclasses import dataclass
 
 import pytest
@@ -721,14 +722,23 @@ def test_bootstrap() -> None:
 TEST_VALID_USER_CONFIG_MSG = "Test valid user-defined cluster and JVM config"
 
 
+@pytest.mark.skipif(
+    not os.environ.get("LIC_PATH"),
+    reason="LIC_PATH environment variable not set - skipping enterprise test",
+)
 @pytest.mark.parametrize("log_msg", ["test_stargate_parallel"], indirect=True)
 def test_stargate_parallel() -> None:
-    """Ensure valid configs can be appended to cluster config files."""
+    """Test stargate-parallel module provisioning (requires SEP license).
+
+    Set LIC_PATH environment variable to your license file location to run this test.
+    Example: LIC_PATH=~/work/license/starburstdata.license pytest ...
+    """
+    lic_path = os.environ.get("LIC_PATH")
     prepend = [
         "--env",
         "cluster_ver=468-e.1",
         "--env",
-        "lic_path=~/work/license/starburstdata.license",
+        f"lic_path={lic_path}",
     ]
     append = ["--module", "stargate-parallel", "--image", "starburst"]
     result = executor.exec(

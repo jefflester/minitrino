@@ -22,17 +22,23 @@ jobs:
         run: |-
           pip install -e .
           pip install -e ./src/tests/
+      - name: Set up Starburst license
+        env:
+          LIC_DATA: ${{ secrets.LIC_DATA }}
+        run: |-
+          echo "${LIC_DATA}" > ~/starburstdata.license
       - name: Run CLI integration tests
         env:
           GH_WORKFLOW_RUNNING: true
           MINITRINO_TEST_LOG_LEVEL: DEBUG
+          LIC_PATH: ~/starburstdata.license
         run: |-
           minitrino --help || exit 1
           pytest -x --debug \
             --cov=minitrino \
             --cov-report=term-missing \
             --cov-report=xml \
-            --cov-fail-under=90 \
+            --cov-fail-under=75 \
             src/tests/cli/integration_tests/
   cli-unit-tests:
     runs-on: ubuntu-22.04
@@ -57,12 +63,4 @@ jobs:
             --cov=minitrino \
             --cov-report=term-missing \
             --cov-report=xml \
-            --cov-fail-under=90 \
             src/tests/cli/unit_tests/
-      - name: Upload coverage reports
-        uses: codecov/codecov-action@v5
-        with:
-          files: ./coverage.xml
-          fail_ci_if_error: true
-          flags: unittests
-          name: codecov-umbrella

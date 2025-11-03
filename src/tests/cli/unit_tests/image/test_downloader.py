@@ -1,12 +1,16 @@
 """Unit tests for the downloader script."""
 
+import os
 import sys
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
-# Add the scripts directory to the path
-sys.path.insert(0, "/Users/jlester/work/repos/minitrino/src/lib/image/src/scripts")
+# Add the scripts directory to the path dynamically
+SCRIPT_PATH = os.path.realpath(__file__)
+HERE = os.path.dirname(SCRIPT_PATH)
+SCRIPTS_DIR = os.path.abspath(os.path.join(HERE, "../../../../lib/image/src/scripts"))
+sys.path.insert(0, SCRIPTS_DIR)
 
 from downloader import (  # noqa: E402
     download_tarball,

@@ -13,9 +13,6 @@ import pytest
 from minitrino.core.errors import MinitrinoError, UserError
 from minitrino.core.library import LibraryManager
 
-# Import fixtures from the fixtures module
-from tests.cli.unit_tests.fixtures import mock_logger  # noqa: F401
-
 
 @pytest.fixture
 def mock_ctx(tmp_path, mock_logger):

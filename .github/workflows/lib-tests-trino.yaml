@@ -12,6 +12,20 @@ jobs:
   lib-tests:
     runs-on: ubuntu-22.04
     steps:
+      - name: Free up disk space
+        run: |-
+          echo "Disk space before cleanup:"
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo apt-get clean
+          sudo docker system prune -af --volumes
+          echo "Disk space after cleanup:"
+          df -h
       - name: Check out code
         uses: actions/checkout@v5
       - name: Set up Python
@@ -21,7 +35,7 @@ jobs:
       - name: Install project dependencies
         run: |-
           pip install -e .
-          pip install -e ./src/test/
+          pip install -e ./src/tests/
       - name: Write config file and point to license
         run: |-
           mkdir ~/.minitrino/
@@ -31,5 +45,5 @@ jobs:
           EOF
       - name: Run library tests
         run: |-
-          python ./src/test/src/lib/runner.py \
+          python ./src/tests/lib/runner.py \
             --debug --remove-images --image trino

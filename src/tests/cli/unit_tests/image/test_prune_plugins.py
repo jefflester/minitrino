@@ -1,10 +1,14 @@
 """Unit tests for prune_plugins.py script."""
 
+import os
 import sys
 from unittest.mock import call, patch
 
-# Add the image scripts directory to path for imports
-sys.path.insert(0, "/Users/jlester/work/repos/minitrino/src/lib/image/src/scripts")
+# Add the image scripts directory to path for imports dynamically
+SCRIPT_PATH = os.path.realpath(__file__)
+HERE = os.path.dirname(SCRIPT_PATH)
+SCRIPTS_DIR = os.path.abspath(os.path.join(HERE, "../../../../lib/image/src/scripts"))
+sys.path.insert(0, SCRIPTS_DIR)
 from prune_plugins import main, prune_plugins  # noqa: E402
 
 

@@ -14,6 +14,8 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v5
+      - name: Free up disk space
+        uses: ./.github/actions/cleanup-disk
       - name: Set up Python
         uses: actions/setup-python@v6
         with:

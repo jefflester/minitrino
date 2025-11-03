@@ -12,22 +12,10 @@ jobs:
   lib-tests:
     runs-on: ubuntu-22.04
     steps:
-      - name: Free up disk space
-        run: |-
-          echo "Disk space before cleanup:"
-          df -h
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /usr/local/share/boost
-          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/hostedtoolcache/CodeQL
-          sudo apt-get clean
-          sudo docker system prune -af --volumes
-          echo "Disk space after cleanup:"
-          df -h
       - name: Check out code
         uses: actions/checkout@v5
+      - name: Free up disk space
+        uses: ./.github/actions/cleanup-disk
       - name: Set up Python
         uses: actions/setup-python@v6
         with:

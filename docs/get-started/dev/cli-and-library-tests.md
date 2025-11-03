@@ -88,8 +88,8 @@ make unit-tests
 # Run all integration tests
 make integration-tests
 
-# Run specific integration test with arguments
-make integration-tests INTEGRATION_TEST_ARGS="-k test_provision_basic"
+# Run failed tests first, then continue (useful for debugging)
+make integration-tests FF=1
 
 # Run all tests (unit + integration)
 make all-tests
@@ -184,24 +184,24 @@ python src/tests/lib/runner.py ldap
 **Run tests for a specific Trino/Starburst version**:
 
 ```sh
-# Test with Trino 476
-LF=1 make integration-tests
+# Test with Trino using runner directly
+IMAGE=trino CLUSTER_VER=476 python src/tests/lib/runner.py
 
-# Test with Starburst Enterprise
+# Test with Starburst Enterprise using runner
 IMAGE=starburst CLUSTER_VER=476-e python src/tests/lib/runner.py
 ```
 
 **Use Make targets**:
 
 ```sh
-# Run all library tests
+# Run all library tests (defaults to Starburst, see Makefile)
 make lib-tests
 
-# Run library tests for Trino distribution
-make lib-tests-trino
+# Run library tests with license file
+LIC_PATH=/path/to/license make lib-tests
 
-# Run library tests for Starburst Enterprise
-make lib-tests-sep
+# Run library tests for specific modules
+make lib-tests ARGS="hive iceberg"
 ```
 
 ### Understanding Library Test Structure

@@ -36,15 +36,35 @@ variables.
 
 The following shell environment variables are picked up by the CLI:
 
+### User-Facing Variables
+
 - `CLUSTER_NAME` - Name of the cluster (defaults to `default`)
 - `CLUSTER_VER` - Version of Trino or Starburst to use (e.g., `476` or `476-e`)
-- `CONFIG_PROPERTIES` - Additional Trino/Starburst config properties
+- `CONFIG_PROPERTIES` - Additional Trino/Starburst config properties for
+  coordinator
 - `DOCKER_HOST` - Docker daemon socket location
 - `IMAGE` - Distribution to use: `trino` or `starburst` (defaults to `trino`)
-- `JVM_CONFIG` - Additional JVM configuration
+- `JVM_CONFIG` - Additional JVM configuration for coordinator
 - `LIB_PATH` - Path to Minitrino library files
 - `LIC_PATH` - Path to Starburst license file (for Enterprise modules)
 - `TEXT_EDITOR` - Text editor to use for config commands
+
+### Advanced Variables
+
+These variables provide fine-grained control over Minitrino's behavior:
+
+- `WORKER_CONFIG_PROPERTIES` - Additional config properties specific to workers
+- `WORKER_JVM_CONFIG` - Additional JVM configuration specific to workers
+- `PROVISION_BUILD_TIMEOUT` - Docker image build timeout in seconds (default:
+  1200\)
+- `STARTUP_SELECT_RETRIES` - Number of retries for startup health check
+  (default: 30)
+- `KEEP_PLUGINS` - Preserve plugin directory during provisioning (set to `true`
+  to enable)
+- `COMPOSE_BAKE` - Enable Docker Compose bake mode for debugging (internal use)
+
+All `__PORT_*` variables (e.g., `__PORT_MINITRINO`, `__PORT_POSTGRES`) are also
+recognized and can be overridden via shell environment or command line.
 
 All other shell variables are ignored.
 

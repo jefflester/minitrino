@@ -8,6 +8,7 @@ that the tool is best suited for.
 - [Workflow Examples](#workflow-examples)
   - [Overview](#overview)
   - [Module Documentation](#module-documentation)
+    - [Enterprise vs Open Source Modules](#enterprise-vs-open-source-modules)
     - [Administration Modules](#administration-modules)
     - [Catalog Modules](#catalog-modules)
     - [Security Modules](#security-modules)
@@ -31,6 +32,29 @@ that the tool is best suited for.
     - [Method Two: Environment Variables](#method-two-environment-variables)
     - [Method Three: Bootstrap Scripts](#method-three-bootstrap-scripts)
   - [Bootstrap Scripts](#bootstrap-scripts)
+    - [How Bootstrap Scripts Work](#how-bootstrap-scripts-work)
+    - [Execution Context](#execution-context)
+    - [Available Environment Variables](#available-environment-variables)
+    - [Available Tools and Utilities](#available-tools-and-utilities)
+    - [Creating a Bootstrap Script](#creating-a-bootstrap-script)
+    - [Bootstrap Script Best Practices](#bootstrap-script-best-practices)
+      - [Idempotency](#idempotency)
+      - [Error Handling](#error-handling)
+      - [External Service Dependencies](#external-service-dependencies)
+      - [File Ownership](#file-ownership)
+      - [Using Python in Bootstraps](#using-python-in-bootstraps)
+    - [Debugging Bootstrap Scripts](#debugging-bootstrap-scripts)
+      - [View Bootstrap Logs](#view-bootstrap-logs)
+      - [Manually Execute Bootstrap](#manually-execute-bootstrap)
+      - [Force Re-execution](#force-re-execution)
+      - [Check Bootstrap Files](#check-bootstrap-files)
+    - [Real-World Examples](#real-world-examples)
+      - [Example 1: TLS Certificate Generation](#example-1-tls-certificate-generation)
+      - [Example 2: Data Loading](#example-2-data-loading)
+      - [Example 3: Configuration File Modification](#example-3-configuration-file-modification)
+    - [Testing Bootstrap Scripts Locally](#testing-bootstrap-scripts-locally)
+    - [When Bootstrap Scripts Fail](#when-bootstrap-scripts-fail)
+    - [More Examples](#more-examples)
 
 ## Module Documentation
 
@@ -83,11 +107,6 @@ The table below shows which modules require a Starburst license.
 | **Security** | password-file            | OSS           | Password file-based authentication                   |
 | **Security** | tls                      | OSS           | TLS/SSL encryption for secure connections            |
 
-**Summary:**
-
-- **Enterprise modules:** 12 modules require Starburst Enterprise
-- **Open-source modules:** 24 modules work with Trino
-
 **Using Enterprise Modules:**
 
 Enterprise modules require:
@@ -107,11 +126,15 @@ minitrino -e IMAGE=starburst -e LIC_PATH=~/starburstdata.license provision -m in
 - [`data-products`](../../modules/admin/data-products)
 - [`file-group-provider`](../../modules/admin/file-group-provider)
 - [`insights`](../../modules/admin/insights)
+- [`ldap-group-provider`](../../modules/admin/ldap-group-provider)
 - [`minio`](../../modules/admin/minio)
 - [`mysql-event-listener`](../../modules/admin/mysql-event-listener)
 - [`resource-groups`](../../modules/admin/resource-groups)
 - [`results-cache`](../../modules/admin/results-cache)
+- [`scim`](../../modules/admin/scim)
 - [`session-property-manager`](../../modules/admin/session-property-manager)
+- [`spooling-protocol`](../../modules/admin/spooling-protocol)
+- [`starburst-gateway`](../../modules/admin/starburst-gateway)
 
 ### Catalog Modules
 
@@ -122,11 +145,14 @@ minitrino -e IMAGE=starburst -e LIC_PATH=~/starburstdata.license provision -m in
 - [`faker`](../../modules/catalog/faker)
 - [`hive`](../../modules/catalog/hive)
 - [`iceberg`](../../modules/catalog/iceberg)
+- [`iceberg-hms`](../../modules/catalog/iceberg-hms)
 - [`mariadb`](../../modules/catalog/mariadb)
 - [`mysql`](../../modules/catalog/mysql)
 - [`pinot`](../../modules/catalog/pinot)
 - [`postgres`](../../modules/catalog/postgres)
 - [`sqlserver`](../../modules/catalog/sqlserver)
+- [`stargate`](../../modules/catalog/stargate)
+- [`stargate-parallel`](../../modules/catalog/stargate-parallel)
 
 ### Security Modules
 
@@ -386,10 +412,10 @@ module. All resources are labeled with project-specific metadata, so all
 `remove` commands will target Docker resources specifically tied to Minitrino
 modules.
 
-Remove all Minitrino-labeled images:
+Remove all Minitrino-labeled images (requires `--cluster all` or `-c all`):
 
 ```sh
-minitrino remove --images
+minitrino -c all remove --images
 ```
 
 Remove images from a specific module:

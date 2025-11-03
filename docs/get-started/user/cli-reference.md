@@ -11,7 +11,8 @@ The following options are available for all Minitrino commands:
 - `-v, --verbose` - Enable verbose output for detailed logging
 - `--log-level` - Set the logging level (ERROR, WARN, INFO, DEBUG)
 - `-e, --env` - Set environment variables (format: `KEY=VALUE`)
-- `-c, --cluster` - Specify the cluster name (use `'*'` for all clusters)
+- `-c, --cluster` - Specify the cluster name (use `'*'` or `'all'` for all
+  clusters)
 
 ## Commands
 
@@ -117,14 +118,15 @@ The following options are available for all Minitrino commands:
 
 ### Operating on All Clusters
 
-You can use `-c '*'` to operate on all clusters simultaneously:
+You can use `-c '*'` or `-c all` to operate on all clusters simultaneously:
 
 ```sh
 # Snapshot all clusters
 minitrino -c '*' snapshot
+minitrino -c all snapshot
 
 # Stop all clusters
-minitrino -c '*' down
+minitrino -c all down
 ```
 
 ### Setting Environment Variables
@@ -134,6 +136,23 @@ Environment variables can be set via the `-e` flag:
 ```sh
 minitrino -e CLUSTER_VER=476 -e LIC_PATH=/path/to/license provision
 ```
+
+### Choosing Trino or Starburst Distribution
+
+For the `provision` command, you can specify the distribution using either the
+command-specific `-i/--image` flag or the global `-e IMAGE=` environment
+variable:
+
+```sh
+# Preferred method: Use the provision command's -i flag
+minitrino -v provision -i starburst -m postgres
+
+# Alternative: Use global environment variable
+minitrino -v -e IMAGE=starburst provision -m postgres
+```
+
+Both methods are functionally equivalent, but the `-i` flag is more explicit and
+recommended.
 
 ### Debug Mode
 

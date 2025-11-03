@@ -26,6 +26,7 @@ release = _read_version_file()
 extensions = [
     "ablog",
     "myst_parser",
+    "sphinx_click",
     "sphinx_copybutton",
     "sphinx_design",
     "sphinx_favicon",
@@ -177,7 +178,7 @@ def linkcode_resolve(domain, info):
 
 # -- Misc. options
 # -----------------------------------------------------------
-root_doc = "home"
+root_doc = "index"
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "**.ipynb_checkpoints"]
 html_static_path = ["_static"]
 templates_path = ["_templates"]
@@ -191,6 +192,6 @@ html_sidebars = {}
 html_context = {
     "github_user": "jefflester",
     "github_repo": "minitrino",
-    "github_version": "main",
+    "github_version": "master",
     "doc_path": "docs",
 }

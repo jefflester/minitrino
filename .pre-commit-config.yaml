@@ -21,16 +21,6 @@ repos:
           "src/"
         ]
 
-  - repo: local
-    hooks:
-      - id: gen-docs-requirements
-        name: Generate docs/requirements.txt from pyproject.toml
-        entry: python .precommit/gen_docs_requirements.py
-        language: python
-        files: ^pyproject\.toml$
-        additional_dependencies: [tomli]
-        pass_filenames: false
-
   - repo: https://github.com/pycqa/isort
     rev: 6.0.1
     hooks:

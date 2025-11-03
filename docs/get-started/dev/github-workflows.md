@@ -42,11 +42,10 @@ workflows are triggered:
 - `test-release.yaml`
 
 The first three workflows automate the tests described in
-[testing overview](https://github.com/jefflester/minitrino/wiki/CLI-and-Library-Tests).
-The `test-release.yaml` workflow creates a draft release and tag (`0.0.0`) with
-the release branch as its target. This allows for the testing suite to have
-access to an updated Minitrino library reflective of the current state of the
-release branch.
+[testing overview](cli-and-library-tests). The `test-release.yaml` workflow
+creates a draft release and tag (`0.0.0`) with the release branch as its target.
+This allows for the testing suite to have access to an updated Minitrino library
+reflective of the current state of the release branch.
 
 ## Merging a PR into `master`
 

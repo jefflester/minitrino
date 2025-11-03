@@ -22,12 +22,12 @@ Contributors have two options:
 In either case, please provide a comprehensive description of your changes with
 the PR. PRs will never be merged directly to `master`; they are merged into a
 release branch. To learn more about PR and release workflows, visit the
-[GitHub workflows overview](https://github.com/jefflester/minitrino/wiki/GitHub-Workflows).
+[GitHub workflows overview](../dev/github-workflows).
 
 If your contribution modifies or adds modules to the library, you must add
-[library tests](https://github.com/jefflester/minitrino/wiki/CLI-and-Library-Tests#library-tests)
-for all affected modules.
+[library tests](../dev/cli-and-library-tests.md#library-tests) for all affected
+modules.
 
 If your contribution modifies the CLI, you must add
-[CLI tests](https://github.com/jefflester/minitrino/wiki/CLI-and-Library-Tests#cli-tests)
-to ensure your changes work.
+[CLI tests](../dev/cli-and-library-tests.md#cli-tests) to ensure your changes
+work.

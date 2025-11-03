@@ -140,18 +140,101 @@ bash -c 'cat << EOF > metadata.json
 EOF'
 ```
 
-`metadata.json` key descriptions:
+### Metadata Field Reference
 
-- `description`: describes the module.
-- `incompatibleModules`: restricts certain modules from being provisioned
-  alongside the module. The `*` wildcard is a supported convention if the module
-  is incompatible with all other modules.
-- `dependentModules`: specifies which modules must be provisioned alongside the
-  target. Dependent modules will be automatically provisioned with the
-  `provision` command.
-- `enterprise`: requires a Starburst license file (`starburstdata.license`).
+#### Required Fields
 
-The metadata can be exposed via the `modules` command.
+- **`description`** (string, required): Human-readable description of the
+  module's purpose and functionality.
+  ```json
+  "description": "PostgreSQL catalog connector with async query support"
+  ```
+
+#### Optional Fields
+
+- **`enterprise`** (boolean, optional, default: `false`): Indicates whether the
+  module requires a Starburst Enterprise license (`starburstdata.license`). Set
+  to `true` for Starburst-exclusive features.
+
+  ```json
+  "enterprise": true
+  ```
+
+- **`incompatibleModules`** (array of strings, optional): Lists modules that
+  cannot be provisioned alongside this module due to conflicts (e.g., port
+  collisions, conflicting configurations). Use `["*"]` wildcard to indicate
+  incompatibility with all other modules.
+
+  ```json
+  "incompatibleModules": ["ldap", "oauth2"]
+  ```
+
+- **`dependentModules`** (array of strings, optional): Specifies prerequisite
+  modules that must be provisioned alongside this module. Minitrino will
+  automatically include these during provisioning.
+
+  ```json
+  "dependentModules": ["minio", "hive"]
+  ```
+
+- **`versions`** (array of strings, optional): Defines version compatibility
+  constraints for the module. Array can contain 0-2 items representing
+  `[minVersion, maxVersion]`. Use `"9999"` to indicate no upper bound. Empty
+  array `[]` means no version constraints.
+
+  ```json
+  "versions": ["466", "9999"]  // Works with Trino/Starburst 466 and above
+  "versions": ["443", "465"]   // Works only with versions 443-465
+  "versions": []               // No version constraints
+  ```
+
+- **`dependentClusters`** (array of objects, optional): **Advanced feature** for
+  multi-cluster orchestration. Defines additional clusters that should be
+  automatically provisioned alongside the primary cluster. Used by modules like
+  `starburst-gateway` and `stargate` for federated query scenarios.
+
+  Each object requires:
+  - `name` (string): Unique name for the dependent cluster
+  - `modules` (array of strings): Modules to provision in the dependent cluster
+  - `workers` (number): Number of worker nodes (0 for coordinator-only)
+  - `env` (object): Environment variables specific to this cluster
+
+  ```json
+  "dependentClusters": [
+    {
+      "name": "stargate-remote",
+      "modules": ["hive", "password-file"],
+      "workers": 0,
+      "env": {
+        "__PORT_MINITRINO": "60801",
+        "CONFIG_PROPERTIES": "http-server.process-forwarded=true"
+      }
+    }
+  ]
+  ```
+
+### Metadata Schema Validation
+
+All metadata files are validated against a JSON schema during CLI operations. If
+validation fails, Minitrino will provide detailed error messages indicating
+which fields are invalid.
+
+### Example: Complete Metadata File
+
+```json
+{
+  "description": "Iceberg catalog with REST metadata management and S3 storage",
+  "incompatibleModules": [],
+  "dependentModules": ["minio"],
+  "enterprise": false,
+  "versions": ["443", "9999"],
+  "dependentClusters": []
+}
+```
+
+### Viewing Metadata
+
+The metadata can be exposed via the `modules` command:
 
 ```sh
 minitrino modules -m ${module}

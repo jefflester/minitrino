@@ -37,40 +37,106 @@ that the tool is best suited for.
 Each module has a `readme` associated with it. The list below points to the
 `readme` files for each module.
 
+### Enterprise vs Open Source Modules
+
+Minitrino supports both Trino (open-source) and Starburst Enterprise modules.
+The table below shows which modules require a Starburst license.
+
+:::{tip} **Quick Reference:** ⭐ = Requires Starburst Enterprise license and
+`IMAGE=starburst` :::
+
+| Module Type  | Module Name              | License       | Description                                          |
+| ------------ | ------------------------ | ------------- | ---------------------------------------------------- |
+| **Admin**    | cache-service            | ⭐ Enterprise | Materialized view caching and table scan redirection |
+| **Admin**    | data-products            | ⭐ Enterprise | Data products management and governance              |
+| **Admin**    | file-group-provider      | OSS           | File-based group provider for authorization          |
+| **Admin**    | insights                 | ⭐ Enterprise | Starburst Insights analytics and monitoring UI       |
+| **Admin**    | ldap-group-provider      | ⭐ Enterprise | LDAP-based group integration                         |
+| **Admin**    | minio                    | OSS           | S3-compatible object storage (MinIO)                 |
+| **Admin**    | mysql-event-listener     | OSS           | MySQL-based audit logging and event tracking         |
+| **Admin**    | resource-groups          | OSS           | Resource management and query queueing               |
+| **Admin**    | results-cache            | ⭐ Enterprise | Query result caching for improved performance        |
+| **Admin**    | scim                     | ⭐ Enterprise | SCIM 2.0 user and group synchronization              |
+| **Admin**    | session-property-manager | OSS           | Manage session properties and defaults               |
+| **Admin**    | spooling-protocol        | OSS           | Client-side result spooling protocol                 |
+| **Admin**    | starburst-gateway        | ⭐ Enterprise | Starburst Gateway for query federation               |
+| **Catalog**  | clickhouse               | OSS           | ClickHouse database connector                        |
+| **Catalog**  | db2                      | ⭐ Enterprise | IBM Db2 database connector                           |
+| **Catalog**  | delta-lake               | OSS           | Delta Lake table format support                      |
+| **Catalog**  | elasticsearch            | OSS           | Elasticsearch search engine connector                |
+| **Catalog**  | faker                    | OSS           | Faker data generator for testing                     |
+| **Catalog**  | hive                     | OSS           | Hive Metastore with MinIO storage                    |
+| **Catalog**  | iceberg                  | OSS           | Apache Iceberg REST catalog                          |
+| **Catalog**  | iceberg-hms              | ⭐ Enterprise | Iceberg with Hive Metastore catalog                  |
+| **Catalog**  | mariadb                  | OSS           | MariaDB database connector                           |
+| **Catalog**  | mysql                    | OSS           | MySQL database connector                             |
+| **Catalog**  | pinot                    | OSS           | Apache Pinot real-time analytics connector           |
+| **Catalog**  | postgres                 | OSS           | PostgreSQL database connector                        |
+| **Catalog**  | sqlserver                | OSS           | Microsoft SQL Server connector                       |
+| **Catalog**  | stargate                 | ⭐ Enterprise | Stargate data federation connector                   |
+| **Catalog**  | stargate-parallel        | ⭐ Enterprise | Stargate with parallel query execution               |
+| **Security** | biac                     | ⭐ Enterprise | Built-in access control (BIAC)                       |
+| **Security** | file-access-control      | OSS           | File-based authorization rules                       |
+| **Security** | kerberos                 | OSS           | Kerberos authentication integration                  |
+| **Security** | ldap                     | OSS           | LDAP authentication                                  |
+| **Security** | oauth2                   | OSS           | OAuth 2.0 authentication                             |
+| **Security** | password-file            | OSS           | Password file-based authentication                   |
+| **Security** | tls                      | OSS           | TLS/SSL encryption for secure connections            |
+
+**Summary:**
+
+- **Enterprise modules:** 12 modules require Starburst Enterprise
+- **Open-source modules:** 24 modules work with Trino
+
+**Using Enterprise Modules:**
+
+Enterprise modules require:
+
+1. Starburst Enterprise distribution: `IMAGE=starburst`
+1. Valid Starburst license file (see
+   [license configuration](#point-to-a-starburst-license-file-for-enterprise-modules))
+
+```sh
+# Example: Provision with enterprise module
+minitrino -e IMAGE=starburst -e LIC_PATH=~/starburstdata.license provision -m insights
+```
+
 ### Administration Modules
 
-- [`cache-service`](https://github.com/jefflester/minitrino/blob/master/src/lib/modules/admin/cache-service/readme.md)
-- [`data-products`](https://github.com/jefflester/minitrino/blob/master/src/lib/modules/admin/data-products/readme.md)
-- [`file-group-provider`](https://github.com/jefflester/minitrino/blob/master/src/lib/modules/admin/file-group-provider/readme.md)
-- [`insights`](https://github.com/jefflester/minitrino/blob/master/src/lib/modules/admin/insights/readme.md)
-- [`mysql-event-listener`](https://github.com/jefflester/minitrino/blob/master/src/lib/modules/admin/mysql-event-listener/readme.md)
-- [`resource-groups`](https://github.com/jefflester/minitrino/blob/master/src/lib/modules/admin/resource-groups/readme.md)
-- [`results-cache`](https://github.com/jefflester/minitrino/blob/master/src/lib/modules/admin/results-cache/readme.md)
-- [`session-property-manager`](https://github.com/jefflester/minitrino/blob/master/src/lib/modules/admin/session-property-manager/readme.md)
+- [`cache-service`](../../modules/admin/cache-service)
+- [`data-products`](../../modules/admin/data-products)
+- [`file-group-provider`](../../modules/admin/file-group-provider)
+- [`insights`](../../modules/admin/insights)
+- [`minio`](../../modules/admin/minio)
+- [`mysql-event-listener`](../../modules/admin/mysql-event-listener)
+- [`resource-groups`](../../modules/admin/resource-groups)
+- [`results-cache`](../../modules/admin/results-cache)
+- [`session-property-manager`](../../modules/admin/session-property-manager)
 
 ### Catalog Modules
 
-- [`clickhouse`](https://github.com/jefflester/minitrino/blob/master/src/lib/modules/catalog/clickhouse/readme.md)
-- [`db2`](https://github.com/jefflester/minitrino/blob/master/src/lib/modules/catalog/db2/readme.md)
-- [`delta-lake`](https://github.com/jefflester/minitrino/blob/master/src/lib/modules/catalog/delta-lake/readme.md)
-- [`elasticsearch`](https://github.com/jefflester/minitrino/blob/master/src/lib/modules/catalog/elasticsearch/readme.md)
-- [`faker`](https://github.com/jefflester/minitrino/blob/master/src/lib/modules/catalog/faker/readme.md)
-- [`hive`](https://github.com/jefflester/minitrino/blob/master/src/lib/modules/catalog/hive/readme.md)
-- [`iceberg`](https://github.com/jefflester/minitrino/blob/master/src/lib/modules/catalog/iceberg/readme.md)
-- [`mariadb`](https://github.com/jefflester/minitrino/blob/master/src/lib/modules/catalog/mariadb/readme.md)
-- [`mysql`](https://github.com/jefflester/minitrino/blob/master/src/lib/modules/catalog/mysql/readme.md)
-- [`pinot`](https://github.com/jefflester/minitrino/blob/master/src/lib/modules/catalog/pinot/readme.md)
-- [`postgres`](https://github.com/jefflester/minitrino/blob/master/src/lib/modules/catalog/postgres/readme.md)
-- [`sqlserver`](https://github.com/jefflester/minitrino/blob/master/src/lib/modules/catalog/sqlserver/readme.md)
+- [`clickhouse`](../../modules/catalog/clickhouse)
+- [`db2`](../../modules/catalog/db2)
+- [`delta-lake`](../../modules/catalog/delta-lake)
+- [`elasticsearch`](../../modules/catalog/elasticsearch)
+- [`faker`](../../modules/catalog/faker)
+- [`hive`](../../modules/catalog/hive)
+- [`iceberg`](../../modules/catalog/iceberg)
+- [`mariadb`](../../modules/catalog/mariadb)
+- [`mysql`](../../modules/catalog/mysql)
+- [`pinot`](../../modules/catalog/pinot)
+- [`postgres`](../../modules/catalog/postgres)
+- [`sqlserver`](../../modules/catalog/sqlserver)
 
 ### Security Modules
 
-- [`biac`](https://github.com/jefflester/minitrino/blob/master/src/lib/modules/security/biac/readme.md)
-- [`file-access-control`](https://github.com/jefflester/minitrino/blob/master/src/lib/modules/security/file-access-control/readme.md)
-- [`ldap`](https://github.com/jefflester/minitrino/blob/master/src/lib/modules/security/ldap/readme.md)
-- [`oauth2`](https://github.com/jefflester/minitrino/blob/master/src/lib/modules/security/oauth2/readme.md)
-- [`password-file`](https://github.com/jefflester/minitrino/blob/master/src/lib/modules/security/password-file/readme.md)
-- [`tls`](https://github.com/jefflester/minitrino/blob/master/src/lib/modules/security/tls/readme.md)
+- [`biac`](../../modules/security/biac)
+- [`file-access-control`](../../modules/security/file-access-control)
+- [`kerberos`](../../modules/security/kerberos)
+- [`ldap`](../../modules/security/ldap)
+- [`oauth2`](../../modules/security/oauth2)
+- [`password-file`](../../modules/security/password-file)
+- [`tls`](../../modules/security/tls)
 
 ## CLI Examples
 
@@ -364,6 +430,10 @@ directory by passing the `--directory` option to the `snapshot` command.
 
 ### Point to a Starburst License File for Enterprise Modules
 
+:::{note} **Which modules require a license?** See the
+[Enterprise Module Reference](#enterprise-vs-open-source-modules) table above
+for a complete list of enterprise vs open-source modules. :::
+
 Pass an environment variable directly to the command:
 
 ```sh
@@ -391,7 +461,7 @@ minitrino provision -m insights
 ```
 
 More information about environment variables
-[can be found here](https://github.com/jefflester/minitrino/wiki/Environment-Variables-and-Config).
+[can be found here](environment-variables-and-config).
 
 ## Modify the Trino `config.properties` and `jvm.config` Files
 
@@ -457,22 +527,117 @@ module [bootstrap script](#bootstrap-scripts).
 
 ## Bootstrap Scripts
 
-Minitrino supports container bootstrap scripts. These scripts **do not replace**
-the entrypoint (or default command) for a container. The script is copied from
-the Minitrino library to the container, executed, and then removed from the
-container. Containers are restarted after each bootstrap script execution.
+Bootstrap scripts allow you to customize container initialization with arbitrary
+shell commands. These scripts execute at specific lifecycle stages and can
+modify configurations, load data, or initialize external services.
 
-If a bootstrap script has already executed in a container, Minitrino will not
-re-execute the bootstrap script _unless the contents of the script have
-changed_. The is useful after running `minitrino down --keep`––this way, the
-subsequent `provision` command will not re-execute the same bootstrap script(s).
+### How Bootstrap Scripts Work
 
-In general, if a bootstrap script is updated, it is recommended to destroy and
-re-provision the Minitrino environment.
+1. **Minitrino copies** bootstrap scripts from the library to the container
+1. **Scripts execute** in two phases: `before_start` and `after_start`
+1. **Container restarts** after each bootstrap execution
+1. **Idempotency checks:** Minitrino checksums scripts and only re-executes if
+   content changes
 
-To add a bootstrap script, add a `resources/bootstrap/` directory in any given
-module, create a shell script, and then reference the script name in the Compose
-YAML file via the `MINITRINO_BOOTSTRAP` environment variable:
+**Important:** Bootstrap scripts do NOT replace the container's entrypoint. They
+augment the startup process.
+
+### Execution Context
+
+**User and Permissions:**
+
+- Scripts initially run as **root**
+- After execution, ownership of `/etc/${CLUSTER_DIST}` changes to service user
+  (trino/starburst)
+- Scripts can use `sudo` for privileged operations
+- Files created should be owned by `${SERVICE_USER}` for persistence
+
+**Execution Phases:**
+
+1. **`before_start()`**:
+   - Runs before Trino/Starburst server starts
+   - Use for: config generation, certificate setup, schema initialization
+   - Trino/Starburst service is NOT available yet
+
+1. **`after_start()`**:
+   - Runs after Trino/Starburst is accepting queries
+   - Use for: data loading, SQL execution, post-startup validation
+   - Trino/Starburst service IS available (can use `trino-cli`)
+
+### Available Environment Variables
+
+Your bootstrap script has access to these key variables:
+
+```bash
+$CLUSTER_DIST         # "trino" or "starburst"
+$CLUSTER_VER          # Version number (e.g., "476")
+$CLUSTER_NAME         # Cluster name (e.g., "default")
+$SERVICE_USER         # Service user ("trino" or "starburst")
+$HOSTNAME             # Container hostname
+$COORDINATOR          # "true" for coordinator, "false" for workers
+```
+
+All Docker Compose environment variables are also available.
+
+### Available Tools and Utilities
+
+Bootstrap scripts have access to a rich toolset:
+
+- **Networking:** `curl`, `wget`, `netcat`, `ping`, `telnet`
+- **Data:** `jq` (JSON), `yq` (YAML)
+- **Trino:** `trino-cli` (for SQL execution in `after_start`)
+- **Security:** `keytool` (Java keystore), `openssl`, `ldap-utils`, `krb5-user`
+- **Utilities:** `wait-for-it` (wait for services), `vim`, `tree`, `less`
+- **Python:** Python 3 with pip (can install additional packages)
+
+### Creating a Bootstrap Script
+
+**1. Create the script directory:**
+
+```sh
+mkdir -p lib/modules/${type}/${module}/resources/bootstrap/
+```
+
+**2. Write the script:**
+
+```bash
+#!/usr/bin/env bash
+
+set -euxo pipefail
+
+before_start() {
+    echo "Executing before Trino starts..."
+
+    # Example: Modify config file
+    echo "discovery.uri=http://custom-coordinator:8080" >> /etc/${CLUSTER_DIST}/config.properties
+
+    # Example: Wait for external service
+    wait-for-it postgres:5432 --strict --timeout=30
+
+    # Example: Generate certificates (as root)
+    keytool -genkeypair -alias mykey ...
+
+    # Example: Fix ownership
+    chown -R ${SERVICE_USER}:root /etc/${CLUSTER_DIST}/custom/
+}
+
+after_start() {
+    echo "Executing after Trino started..."
+
+    # Example: Load data via SQL
+    trino-cli --user admin --execute "CREATE SCHEMA IF NOT EXISTS hive.default"
+
+    # Example: Validate setup
+    if trino-cli --user admin --execute "SELECT 1"; then
+        echo "Cluster is ready!"
+    else
+        echo "Cluster validation failed!"
+        exit 1
+    fi
+}
+```
+
+**3. Reference in Docker Compose YAML:**
 
 ```yaml
 services:
@@ -481,5 +646,288 @@ services:
       MINITRINO_BOOTSTRAP: bootstrap.sh
 ```
 
-See the `elasticsearch` module for an example of a module that uses a bootstrap
-script.
+**4. Test the module:**
+
+```sh
+minitrino -v provision -m ${module}
+```
+
+### Bootstrap Script Best Practices
+
+#### Idempotency
+
+Always check if operations were already completed:
+
+```bash
+before_start() {
+    # Check if index already exists
+    if curl -s http://elasticsearch:9200/_cat/indices | grep -q 'myindex'; then
+        echo "Index already exists, skipping creation"
+        return 0
+    fi
+
+    # Create index
+    curl -XPUT http://elasticsearch:9200/myindex ...
+}
+```
+
+#### Error Handling
+
+Use `set -e` to exit on errors, but handle expected failures:
+
+```bash
+set -euxo pipefail  # Exit on error, undefined vars, pipe failures
+
+before_start() {
+    # This will exit script if command fails
+    keytool -genkeypair ...
+
+    # Handle expected failures
+    if ! some_optional_command; then
+        echo "Optional command failed, continuing..."
+    fi
+}
+```
+
+#### External Service Dependencies
+
+Wait for services to be ready:
+
+```bash
+before_start() {
+    # Wait for service to be available
+    wait-for-it elasticsearch:9200 --strict --timeout=60 -- \
+        echo "Elasticsearch is up"
+
+    # Alternative: manual retry logic
+    retries=30
+    until curl -s http://postgres:5432 > /dev/null 2>&1; do
+        retries=$((retries - 1))
+        if [ $retries -eq 0 ]; then
+            echo "Postgres failed to start"
+            exit 1
+        fi
+        sleep 1
+    done
+}
+```
+
+#### File Ownership
+
+Ensure files are owned by the service user:
+
+```bash
+before_start() {
+    # Create files as root
+    echo "config-value" > /etc/${CLUSTER_DIST}/custom.properties
+
+    # Fix ownership for service user
+    chown ${SERVICE_USER}:root /etc/${CLUSTER_DIST}/custom.properties
+    chmod 644 /etc/${CLUSTER_DIST}/custom.properties
+}
+```
+
+#### Using Python in Bootstraps
+
+Install packages and run Python scripts:
+
+```bash
+before_start() {
+    # Install Python packages
+    sudo pip install requests faker
+
+    # Run inline Python
+    python3 << 'EOF'
+import requests
+response = requests.get('http://service:8080/health')
+print(f"Health check: {response.status_code}")
+EOF
+
+    # Or execute external script
+    python3 /mnt/bootstrap/mymodule/myscript.py
+}
+```
+
+### Debugging Bootstrap Scripts
+
+#### View Bootstrap Logs
+
+```sh
+# Check if bootstraps completed
+docker logs minitrino-default 2>&1 | grep BOOTSTRAP
+
+# View bootstrap script execution
+docker logs minitrino-default 2>&1 | grep -A 50 "before_start"
+```
+
+#### Manually Execute Bootstrap
+
+```sh
+# Enter container
+docker exec -it minitrino-default bash
+
+# View bootstrap script
+cat /tmp/minitrino/bootstrap/mymodule/bootstrap.sh
+
+# Execute manually
+bash -x /tmp/minitrino/bootstrap/mymodule/bootstrap.sh
+```
+
+#### Force Re-execution
+
+Minitrino tracks bootstrap checksums to avoid re-running unchanged scripts:
+
+```sh
+# Remove checksum file to force re-execution
+docker exec minitrino-default rm /etc/trino/.minitrino/bootstrap_checksums.json
+
+# Restart container (will re-run bootstraps)
+docker restart minitrino-default
+```
+
+#### Check Bootstrap Files
+
+```sh
+# View bootstrap directory structure
+docker exec minitrino-default tree /tmp/minitrino/bootstrap/
+
+# Check what's mounted
+docker exec minitrino-default ls -la /mnt/bootstrap/
+```
+
+### Real-World Examples
+
+#### Example 1: TLS Certificate Generation
+
+From `security/tls/resources/cluster/bootstrap.sh`:
+
+```bash
+before_start() {
+    local ssl_dir=/mnt/etc/tls
+
+    # Check if certificates exist
+    if [[ -f "${ssl_dir}/keystore.jks" ]]; then
+        echo "TLS artifacts already exist, skipping generation"
+        return 0
+    fi
+
+    # Generate keystore
+    keytool -genkeypair \
+        -alias minitrino \
+        -keyalg RSA \
+        -keystore "${ssl_dir}/keystore.jks" \
+        -storepass changeit \
+        -validity 3650 \
+        -dname "CN=*.minitrino.com"
+
+    # Export certificate
+    keytool -export \
+        -alias minitrino \
+        -keystore "${ssl_dir}/keystore.jks" \
+        -file "${ssl_dir}/minitrino_cert.cer" \
+        -storepass changeit
+}
+```
+
+#### Example 2: Data Loading
+
+From `catalog/elasticsearch/resources/cluster/bootstrap-es.sh`:
+
+```bash
+before_start() {
+    # Wait for Elasticsearch
+    wait-for-it elasticsearch:9200 --strict --timeout=60
+
+    # Check if index exists
+    if curl -s http://elasticsearch:9200/_cat/indices | grep -q 'user'; then
+        echo "Index already exists, skipping"
+        return 0
+    fi
+
+    # Create index
+    curl -XPUT http://elasticsearch:9200/user -H 'Content-Type: application/json' -d '{
+        "settings": { "number_of_replicas": 0 }
+    }'
+
+    # Install Python dependencies
+    sudo pip install faker requests
+
+    # Generate and load data
+    python3 << 'EOF'
+import requests
+from faker import Faker
+fake = Faker()
+for i in range(1, 500):
+    user = {"name": fake.name(), "email": fake.email()}
+    requests.post("http://elasticsearch:9200/user/_doc/" + str(i), json=user)
+EOF
+}
+```
+
+#### Example 3: Configuration File Modification
+
+```bash
+before_start() {
+    # Append to JVM config
+    echo "-Djava.security.krb5.conf=/etc/krb5.conf" >> /etc/${CLUSTER_DIST}/jvm.config
+
+    # Modify config.properties
+    cat << EOF >> /etc/${CLUSTER_DIST}/config.properties
+http-server.authentication.krb5.service-name=trino
+http-server.authentication.krb5.keytab=/etc/trino.keytab
+EOF
+
+    # Ensure ownership
+    chown -R ${SERVICE_USER}:root /etc/${CLUSTER_DIST}/
+}
+```
+
+### Testing Bootstrap Scripts Locally
+
+Before adding to a module, test bootstrap logic locally:
+
+```sh
+# 1. Provision cluster without custom bootstrap
+minitrino -v provision -m base-module
+
+# 2. Copy test script into container
+docker cp my-bootstrap.sh minitrino-default:/tmp/test-bootstrap.sh
+
+# 3. Execute manually
+docker exec -it minitrino-default bash -x /tmp/test-bootstrap.sh
+
+# 4. Verify results
+docker exec -it minitrino-default cat /etc/trino/config.properties
+```
+
+### When Bootstrap Scripts Fail
+
+If provisioning hangs or fails during bootstrap:
+
+1. **Check logs:** `docker logs minitrino-default 2>&1 | tail -100`
+1. **Look for errors:** Search for "ERROR", "failed", or stack traces
+1. **Verify external services:** Ensure dependencies (DBs, etc.) are running
+1. **Test interactively:** Enter container and run script manually
+1. **Simplify script:** Comment out sections to isolate the failure
+1. **Check permissions:** Verify files/directories are accessible
+
+After fixing issues, destroy and re-provision:
+
+```sh
+minitrino down
+minitrino remove --volumes
+minitrino -v provision -m ${module}
+```
+
+### More Examples
+
+Additional bootstrap examples can be found in the library:
+
+- **TLS setup:** `lib/modules/security/tls/resources/cluster/bootstrap.sh`
+- **LDAP configuration:**
+  `lib/modules/security/ldap/resources/cluster/bootstrap.sh`
+- **OAuth2 setup:** `lib/modules/security/oauth2/resources/cluster/bootstrap.sh`
+- **BIAC initialization:**
+  `lib/modules/security/biac/resources/cluster/bootstrap.sh`
+- **Elasticsearch data loading:**
+  `lib/modules/catalog/elasticsearch/resources/cluster/bootstrap-es.sh`

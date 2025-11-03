@@ -21,6 +21,7 @@ Submodules
    minitrino.core.context
    minitrino.core.envvars
    minitrino.core.errors
+   minitrino.core.library
    minitrino.core.modules
 
 Module contents

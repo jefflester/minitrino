@@ -47,15 +47,13 @@ dev = [
   "wheel",
   "yamllint"
 ]
-# Used for basis of docs requirements.txt:
-# Be sure to maintain these deps to keep things in sync.
 docs = [
   "ablog",
-  "autoapi",
   "myst_parser",
   "numpydoc",
   "pydata-sphinx-theme",
   "sphinx",
+  "sphinx-click",
   "sphinx-copybutton",
   "sphinx-design",
   "sphinx-favicon",

@@ -92,7 +92,7 @@ install_trino_cli() {
     # Wrapper with logging disabled
     cat <<-EOF > "${trino_cli_wrapper}"
 	#!/bin/bash
-	exec java -Djava.util.logging.config.file=/dev/null -jar "${trino_cli_jar}" "\$@"
+	exec java -Djava.util.logging.config.file=/dev/null --enable-native-access=ALL-UNNAMED -jar "${trino_cli_jar}" "\$@"
 EOF
 
     chmod +x "${trino_cli_wrapper}" "${trino_cli_jar}"

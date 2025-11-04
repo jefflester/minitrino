@@ -609,8 +609,8 @@ All Docker Compose environment variables are also available.
 
 Bootstrap scripts have access to a rich toolset:
 
-- **Networking:** `curl`, `wget`, `netcat`, `ping`, `telnet`
-- **Data:** `jq` (JSON), `yq` (YAML)
+- **Networking:** `curl`, `wget`, `ping`, `telnet`
+- **Data:** `jq` (JSON processor)
 - **Trino:** `trino-cli` (for SQL execution in `after_start`)
 - **Security:** `keytool` (Java keystore), `openssl`, `ldap-utils`, `krb5-user`
 - **Utilities:** `wait-for-it` (wait for services), `vim`, `tree`, `less`

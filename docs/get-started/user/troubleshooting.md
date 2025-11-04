@@ -260,6 +260,10 @@ cat /data/starburst/var/log/server.log
 ls /tmp/minitrino/bootstrap/
 ```
 
+**Note:** Log paths are based on Trino's default behavior where logs are written
+to `${node.data-dir}/var/log/server.log`. You can also view logs using
+`docker logs minitrino-default`.
+
 ---
 
 ### Bootstrap Script Failures
@@ -310,7 +314,7 @@ docker logs minitrino-default 2>&1 | grep "BOOTSTRAP"
    ```
 
 1. **Review bootstrap script:** Check the script at
-   `~/.minitrino/lib/modules/<type>/<module>/resources/bootstrap/`
+   `~/.minitrino/lib/modules/<type>/<module>/resources/cluster/`
 
 **Note:** Bootstrap scripts are only re-executed if their content changes. After
 modifying a bootstrap script, destroy and re-provision the environment.

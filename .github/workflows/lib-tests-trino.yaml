@@ -9,8 +9,34 @@ on:
       - src/lib/**
 
 jobs:
-  lib-tests:
+  prepare-matrix:
     runs-on: ubuntu-22.04
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.10'
+      - name: Install project dependencies
+        run: |-
+          pip install -e .
+      - name: Generate test matrix
+        id: set-matrix
+        run: |-
+          output=$(python src/tests/lib/generate_test_matrix.py --image trino --output github)
+          matrix_line=$(echo "$output" | grep "^matrix=")
+          echo "$matrix_line" >> $GITHUB_OUTPUT
+
+  lib-tests:
+    needs: prepare-matrix
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
     steps:
       - name: Check out code
         uses: actions/checkout@v5
@@ -31,7 +57,8 @@ jobs:
           [config]
           IMAGE=trino
           EOF
-      - name: Run library tests
+      - name: Run library tests (Segment ${{ matrix.segment }})
         run: |-
           python ./src/tests/lib/runner.py \
-            --debug --remove-images --image trino
+            --debug --remove-images --image trino \
+            ${{ matrix.modules }}

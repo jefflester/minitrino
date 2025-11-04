@@ -254,8 +254,13 @@ enterprise_scenarios = [
     indirect=["log_msg"],
 )
 @pytest.mark.usefixtures("cleanup_config", "reset_metadata")
-def test_enterprise_scenarios(scenario: EnterpriseScenario) -> None:
+def test_enterprise_scenarios(scenario: EnterpriseScenario, monkeypatch) -> None:
     """Run each EnterpriseScenario."""
+    # For the no-license scenario, remove LIC_PATH from OS environment
+    # to properly test the "missing license" error path
+    if scenario.license_path is None:
+        monkeypatch.delenv("LIC_PATH", raising=False)
+
     # Update metadata BEFORE building/executing the command
     data = [{"enterprise": scenario.enterprise}]
     utils.update_metadata_json("test", data)

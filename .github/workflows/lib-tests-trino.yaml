@@ -33,13 +33,27 @@ jobs:
   lib-tests:
     needs: prepare-matrix
     runs-on: ubuntu-22.04
-    timeout-minutes: 120
+    timeout-minutes: 180
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
     steps:
       - name: Check out code
         uses: actions/checkout@v5
+      - name: Get cluster version
+        id: version
+        uses: ./.github/actions/get-cluster-version
+      - name: Wait for test release
+        uses: ./.github/actions/wait-for-test-release
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Pull pre-built Trino image
+        uses: ./.github/actions/pull-test-image
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          pr-number: ${{ github.event.pull_request.number }}
+          image-type: trino
+          cluster-version: ${{ steps.version.outputs.trino_version }}
       - name: Free up disk space
         uses: ./.github/actions/cleanup-disk
       - name: Set up Python

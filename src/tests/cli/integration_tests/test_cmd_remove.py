@@ -742,11 +742,12 @@ def assert_resources_removed(
         utils.assert_in_output(
             f"{resource_type[:-1].capitalize()} removed:", result=result
         )
+        image_name = kwargs.get("image_name")
         assert_docker_resource_count(
             DockerResourceCount(
                 getattr(docker_client, resource_type),
                 kwargs.get("label", ROOT_LABEL),
                 0,
-                kwargs.get("image_name"),
+                [image_name] if image_name else None,
             )
         )

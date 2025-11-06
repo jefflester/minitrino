@@ -1,0 +1,65 @@
+---
+name: 'Pull Test Image'
+description: 'Pull pre-built test image from GHCR and tag it for local use'
+author: 'Minitrino'
+
+inputs:
+  github-token:
+    description: 'GitHub token for authentication'
+    required: true
+  pr-number:
+    description: 'Pull request number'
+    required: true
+  image-type:
+    description: 'Image type (trino or starburst)'
+    required: true
+  cluster-version:
+    description: 'Cluster version (sourced from minitrino.env via workflows)'
+    required: true
+  timeout-attempts:
+    description: 'Number of retry attempts (30 seconds per attempt)'
+    required: false
+    default: '20'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Log in to GitHub Container Registry
+      shell: bash
+      run: echo "${{ inputs.github-token }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+    - name: Wait for image to be available
+      shell: bash
+      run: |-
+        IMAGE="ghcr.io/jefflester/minitrino:pr-${{ inputs.pr-number }}-${{ inputs.image-type }}"
+        echo "Waiting for image ${IMAGE} to be available..."
+
+        for i in $(seq 1 ${{ inputs.timeout-attempts }}); do
+          if docker manifest inspect "${IMAGE}" >/dev/null 2>&1; then
+            echo "Image ${IMAGE} is available!"
+            break
+          fi
+
+          if [ "$i" -eq "${{ inputs.timeout-attempts }}" ]; then
+            echo "Timeout waiting for image ${IMAGE}"
+            exit 1
+          fi
+
+          echo "Image not yet available, waiting... (attempt $i/${{ inputs.timeout-attempts }})"
+          sleep 30
+        done
+
+    - name: Pull and re-tag image
+      shell: bash
+      run: |-
+        GHCR_IMAGE="ghcr.io/jefflester/minitrino:pr-${{ inputs.pr-number }}-${{ inputs.image-type }}"
+        LOCAL_TAG="minitrino/cluster:${{ inputs.cluster-version }}-${{ inputs.image-type }}"
+
+        echo "Pulling ${GHCR_IMAGE}..."
+        docker pull "${GHCR_IMAGE}"
+
+        echo "Re-tagging to ${LOCAL_TAG}..."
+        docker tag "${GHCR_IMAGE}" "${LOCAL_TAG}"
+
+        echo "Image ready: ${LOCAL_TAG}"
+        docker images | grep minitrino/cluster || true

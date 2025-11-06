@@ -3,7 +3,7 @@
 set -euxo pipefail
 
 fetch_oauth_cert() {
-    local retries=10
+    local retries=20
     local wait=3
     for i in $(seq 1 $retries); do
         if openssl s_client -connect oauth2-server:8100 2>/dev/null </dev/null \
@@ -23,7 +23,7 @@ before_start() {
     fetch_oauth_cert
     echo "Adding OAuth2 server certificate to truststore..."
     if ! keytool -list \
-        -keystore /etc/starburst/tls-jvm/cacerts \
+        -keystore /etc/"${CLUSTER_DIST}"/tls-jvm/cacerts \
         -storepass changeit \
         -alias oauth2-server > /dev/null 2>&1
     then

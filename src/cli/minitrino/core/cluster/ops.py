@@ -199,6 +199,19 @@ class ClusterOperations:
                 env_dict = dict(item.split("=", 1) for item in env_list if "=" in item)
                 env_dict["WORKER"] = "true"
                 env_dict["COORDINATOR"] = "false"
+
+                # Extract extra_hosts from coordinator to ensure workers have same
+                # network capabilities (e.g., host.docker.internal resolution)
+                extra_hosts_list = coordinator.attrs.get("HostConfig", {}).get(
+                    "ExtraHosts", []
+                )
+                extra_hosts_dict = {}
+                if extra_hosts_list:
+                    for entry in extra_hosts_list:
+                        if ":" in entry:
+                            hostname, ip = entry.split(":", 1)
+                            extra_hosts_dict[hostname] = ip
+
                 worker_base = self._ctx.docker_client.containers.run(
                     worker_img,
                     name=fq_worker_name,
@@ -206,6 +219,7 @@ class ClusterOperations:
                     detach=True,
                     hostname=fq_worker_name,
                     network=network_name,
+                    extra_hosts=extra_hosts_dict if extra_hosts_dict else None,
                     labels={
                         "org.minitrino.root": "true",
                         "org.minitrino.module.minitrino": "true",

@@ -9,10 +9,13 @@
       "healthcheck": {
         "command": "trino-cli --debug --output-format CSV_HEADER --execute 'SHOW TABLES IN pinot.default' --user admin",
         "container": "minitrino-lib-test",
-        "retries": 60,
+        "retries": 180,
         "exitCode": 0,
         "contains": [
-          "baseballstats"
+          "baseballstats",
+          "dimbaseballteams",
+          "githubcomplextypeevents",
+          "githubevents"
         ]
       }
     },

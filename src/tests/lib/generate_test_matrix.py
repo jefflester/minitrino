@@ -67,7 +67,7 @@ def split_into_chunks(modules: list[str]) -> list[list[str]]:
     """
     Split module list evenly across optimal number of runners.
 
-    The algorithm targets ~10 modules per runner, then distributes
+    The algorithm targets ~5 modules per runner, then distributes
     modules as evenly as possible across the calculated number of runners.
 
     Parameters
@@ -97,8 +97,8 @@ def split_into_chunks(modules: list[str]) -> list[list[str]]:
     if num_modules == 0:
         return []
 
-    # Calculate optimal number of runners (target ~10 modules per runner)
-    num_runners = math.ceil(num_modules / 10)
+    # Calculate optimal number of runners (target ~5 modules per runner)
+    num_runners = math.ceil(num_modules / 5)
 
     # Calculate base modules per runner and remainder
     base_per_runner = num_modules // num_runners
@@ -121,7 +121,7 @@ def generate_matrix(image: str) -> dict[str, Any]:
     Generate GitHub Actions matrix configuration.
 
     Automatically calculates optimal number of runners and distributes
-    modules evenly across them (targeting ~10 modules per runner).
+    modules evenly across them (targeting ~5 modules per runner).
 
     Parameters
     ----------
@@ -155,7 +155,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Generate test matrix for parallelized library tests. "
         "Automatically distributes modules evenly across runners "
-        "(targeting ~10 per runner)."
+        "(targeting ~5 per runner)."
     )
     parser.add_argument(
         "--image",

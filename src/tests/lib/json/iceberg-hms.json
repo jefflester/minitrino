@@ -3,7 +3,7 @@
     {
       "type": "logs",
       "name": "Ensure HMS is running",
-      "container": "metastore-iceberg-hms-test",
+      "container": "metastore-iceberg-hms-lib-test",
       "contains": [
         "Starting Metastore Server"
       ],

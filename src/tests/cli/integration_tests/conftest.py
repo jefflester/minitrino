@@ -207,6 +207,34 @@ def reset_metadata(request: pytest.FixtureRequest) -> Generator:
 
 
 @pytest.fixture
+def build_test_image() -> Generator:
+    """
+    Build the test module image.
+
+    Notes
+    -----
+    This fixture ensures the minitrino/test:latest image exists by
+    provisioning and then bringing down the test cluster. Runs before
+    the test.
+    """
+    logger.debug("Building test module image via provision")
+    common.start_docker_daemon()
+    logger.debug("Provisioning test module to build image")
+    executor.exec(
+        executor.build_cmd(
+            "provision", cluster=CLUSTER_NAME, append=["--module", "test"]
+        ),
+        log_output=False,
+    )
+    logger.debug("Bringing down cluster but keeping image")
+    executor.exec(
+        executor.build_cmd("down", cluster=CLUSTER_NAME, append=["--sig-kill"]),
+        log_output=False,
+    )
+    yield
+
+
+@pytest.fixture
 def provision_clusters(request: pytest.FixtureRequest) -> Generator:
     """
     Provision one or more clusters with the `test` module by default.

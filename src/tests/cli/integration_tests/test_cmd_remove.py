@@ -202,6 +202,7 @@ remove_all_scenarios = [
     ids=utils.get_scenario_ids(remove_all_scenarios),
     indirect=["log_msg"],
 )
+@pytest.mark.usefixtures("build_test_image")
 def test_remove_all_scenarios(
     docker_client: DockerClient, scenario: RemoveAllScenario
 ) -> None:

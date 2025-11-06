@@ -31,15 +31,15 @@
     {
       "type": "query",
       "name": "Verify result cache usage",
-      "sql": "SELECT \\\"stats.cachehits.totalcount\\\" FROM \\\"jmx\\\".\\\"current\\\".\\\"com.starburstdata.cache.resultscache:name=dispatcher\\\"",
+      "sql": "SELECT \\\"stats.cachehits.totalcount\\\" FROM \\\"jmx\\\".\\\"current\\\".\\\"com.starburstdata.cache.resultscache:name=dispatcher\\\" WHERE \\\"stats.cachehits.totalcount\\\" >= 1",
       "trinoCliArgs": [
         "--server 'http://localhost:8080'",
         "--user admin"
       ],
       "contains": [
-        "stats.cachehits.totalcount",
-        "1"
-      ]
+        "stats.cachehits.totalcount"
+      ],
+      "rowCount": 1
     }
   ]
 }

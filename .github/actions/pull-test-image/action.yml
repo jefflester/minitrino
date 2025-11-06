@@ -19,7 +19,7 @@ inputs:
   timeout-attempts:
     description: 'Number of retry attempts (30 seconds per attempt)'
     required: false
-    default: '20'
+    default: '120'
 
 runs:
   using: 'composite'

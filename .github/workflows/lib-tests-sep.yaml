@@ -76,9 +76,6 @@ jobs:
           IMAGE=starburst
           EOF
       - name: Run library tests (Segment ${{ matrix.segment }})
-        env:
-          JVM_CONFIG: "-Xmx1G\n-Xms1G"
-          WORKER_JVM_CONFIG: "-Xmx768m\n-Xms768m"
         run: |-
           python ./src/tests/lib/runner.py \
             --debug --remove-images --image starburst \

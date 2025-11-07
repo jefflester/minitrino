@@ -215,24 +215,10 @@ class ModuleTest:
         """
         if self.image == "starburst":
             cluster_ver = ["-e", f"CLUSTER_VER={DEFAULT_CLUSTER_VER}-e"]
-            # Starburst Enterprise: 1GB is the floor for coordinator
-            jvm_config = [
-                "-e",
-                f"JVM_CONFIG=-Xmx1G{chr(10)}-Xms1G",
-                "-e",
-                f"WORKER_JVM_CONFIG=-Xmx768m{chr(10)}-Xms768m",
-            ]
         else:
             cluster_ver = ["-e", f"CLUSTER_VER={DEFAULT_CLUSTER_VER}"]
-            # Trino: slightly smaller but still generous
-            jvm_config = [
-                "-e",
-                f"JVM_CONFIG=-Xmx768m{chr(10)}-Xms768m",
-                "-e",
-                f"WORKER_JVM_CONFIG=-Xmx512m{chr(10)}-Xms512m",
-            ]
 
-        prepend_args = cluster_ver + jvm_config
+        prepend_args = cluster_ver
 
         # Apply module overrides if specified in test JSON
         if self.module_overrides.get("dependentClusters"):

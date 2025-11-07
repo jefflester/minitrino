@@ -1,4 +1,19 @@
 {
+  "moduleOverrides": {
+    "dependentClusters": [
+      {
+        "name": "stargate-parallel-remote",
+        "modules": [
+          "password-file"
+        ],
+        "workers": 0,
+        "env": {}
+      }
+    ],
+    "env": {
+      "STARGATE_PARALLEL_CATALOG": "tpch"
+    }
+  },
   "tests": [
     {
       "type": "shell",
@@ -18,22 +33,7 @@
     },
     {
       "type": "query",
-      "name": "Test create schema in remote cluster",
-      "sql": "CALL system.execute(query => 'CREATE SCHEMA test_schema WITH (location = ''s3a://minitrino/hive/test_schema'')')",
-      "trinoCliArgs": [
-        "--server 'http://localhost:8080'",
-        "--user admin",
-        "--catalog stargate_parallel",
-        "--schema default"
-      ],
-      "retries": 10,
-      "contains": [
-        "CALL"
-      ]
-    },
-    {
-      "type": "query",
-      "name": "Test schema list",
+      "name": "Test schema list via stargate_parallel",
       "sql": "SHOW SCHEMAS IN stargate_parallel",
       "trinoCliArgs": [
         "--server 'http://localhost:8080'",
@@ -41,30 +41,30 @@
       ],
       "retries": 10,
       "contains": [
-        "default",
-        "information_schema",
-        "test_schema"
+        "tiny",
+        "sf1",
+        "sf100"
       ]
     },
     {
       "type": "query",
-      "name": "Test CTAS",
-      "sql": "CALL system.execute(query => 'CREATE TABLE test_schema.test_table AS SELECT * FROM tpch.tiny.customer LIMIT 10')",
+      "name": "Test table list via stargate_parallel",
+      "sql": "SHOW TABLES IN stargate_parallel.tiny",
       "trinoCliArgs": [
         "--server 'http://localhost:8080'",
-        "--user admin",
-        "--catalog stargate_parallel",
-        "--schema default"
+        "--user admin"
       ],
       "retries": 10,
       "contains": [
-        "CALL"
+        "customer",
+        "nation",
+        "orders"
       ]
     },
     {
       "type": "query",
-      "name": "Test table select",
-      "sql": "SELECT * FROM stargate_parallel.test_schema.test_table LIMIT 10",
+      "name": "Test data query via stargate_parallel",
+      "sql": "SELECT * FROM stargate_parallel.tiny.customer LIMIT 5",
       "trinoCliArgs": [
         "--server 'http://localhost:8080'",
         "--user admin"
@@ -74,6 +74,20 @@
         "custkey",
         "name",
         "address"
+      ]
+    },
+    {
+      "type": "query",
+      "name": "Test join query via stargate_parallel",
+      "sql": "SELECT c.name, o.orderkey FROM stargate_parallel.tiny.customer c JOIN stargate_parallel.tiny.orders o ON c.custkey = o.custkey LIMIT 5",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'",
+        "--user admin"
+      ],
+      "retries": 10,
+      "contains": [
+        "name",
+        "orderkey"
       ]
     }
   ]

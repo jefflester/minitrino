@@ -72,6 +72,9 @@ jobs:
           IMAGE=trino
           EOF
       - name: Run library tests (Segment ${{ matrix.segment }})
+        env:
+          JVM_CONFIG: "-Xmx768m\n-Xms768m"
+          WORKER_JVM_CONFIG: "-Xmx512m\n-Xms512m"
         run: |-
           python ./src/tests/lib/runner.py \
             --debug --remove-images --image trino \

@@ -10,7 +10,9 @@
         "password-file"
       ],
       "workers": 0,
-      "env": {}
+      "env": {
+        "STARGATE_CATALOG": "hive"
+      }
     }
   ]
 }

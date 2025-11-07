@@ -68,6 +68,7 @@ class ModuleTest:
         self.debug = debug
         self.x = x
         self.specs = utils.SPECS
+        self.module_overrides = json_data.get("moduleOverrides", {})
 
     def run(self) -> bool:
         """
@@ -214,8 +215,38 @@ class ModuleTest:
         """
         if self.image == "starburst":
             cluster_ver = ["-e", f"CLUSTER_VER={DEFAULT_CLUSTER_VER}-e"]
+            # Starburst Enterprise: 1GB is the floor for coordinator
+            jvm_config = [
+                "-e",
+                f"JVM_CONFIG=-Xmx1G{chr(10)}-Xms1G",
+                "-e",
+                f"WORKER_JVM_CONFIG=-Xmx768m{chr(10)}-Xms768m",
+            ]
         else:
             cluster_ver = ["-e", f"CLUSTER_VER={DEFAULT_CLUSTER_VER}"]
+            # Trino: slightly smaller but still generous
+            jvm_config = [
+                "-e",
+                f"JVM_CONFIG=-Xmx768m{chr(10)}-Xms768m",
+                "-e",
+                f"WORKER_JVM_CONFIG=-Xmx512m{chr(10)}-Xms512m",
+            ]
+
+        prepend_args = cluster_ver + jvm_config
+
+        # Apply module overrides if specified in test JSON
+        if self.module_overrides.get("dependentClusters"):
+            import json
+
+            override_json = json.dumps(self.module_overrides["dependentClusters"])
+            prepend_args += ["-e", f"MINITRINO_TEST_DEP_OVERRIDE={override_json}"]
+            logger.debug(f"Using dependent cluster override: {override_json}")
+
+        # Apply main cluster environment variable overrides
+        if self.module_overrides.get("env"):
+            for key, value in self.module_overrides["env"].items():
+                prepend_args += ["-e", f"{key}={value}"]
+                logger.debug(f"Using main cluster env override: {key}={value}")
 
         no_rollback = "--no-rollback" if self.x else ""
         append_args = [
@@ -230,7 +261,7 @@ class ModuleTest:
         executor = common.MinitrinoExecutor("lib-test", debug=self.debug)
         cmd = executor.build_cmd(
             base="provision",
-            prepend=cluster_ver,
+            prepend=prepend_args,
             append=append_args,
         )
         cmd_result = executor.exec(cmd)

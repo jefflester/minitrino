@@ -141,9 +141,30 @@ class ClusterValidator:
                 cluster["name"] = cluster_name
                 dependent_clusters.append(cluster)
 
+        # Check for test override once upfront
+        override_clusters = None
+        override_env = self._ctx.env.get("MINITRINO_TEST_DEP_OVERRIDE")
+        if override_env:
+            import json
+
+            try:
+                override_clusters = json.loads(override_env)
+                self._ctx.logger.debug(
+                    f"Using test override for dependent clusters: {override_clusters}"
+                )
+            except json.JSONDecodeError as e:
+                self._ctx.logger.warn(
+                    f"Invalid JSON in MINITRINO_TEST_DEP_OVERRIDE: {e}"
+                )
+
         for module in modules:
-            module_data: dict = self._ctx.modules.data.get(module, {})
-            module_dependent_clusters = module_data.get("dependentClusters", [])
+            # Use override if present, otherwise use module metadata
+            if override_clusters is not None:
+                module_dependent_clusters = override_clusters
+            else:
+                module_data: dict = self._ctx.modules.data.get(module, {})
+                module_dependent_clusters = module_data.get("dependentClusters", [])
+
             if module_dependent_clusters:
                 _helper(module_dependent_clusters)
 

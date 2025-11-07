@@ -47,6 +47,7 @@ class ClusterProvisioner:
         self.workers: int = 0
         self.no_rollback: bool = False
         self.build: bool = False
+        self._captured_container_logs: str = ""  # Store container logs before rollback
 
         self._worker_safe_event: threading.Event = threading.Event()
         self._dep_cluster_env: dict[str, str] = {}
@@ -117,6 +118,8 @@ class ClusterProvisioner:
                 self._ctx.logger.error(
                     "Provisioning failed. Rolling back all provisioned clusters..."
                 )
+                # Capture container logs before rollback destroys them
+                self._capture_container_logs_for_crashdump()
                 self._rollback()
                 raise e
 
@@ -130,9 +133,23 @@ class ClusterProvisioner:
                 f"{str(e)}\nFull provision log written to {crashdump}"
             )
             with open(crashdump, "w") as f:
+                # Write Minitrino logs
+                f.write("=" * 80 + "\n")
+                f.write("MINITRINO LOGS\n")
+                f.write("=" * 80 + "\n\n")
                 for msg, _, is_spinner in self._ctx.logger._log_sink.buffer:
                     if not is_spinner:
                         f.write(msg + "\n")
+
+                # Write captured container logs
+                f.write("\n\n")
+                if self._captured_container_logs:
+                    f.write(self._captured_container_logs)
+                else:
+                    f.write("=" * 80 + "\n")
+                    f.write("CONTAINER LOGS\n")
+                    f.write("=" * 80 + "\n\n")
+                    f.write("No container logs were captured.\n")
             raise MinitrinoError(f"{str(e)}\nFull provision log written to {crashdump}")
 
     def _runner(self, cluster: Optional[dict] = None) -> None:
@@ -208,6 +225,83 @@ class ClusterProvisioner:
         except Exception as e:
             self._rollback()
             raise MinitrinoError("Failed to provision cluster.") from e
+
+    def _capture_container_logs_for_crashdump(self) -> None:
+        """
+        Capture container logs before rollback destroys them.
+
+        Stores logs in self._captured_container_logs for later use in crashdump.
+        """
+        logs_buffer = []
+        logs_buffer.append("=" * 80 + "\n")
+        logs_buffer.append("CONTAINER LOGS\n")
+        logs_buffer.append("=" * 80 + "\n\n")
+
+        # Save current cluster name to restore later
+        original_cluster_name = self._ctx.cluster_name
+        total_containers = 0
+
+        # Debug: Log provisioned clusters
+        self._ctx.logger.debug(
+            f"Capturing logs for provisioned clusters: {self._ctx.provisioned_clusters}"
+        )
+        logs_buffer.append(
+            f"Provisioned clusters: {self._ctx.provisioned_clusters}\n\n"
+        )
+
+        try:
+            # Iterate through all provisioned clusters
+            for cluster_name in self._ctx.provisioned_clusters:
+                self._ctx.cluster_name = cluster_name  # Activate cluster in context
+                logs_buffer.append(f"\n{'=' * 80}\n")
+                logs_buffer.append(f"Cluster: {cluster_name}\n")
+                logs_buffer.append(f"{'=' * 80}\n\n")
+
+                try:
+                    # Get all containers for this cluster
+                    resources = self._ctx.cluster.resource.resources()
+                    containers = list(resources.containers())
+
+                    if containers:
+                        total_containers += len(containers)
+                        for container in containers:
+                            logs_buffer.append(
+                                f"\n--- Container: {container.name} ---\n"
+                            )
+                            logs_buffer.append(f"Status: {container.status}\n")
+                            logs_buffer.append(f"ID: {container.id[:12]}\n")
+                            try:
+                                logs = container.logs().decode(
+                                    "utf-8", errors="replace"
+                                )
+                                logs_buffer.append(f"\nLogs:\n{logs}\n")
+                            except Exception as log_err:
+                                logs_buffer.append(
+                                    f"\nFailed to retrieve logs: {log_err}\n"
+                                )
+                            logs_buffer.append("-" * 80 + "\n")
+                    else:
+                        logs_buffer.append("No containers found for this cluster.\n")
+                except Exception as cluster_err:
+                    logs_buffer.append(
+                        f"\nFailed to retrieve containers for cluster "
+                        f"'{cluster_name}': {cluster_err}\n"
+                    )
+
+            if total_containers == 0:
+                logs_buffer.append(
+                    "\nNo containers found across all provisioned clusters.\n"
+                )
+
+        except Exception as container_err:
+            logs_buffer.append(
+                f"\nFailed to retrieve container information: {container_err}\n"
+            )
+        finally:
+            # Restore original cluster name
+            self._ctx.cluster_name = original_cluster_name
+
+        self._captured_container_logs = "".join(logs_buffer)
 
     def _provision_workers_when_safe(self) -> None:
         """

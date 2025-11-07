@@ -157,7 +157,7 @@ remove_all_scenarios = [
         id="images",
         cmd_flags=["--images"],
         expected_remove_types=["images"],
-        label=None,
+        label=ROOT_LABEL,
         image_name=TEST_IMAGE_NAME,
         log_msg="Remove all images",
     ),

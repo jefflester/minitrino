@@ -86,6 +86,12 @@ class ModuleTest:
             )
             return False
 
+        if self._skip_ci():
+            utils.log_status(
+                f"Module '{self.module}' is configured to skip in CI, skipping test"
+            )
+            return False
+
         tests = self.json_data.get("tests", [])
         for t in tests:
             self._validate(t)
@@ -201,6 +207,26 @@ class ModuleTest:
             )
             return True
         return False
+
+    def _skip_ci(self) -> bool:
+        """
+        Skip tests in CI if configured via test JSON.
+
+        Returns
+        -------
+        bool
+            `True` if the tests should be skipped, `False` otherwise.
+
+        Notes
+        -----
+        Checks for 'skipCi' field in test JSON. If true and IS_GITHUB
+        environment variable is set to 'true', the test will be skipped.
+        This allows marking resource-intensive tests that exceed CI runner
+        constraints.
+        """
+        is_github = os.environ.get("IS_GITHUB", "").lower() == "true"
+        skip_ci = self.json_data.get("skipCi", False)
+        return is_github and skip_ci
 
     def _runner(self, tests: list[dict], workers: bool = False) -> None:
         """

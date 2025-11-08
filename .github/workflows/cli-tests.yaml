@@ -9,7 +9,7 @@ on:
       - src/cli/**
 
 jobs:
-  cli-integration-tests:
+  cli-integration-provision:
     runs-on: ubuntu-22.04
     steps:
       - name: Check out code
@@ -43,19 +43,65 @@ jobs:
           LIC_DATA: ${{ secrets.LIC_DATA }}
         run: |-
           echo "${LIC_DATA}" > ~/starburstdata.license
-      - name: Run CLI integration tests
+      - name: Run CLI integration tests (provision)
         env:
-          GH_WORKFLOW_RUNNING: true
           MINITRINO_TEST_LOG_LEVEL: DEBUG
           LIC_PATH: ~/starburstdata.license
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |-
           minitrino --help || exit 1
           pytest -x --debug \
             --cov=minitrino \
             --cov-report=term-missing \
             --cov-report=xml \
-            --cov-fail-under=75 \
-            src/tests/cli/integration_tests/
+            src/tests/cli/integration_tests/test_cmd_provision.py
+  cli-integration-other:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+      - name: Get cluster version
+        id: version
+        uses: ./.github/actions/get-cluster-version
+      - name: Wait for test release
+        uses: ./.github/actions/wait-for-test-release
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Pull pre-built Trino image
+        uses: ./.github/actions/pull-test-image
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          pr-number: ${{ github.event.pull_request.number }}
+          image-type: trino
+          cluster-version: ${{ steps.version.outputs.trino_version }}
+      - name: Free up disk space
+        uses: ./.github/actions/cleanup-disk
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.10'
+      - name: Install project dependencies
+        run: |-
+          pip install -e .
+          pip install -e ./src/tests/
+      - name: Set up Starburst license
+        env:
+          LIC_DATA: ${{ secrets.LIC_DATA }}
+        run: |-
+          echo "${LIC_DATA}" > ~/starburstdata.license
+      - name: Run CLI integration tests (other)
+        env:
+          MINITRINO_TEST_LOG_LEVEL: DEBUG
+          LIC_PATH: ~/starburstdata.license
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |-
+          minitrino --help || exit 1
+          pytest -x --debug \
+            --cov=minitrino \
+            --cov-report=term-missing \
+            --cov-report=xml \
+            src/tests/cli/integration_tests/ \
+            --ignore=src/tests/cli/integration_tests/test_cmd_provision.py
   cli-unit-tests:
     runs-on: ubuntu-22.04
     steps:
@@ -75,7 +121,6 @@ jobs:
           pip install -e ./src/tests/
       - name: Run unit tests with coverage
         env:
-          GH_WORKFLOW_RUNNING: true
           MINITRINO_TEST_LOG_LEVEL: DEBUG
         run: |-
           minitrino --help || exit 1

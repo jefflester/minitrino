@@ -449,11 +449,11 @@ def stop_docker_daemon() -> None:
     else:
         raise RuntimeError(f"Incompatible testing platform: {sys.platform}")
 
-    for _ in range(10):
+    for _ in range(60):
         if not is_docker_running():
             return
         sleep(1)
-    raise TimeoutError("Docker daemon failed to stop after force quit.")
+    raise TimeoutError("Docker daemon failed to stop after 60 seconds.")
 
 
 def get_containers(container_name: str = "", all: bool = False) -> list[Container]:

@@ -31,7 +31,6 @@ dev = [
   "black",
   "flake8",
   "isort",
-  "mdformat",
   "mypy",
   "pre-commit",
   "pydocstyle",

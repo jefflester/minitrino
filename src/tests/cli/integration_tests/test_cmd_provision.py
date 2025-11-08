@@ -711,6 +711,28 @@ def test_bootstrap() -> None:
     result = executor.exec(executor.build_cmd(**cmd_args))
     utils.assert_exit_code(result)
 
+    # Wait for POST START BOOTSTRAPS COMPLETED to ensure after_start hook finished
+    import time
+
+    max_wait = 60  # seconds
+    elapsed = 0
+    bootstrap_completed = False
+
+    container = common.get_containers(MINITRINO_CONTAINER)[0]
+    while elapsed < max_wait:
+        logs = container.logs().decode("utf-8", errors="ignore")
+        if "POST START BOOTSTRAPS COMPLETED" in logs:
+            bootstrap_completed = True
+            break
+        time.sleep(1)
+        elapsed += 1
+
+    if not bootstrap_completed:
+        raise TimeoutError(
+            f"Bootstrap scripts did not complete within {max_wait} seconds. "
+            f"Container logs:\n{logs}"
+        )
+
     # Verify bootstrap scripts executed by checking created files
     # Bootstrap only supported in minitrino container (before/after hooks)
     minitrino_bootstrap_before = common.execute_cmd(

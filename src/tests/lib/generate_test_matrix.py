@@ -4,15 +4,59 @@
 This script dynamically generates a matrix of test segments by:
 1. Fetching all available modules from minitrino
 2. Filtering based on image type (trino excludes enterprise modules)
-3. Splitting modules into chunks of specified size
-4. Outputting GitHub Actions matrix JSON
+3. Filtering out skipCi modules when running in GitHub CI
+4. Splitting modules into chunks of specified size
+5. Outputting GitHub Actions matrix JSON
 """
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from typing import Any
+
+
+def filter_skip_ci_modules(modules: list[str]) -> list[str]:
+    """
+    Filter out modules marked with skipCi: true from test JSON files.
+
+    Parameters
+    ----------
+    modules : list[str]
+        List of module names
+
+    Returns
+    -------
+    list[str]
+        Filtered list excluding modules with skipCi: true
+    """
+    # Determine path to test JSON directory
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    json_dir = os.path.join(script_dir, "json")
+
+    filtered = []
+    for module in modules:
+        json_path = os.path.join(json_dir, f"{module}.json")
+        try:
+            with open(json_path) as f:
+                data = json.load(f)
+                if not data.get("skipCi", False):
+                    filtered.append(module)
+                else:
+                    print(
+                        f"Skipping module '{module}' (skipCi: true)",
+                        file=sys.stderr,
+                    )
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            # If JSON doesn't exist or is invalid, include the module
+            print(
+                f"Warning: Could not check skipCi for '{module}': {e}",
+                file=sys.stderr,
+            )
+            filtered.append(module)
+
+    return filtered
 
 
 def get_modules(image: str) -> list[str]:
@@ -58,6 +102,11 @@ def get_modules(image: str) -> list[str]:
 
     # Exclude "test" module (used for CLI integration tests, not library tests)
     modules = [name for name in modules if name != "test"]
+
+    # Filter out skipCi modules when running in GitHub CI
+    is_github = os.environ.get("IS_GITHUB", "").lower() == "true"
+    if is_github:
+        modules = filter_skip_ci_modules(modules)
 
     # Sort for consistent ordering
     return sorted(modules)

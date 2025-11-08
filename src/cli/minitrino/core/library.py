@@ -21,6 +21,22 @@ class LibraryManager:
     def __init__(self, ctx: "MinitrinoContext"):
         self._ctx = ctx
         self.releases_url = "https://api.github.com/repos/jefflester/minitrino/releases"
+        # Only use GITHUB_TOKEN in CI to avoid rate limits during testing.
+        # Never use user's personal token without explicit consent.
+        self._github_token = (
+            os.getenv("GITHUB_TOKEN") if os.getenv("IS_GITHUB") == "true" else None
+        )
+
+    def _get_github_headers(self) -> dict:
+        """Get headers for GitHub API requests with authentication.
+
+        Note: Only uses GITHUB_TOKEN when running in CI (IS_GITHUB=true).
+        This avoids using personal tokens without user consent.
+        """
+        headers = {"Accept": "application/vnd.github.v3+json"}
+        if self._github_token:
+            headers["Authorization"] = f"Bearer {self._github_token}"
+        return headers
 
     def install(self, version: str = "") -> None:
         """Install or update the Minitrino library."""
@@ -48,9 +64,12 @@ class LibraryManager:
         """List all available releases from GitHub."""
         releases = []
         page = 1
+        headers = self._get_github_headers()
         while True:
             resp = requests.get(
-                self.releases_url, params={"per_page": 100, "page": page}
+                self.releases_url,
+                params={"per_page": 100, "page": page},
+                headers=headers,
             )
             resp.raise_for_status()
             data = resp.json()

@@ -9,4 +9,4 @@ TEST_CONTAINER = "test-cli-test"
 MINITRINO_CONTAINER = "minitrino-cli-test"
 STOPPED_CONTAINER_MSG = "Stopped container"
 REMOVED_CONTAINER_MSG = "Removed container"
-GH_WORKFLOW_RUNNING = os.environ.get("GH_WORKFLOW_RUNNING", False)
+IS_GITHUB = os.environ.get("IS_GITHUB", False)

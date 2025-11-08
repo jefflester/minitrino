@@ -140,8 +140,8 @@ class MinitrinoContext:
         """
         if self._initialized:
             raise MinitrinoError("Context has already been initialized.")
-        self.env = EnvironmentVariables(self)
         self._lib_safe = True
+        self.env = EnvironmentVariables(self)
         if version_only:
             return
         self._validate_config_file()

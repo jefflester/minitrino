@@ -26,13 +26,6 @@ repos:
     hooks:
       - id: isort
 
-  - repo: https://github.com/executablebooks/mdformat
-    rev: 0.7.22
-    hooks:
-      - id: mdformat
-        files: ^docs/
-        exclude: docs/index.md
-
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.16.1
     hooks:

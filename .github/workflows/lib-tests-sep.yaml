@@ -25,6 +25,8 @@ jobs:
           pip install -e .
       - name: Generate test matrix
         id: set-matrix
+        env:
+          IS_GITHUB: ${{ vars.IS_GITHUB }}
         run: |-
           output=$(python src/tests/lib/generate_test_matrix.py --image starburst --output github)
           matrix_line=$(echo "$output" | grep "^matrix=")
@@ -76,6 +78,8 @@ jobs:
           IMAGE=starburst
           EOF
       - name: Run library tests (Segment ${{ matrix.segment }})
+        env:
+          IS_GITHUB: ${{ vars.IS_GITHUB }}
         run: |-
           python ./src/tests/lib/runner.py \
             --debug --remove-images --image starburst \

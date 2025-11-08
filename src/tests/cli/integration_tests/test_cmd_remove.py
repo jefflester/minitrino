@@ -19,7 +19,7 @@ from tests import common
 from tests.cli.constants import (
     CLUSTER_NAME,
     CLUSTER_NAME_2,
-    GH_WORKFLOW_RUNNING,
+    IS_GITHUB,
     TEST_IMAGE_NAME,
 )
 from tests.cli.integration_tests import utils
@@ -209,7 +209,7 @@ def test_remove_all_scenarios(
     """Run each RemoveAllScenario."""
 
     if "images" in scenario.expected_remove_types:
-        if not GH_WORKFLOW_RUNNING:
+        if not IS_GITHUB:
             return
 
     append_flags: list[str] = []
@@ -743,12 +743,13 @@ def assert_resources_removed(
         utils.assert_in_output(
             f"{resource_type[:-1].capitalize()} removed:", result=result
         )
-        image_name = kwargs.get("image_name")
+        # For removal tests, only check count=0 with label filter
+        # Don't use image_names as that checks for presence, not absence
         assert_docker_resource_count(
             DockerResourceCount(
                 getattr(docker_client, resource_type),
                 kwargs.get("label", ROOT_LABEL),
                 0,
-                [image_name] if image_name else None,
+                None,
             )
         )

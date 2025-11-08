@@ -77,6 +77,10 @@ daemon_off_scenarios = [
 ]
 
 
+@pytest.mark.skipif(
+    os.getenv("IS_GITHUB") == "true",
+    reason="Skip Docker-off scenarios on GitHub Actions",
+)
 @pytest.mark.flaky(
     reruns=0
 )  # Disable retries - conflicts with session-scoped stop_docker

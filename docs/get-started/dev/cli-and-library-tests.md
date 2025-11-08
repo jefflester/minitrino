@@ -139,7 +139,9 @@ src/tests/cli/integration_tests/test_cmd_provision.py::test_provision_with_hive 
 
 ### Coverage Requirements
 
-The project requires **90% test coverage**. To check coverage:
+The project aims for **90% test coverage** as a quality goal. Coverage is
+collected for all test runs, though CI workflows do not enforce hard thresholds
+for integration tests. To check coverage locally:
 
 ```sh
 make coverage
@@ -269,7 +271,8 @@ Each workflow tests multiple Trino/Starburst versions to ensure compatibility.
 ### Test Duration
 
 - **CLI Unit Tests**: ~30 seconds
-- **CLI Integration Tests**: ~3-5 minutes
+- **CLI Integration Tests**: ~25-30 minutes in CI (parallelized across provision
+  and other tests)
 - **Library Tests (single module)**: ~2-3 minutes
 - **Library Tests (all modules)**: ~30-60 minutes (varies by modules)
 

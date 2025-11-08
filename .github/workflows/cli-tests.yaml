@@ -45,6 +45,7 @@ jobs:
           echo "${LIC_DATA}" > ~/starburstdata.license
       - name: Run CLI integration tests (provision)
         env:
+          IS_GITHUB: ${{ vars.IS_GITHUB }}
           MINITRINO_TEST_LOG_LEVEL: DEBUG
           LIC_PATH: ~/starburstdata.license
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -91,6 +92,7 @@ jobs:
           echo "${LIC_DATA}" > ~/starburstdata.license
       - name: Run CLI integration tests (other)
         env:
+          IS_GITHUB: ${{ vars.IS_GITHUB }}
           MINITRINO_TEST_LOG_LEVEL: DEBUG
           LIC_PATH: ~/starburstdata.license
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -121,6 +123,7 @@ jobs:
           pip install -e ./src/tests/
       - name: Run unit tests with coverage
         env:
+          IS_GITHUB: ${{ vars.IS_GITHUB }}
           MINITRINO_TEST_LOG_LEVEL: DEBUG
         run: |-
           minitrino --help || exit 1

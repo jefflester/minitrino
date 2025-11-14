@@ -23,9 +23,6 @@ outputs:
 runs:
   using: 'composite'
   steps:
-    - name: Check out code
-      uses: actions/checkout@v5
-
     - name: Free up disk space
       if: inputs.cleanup-disk == 'true'
       uses: ./.github/actions/cleanup-disk

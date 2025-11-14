@@ -1,6 +1,6 @@
 ---
 name: 'Setup Test Environment'
-description: 'Checkout code, setup Python, install dependencies, and wait for test release'
+description: 'Setup Python, install dependencies, and wait for test release'
 author: 'Minitrino'
 
 inputs:
@@ -26,9 +26,6 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Check out code
-      uses: actions/checkout@v5
-
     - name: Wait for test release
       uses: ./.github/actions/wait-for-test-release
       with:

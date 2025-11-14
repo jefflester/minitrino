@@ -115,6 +115,9 @@ jobs:
       contents: read
       packages: write
     steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
       - name: Setup Docker build environment
         id: setup
         uses: ./.github/actions/setup-docker-build
@@ -151,6 +154,9 @@ jobs:
       contents: read
       packages: write
     steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
       - name: Setup Docker build environment
         id: setup
         uses: ./.github/actions/setup-docker-build
@@ -187,6 +193,9 @@ jobs:
     if: always() && needs.test-release.result == 'success'
     runs-on: ubuntu-22.04
     steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
       - name: Setup test environment
         uses: ./.github/actions/setup-test-environment
         with:
@@ -211,6 +220,9 @@ jobs:
     if: always() && needs.test-release.result == 'success'
     runs-on: ubuntu-22.04
     steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
       - name: Get cluster version
         id: version
         uses: ./.github/actions/get-cluster-version
@@ -253,6 +265,9 @@ jobs:
     if: always() && needs.test-release.result == 'success'
     runs-on: ubuntu-22.04
     steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
       - name: Get cluster version
         id: version
         uses: ./.github/actions/get-cluster-version
@@ -301,6 +316,9 @@ jobs:
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
     steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
       - name: Prepare test matrix
         id: matrix
         uses: ./.github/actions/prepare-test-matrix
@@ -317,6 +335,9 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.prepare-trino-matrix.outputs.matrix) }}
     steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
       - name: Get cluster version
         id: version
         uses: ./.github/actions/get-cluster-version
@@ -361,6 +382,9 @@ jobs:
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
     steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
       - name: Prepare test matrix
         id: matrix
         uses: ./.github/actions/prepare-test-matrix
@@ -377,6 +401,9 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJson(needs.prepare-starburst-matrix.outputs.matrix) }}
     steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
       - name: Get cluster version
         id: version
         uses: ./.github/actions/get-cluster-version

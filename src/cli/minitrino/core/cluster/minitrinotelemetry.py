@@ -1,27 +1,69 @@
+from __future__ import annotations
+
+import asyncio
+import csv
 import io
+import os
+import sys
+import time
+from collections import defaultdict
+from functools import wraps
 from pathlib import Path
 from sys import platform
-import sys
-from minitrino.core.context import MinitrinoContext
-import os 
-import asyncio 
-import aiohttp
-from functools import wraps
-from logger import logger 
-from collections import defaultdict
-import time
-import csv
 
 import aiofiles
+import aiohttp
+from typing import TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    from minitrino.core.cluster.cluster import Cluster
+    from minitrino.core.context import MinitrinoContext
+
+# Decorator for CLI commands to enable telemetry
+def telemetrize(func):
+
+        """
+        Decorator to run the orchestrate_telemetry
+
+        This function wraps the ClusterOperations method and ensure the telemetry logic runs only once the full MinitrinoContext is ready
+        """
+        @wraps(func)
+        async def wrapper(self, *args, **kwargs):
+
+            #Access the global initialized telemetry object
+        
+
+           
+            # Execute the original command first
+
+            result = func(self, *args, **kwargs)
+
+            #Check if the result is an awaitable 
+            if asyncio.iscoroutine(result):
+                result = await result
+
+            #orchestrate_telmetry is async, so we'll await it
+            # Use self to call it
+            if hasattr(self, 'telmetry') and isinstance(self.telemetry, MinitrinoTelemetry):
+                await self.telemetry.orchestrate_telemetry()
+            else:
+                print("Telemetyr instance not found on CLusterOperations instance.")
+
+            #Return Original Result
+            return result
+        return wrapper
+
+
 
 class MinitrinoTelemetry:
-    def __init__(self):
-        self.ctx: MinitrinoContext = MinitrinoContext()
+    def __init__(self, ctx: MinitrinoContext):
+        self._ctx = ctx
+
         self.enabled = self._is_enabled()
         self.endpoint = os.getenv("MINITRINO_TELMETRY_ENDPOINT","http://localhost:5432")
 
     def _is_enabled(self) -> bool:
-        return self.ctx.env.get("MINITRINO_TELEMETRY", "true") == "true"
+        return self._ctx.env.get("MINITRINO_TELEMETRY", "true") == "true"
     
     def create_payload(self, command, os_name, os_version, python_version):
         """Create a telemetry payload."""
@@ -44,10 +86,10 @@ class MinitrinoTelemetry:
         try:
             return await response.json()
         except aiohttp.ContentTypeError:
-            self.ctx.logger.log("Received a non-JSON response from the server")
+            self._ctx.logger.log("Received a non-JSON response from the server")
             return {"message": await response.txt()}
         except Exception as e:
-            self.ctx.logger.log(f"Failed to decode JSON response: {e}")
+            self._ctx.logger.log(f"Failed to decode JSON response: {e}")
             return {"error": "Failed to decode JSON response"}
 
 
@@ -76,7 +118,7 @@ class MinitrinoTelemetry:
                 saferesponse = await self.jsonDecoder(response)
                 return response.status, saferesponse
             except aiohttp.ClientError as e:
-                self.ctx.logger.log(f"Request failed with aiohttp.ClientError: {e}. Retrying in {delay**retry}s")
+                self._ctx.logger.log(f"Request failed with aiohttp.ClientError: {e}. Retrying in {delay**retry}s")
                 await asyncio.sleep(delay ** retry)
         return 500, {"error": "Could not send request"}
 
@@ -95,7 +137,7 @@ class MinitrinoTelemetry:
         # if moduels are found, check fif they are the standard library
         # if it's custom, replace module name with custom
 
-        command = self.ctx.command.name
+        command = self._ctx.command.name
         #command_options = self.ctx.paramas
      
         # --- Get System/App Details ---
@@ -118,42 +160,19 @@ class MinitrinoTelemetry:
             status, response = await self.batch_to_db()
 
         except Exception as e:
-            self.ctx.logger.log(f"this is the error {e}")
+            self._ctx.logger.log(f"this is the error {e}")
 
         
         if status == 200:
-            self.ctx.logger.log("Telemetry data sent successfully.")
+            self._ctx.logger.log("Telemetry data sent successfully.")
             return True, response
         else:
-            self.ctx.logger.log(f"Telemetry payload not send due to network error. status: {status}, response: {response}")
+            self._ctx.logger.log(f"Telemetry payload not send due to network error. status: {status}, response: {response}")
             return False, response
     
 
 
-    # Decorator for CLI commands to enable telemetry
-    def telemetrize(self, func):
-
-        """
-        Decorator to run the orchestrate_telemetry
-        """
-        @wraps(func)
-        async def wrapper(*args, **kwargs):
-            # Execute the original command first
-
-            result = func(*args, **kwargs)
-
-            #Check if the result is an awaitable 
-            if asyncio.iscoroutine(result):
-                result = await result
-
-            #orchestrate_telmetry is async, so we'll await it
-            # Use self to call it
-            await self.orchestrate_telemetry()
-
-            #Return Original Result
-            return result
-        return wrapper
-
+    
         # Pull out the command name from Click
         # Pull out command options
         # If provision command and modules are present, grab the modules
@@ -196,7 +215,7 @@ class MinitrinoTelemetry:
 
         
         except Exception as e:
-            self.ctx.logger.log(f"Failed to write record to file: {e}")
+            self._ctx.logger.log(f"Failed to write record to file: {e}")
 
         
         # if ~/.minitrino/telemetry/telemetry.csv exists, append to it
@@ -246,7 +265,7 @@ class MinitrinoTelemetry:
                     return status,response
 
         except Exception as e:
-            self.ctx.logger.log(f"An error occured: {e}")
+            self._ctx.logger.log(f"An error occured: {e}")
             
 
 

@@ -1,9 +1,12 @@
 # tests/test_telemetry.py
-import unittest
 import os
+import unittest
+from unittest.mock import AsyncMock, patch
+
 import aiohttp
-from unittest.mock import patch, AsyncMock
+
 from minitrino.telemetry import Telemetry
+
 
 # A test that checks if the Telemetry class is enabled by default.
 def test_telemetry_is_enabled(self):
@@ -12,9 +15,8 @@ def test_telemetry_is_enabled(self):
     self.assertTrue(telemetry.is_telemetry_enabled())
 
 
-
 # A test that checks if the send_telemetry function is making a network request.
-@patch('aiohttp.ClientSession.post', new_callable=AsyncMock)
+@patch("aiohttp.ClientSession.post", new_callable=AsyncMock)
 async def test_send_telemetry_makes_network_request(self, mock_post):
     # We need to mock the environment variable to enable telemetry.
     os.environ["MINITRINO_TELEMETRY"] = "true"
@@ -32,7 +34,7 @@ async def test_send_telemetry_makes_network_request(self, mock_post):
 
 
 # A test that checks if the send_telemetry function is resilient to network errors.
-@patch('aiohttp.ClientSession.post', new_callable=AsyncMock)
+@patch("aiohttp.ClientSession.post", new_callable=AsyncMock)
 async def test_send_telemetry_handles_network_error(self, mock_post):
     # The mock will raise a ClientError.
     mock_post.side_effect = aiohttp.ClientError

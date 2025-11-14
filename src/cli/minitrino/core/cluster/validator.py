@@ -31,7 +31,8 @@ class ClusterValidator:
         environment variables meet minimum requirements for either Trino
         or Starburst distributions.
     check_dependent_clusters(modules: Optional[list[str]] = None)
-        Identify dependent clusters for the specified modules.
+        Identify dependent clust
+        ers for the specified modules.
     check_dup_config()
         Check for duplicate entries in `config.properties` and
         `jvm.config` and log warnings if duplicates are found.

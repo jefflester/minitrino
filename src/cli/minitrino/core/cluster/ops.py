@@ -1,13 +1,14 @@
 """Cluster operations and resource management for Minitrino clusters."""
 
 from __future__ import annotations
-from minitrinotelemetry import MinitrinoTelemetry
 
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import TYPE_CHECKING, Optional
 
 from docker.errors import APIError, NotFound
+from minitrino.core.cluster.minitrinotelemetry import MinitrinoTelemetry
+from minitrino.core.cluster.minitrinotelemetry import telemetrize
 
 from minitrino import utils
 from minitrino.core.docker.wrappers import (
@@ -28,9 +29,9 @@ if TYPE_CHECKING:
     from minitrino.core.cluster.cluster import Cluster
     from minitrino.core.context import MinitrinoContext
 
-telemetry = MinitrinoTelemetry()
 
-
+global Telemetry
+Telemetry = None
 class ClusterOperations:
     """
     Cluster operations manager for the current cluster.
@@ -65,10 +66,14 @@ class ClusterOperations:
         Provisions or adjusts worker containers based on the specified
         number.
     """
-
+    
     def __init__(self, ctx: MinitrinoContext, cluster: Cluster):
         self._ctx = ctx
         self._cluster = cluster
+        global Telemetry
+        Telemetry = MinitrinoTelemetry(ctx)
+        
+       
 
     def down(self, sig_kill: bool = False, keep: bool = False) -> None:
         """
@@ -299,8 +304,8 @@ class ClusterOperations:
                 self._ctx.logger.debug(f"Rolled back {repr(c)}")
             except Exception:
                 pass
-    
-    @tele.telemetrize()
+
+    @telemetrize
     def provision_workers(self, workers: int = 0) -> None:
         """Reconcile number of workers with the specified number."""
         # Handles five scenarios:

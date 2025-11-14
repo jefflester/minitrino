@@ -1,11 +1,11 @@
 """Minitrino CLI entrypoint."""
 
+import asyncio
 import difflib
 import os
 import sys
 from importlib import import_module
 from typing import Any
-import asyncio
 
 import click
 
@@ -13,8 +13,6 @@ from minitrino import utils
 from minitrino.core import logger as minitrino_logger
 from minitrino.core.context import MinitrinoContext
 from minitrino.core.logger import LogLevel, MinitrinoLogger
-from minitrino.core.cluster.telemetry import Telemetry
-from minitrino.core.cluster.telemetry import Batcher
 
 
 class CommandLineInterface(click.MultiCommand):
@@ -47,6 +45,7 @@ class CommandLineInterface(click.MultiCommand):
             logger.error(f"No 'cli' object in {mod_name}")
             sys.exit(1)
         return cmd
+
 
 @click.command(cls=CommandLineInterface)
 @click.option(
@@ -95,8 +94,6 @@ class CommandLineInterface(click.MultiCommand):
     type=str,
     help="Sets the cluster name. Defaults to 'default'.",
 )
-
-
 @utils.exception_handler
 @utils.pass_environment()
 def cli(
@@ -120,7 +117,6 @@ def cli(
     minitrino_logger.configure_logging(
         effective_log_level, global_logging=global_logging
     )
-
 
 
 def display_version(ctx: click.Context) -> None:

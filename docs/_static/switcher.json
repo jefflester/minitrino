@@ -1,11 +1,16 @@
 [
   {
-    "version": "latest",
-    "url": "https://minitrino.readthedocs.io/en/latest/"
-  },
-  {
     "version": "3.0.0",
     "url": "https://minitrino.readthedocs.io/en/3.0.0/",
     "preferred": true
+  },
+  {
+    "version": "master",
+    "url": "https://minitrino.readthedocs.io/en/master/",
+    "preferred": true
+  },
+  {
+    "version": "latest",
+    "url": "https://minitrino.readthedocs.io/en/latest/"
   }
 ]

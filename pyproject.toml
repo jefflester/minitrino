@@ -8,11 +8,11 @@ authors = [
 ]
 description = "A command line tool that makes it easy to run modular Trino environments locally."
 dependencies = [
-  "PyYAML",
+  "PyYAML>=6.0.1",
   "click==8.1.8",
   "docker==7.1.0",
   "humanize",
-  "jsonschema",
+  "jsonschema>=4.18.0",
   "python-dateutil",
   "requests>=2.32.2",
   "tabulate"

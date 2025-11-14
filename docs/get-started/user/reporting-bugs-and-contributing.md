@@ -24,6 +24,20 @@ the PR. PRs will never be merged directly to `master`; they are merged into a
 release branch. To learn more about PR and release workflows, visit the
 [GitHub workflows overview](../dev/github-workflows).
 
+### Development Environment Setup
+
+After forking or cloning the repository:
+
+1. Run `./install.sh` to set up the development environment
+1. Dependencies are managed in `pyproject.toml`
+1. Run `make pre-commit` to lint changes before committing
+
+All dependency updates are managed through Dependabot, which creates automated
+pull requests. Contributors should not manually update dependency versions
+unless addressing a specific security vulnerability or bug.
+
+### Testing Requirements
+
 If your contribution modifies or adds modules to the library, you must add
 [library tests](../dev/cli-and-library-tests.md#library-tests) for all affected
 modules.

@@ -59,3 +59,35 @@ Upon completion of the code tests and the merging of a feature branch PR into
 - Creates a release whose name matches the name of the PR branch (e.g. `3.0.0`)
 - Publishes the release and marks it as `latest`
 - Builds the CLI package and publishes it to PyPi
+
+## Automated Dependency Updates
+
+Dependabot is configured to automatically monitor and update dependencies across
+the project. Updates are proposed via pull requests on a weekly schedule
+(Mondays).
+
+### Monitored Ecosystems
+
+- **Python packages** (pyproject.toml): Groups type stubs, documentation deps,
+  and dev tools together. Security-critical dependencies (docker, click,
+  requests, PyYAML) create individual PRs for visibility.
+- **GitHub Actions** (workflow files): Groups Docker actions and GitHub official
+  actions separately.
+- **Docker images** (Dockerfiles): Monitors base images in
+  `src/lib/image/Dockerfile` and `install/docs/Dockerfile`.
+
+### Manual Updates Required
+
+Docker image versions in `src/lib/minitrino.env` (e.g., `POSTGRES_VER`,
+`MINIO_VER`) are not auto-detected by Dependabot and require periodic manual
+review and updates.
+
+### Reviewing Dependabot PRs
+
+When reviewing Dependabot PRs:
+
+1. Verify CI tests pass
+1. Review changelog and breaking changes
+1. For grouped updates (dev tools, docs deps), quick review is sufficient
+1. For security-critical deps, perform thorough testing with affected CLI
+   commands

@@ -27,8 +27,7 @@ from minitrino.core.context import MinitrinoContext
 @utils.exception_handler
 @utils.pass_environment()
 def cli(ctx: MinitrinoContext, version: str, list_releases: bool) -> None:
-    """
-    Install the Minitrino library from a tagged GitHub release.
+    """Install the Minitrino library from a tagged GitHub release.
 
     If a library directory already exists, prompt the user for
     permission before overwriting it. The version defaults to the

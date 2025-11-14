@@ -2,7 +2,7 @@
 
 Configures the file-based
 [session property manager](https://trino.io/docs/current/admin/session-property-managers.html)
-in the cluste.
+in the cluster.
 
 ## Usage
 

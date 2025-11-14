@@ -10,7 +10,6 @@ description = "A command line tool that makes it easy to run modular Trino envir
 dependencies = [
   "PyYAML",
   "click==8.1.8",
-  "colorama",
   "docker==7.1.0",
   "humanize",
   "jsonschema",
@@ -22,7 +21,7 @@ keywords = ["docker", "minitrino", "starburst", "trino"]
 license = {text = "Apache-2.0"}
 name = "minitrino"
 readme = "readme.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10.12"
 urls = {"Homepage" = "https://github.com/jefflester/minitrino"}
 version = "3.0.1"
 
@@ -87,8 +86,7 @@ select = [
   "ASYNC",  # flake8-async
 ]
 ignore = [
-  "E203",   # whitespace before ':'
-  "W503",   # line break before binary operator
+  # Note: E203 and W503 are not needed in Ruff (handled by formatter)
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -114,6 +112,24 @@ python_version = "3.10"
 
 [tool.pydocstyle]
 convention = "numpy"
+
+[tool.deptry]
+exclude = [
+  "src/tests",
+  "docs",
+  ".precommit",
+]
+extend_exclude = [
+  "venv",
+  ".venv",
+  "build",
+  "dist",
+  ".eggs",
+]
+# Tell deptry that dev and docs dependencies are for tooling, not code imports
+pep621_dev_dependency_groups = ["dev", "docs"]
+# Known first-party packages (not transitive)
+known_first_party = ["minitrino", "tests"]
 
 [tool.setuptools]
 package-dir = {"" = "src/cli"}

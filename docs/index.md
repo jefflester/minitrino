@@ -71,23 +71,26 @@ validating configurations before production deployment—all with minimal setup
 and no cloud costs.
 
 ```{toctree}
-:caption: Getting Started
-
+---
+caption: Getting Started
+---
 get-started/index
 ```
 
 ```{toctree}
-:caption: Modules
-:hidden:
-
+---
+caption: Modules
+hidden:
+---
 modules/index
 ```
 
 ```{toctree}
-:caption: API Reference
-:maxdepth: 4
-:hidden:
-:glob:
-
+---
+caption: API Reference
+maxdepth: 4
+hidden:
+glob:
+---
 api/index
 ```

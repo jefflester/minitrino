@@ -5,8 +5,7 @@ from enum import Enum
 
 
 class LogLevel(Enum):
-    """
-    Logging levels for Minitrino.
+    """Logging levels for Minitrino.
 
     Attributes
     ----------

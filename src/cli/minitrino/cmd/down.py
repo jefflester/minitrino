@@ -34,8 +34,7 @@ from minitrino.core.context import MinitrinoContext
 @utils.exception_handler
 @utils.pass_environment()
 def cli(ctx: MinitrinoContext, sig_kill: bool, keep: bool) -> None:
-    """
-    Stop running containers.
+    """Stop running containers.
 
     Parameters
     ----------

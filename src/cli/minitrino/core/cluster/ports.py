@@ -1,15 +1,14 @@
 """Port management for Minitrino clusters.
 
-This module provides classes and functions to manage port assignments
-for Minitrino clusters, including dynamic port assignment and handling
-user overrides.
+This module provides classes and functions to manage port assignments for Minitrino
+clusters, including dynamic port assignment and handling user overrides.
 """
 
 from __future__ import annotations
 
 import re
 import socket
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from minitrino.core.errors import UserError
 
@@ -19,8 +18,7 @@ if TYPE_CHECKING:
 
 
 class ClusterPortManager:
-    """
-    Manage cluster ports for the current cluster.
+    """Manage cluster ports for the current cluster.
 
     Parameters
     ----------
@@ -35,9 +33,8 @@ class ClusterPortManager:
         self._ctx = ctx
         self._cluster = cluster
 
-    def set_external_ports(self, modules: Optional[list[str]] = None) -> None:
-        """
-        Dynamically assign host ports to containers.
+    def set_external_ports(self, modules: list[str] | None = None) -> None:
+        """Dynamically assign host ports to containers.
 
         Parameters
         ----------
@@ -70,7 +67,7 @@ class ClusterPortManager:
                         f"correct variable name and ensure a default value is "
                         f"set as an environment variable. See the wiki for more "
                         f"information: TODO: link\n{e}",
-                    )
+                    ) from e
                 self._assign_port(container_name, host_port_var_name, int(default_port))
 
     def _is_port_in_use(self, port: int) -> bool:
@@ -95,7 +92,7 @@ class ClusterPortManager:
         return False
 
     def _find_next_available_port(
-        self, default_port: int, exclude_var: Optional[str] = None
+        self, default_port: int, exclude_var: str | None = None
     ) -> int:
         """Find the next available port on the host."""
         candidate_port = default_port
@@ -112,7 +109,7 @@ class ClusterPortManager:
         return candidate_port
 
     def _is_port_assigned_in_session(
-        self, port: int, exclude_var: Optional[str] = None
+        self, port: int, exclude_var: str | None = None
     ) -> bool:
         """Check if a port has been assigned in the current session."""
         for env_var, env_value in self._ctx.env.items():

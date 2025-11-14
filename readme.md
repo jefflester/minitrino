@@ -20,11 +20,11 @@ Tests](https://github.com/jefflester/minitrino/actions/workflows/lib-tests-trino
 [![Trino
 Slack](https://img.shields.io/static/v1?logo=slack&logoColor=959DA5&label=Slack&labelColor=333a41&message=join%20conversation&color=3AC358)](https://trinodb.io/slack.html)
 
------
+______________________________________________________________________
 
 **Latest Stable Release**: 3.0.1
 
------
+______________________________________________________________________
 
 ## Quick Start
 

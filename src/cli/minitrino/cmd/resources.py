@@ -4,7 +4,7 @@ import sys
 import textwrap
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 import click
 import humanize
@@ -71,23 +71,25 @@ def cli(
     if fetch_containers:
         containers = resources.containers()
         containers = sorted(containers, key=lambda c: (c.cluster_name, c.name))
-        with ctx.logger.spinner("Fetching container stats..."):
-            with ThreadPoolExecutor(max_workers=8) as executor:
-                future_to_container = {
-                    executor.submit(get_container_stats, c): c for c in containers
-                }
-                for future in as_completed(future_to_container):
-                    if shutdown_event.is_set():
-                        ctx.logger.warn(
-                            "Shutdown detected. Aborting container stats fetch."
-                        )
-                        break
-                    container = future_to_container[future]
-                    try:
-                        stats = future.result()
-                    except Exception:
-                        stats = {"memory": "N/A", "cpu": "N/A"}
-                    container_stats[container.id] = stats
+        with (
+            ctx.logger.spinner("Fetching container stats..."),
+            ThreadPoolExecutor(max_workers=8) as executor,
+        ):
+            future_to_container = {
+                executor.submit(get_container_stats, c): c for c in containers
+            }
+            for future in as_completed(future_to_container):
+                if shutdown_event.is_set():
+                    ctx.logger.warn(
+                        "Shutdown detected. Aborting container stats fetch."
+                    )
+                    break
+                container = future_to_container[future]
+                try:
+                    stats = future.result()
+                except Exception:
+                    stats = {"memory": "N/A", "cpu": "N/A"}
+                container_stats[container.id] = stats
         for c in containers:
             cluster = c.cluster_name
             created = parse_date(c.attrs["Created"])
@@ -140,7 +142,7 @@ def cli(
             cluster = v.cluster_name
             created_str = v.attrs.get("CreatedAt")
             try:
-                vol_created: Optional[datetime] = (
+                vol_created: datetime | None = (
                     parse_date(created_str) if created_str else None
                 )
                 age = (
@@ -204,7 +206,7 @@ def cli(
         sys.stdout.write(full_output + "\n")
 
 
-def render_table(rows: Optional[list[list[Any]]], headers: list[str]):
+def render_table(rows: list[list[Any]] | None, headers: list[str]):
     """Render a table of resources.
 
     Parameters

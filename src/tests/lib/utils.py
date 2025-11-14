@@ -98,8 +98,7 @@ def dump_container_logs(debug=False) -> None:
 
 
 def record_failed_test(test_name: str, first: bool = False) -> None:
-    """
-    Record a failed test.
+    """Record a failed test.
 
     Parameters
     ----------
@@ -122,7 +121,7 @@ def get_failed_tests() -> list[str]:
     """Get the list of failed tests."""
     _file = os.path.join(common.MINITRINO_USER_DIR, ".lastfailed")
     try:
-        with open(_file, "r") as f:
+        with open(_file) as f:
             return f.read().splitlines()
     except Exception as e:
         logger.error(f"Failed to get failed tests: {e}")

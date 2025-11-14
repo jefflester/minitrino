@@ -1,6 +1,5 @@
 import os
 from dataclasses import dataclass
-from typing import Optional
 
 import pytest
 
@@ -14,8 +13,7 @@ executor = common.MinitrinoExecutor(utils.CLUSTER_NAME)
 
 @dataclass
 class DaemonOffScenario:
-    """
-    Daemon off scenario.
+    """Daemon off scenario.
 
     Parameters
     ----------
@@ -33,7 +31,7 @@ class DaemonOffScenario:
 
     id: str
     cmd: dict
-    input_val: Optional[str]
+    input_val: str | None
     expected_exit_code: int
     log_msg: str
 
@@ -101,8 +99,7 @@ def test_daemon_off_scenarios(scenario: DaemonOffScenario) -> None:
 
 @dataclass
 class EnvScenario:
-    """
-    Env scenario.
+    """Env scenario.
 
     Parameters
     ----------
@@ -203,8 +200,7 @@ def test_env_scenarios(scenario: EnvScenario) -> None:
 
 @dataclass
 class InvalidEnvScenario:
-    """
-    Invalid environment variable scenario.
+    """Invalid environment variable scenario.
 
     Parameters
     ----------
@@ -253,8 +249,7 @@ def test_invalid_env_scenarios(scenario: InvalidEnvScenario) -> None:
 
 @dataclass
 class InvalidLibScenario:
-    """
-    Invalid library scenario.
+    """Invalid library scenario.
 
     Parameters
     ----------
@@ -311,10 +306,7 @@ TEST_MULTI_ENV_MSG = "Pass in multiple environment variables"
 @pytest.mark.usefixtures("cleanup_config")
 @pytest.mark.parametrize("log_msg", [TEST_MULTI_ENV_MSG], indirect=True)
 def test_multiple_env() -> None:
-    """
-    Verify that multiple environment variables can be successfully
-    passed in.
-    """
+    """Verify that multiple environment variables can be successfully passed in."""
     result = executor.exec(
         executor.build_cmd(
             "modules",

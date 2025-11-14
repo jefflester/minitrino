@@ -108,7 +108,7 @@ class LibraryManager:
             self._cleanup(tarball, file_basename)
         except Exception as e:
             self._cleanup(tarball, file_basename, False)
-            raise MinitrinoError(str(e))
+            raise MinitrinoError(str(e)) from e
 
     def _download_file(self, url: str, dest_path: str) -> None:
         """Download a file from URL to destination path."""
@@ -126,8 +126,7 @@ class LibraryManager:
             tar.extractall(path=extract_dir, filter="fully_trusted")
 
     def auto_install_or_update(self) -> None:
-        """
-        Automatically install or update Minitrino libraries to match the CLI version.
+        """Automatically install or update Minitrino libraries to match the CLI version.
 
         This method checks if the Minitrino library is installed and if its version
         matches the CLI version. If not installed, it will automatically install the

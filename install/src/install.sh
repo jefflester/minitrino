@@ -61,7 +61,7 @@ find_python() {
     while IFS= read -r line; do
         [ -n "$line" ] && homebrew_candidates+=("$line")
     done < <(ls /opt/homebrew/bin/python3.1* 2>/dev/null || true)
-    
+
     usr_local_candidates=()
     while IFS= read -r line; do
         [ -n "$line" ] && usr_local_candidates+=("$line")
@@ -74,22 +74,22 @@ find_python() {
     )
 
     candidates=()
-    
+
     # Add dynamic candidates if any
     if [[ ${#dynamic_candidates[@]} -gt 0 ]]; then
         candidates+=("${dynamic_candidates[@]}")
     fi
-    
+
     # Add homebrew candidates if any
     if [[ ${#homebrew_candidates[@]} -gt 0 ]]; then
         candidates+=("${homebrew_candidates[@]}")
     fi
-    
+
     # Add usr/local candidates if any
     if [[ ${#usr_local_candidates[@]} -gt 0 ]]; then
         candidates+=("${usr_local_candidates[@]}")
     fi
-    
+
     # Add static candidates
     candidates+=("${static_candidates[@]}")
 

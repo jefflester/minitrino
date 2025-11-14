@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import threading
-from typing import TYPE_CHECKING, Any, Callable, Iterator, Tuple
+from collections.abc import Callable, Iterator
+from typing import TYPE_CHECKING, Any
 
 from minitrino.core.errors import MinitrinoError
 from minitrino.core.exec.container import ContainerCommandExecutor
@@ -15,15 +16,13 @@ if TYPE_CHECKING:
 
 
 class CommandExecutor:
-    """
-    Execute commands in a subprocess or within a Docker container.
+    """Execute commands in a subprocess or within a Docker container.
 
     This is a thin dispatcher that delegates to HostCommandExecutor or
-    ContainerCommandExecutor based on the presence of the 'container'
-    kwarg.
+    ContainerCommandExecutor based on the presence of the 'container' kwarg.
     """
 
-    def __init__(self, ctx: "MinitrinoContext") -> None:
+    def __init__(self, ctx: MinitrinoContext) -> None:
         self._ctx = ctx
 
     def execute(
@@ -31,8 +30,7 @@ class CommandExecutor:
         *args: list[str],
         **kwargs: Any,
     ) -> list[CommandResult]:
-        """
-        Execute commands in a subprocess or within a container.
+        """Execute commands in a subprocess or within a container.
 
         Keyword Arguments
         -----------------
@@ -58,7 +56,7 @@ class CommandExecutor:
         results = []
         for command in args:
             try:
-                if kwargs.get("container", None):
+                if kwargs.get("container"):
                     result = ContainerCommandExecutor(self._ctx).execute(
                         command, **kwargs
                     )
@@ -86,8 +84,7 @@ class CommandExecutor:
         *args: list[str],
         **kwargs: Any,
     ) -> Iterator[str]:
-        """
-        Stream output from subprocesses or commands inside containers.
+        """Stream output from subprocesses or commands inside containers.
 
         Parameters
         ----------
@@ -103,7 +100,7 @@ class CommandExecutor:
         """
         interactive = kwargs.pop("interactive", False)
         for command in args:
-            if kwargs.get("container", None):
+            if kwargs.get("container"):
                 yield from ContainerCommandExecutor(self._ctx).stream_execute(
                     command, **kwargs
                 )
@@ -123,9 +120,8 @@ class CommandExecutor:
         self,
         command: list[str],
         **kwargs: Any,
-    ) -> Tuple[Iterator[str], threading.Event, Callable[[], CommandResult]]:
-        """
-        Stream output with immediate access to exit code and completion status.
+    ) -> tuple[Iterator[str], threading.Event, Callable[[], CommandResult]]:
+        """Stream output with immediate access to exit code and completion status.
 
         This method enables fast failure detection by providing both streaming
         output and immediate access to process/command completion status and
@@ -155,7 +151,7 @@ class CommandExecutor:
         MinitrinoError
             If the command is not a list for host execution.
         """
-        if kwargs.get("container", None):
+        if kwargs.get("container"):
             return ContainerCommandExecutor(self._ctx).stream_execute_with_result(
                 command, **kwargs
             )

@@ -30,6 +30,6 @@ SHOW SCHEMAS FROM stargate_parallel;
 The remote cluster depends on the following modules:
 
 - [`hive`](./hive.md#hive-catalog)
-- [`password-file`](../security/password-file.md#password-file-catalog)
-- [`spooling-protocol`](../admin/spooling-protocol.md#spooling-protocol-catalog):
-  Required specifically for the parallel connector.
+- [`password-file`](../security/password-file.md)
+- [`spooling-protocol`](../admin/spooling-protocol.md): Required specifically for
+  the parallel connector.

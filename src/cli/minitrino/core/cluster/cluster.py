@@ -14,8 +14,7 @@ if TYPE_CHECKING:
 
 
 class Cluster:
-    """
-    Exposes various cluster operations.
+    """Exposes various cluster operations.
 
     Parameters
     ----------

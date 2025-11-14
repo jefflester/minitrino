@@ -10,14 +10,13 @@ This module provides foundational infrastructure for unit testing including:
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Type
+from typing import Any
 from unittest.mock import Mock, patch
 
 import docker
 import pytest
 from click.testing import CliRunner
 from docker.models.containers import Container
-
 from minitrino.core.cluster.cluster import Cluster
 from minitrino.core.context import MinitrinoContext
 from minitrino.core.logging.logger import MinitrinoLogger
@@ -80,11 +79,11 @@ class MockMinitrinoContext:
 
     def __init__(
         self,
-        cluster: Optional[str] = "test",
-        env: Optional[Dict[str, str]] = None,
-        modules: Optional[List[str]] = None,
+        cluster: str | None = "test",
+        env: dict[str, str] | None = None,
+        modules: list[str] | None = None,
         verbose: bool = False,
-        lib_dir: Optional[Path] = None,
+        lib_dir: Path | None = None,
     ):
         """Initialize mock context with configurable components."""
         self.cluster_name = cluster
@@ -130,7 +129,7 @@ class MockMinitrinoContext:
         cluster.get_container = Mock(return_value=None)
         return cluster
 
-    def _create_mock_modules(self, module_names: List[str]) -> Mock:
+    def _create_mock_modules(self, module_names: list[str]) -> Mock:
         """Create mock modules object."""
         modules = Mock(spec=Modules)
         modules.module_names = module_names
@@ -163,12 +162,12 @@ class ModuleMetadata:
 
     name: str
     description: str = "Test module"
-    dependencies: List[str] = field(default_factory=list)
-    incompatibilities: List[str] = field(default_factory=list)
+    dependencies: list[str] = field(default_factory=list)
+    incompatibilities: list[str] = field(default_factory=list)
     enterprise: bool = False
-    compose_file: Optional[str] = None
+    compose_file: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary format."""
         data = {
             "description": self.description,
@@ -195,8 +194,8 @@ class TestDataFactory:
 
     @staticmethod
     def create_environment_variables(
-        base_env: Optional[Dict[str, str]] = None, **kwargs
-    ) -> Dict[str, str]:
+        base_env: dict[str, str] | None = None, **kwargs
+    ) -> dict[str, str]:
         """Create environment variables dict for testing."""
         env = base_env or {}
         env.update(kwargs)
@@ -207,7 +206,7 @@ class TestDataFactory:
     def create_mock_container(
         name: str = "test-container",
         status: str = "running",
-        labels: Optional[Dict[str, str]] = None,
+        labels: dict[str, str] | None = None,
     ) -> Mock:
         """Create a mock Docker container."""
         container = Mock(spec=Container)
@@ -224,7 +223,7 @@ class TestDataFactory:
         return container
 
     @staticmethod
-    def create_docker_compose_yaml(services: List[str]) -> str:
+    def create_docker_compose_yaml(services: list[str]) -> str:
         """Create a minimal Docker Compose YAML for testing."""
         yaml_content = "version: '3.8'\nservices:\n"
         for service in services:
@@ -234,9 +233,9 @@ class TestDataFactory:
     @staticmethod
     def create_cluster_config(
         cluster_name: str = "test",
-        modules: Optional[List[str]] = None,
-        env: Optional[Dict[str, str]] = None,
-    ) -> Dict[str, Any]:
+        modules: list[str] | None = None,
+        env: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
         """Create a cluster configuration for testing."""
         return {
             "cluster": cluster_name,
@@ -252,7 +251,7 @@ class MinitrinoAssertions:
     def assert_valid_cluster_state(
         cluster: Cluster,
         expected_name: str,
-        expected_containers: Optional[List[str]] = None,
+        expected_containers: list[str] | None = None,
     ):
         """Assert that cluster is in valid state."""
         assert cluster.name == expected_name
@@ -266,8 +265,8 @@ class MinitrinoAssertions:
     @staticmethod
     def assert_error_type(
         func: Any,  # Using Any since Callable requires parameters
-        error_class: Type[Exception],
-        message_pattern: Optional[str] = None,
+        error_class: type[Exception],
+        message_pattern: str | None = None,
     ):
         """Assert that function raises expected error type."""
         with pytest.raises(error_class) as exc_info:
@@ -285,13 +284,13 @@ class MinitrinoAssertions:
         """Assert that logger was called with expected message."""
         method = getattr(logger_mock, level)
         calls = method.call_args_list
-        assert any(
-            message in str(call) for call in calls
-        ), f"Expected '{message}' in {level} logs, got: {calls}"
+        assert any(message in str(call) for call in calls), (
+            f"Expected '{message}' in {level} logs, got: {calls}"
+        )
 
     @staticmethod
     def assert_env_var_set(
-        env: Dict[str, str],
+        env: dict[str, str],
         key: str,
         expected_value: str,
     ):
@@ -301,7 +300,7 @@ class MinitrinoAssertions:
 
     @staticmethod
     def assert_module_valid(
-        module_metadata: Dict[str, Any],
+        module_metadata: dict[str, Any],
         expected_name: str,
     ):
         """Assert that module metadata is valid."""

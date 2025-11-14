@@ -4,7 +4,6 @@ Tests custom exception classes and error formatting.
 """
 
 import pytest
-
 from minitrino.core.errors import MinitrinoError, UserError
 
 
@@ -153,7 +152,7 @@ class TestErrorUsagePatterns:
 
         try:
             function_that_fails()
-            assert False, "Should have raised"
+            raise AssertionError("Should have raised")
         except UserError as e:
             assert "Invalid module name" in str(e)
             assert "Use 'minitrino modules' to see available modules" in str(e)

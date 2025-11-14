@@ -101,9 +101,11 @@ class TestEnvironmentVariablesSimple:
         with patch("minitrino.core.envvars.utils.parse_key_value_pair") as mock_parse:
             mock_parse.return_value = ("KEY", "user_value")
 
-            with patch.dict(os.environ, {"KEY": "os_value"}):
-                with patch.object(EnvironmentVariables, "_parse_minitrino_config"):
-                    env = EnvironmentVariables(mock_ctx)
+            with (
+                patch.dict(os.environ, {"KEY": "os_value"}),
+                patch.object(EnvironmentVariables, "_parse_minitrino_config"),
+            ):
+                env = EnvironmentVariables(mock_ctx)
 
             # User value should win
             assert env["KEY"] == "user_value"

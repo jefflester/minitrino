@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Tarball Naming and Directory Permutations.
+"""Tarball Naming and Directory Permutations.
 
 This script supports downloading and unpacking Trino and Starburst
 tarballs. The tarball file name and unpack directory structure depend on
@@ -57,16 +56,14 @@ import sys
 import tarfile
 import time
 import urllib.request
-from typing import Tuple
 
 LOG_PREFIX = "[downloader]"
 TRINO_URL = "https://repo1.maven.org/maven2/io/trino/trino-server"
 STARBURST_URL = "https://s3.us-east-2.amazonaws.com/software.starburstdata.net"
 
 
-def get_arch() -> Tuple[str, str]:
-    """
-    Detect the current system architecture.
+def get_arch() -> tuple[str, str]:
+    """Detect the current system architecture.
 
     Returns
     -------
@@ -90,9 +87,8 @@ def get_arch() -> Tuple[str, str]:
 
 def resolve_tarball_info(
     cluster_dist: str, cluster_ver: str
-) -> Tuple[str, str, str, str]:
-    """
-    Resolve the tarball info.
+) -> tuple[str, str, str, str]:
+    """Resolve the tarball info.
 
     Parameters
     ----------
@@ -127,8 +123,7 @@ def resolve_tarball_info(
 
 
 def download_tarball(url: str, tar_path: str) -> None:
-    """
-    Download a tarball from a URL to a local file.
+    """Download a tarball from a URL to a local file.
 
     Parameters
     ----------
@@ -166,8 +161,7 @@ def download_tarball(url: str, tar_path: str) -> None:
 
 
 def unpack_tarball(tar_path: str, dest_dir: str) -> None:
-    """
-    Extract a gzipped tarball to a destination directory.
+    """Extract a gzipped tarball to a destination directory.
 
     Parameters
     ----------
@@ -183,8 +177,7 @@ def unpack_tarball(tar_path: str, dest_dir: str) -> None:
 
 
 def unpack_and_copy(cluster_dist: str, unpack_dir: str, arch_bin: str) -> None:
-    """
-    Copy files from the unpacked tarball to the destination.
+    """Copy files from the unpacked tarball to the destination.
 
     Parameters
     ----------
@@ -229,8 +222,7 @@ def unpack_and_copy(cluster_dist: str, unpack_dir: str, arch_bin: str) -> None:
 
 
 def main(cluster_ver: str, cluster_dist: str) -> None:
-    """
-    Download, extract, and copy distro tarball.
+    """Download, extract, and copy distro tarball.
 
     Parameters
     ----------

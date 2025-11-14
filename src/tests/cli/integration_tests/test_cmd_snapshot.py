@@ -1,13 +1,13 @@
 import copy
 import os
 import shutil
+from collections.abc import Generator
 from dataclasses import dataclass
-from typing import Generator, Optional
 
 import pytest
 from click.testing import Result
-
 from minitrino.settings import SCRUBBED
+
 from tests import common
 from tests.cli.integration_tests import utils
 from tests.common import MINITRINO_USER_DIR
@@ -29,9 +29,7 @@ executor = common.MinitrinoExecutor(utils.CLUSTER_NAME)
 
 @pytest.fixture
 def cleanup_snapshot(request: pytest.FixtureRequest) -> Generator:
-    """
-    Removes the snapshot directory before and after the test.
-    """
+    """Removes the snapshot directory before and after the test."""
 
     def _rm():
         shutil.rmtree(MINITRINO_USER_SNAPSHOTS_DIR, ignore_errors=True)
@@ -51,8 +49,7 @@ pytestmark = pytest.mark.usefixtures(
 
 @dataclass
 class SnapshotScenario:
-    """
-    Snapshot scenario.
+    """Snapshot scenario.
 
     Parameters
     ----------
@@ -77,9 +74,9 @@ class SnapshotScenario:
     id: str
     append_flags: list[str]
     check_yaml: bool
-    expected_output: Optional[str]
-    expected_in_file: Optional[str | list[str]]
-    expected_not_in_file: Optional[str | list[str]]
+    expected_output: str | None
+    expected_in_file: str | list[str] | None
+    expected_not_in_file: str | list[str] | None
     keepalive: bool
     log_msg: str
 
@@ -197,10 +194,7 @@ TEST_DIRECTORY_MSG = "Testing snapshot to user-specified directory: /tmp/"
 
 @pytest.mark.parametrize("log_msg", [TEST_DIRECTORY_MSG], indirect=True)
 def test_directory() -> None:
-    """
-    Test that the snapshot file can be saved in a user-specified
-    directory.
-    """
+    """Test that the snapshot file can be saved in a user-specified directory."""
     cmd_args = copy.deepcopy(CMD_SNAPSHOT_TEST)
     cmd_args["append"].extend(["--directory", "/tmp/"])
     result = executor.exec(executor.build_cmd(**cmd_args), "y\n")
@@ -216,9 +210,7 @@ TEST_DIRECTORY_INVALID_MSG = "Testing snapshot to invalid directory: /foo/"
 
 @pytest.mark.parametrize("log_msg", [TEST_DIRECTORY_INVALID_MSG], indirect=True)
 def test_directory_invalid() -> None:
-    """
-    Test that the snapshot file cannot be saved in an invalid directory.
-    """
+    """Test that the snapshot file cannot be saved in an invalid directory."""
     cmd = append_snapshot_test_cmd(["--directory", "/foo/"])
     result = executor.exec(cmd, "y\n")
     utils.assert_exit_code(result, expected=2)
@@ -265,10 +257,8 @@ TEST_NO_SCRUB_MSG = "Testing --no-scrub option for snapshot command"
 @pytest.mark.parametrize("log_msg", [TEST_NO_SCRUB_MSG], indirect=True)
 @pytest.mark.usefixtures("cleanup_config")
 def test_no_scrub() -> None:
-    """
-    Verify that the user config file is retained in full when scrubbing
-    is disabled.
-    """
+    """Verify that the user config file is retained in full when scrubbing is
+    disabled."""
     result = executor.exec(append_snapshot_test_cmd(["--no-scrub"]), "y\n")
     run_assertions(result, check_yaml=False)
     utils.assert_not_in_file(SCRUBBED, path=snapshot_config_file())
@@ -288,8 +278,10 @@ def test_scrub() -> None:
     utils.assert_in_file(SCRUBBED, path=snapshot_config_file())
 
 
-def append_snapshot_test_cmd(append_flags: list[str] = []) -> list[str]:
+def append_snapshot_test_cmd(append_flags: list[str] | None = None) -> list[str]:
     """Build the snapshot command with the given append flags."""
+    if append_flags is None:
+        append_flags = []
     cmd_args = copy.deepcopy(CMD_SNAPSHOT_TEST)
     cmd_args["append"].extend(append_flags)
     return executor.build_cmd(**cmd_args)

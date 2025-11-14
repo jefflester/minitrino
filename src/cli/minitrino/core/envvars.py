@@ -15,8 +15,7 @@ if TYPE_CHECKING:
 
 
 class EnvironmentVariables(dict):
-    """
-    Minitrino environment variables.
+    """Minitrino environment variables.
 
     Parameters
     ----------
@@ -48,8 +47,7 @@ class EnvironmentVariables(dict):
         self._parse_minitrino_config()
 
     def get(self, key: Any, default: Any = None) -> str:
-        """
-        Return the value for a given environment variable key.
+        """Return the value for a given environment variable key.
 
         Parameters
         ----------
@@ -68,8 +66,7 @@ class EnvironmentVariables(dict):
         return str(val) if val is not None else ""
 
     def _strip_quotes(self, value: str) -> str:
-        r"""
-        Strip surrounding quotes from a string value.
+        r"""Strip surrounding quotes from a string value.
 
         Removes matching single or double quotes from the beginning and end
         of a string. Only strips if both ends have the same quote character.
@@ -102,16 +99,15 @@ class EnvironmentVariables(dict):
         command-line arguments or OS environment variables.
         """
         value = value.strip()
-        if len(value) >= 2:
-            if (value[0] == '"' and value[-1] == '"') or (
-                value[0] == "'" and value[-1] == "'"
-            ):
-                return value[1:-1]
+        if len(value) >= 2 and (
+            (value[0] == '"' and value[-1] == '"')
+            or (value[0] == "'" and value[-1] == "'")
+        ):
+            return value[1:-1]
         return value
 
     def _parse_user_env_args(self) -> None:
-        """
-        Parse user-specified environment variables from the config file.
+        """Parse user-specified environment variables from the config file.
 
         Notes
         -----
@@ -126,8 +122,7 @@ class EnvironmentVariables(dict):
             self[k.upper()] = str(v)
 
     def _parse_os_env(self) -> None:
-        """
-        Parse environment variables from the user's shell.
+        """Parse environment variables from the user's shell.
 
         Notes
         -----
@@ -163,8 +158,7 @@ class EnvironmentVariables(dict):
                 self[k] = str(v)
 
     def _parse_minitrino_config(self) -> None:
-        """
-        Parse the user's `minitrino.cfg` file.
+        """Parse the user's `minitrino.cfg` file.
 
         Notes
         -----
@@ -200,8 +194,7 @@ class EnvironmentVariables(dict):
             return
 
     def _parse_library_env(self) -> dict:
-        """
-        Parse the Minitrino library's `minitrino.env` file.
+        """Parse the Minitrino library's `minitrino.env` file.
 
         Returns
         -------
@@ -230,7 +223,7 @@ class EnvironmentVariables(dict):
             )
 
         lib_env = {}
-        with open(env_file, "r") as f:
+        with open(env_file) as f:
             for env_var in f:
                 if not env_var.strip():
                     continue
@@ -243,8 +236,7 @@ class EnvironmentVariables(dict):
         return lib_env
 
     def _log_env_vars(self) -> None:
-        """
-        Log the currently-registered environment variables.
+        """Log the currently-registered environment variables.
 
         Notes
         -----

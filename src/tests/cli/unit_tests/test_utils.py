@@ -3,7 +3,6 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from minitrino import utils
 from minitrino.core.context import MinitrinoContext
 

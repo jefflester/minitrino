@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import threading
 import time
-from typing import TYPE_CHECKING, Any, Callable, Generator, Iterator, Optional, Tuple
+from collections.abc import Callable, Generator, Iterator
+from typing import TYPE_CHECKING, Any
 
 from minitrino.core.docker.wrappers import MinitrinoContainer
 from minitrino.core.errors import MinitrinoError
@@ -18,7 +19,7 @@ if TYPE_CHECKING:
 class ContainerCommandExecutor:
     """Execute commands inside containers."""
 
-    def __init__(self, ctx: "MinitrinoContext") -> None:
+    def __init__(self, ctx: MinitrinoContext) -> None:
         self._ctx = ctx
         self.shell = None
 
@@ -26,9 +27,9 @@ class ContainerCommandExecutor:
         self,
         command: list[str],
         **kwargs: Any,
-    ) -> "CommandResult":
+    ) -> CommandResult:
         """Execute a command inside a container."""
-        container: MinitrinoContainer = kwargs.get("container", None)
+        container: MinitrinoContainer = kwargs.get("container")
         if not container:
             raise ValueError(
                 "Container parameter is required for ContainerCommandExecutor"
@@ -48,7 +49,7 @@ class ContainerCommandExecutor:
             exec_handler = self._ctx.api_client.exec_create(
                 container.name,
                 cmd=docker_cmd,
-                environment=kwargs.get("environment", None),
+                environment=kwargs.get("environment"),
                 privileged=True,
                 user=user,
             )
@@ -95,7 +96,7 @@ class ContainerCommandExecutor:
         **kwargs: Any,
     ) -> Iterator[str]:
         """Stream output from a command inside a container."""
-        container: MinitrinoContainer = kwargs.get("container", None)
+        container: MinitrinoContainer = kwargs.get("container")
         if not container:
             raise ValueError(
                 "Container parameter is required for ContainerCommandExecutor"
@@ -109,7 +110,7 @@ class ContainerCommandExecutor:
         exec_handler = self._ctx.api_client.exec_create(
             container.name,
             cmd=docker_cmd,
-            environment=kwargs.get("environment", None),
+            environment=kwargs.get("environment"),
             privileged=True,
             user=user,
         )
@@ -126,9 +127,8 @@ class ContainerCommandExecutor:
         self,
         command: list[str],
         **kwargs: Any,
-    ) -> Tuple[Iterator[str], threading.Event, Callable[[], CommandResult]]:
-        """
-        Stream output from a container command with access to exit code.
+    ) -> tuple[Iterator[str], threading.Event, Callable[[], CommandResult]]:
+        """Stream output from a container command with access to exit code.
 
         Returns a tuple of:
         - Iterator[str]: Yields output lines as they are produced
@@ -151,7 +151,7 @@ class ContainerCommandExecutor:
             A tuple containing the output iterator, completion event, and
             result callable.
         """
-        container: MinitrinoContainer = kwargs.get("container", None)
+        container: MinitrinoContainer = kwargs.get("container")
         if not container:
             raise ValueError(
                 "Container parameter is required for ContainerCommandExecutor"
@@ -163,8 +163,8 @@ class ContainerCommandExecutor:
         start_time = time.monotonic()
         output_lines: list[str] = []
         exit_code_holder: dict[str, int] = {"exit_code": -1}
-        error_holder: dict[str, Optional[BaseException]] = {"error": None}
-        exec_id_holder: dict[str, Optional[str]] = {"exec_id": None}
+        error_holder: dict[str, BaseException | None] = {"error": None}
+        exec_id_holder: dict[str, str | None] = {"exec_id": None}
         completion_event = threading.Event()
 
         self._ctx.logger.debug(
@@ -176,7 +176,7 @@ class ContainerCommandExecutor:
             exec_handler = self._ctx.api_client.exec_create(
                 container.name,
                 cmd=docker_cmd,
-                environment=kwargs.get("environment", None),
+                environment=kwargs.get("environment"),
                 privileged=True,
                 user=user,
             )
@@ -220,7 +220,8 @@ class ContainerCommandExecutor:
                 suppress = kwargs.get("suppress_output", False)
                 try:
                     for line in self._buffer_exec_output_lines(
-                        output_generator, False  # Always get all lines
+                        output_generator,
+                        False,  # Always get all lines
                     ):
                         output_lines.append(line)
                         if not suppress:
@@ -275,8 +276,7 @@ class ContainerCommandExecutor:
             error_holder["error"] = e
 
             def empty_iterator() -> Iterator[str]:
-                return
-                yield  # Make it a generator
+                return iter(())  # Empty iterator
 
             def get_error_result() -> CommandResult:
                 duration = time.monotonic() - start_time
@@ -300,8 +300,7 @@ class ContainerCommandExecutor:
     def _buffer_exec_output_lines(
         self, output_generator: Generator[bytes, None, None], suppress_output: bool
     ):
-        """
-        Buffer Docker exec_start output chunks into lines.
+        """Buffer Docker exec_start output chunks into lines.
 
         Yields lines as they are completed.
 

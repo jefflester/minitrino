@@ -1,9 +1,10 @@
 """Comprehensive tests for logging sink behavior.
 
-This module tests all aspects of the logging sink functionality including
-buffer management, thread safety, and interaction with other components.
+This module tests all aspects of the logging sink functionality including buffer
+management, thread safety, and interaction with other components.
 """
 
+import contextlib
 import threading
 import time
 
@@ -258,11 +259,9 @@ class TestLoggingSinkBehavior:
 
         # Try to cause an error with bad input
         # The sink should handle this gracefully
-        try:
+        with contextlib.suppress(Exception):
             # SinkCollector should handle various input types
             sink(None, "stdout", False)  # None as message
-        except Exception:
-            pass  # If it raises, that's ok for this test
 
         # Should still work after exception
         sink("After exception", "stdout", False)

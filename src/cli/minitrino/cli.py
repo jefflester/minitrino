@@ -39,7 +39,7 @@ class CommandLineInterface(click.MultiCommand):
             suggestion = utils.closest_match_or_error(
                 name, self.list_commands(ctx), "command"
             )
-            raise UserError(f"Command '{name}' not found. {suggestion}")
+            raise UserError(f"Command '{name}' not found. {suggestion}") from None
         cmd = getattr(mod, "cli", None)
         if cmd is None:
             raise UserError(f"No 'cli' object in {mod_name}")
@@ -53,7 +53,7 @@ class CommandLineInterface(click.MultiCommand):
     help="Show the version and exit.",
     expose_value=False,
     is_eager=True,
-    callback=lambda ctx, param, value: display_version(ctx) if value else None,
+    callback=lambda ctx, _param, value: display_version(ctx) if value else None,
 )
 @click.option(
     "-v",

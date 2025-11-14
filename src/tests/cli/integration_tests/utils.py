@@ -3,7 +3,7 @@
 import json
 import os
 import re
-from typing import Optional, TypedDict
+from typing import TypedDict
 
 import docker
 from click.testing import Result
@@ -58,9 +58,8 @@ def cleanup_config():
     write_file(common.CONFIG_FILE, config)
 
 
-def update_metadata_json(module: str, updates: Optional[list[dict]] = None) -> None:
-    """
-    Update a given module's `metadata.json` file.
+def update_metadata_json(module: str, updates: list[dict] | None = None) -> None:
+    """Update a given module's `metadata.json` file.
 
     Parameters
     ----------
@@ -72,7 +71,7 @@ def update_metadata_json(module: str, updates: Optional[list[dict]] = None) -> N
     """
     updates = updates or []
     path = get_metadata_json_path(module)
-    with open(path, "r") as f:
+    with open(path) as f:
         data = json.load(f)
     for update in updates:
         for k, v in update.items():
@@ -117,13 +116,12 @@ def get_module_yaml_path(module: str) -> str:
 
 def read_file(path: str) -> str:
     """Read a file and return its contents."""
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         return f.read()
 
 
 def write_file(path: str, contents: str, mode: str = "w") -> int:
-    """
-    Write content to a file at the given path.
+    """Write content to a file at the given path.
 
     Parameters
     ----------
@@ -144,8 +142,7 @@ def write_file(path: str, contents: str, mode: str = "w") -> int:
 
 
 def assert_exit_code(result: Result | common.CommandResult, expected: int = 0) -> None:
-    """
-    Assert the CLI result exit code matches expected.
+    """Assert the CLI result exit code matches expected.
 
     Parameters
     ----------
@@ -154,17 +151,12 @@ def assert_exit_code(result: Result | common.CommandResult, expected: int = 0) -
     expected : int
         The expected exit code. Defaults to 0.
     """
-    msg = "Unexpected exit code: %s (expected: %s). Output:\n%s" % (
-        result.exit_code,
-        expected,
-        result.output,
-    )
+    msg = f"Unexpected exit code: {result.exit_code} (expected: {expected}). Output:\n{result.output}"
     assert result.exit_code == expected, msg
 
 
 def assert_num_containers(expected: int = 0, all: bool = False) -> None:
-    """
-    Assert the expected number of existing containers.
+    """Assert the expected number of existing containers.
 
     Parameters
     ----------
@@ -176,17 +168,12 @@ def assert_num_containers(expected: int = 0, all: bool = False) -> None:
     """
     containers = common.get_containers(all=all)
     container_names = [c.name for c in containers]
-    msg = "Unexpected number of containers: %s (expected: %s) (containers: %s)" % (
-        len(containers),
-        expected,
-        container_names,
-    )
+    msg = f"Unexpected number of containers: {len(containers)} (expected: {expected}) (containers: {container_names})"
     assert len(containers) == expected, msg
 
 
 def assert_containers_exist(*args: str, all: bool = False) -> None:
-    """
-    Assert the given containers exist.
+    """Assert the given containers exist.
 
     Parameters
     ----------
@@ -204,8 +191,7 @@ def assert_containers_exist(*args: str, all: bool = False) -> None:
 
 
 def assert_containers_not_exist(*args: str, all: bool = False) -> None:
-    """
-    Assert the given containers do not exist.
+    """Assert the given containers do not exist.
 
     Parameters
     ----------
@@ -235,8 +221,7 @@ def assert_is_file(path: str) -> None:
 
 
 def assert_in_file(*args: str, path: str) -> None:
-    """
-    Assert the given strings are in the file.
+    """Assert the given strings are in the file.
 
     Parameters
     ----------
@@ -252,8 +237,7 @@ def assert_in_file(*args: str, path: str) -> None:
 
 
 def assert_not_in_file(*args: str, path: str) -> None:
-    """
-    Assert the given strings are not in the file.
+    """Assert the given strings are not in the file.
 
     Parameters
     ----------
@@ -271,8 +255,7 @@ def assert_not_in_file(*args: str, path: str) -> None:
 def assert_in_output(
     *args: str, result: Result | common.CommandResult | list[str]
 ) -> None:
-    """
-    Assert the given strings or regex patterns are in the result output.
+    """Assert the given strings or regex patterns are in the result output.
 
     Parameters
     ----------
@@ -297,8 +280,7 @@ def assert_in_output(
 
 
 def assert_not_in_output(*args: str, result: Result | common.CommandResult) -> None:
-    """
-    Assert the given strings are not in the result output.
+    """Assert the given strings are not in the result output.
 
     Parameters
     ----------

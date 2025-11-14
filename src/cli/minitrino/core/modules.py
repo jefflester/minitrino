@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import os
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import jsonschema
 import yaml
@@ -57,8 +57,7 @@ MODULE_METADATA_SPEC = {
 
 
 class Modules:
-    """
-    Module validation and management.
+    """Module validation and management.
 
     Parameters
     ----------
@@ -101,8 +100,7 @@ class Modules:
         self._load_modules()
 
     def running_modules(self) -> dict[str, str]:
-        """
-        Retrieve running modules by inspecting active Docker containers.
+        """Retrieve running modules by inspecting active Docker containers.
 
         Returns
         -------
@@ -177,8 +175,7 @@ class Modules:
         return modules
 
     def validate_module_name(self, name: str) -> str:
-        """
-        Return the module name or raise UserError with a suggestion.
+        """Return the module name or raise UserError with a suggestion.
 
         Always use this method to validate any user-provided module
         name(s).
@@ -201,9 +198,8 @@ class Modules:
         valid_names = list(self.data.keys())
         return utils.closest_match_or_error(name, valid_names, "module")
 
-    def check_dep_modules(self, modules: Optional[list[str]] = None) -> list[str]:
-        """
-        Recursively collect all direct and transitive module deps.
+    def check_dep_modules(self, modules: list[str] | None = None) -> list[str]:
+        """Recursively collect all direct and transitive module deps.
 
         Parameters
         ----------
@@ -235,10 +231,9 @@ class Modules:
         return list(result)
 
     def check_module_version_requirements(
-        self, modules: Optional[list[str]] = None
+        self, modules: list[str] | None = None
     ) -> None:
-        """
-        Check module-cluster version compatibility.
+        """Check module-cluster version compatibility.
 
         Parameters
         ----------
@@ -288,9 +283,8 @@ class Modules:
                     f"version for the module is: {max_ver}."
                 )
 
-    def check_compatibility(self, modules: Optional[list[str]] = None) -> None:
-        """
-        Check for mutually exclusive modules among the provided modules.
+    def check_compatibility(self, modules: list[str] | None = None) -> None:
+        """Check for mutually exclusive modules among the provided modules.
 
         Parameters
         ----------
@@ -322,9 +316,8 @@ class Modules:
                         f"by running 'minitrino modules -m {module}'",
                     )
 
-    def check_enterprise(self, modules: Optional[list[str]] = None) -> None:
-        """
-        Check for Starburst Enterprise modules and validate license.
+    def check_enterprise(self, modules: list[str] | None = None) -> None:
+        """Check for Starburst Enterprise modules and validate license.
 
         Parameters
         ----------
@@ -386,9 +379,8 @@ class Modules:
         elif "dummy.license" not in self._ctx.env.get("LIC_PATH", ""):
             self._ctx.env.update({"LIC_MOUNT_PATH": LIC_MOUNT_PATH})
 
-    def module_services(self, modules: Optional[list[str]] = None) -> list[list]:
-        """
-        Get all services defined in the provided modules.
+    def module_services(self, modules: list[str] | None = None) -> list[list]:
+        """Get all services defined in the provided modules.
 
         Parameters
         ----------
@@ -430,9 +422,8 @@ class Modules:
 
         return services
 
-    def check_volumes(self, modules: Optional[list[str]] = None) -> None:
-        """
-        Check for persistent volumes and warn the user if any are found.
+    def check_volumes(self, modules: list[str] | None = None) -> None:
+        """Check for persistent volumes and warn the user if any are found.
 
         Parameters
         ----------
@@ -455,8 +446,7 @@ class Modules:
                 )
 
     def _load_modules(self) -> None:
-        """
-        Load module data during class instantiation.
+        """Load module data during class instantiation.
 
         Raises
         ------
@@ -545,7 +535,7 @@ class Modules:
                     raise UserError(
                         f"Invalid metadata.json in module '{module_name}': {e.message}",
                         f"File: {json_file}",
-                    )
+                    ) from e
                 for k, v in metadata.items():
                     self.data[module_name][k] = v
 

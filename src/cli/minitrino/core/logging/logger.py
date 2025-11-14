@@ -2,9 +2,9 @@
 
 import inspect
 import logging
+from collections.abc import Callable, Mapping
 from contextlib import contextmanager
 from types import FrameType, TracebackType
-from typing import Callable, Mapping, Optional
 
 from click import prompt, style
 
@@ -83,7 +83,7 @@ class MinitrinoLogger(logging.Logger):
         lvl = logging.DEBUG
         self._log_with_stacklevel(super().debug, msg, *args, level=lvl, **kwargs)
 
-    def set_log_sink(self, sink: Optional[Callable[[str, str, bool], None]]) -> None:
+    def set_log_sink(self, sink: Callable[[str, str, bool], None] | None) -> None:
         """Set the log sink."""
         self._log_sink = sink or lg.sink.SinkCollector()
 
@@ -181,7 +181,7 @@ class MinitrinoLogger(logging.Logger):
 
     def _get_caller_logger(self) -> logging.Logger:
         """Get the caller logger."""
-        frame: Optional[FrameType] = inspect.currentframe()
+        frame: FrameType | None = inspect.currentframe()
         for _ in range(3):
             frame = frame.f_back if frame and frame.f_back else frame
         module = inspect.getmodule(frame)

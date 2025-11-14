@@ -8,7 +8,7 @@ to load balance access to multiple SEP clusters.
 
 {{ starburst_license_warning }}
 
-:::{admonition} Harbor Registry Auth Required :class: warning
+:::\{admonition} Harbor Registry Auth Required :class: warning
 
 This module requires authentication to Starburst's image registry. You must
 authenticate to the Harbor registry specified in the module's YAML file before
@@ -53,5 +53,5 @@ minitrino exec -i 'trino-cli --server starburst-gateway:9080 --user admin'
 ## Dependent Modules
 
 - [`insights`](./insights.md#insights): Enables the Starburst web UI.
-- [`faker`](../catalog/faker.md#faker): Adds a Faker catalog to each cluster for
+- [`faker`](../catalog/faker.md): Adds a Faker catalog to each cluster for
   synthetic data.

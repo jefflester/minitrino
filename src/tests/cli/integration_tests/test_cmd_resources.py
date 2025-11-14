@@ -33,8 +33,7 @@ executor = common.MinitrinoExecutor(utils.CLUSTER_NAME)
 
 @dataclass
 class ResourcesScenario:
-    """
-    Resources scenario.
+    """Resources scenario.
 
     Parameters
     ----------

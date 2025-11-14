@@ -30,4 +30,4 @@ SHOW SCHEMAS FROM stargate;
 The remote cluster depends on the following modules:
 
 - [`hive`](./hive.md#hive-catalog)
-- [`password-file`](../security/password-file.md#password-file-catalog)
+- [`password-file`](../security/password-file.md)

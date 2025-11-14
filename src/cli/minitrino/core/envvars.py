@@ -67,6 +67,48 @@ class EnvironmentVariables(dict):
         val = super().get(key, default)
         return str(val) if val is not None else ""
 
+    def _strip_quotes(self, value: str) -> str:
+        r"""
+        Strip surrounding quotes from a string value.
+
+        Removes matching single or double quotes from the beginning and end
+        of a string. Only strips if both ends have the same quote character.
+
+        Parameters
+        ----------
+        value : str
+            The string value to process.
+
+        Returns
+        -------
+        str
+            The value with surrounding quotes removed, if applicable.
+
+        Examples
+        --------
+        >>> env._strip_quotes('"hello"')
+        'hello'
+        >>> env._strip_quotes("'world'")
+        'world'
+        >>> env._strip_quotes('"mixed\\'')
+        '"mixed\\'
+        >>> env._strip_quotes('no-quotes')
+        'no-quotes'
+
+        Notes
+        -----
+        This method only strips quotes from values parsed from the
+        minitrino.cfg configuration file. It does not affect user-provided
+        command-line arguments or OS environment variables.
+        """
+        value = value.strip()
+        if len(value) >= 2:
+            if (value[0] == '"' and value[-1] == '"') or (
+                value[0] == "'" and value[-1] == "'"
+            ):
+                return value[1:-1]
+        return value
+
     def _parse_user_env_args(self) -> None:
         """
         Parse user-specified environment variables from the config file.
@@ -144,7 +186,7 @@ class EnvironmentVariables(dict):
             config.read(self._ctx.config_file)
             for k, v in config.items("config"):
                 if not self.get(k) and v:
-                    self[k.upper()] = str(v)
+                    self[k.upper()] = self._strip_quotes(str(v))
         except Exception as e:
             self._ctx.logger.warn(
                 f"Failed to parse config file {self._ctx.config_file} with error:"

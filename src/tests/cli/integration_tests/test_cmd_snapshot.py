@@ -240,7 +240,7 @@ def test_provision_file() -> None:
     executor.exec(executor.build_cmd(**cmd_args), "y\n")
     executor.exec(executor.build_cmd(base="down", append=["--sig-kill"]))
     provision_file = snapshot_provision_file()
-    output = common.execute_cmd(f"sh {provision_file}")
+    output = common.execute_cmd(f"bash {provision_file}")
     utils.assert_exit_code(output)
     utils.assert_in_output("Environment provisioning complete", result=output)
 

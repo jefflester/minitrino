@@ -1,104 +1,33 @@
 ---
 services:
 
-  trino:
-    environment:
-      MINITRINO_BOOTSTRAP: 458-native-fs-workaround.sh
-    depends_on:
-      - iceberg-catalog-cp
-
-  iceberg-catalog-cp:
-    image: busybox
-    container_name: iceberg-catalog-cp
+  minitrino:
     volumes:
-      - ./modules/catalog/iceberg/resources/trino/iceberg.properties:/tmp/iceberg.properties
-      - catalogs:/etc/starburst/catalog
-    command:
-      - sh
-      - -c
-      - cp /tmp/iceberg.properties /etc/starburst/catalog/iceberg.properties
-    labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.iceberg=catalog-iceberg
+      - ./modules/catalog/iceberg/resources/cluster/iceberg.properties:/mnt/etc/catalog/iceberg.properties:ro
+      - ./modules/catalog/iceberg/resources/cluster/create-schema.sh:/mnt/bootstrap/iceberg/create-schema.sh:ro
+      - ./modules/catalog/iceberg/resources/cluster/458-native-fs-workaround.sh:/mnt/bootstrap/iceberg/458-native-fs-workaround.sh:ro
 
   iceberg-rest:
     image: tabulario/iceberg-rest:${ICEBERG_REST_VER}
-    container_name: iceberg-rest
+    container_name: iceberg-rest-${CLUSTER_NAME}
     environment:
       AWS_ACCESS_KEY_ID: access-key
       AWS_SECRET_ACCESS_KEY: secret-key
       AWS_REGION: us-east-1
       CATALOG_URI: jdbc:sqlite:/home/iceberg/iceberg.db
-      CATALOG_WAREHOUSE: s3://sample-bucket/wh/
+      CATALOG_WAREHOUSE: s3://minitrino/iceberg/
       CATALOG_IO__IMPL: org.apache.iceberg.aws.s3.S3FileIO
       CATALOG_S3_ENDPOINT: http://s3.us-east-1.minio.com:9000
     ports:
-      - 8181:8181
+      - ${__PORT_ICEBERG_REST_METASTORE}:8181
     volumes:
       - iceberg-metadata:/home/iceberg
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.iceberg=catalog-iceberg
-
-  # ---------------------------------------------------------------------------
-  # I couldn't get path-style access to work with
-  # `org.apache.iceberg.aws.s3.S3FileIO`, even after setting the property that
-  # supposedly enables that feature. As a fallback, I have configured MinIO to
-  # use virtual-style paths for S3, which is the default path style used by the
-  # Iceberg S3 filesystem.
-
-  # Virtual-style path solution for MinIO:
-  # https://stackoverflow.com/a/73393416
-  # ---------------------------------------------------------------------------
-
-  minio-iceberg:
-    image: minio/minio:${MINIO_VER}
-    container_name: minio-iceberg
-    environment:
-      MINIO_ROOT_USER: access-key
-      MINIO_ROOT_PASSWORD: secret-key
-      MINIO_DOMAIN: s3.us-east-1.minio.com
-    command: server --address :9000 --console-address :9003 /data
-    networks:
-      default:
-        aliases:
-          - sample-bucket.s3.us-east-1.minio.com
-    ports:
-      - :9000
-      - 9003:9003
-    volumes:
-      - minio-iceberg-data:/data
-    labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.iceberg=catalog-iceberg
-
-  create-minio-iceberg-buckets:
-    image: minio/mc:${MINIO_MC_VER}
-    container_name: create-minio-iceberg-buckets
-    entrypoint: |-
-      /bin/sh -c "
-      wfi=wait-for-it && \
-      curl -fsSL \\
-        https://raw.githubusercontent.com/vishnubob/$$wfi/master/$$wfi.sh \\
-        > /tmp/$$wfi.sh && \
-      chmod +x /tmp/$$wfi.sh && \
-      echo 'Waiting for MinIO to come up...' && \
-      /tmp/$$wfi.sh minio-iceberg:9000 --strict --timeout=60 && \
-      /usr/bin/mc alias set minio \\
-        http://minio-iceberg:9000 access-key secret-key && \
-      /usr/bin/mc mb minio/sample-bucket/wh/ && \
-      tail -f /dev/null
-      "
-    labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.iceberg=catalog-iceberg
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.iceberg=true
 
 volumes:
   iceberg-metadata:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.iceberg=catalog-iceberg
-  minio-iceberg-data:
-    labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.iceberg=catalog-iceberg
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.iceberg=true

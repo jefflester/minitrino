@@ -1,0 +1,95 @@
+{
+  "skipCi": true,
+  "moduleOverrides": {
+    "dependentClusters": [
+      {
+        "name": "stargate-remote",
+        "modules": [
+          "password-file"
+        ],
+        "workers": 0,
+        "env": {}
+      }
+    ],
+    "env": {
+      "STARGATE_CATALOG": "tpch"
+    }
+  },
+  "tests": [
+    {
+      "type": "shell",
+      "name": "Ensure remote cluster is running",
+      "container": "minitrino-lib-test",
+      "command": "echo 'pass'",
+      "exitCode": 0,
+      "healthcheck": {
+        "command": "curl -s -k minitrino-lib-test-dep-stargate-remote:8080/v1/info || true",
+        "container": "minitrino-lib-test",
+        "retries": 60,
+        "exitCode": 0,
+        "contains": [
+          "\"starting\":false"
+        ]
+      }
+    },
+    {
+      "type": "query",
+      "name": "Test schema list via stargate",
+      "sql": "SHOW SCHEMAS IN stargate",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'",
+        "--user admin"
+      ],
+      "retries": 10,
+      "contains": [
+        "tiny",
+        "sf1",
+        "sf100"
+      ]
+    },
+    {
+      "type": "query",
+      "name": "Test table list via stargate",
+      "sql": "SHOW TABLES IN stargate.tiny",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'",
+        "--user admin"
+      ],
+      "retries": 10,
+      "contains": [
+        "customer",
+        "nation",
+        "orders"
+      ]
+    },
+    {
+      "type": "query",
+      "name": "Test data query via stargate",
+      "sql": "SELECT * FROM stargate.tiny.customer LIMIT 5",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'",
+        "--user admin"
+      ],
+      "retries": 10,
+      "contains": [
+        "custkey",
+        "name",
+        "address"
+      ]
+    },
+    {
+      "type": "query",
+      "name": "Test join query via stargate",
+      "sql": "SELECT c.name, o.orderkey FROM stargate.tiny.customer c JOIN stargate.tiny.orders o ON c.custkey = o.custkey LIMIT 5",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'",
+        "--user admin"
+      ],
+      "retries": 10,
+      "contains": [
+        "name",
+        "orderkey"
+      ]
+    }
+  ]
+}

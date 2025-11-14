@@ -1,25 +1,25 @@
 ---
 services:
 
-  trino:
+  minitrino:
     volumes:
-      - ./modules/catalog/sqlserver/resources/trino/sqlserver.properties:${ETC}/catalog/sqlserver.properties
+      - ./modules/catalog/sqlserver/resources/cluster/sqlserver.properties:/mnt/etc/catalog/sqlserver.properties:ro
 
   sqlserver:
     image: mcr.microsoft.com/mssql/server:${SQLSERVER_VER}
-    container_name: sqlserver
+    container_name: sqlserver-${CLUSTER_NAME}
     env_file:
       - ./modules/catalog/sqlserver/resources/sqlserver/sqlserver.env
     ports:
-      - 1433:1433
+      - ${__PORT_SQL_SERVER}:1433
     volumes:
       - sqlserver-data:/var/opt/mssql
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.sqlserver=catalog-sqlserver
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.sqlserver=true
 
 volumes:
   sqlserver-data:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.sqlserver=catalog-sqlserver
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.sqlserver=true

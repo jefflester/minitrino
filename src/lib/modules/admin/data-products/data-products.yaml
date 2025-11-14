@@ -1,11 +1,11 @@
 ---
 services:
 
-  trino:
+  minitrino:
     environment:
-      CONFIG_PROPERTIES: |-
+      DATA_PRODUCTS_CONFIG_PROPERTIES: |-
         starburst.data-product.enabled=true
-        data-product.starburst-jdbc-url=jdbc:trino://trino:8080
+        data-product.starburst-jdbc-url=jdbc:trino://minitrino-$${ENV:CLUSTER_NAME}:8080
         data-product.starburst-user=admin
     labels:
-      - com.starburst.tests.module.data-products=admin-data-products
+      - org.minitrino.module.admin.data-products=true

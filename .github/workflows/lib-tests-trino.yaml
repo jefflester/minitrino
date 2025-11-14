@@ -1,0 +1,82 @@
+---
+name: Library Tests (Trino)
+
+on:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - src/lib/**
+
+jobs:
+  prepare-matrix:
+    runs-on: ubuntu-22.04
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.10'
+      - name: Install project dependencies
+        run: |-
+          pip install -e .
+      - name: Generate test matrix
+        id: set-matrix
+        env:
+          IS_GITHUB: ${{ vars.IS_GITHUB }}
+        run: |-
+          output=$(python src/tests/lib/generate_test_matrix.py --image trino --output github)
+          matrix_line=$(echo "$output" | grep "^matrix=")
+          echo "$matrix_line" >> $GITHUB_OUTPUT
+
+  lib-tests:
+    needs: prepare-matrix
+    runs-on: ubuntu-22.04
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+      - name: Get cluster version
+        id: version
+        uses: ./.github/actions/get-cluster-version
+      - name: Wait for test release
+        uses: ./.github/actions/wait-for-test-release
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Pull pre-built Trino image
+        uses: ./.github/actions/pull-test-image
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          pr-number: ${{ github.event.pull_request.number }}
+          image-type: trino
+          cluster-version: ${{ steps.version.outputs.trino_version }}
+      - name: Free up disk space
+        uses: ./.github/actions/cleanup-disk
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.10'
+      - name: Install project dependencies
+        run: |-
+          pip install -e .
+          pip install -e ./src/tests/
+      - name: Write config file and point to license
+        run: |-
+          mkdir ~/.minitrino/
+          cat <<EOF > ~/.minitrino/minitrino.cfg
+          [config]
+          IMAGE=trino
+          EOF
+      - name: Run library tests (Segment ${{ matrix.segment }})
+        env:
+          IS_GITHUB: ${{ vars.IS_GITHUB }}
+        run: |-
+          python ./src/tests/lib/runner.py \
+            --debug --remove-images --image trino \
+            ${{ matrix.modules }}

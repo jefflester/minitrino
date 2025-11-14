@@ -1,28 +1,28 @@
 ---
 services:
 
-  trino:
+  minitrino:
     environment:
-      CONFIG_PROPERTIES: http-server.authentication.type=PASSWORD
-      MINITRINO_BOOTSTRAP: bootstrap-trino.sh
+      LDAP_CONFIG_PROPERTIES: http-server.authentication.type=PASSWORD
     volumes:
-      - ./modules/security/ldap/resources/trino/password-authenticator.properties:${ETC}/password-authenticator.properties
-      - ./modules/security/ldap/resources/ldap/ldap-users:${ETC}/ldap-users
+      - ./modules/security/ldap/resources/ldap/ldif:/mnt/etc/ldif:ro
+      - ./modules/security/ldap/resources/cluster/bootstrap.sh:/mnt/bootstrap/ldap/bootstrap.sh:ro
+      - ./modules/security/ldap/resources/cluster/password-authenticator.properties:/mnt/etc/password-authenticator.properties:ro
     links:
-      - ldap:ldap.minitrino.starburstdata.com
+      - ldap:ldap.minitrino.com
 
   ldap:
     image: osixia/openldap:${OPEN_LDAP_VER}
-    container_name: ldap
-    hostname: ldap.minitrino.starburstdata.com
+    container_name: ldap-${CLUSTER_NAME}
+    hostname: ldap.minitrino.com
     environment:
-      LDAP_ORGANISATION: Example Inc.
-      LDAP_DOMAIN: example.com
+      LDAP_ORGANISATION: Minitrino Inc.
+      LDAP_DOMAIN: minitrino.com
       LDAP_ADMIN_PASSWORD: trinoRocks15
       LDAP_TLS_VERIFY_CLIENT: try
       LDAPTLS_REQCERT: never
     ports:
-      - 636:636
+      - ${__PORT_LDAP}:636
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.ldap=security-ldap
+      - org.minitrino.root=true
+      - org.minitrino.module.security.ldap=true

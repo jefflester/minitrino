@@ -1,0 +1,45 @@
+{
+  "tests": [
+    {
+      "type": "query",
+      "name": "Prime result cache",
+      "sql": "SELECT * FROM tpch.tiny.customer LIMIT 1",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'",
+        "--user admin"
+      ],
+      "contains": [
+        "custkey",
+        "name",
+        "address"
+      ]
+    },
+    {
+      "type": "query",
+      "name": "Fetch from result cache",
+      "sql": "SELECT * FROM tpch.tiny.customer LIMIT 1",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'",
+        "--user admin"
+      ],
+      "contains": [
+        "custkey",
+        "name",
+        "address"
+      ]
+    },
+    {
+      "type": "query",
+      "name": "Verify result cache usage",
+      "sql": "SELECT \\\"stats.cachehits.totalcount\\\" FROM \\\"jmx\\\".\\\"current\\\".\\\"com.starburstdata.cache.resultscache:name=dispatcher\\\" WHERE \\\"stats.cachehits.totalcount\\\" >= 1",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'",
+        "--user admin"
+      ],
+      "contains": [
+        "stats.cachehits.totalcount"
+      ],
+      "rowCount": 1
+    }
+  ]
+}

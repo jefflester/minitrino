@@ -1,9 +1,9 @@
 ---
 services:
 
-  trino:
+  minitrino:
     volumes:
-      - ./modules/security/file-access-control/resources/trino/access-control.properties:${ETC}/access-control.properties
-      - ./modules/security/file-access-control/resources/trino/rules.json:${ETC}/rules.json
+      - ./modules/security/file-access-control/resources/cluster/rules.json:/mnt/etc/rules.json:ro
+      - ./modules/security/file-access-control/resources/cluster/access-control.properties:/mnt/etc/access-control.properties:ro
     labels:
-      - com.starburst.tests.module.file-access-control=security-file-access-control
+      - org.minitrino.module.security.file-access-control=true

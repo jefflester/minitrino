@@ -1,25 +1,25 @@
 ---
 services:
 
-  trino:
+  minitrino:
     volumes:
-      - ./modules/catalog/postgres/resources/trino/postgres.properties:${ETC}/catalog/postgres.properties
+      - ./modules/catalog/postgres/resources/cluster/postgres.properties:/mnt/etc/catalog/postgres.properties:ro
 
   postgres:
     image: postgres:${POSTGRES_VER}
-    container_name: postgres
+    container_name: postgres-${CLUSTER_NAME}
     env_file:
       - ./modules/catalog/postgres/resources/postgres/postgres.env
     ports:
-      - 5432:5432
+      - ${__PORT_POSTGRES}:5432
     volumes:
       - postgres-data:/var/lib/postgresql/data
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.postgres=catalog-postgres
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.postgres=true
 
 volumes:
   postgres-data:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.postgres=catalog-postgres
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.postgres=true

@@ -1,15 +1,14 @@
 ---
 services:
 
-  trino:
-    environment:
-      MINITRINO_BOOTSTRAP: bootstrap-elasticsearch.sh
+  minitrino:
     volumes:
-      - ./modules/catalog/elasticsearch/resources/trino/elasticsearch.properties:${ETC}/catalog/elasticsearch.properties
+      - ./modules/catalog/elasticsearch/resources/cluster/elasticsearch.properties:/mnt/etc/catalog/elasticsearch.properties:ro
+      - ./modules/catalog/elasticsearch/resources/cluster/bootstrap-es.sh:/mnt/bootstrap/elasticsearch/bootstrap-es.sh:ro
 
   elasticsearch:
     image: elasticsearch:${ELASTICSEARCH_VER}
-    container_name: elasticsearch
+    container_name: elasticsearch-${CLUSTER_NAME}
     environment:
       discovery.type: single-node
       bootstrap.memory_lock: true
@@ -17,17 +16,17 @@ services:
       network.bind_host: 0.0.0.0
       xpack.security.enabled: false
       ES_JAVA_OPTS: -Xms256m -Xmx256m
-    ports:
-      - 9200:9200
-      - 9300:9300
+    expose:
+      - 9200
+      - 9300
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.elasticsearch=catalog-elasticsearch
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.elasticsearch=true
 
 volumes:
   elasticsearch-data:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.elasticsearch=catalog-elasticsearch
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.elasticsearch=true

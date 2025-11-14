@@ -54,3 +54,9 @@ yarn-error.log*
 *todo.txt*
 *minio.sys*
 *.tar.gz
+.mypy_cache
+docs/_build/**
+node_modules
+.local
+.windsurf
+.python-version

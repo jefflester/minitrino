@@ -1,27 +1,26 @@
 ---
 services:
 
-  trino:
+  minitrino:
     volumes:
-      - ./modules/catalog/mysql/resources/trino/mysql.properties:${ETC}/catalog/mysql.properties
+      - ./modules/catalog/mysql/resources/cluster/mysql.properties:/mnt/etc/catalog/mysql.properties:ro
 
   mysql:
     image: mysql:${MYSQL_VER}
-    container_name: mysql
-    environment:
-      MINITRINO_BOOTSTRAP: bootstrap-mysql.sh
+    container_name: mysql-${CLUSTER_NAME}
     env_file:
       - ./modules/catalog/mysql/resources/mysql/mysql.env
     ports:
-      - 3306:3306
+      - ${__PORT_MYSQL}:3306
     volumes:
       - mysql-data:/var/lib/mysql
+      - ./modules/catalog/mysql/resources/mysql/create-minitrino-db.sql:/docker-entrypoint-initdb.d/create-minitrino-db.sql
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.mysql=catalog-mysql
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.mysql=true
 
 volumes:
   mysql-data:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.mysql=catalog-mysql
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.mysql=true

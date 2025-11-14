@@ -1,20 +1,20 @@
 ---
 services:
 
-  trino:
+  minitrino:
     volumes:
-      - ./modules/catalog/db2/resources/trino/db2.properties:${ETC}/catalog/db2.properties
+      - ./modules/catalog/db2/resources/cluster/db2.properties:/mnt/etc/catalog/db2.properties:ro
 
   db2:
     image: ibmcom/db2:${DB2_VER}
-    container_name: db2
+    container_name: db2-${CLUSTER_NAME}
     env_file:
       - ./modules/catalog/db2/resources/db2/db2.env
     privileged: true
     tty: true
     stdin_open: true
     ports:
-      - 50000:50000
+      - ${__PORT_DB2}:50000
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.db2=catalog-db2
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.db2=true

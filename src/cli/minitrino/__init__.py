@@ -1,0 +1,1 @@
+"""Minitrino CLI package."""

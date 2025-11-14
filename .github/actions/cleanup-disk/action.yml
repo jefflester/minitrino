@@ -1,0 +1,50 @@
+---
+name: 'Cleanup Disk Space'
+description: 'Free up disk space on GitHub-hosted runners by removing unnecessary files and Docker resources'
+author: 'Minitrino'
+
+inputs:
+  clean-docker:
+    description: 'Whether to run docker system prune'
+    required: false
+    default: 'true'
+  show-disk-usage:
+    description: 'Whether to show disk usage before and after cleanup'
+    required: false
+    default: 'true'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Show disk space before cleanup
+      if: inputs.show-disk-usage == 'true'
+      shell: bash
+      run: |-
+        echo "Disk space before cleanup:"
+        df -h
+
+    - name: Remove unnecessary files
+      shell: bash
+      run: |-
+        echo "Removing unnecessary system files..."
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /opt/ghc
+        sudo rm -rf /usr/local/share/boost
+        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /opt/hostedtoolcache/CodeQL
+        sudo apt-get clean
+
+    - name: Clean Docker resources
+      if: inputs.clean-docker == 'true'
+      shell: bash
+      run: |-
+        echo "Cleaning Docker resources..."
+        sudo docker system prune -af --volumes
+
+    - name: Show disk space after cleanup
+      if: inputs.show-disk-usage == 'true'
+      shell: bash
+      run: |-
+        echo "Disk space after cleanup:"
+        df -h

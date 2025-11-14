@@ -1,9 +1,9 @@
 ---
 services:
 
-  trino:
+  minitrino:
     volumes:
-      - ./modules/admin/file-group-provider/resources/trino/group-provider.properties:${ETC}/group-provider.properties
-      - ./modules/admin/file-group-provider/resources/trino/groups.txt:${ETC}/groups.txt
+      - ./modules/admin/file-group-provider/resources/cluster/group-provider.properties:/mnt/etc/group-provider.properties:ro
+      - ./modules/admin/file-group-provider/resources/cluster/groups.txt:/mnt/etc/groups.txt:ro
     labels:
-      - com.starburst.tests.module.file-group-provider=admin-file-group-provider
+      - org.minitrino.module.admin.file-group-provider=true

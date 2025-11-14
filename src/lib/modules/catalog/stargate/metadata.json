@@ -1,0 +1,18 @@
+{
+  "description": "Stargate catalog module",
+  "incompatibleModules": [],
+  "enterprise": true,
+  "dependentClusters": [
+    {
+      "name": "stargate-remote",
+      "modules": [
+        "hive",
+        "password-file"
+      ],
+      "workers": 0,
+      "env": {
+        "STARGATE_CATALOG": "hive"
+      }
+    }
+  ]
+}

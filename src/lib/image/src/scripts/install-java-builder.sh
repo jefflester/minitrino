@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+
+# Trino versions and their corresponding Java versions:
+# >= 436 <= 446: Java 21
+# >= 447 <= 463: Java 22
+# >= 464 <= 467: Java 23
+# >= 468: Java 24
+
+set -euxo pipefail
+
+SERVICE_USER="${1}"
+CLUSTER_VER="${2}"
+
+# Extract numeric version from version string (e.g., "474-e" -> "474")
+TRINO_VER=$(echo "${CLUSTER_VER}" | sed 's/-.*//' | head -c 3)
+
+echo "Detected Trino version: ${TRINO_VER}"
+
+if [ "${TRINO_VER}" -ge 436 ] && [ "${TRINO_VER}" -le 446 ]; then
+    JAVA_VER=21.0.5
+elif [ "${TRINO_VER}" -ge 447 ] && [ "${TRINO_VER}" -le 463 ]; then
+    JAVA_VER=22.0.2
+elif [ "${TRINO_VER}" -ge 464 ] && [ "${TRINO_VER}" -le 467 ]; then
+    JAVA_VER=23.0.2
+elif [ "${TRINO_VER}" -ge 468 ]; then
+    JAVA_VER=24.0.2
+else
+    echo "Unsupported Trino version: ${TRINO_VER}. Exiting..."
+    exit 1
+fi
+
+echo "Installing Java version ${JAVA_VER} for user ${SERVICE_USER}..."
+su - "${SERVICE_USER}" -c "bash -lc 'curl -s https://get.sdkman.io | bash'"
+su - "${SERVICE_USER}" -c \
+    "bash -lc 'source ~/.sdkman/bin/sdkman-init.sh && \
+    sdk install java ${JAVA_VER}-tem --disableUsage && \
+    sdk flush temp && \
+    sdk flush archives && \
+    sdk flush broadcast && \
+    rm -rf ~/.sdkman/tmp/* ~/.sdkman/archives/*'"
+
+echo "Copying cacerts for TLS..."
+USER_HOME=$(eval echo "~${SERVICE_USER}")
+CACERTS_PATH=$(find "${USER_HOME}/.sdkman/candidates/java/" -type f -name 'cacerts' 2>/dev/null | head -n 1)
+if [[ -z "${CACERTS_PATH}" ]]; then
+    echo "Could not find cacerts file. Exiting..."
+    exit 1
+fi
+
+mkdir -p /tmp/tls-jvm/
+cp "${CACERTS_PATH}" /tmp/tls-jvm/
+chmod 644 /tmp/tls-jvm/cacerts
+
+echo "Java installation complete!"

@@ -1,0 +1,33 @@
+---
+name: 'Wait for Test Release'
+description: 'Wait for the 0.0.0 test release to be available before proceeding with tests'
+author: 'Minitrino'
+
+inputs:
+  github-token:
+    description: 'GitHub token for authentication'
+    required: true
+  timeout-attempts:
+    description: 'Number of retry attempts (10 seconds per attempt)'
+    required: false
+    default: '30'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Wait for test release 0.0.0 to be available
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: |-
+        echo "Waiting for release 0.0.0 to be available..."
+        for i in $(seq 1 ${{ inputs.timeout-attempts }}); do
+          if gh release view 0.0.0 >/dev/null 2>&1; then
+            echo "Release 0.0.0 is available!"
+            exit 0
+          fi
+          echo "Release not yet available, waiting... (attempt $i/${{ inputs.timeout-attempts }})"
+          sleep 10
+        done
+        echo "Timeout waiting for release 0.0.0"
+        exit 1

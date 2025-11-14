@@ -1,37 +1,19 @@
 ---
 services:
 
-  trino:
-    depends_on:
-      - hive-mv-tsr-catalog-cp
-    environment:
-      MINITRINO_BOOTSTRAP: bootstrap-trino.sh
+  minitrino:
     volumes:
-      - ./modules/admin/cache-service/resources/trino/rules.json:${ETC}/rules.json
-      - ./modules/admin/cache-service/resources/trino/cache.properties:${ETC}/cache.properties
-      - ./modules/admin/cache-service/resources/trino/cache_svc.properties:${ETC}/catalog/cache_svc.properties
+      - ./modules/admin/cache-service/resources/cluster/rules.json:/mnt/etc/rules.json:ro
+      - ./modules/admin/cache-service/resources/cluster/cache.properties:/mnt/etc/cache.properties:ro
+      - ./modules/admin/cache-service/resources/cluster/cache_svc.properties:/mnt/etc/catalog/cache_svc.properties:ro
+      - ./modules/admin/cache-service/resources/cluster/hive_mv_tsr.properties:/mnt/etc/catalog/hive_mv_tsr.properties:ro
+      - ./modules/admin/cache-service/resources/cluster/bootstrap.sh:/mnt/bootstrap/cache-service/bootstrap.sh:ro
+      - ./modules/admin/cache-service/resources/cluster/458-native-fs-workaround.sh:/mnt/bootstrap/cache-service/458-native-fs-workaround.sh:ro
     ports:
-      - 8180:8180
+      - ${__PORT_CACHE_SERVICE}:8180
+    labels:
+      - org.minitrino.module.admin.cache-service=true
 
-  hive-mv-tsr-catalog-cp:
-    image: busybox
-    container_name: hive-mv-tsr-catalog-cp
+  postgres-backend-svc:
     volumes:
-      - ./modules/admin/cache-service/resources/trino/hive_mv_tsr.properties:/tmp/hive_mv_tsr.properties
-      - catalogs:/etc/starburst/catalog
-    command:
-      - sh
-      - -c
-      - cp /tmp/hive_mv_tsr.properties /etc/starburst/catalog/hive_mv_tsr.properties
-    labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.cache-service=admin-cache-service
-
-  cache-svc-backend:
-    image: postgres:${POSTGRES_SEP_CACHE_SVC_VER}
-    container_name: cache-svc-backend
-    env_file:
-      - ./modules/admin/cache-service/resources/postgres/cache-svc.env
-    labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.cache-service=admin-cache-service
+      - ./modules/admin/cache-service/resources/postgres/create-cachesvc-db.sql:/docker-entrypoint-initdb.d/create-cachesvc-db.sql

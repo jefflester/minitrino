@@ -1,0 +1,57 @@
+---
+name: Cleanup Test Images
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - master
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-22.04
+    permissions:
+      packages: write
+    steps:
+      - name: Delete PR-specific images from GHCR
+        run: |-
+          PR_NUM="${{ github.event.pull_request.number }}"
+          REPO_OWNER="jefflester"
+          PACKAGE_NAME="minitrino"
+
+          echo "Cleaning up images for PR ${PR_NUM}..."
+
+          # Get package version IDs for images tagged with this PR number
+          for IMAGE_TYPE in trino starburst; do
+            TAG="pr-${PR_NUM}-${IMAGE_TYPE}"
+            echo "Looking for tag: ${TAG}"
+
+            # Use GitHub API to find and delete package versions with this tag
+            # Note: This requires the packages:delete scope on the token
+            VERSION_IDS=$(gh api \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "/users/${REPO_OWNER}/packages/container/${PACKAGE_NAME}/versions" \
+              --jq ".[] | select(.metadata.container.tags[] | contains(\"${TAG}\")) | .id" \
+              2>/dev/null || echo "")
+
+            if [ -n "${VERSION_IDS}" ]; then
+              for VERSION_ID in ${VERSION_IDS}; do
+                echo "Deleting version ${VERSION_ID} for ${TAG}..."
+                gh api \
+                  --method DELETE \
+                  -H "Accept: application/vnd.github+json" \
+                  -H "X-GitHub-Api-Version: 2022-11-28" \
+                  "/users/${REPO_OWNER}/packages/container/${PACKAGE_NAME}/versions/${VERSION_ID}" \
+                  && echo "Successfully deleted version ${VERSION_ID}" \
+                  || echo "Failed to delete version ${VERSION_ID}"
+              done
+            else
+              echo "No images found for ${TAG}"
+            fi
+          done
+
+          echo "Cleanup complete!"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

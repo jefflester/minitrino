@@ -1,0 +1,17 @@
+---
+services:
+
+  minitrino:
+    environment:
+      SPOOLING_PROTOCOL_CONFIG_PROPERTIES: |-
+        protocol.spooling.enabled=true
+        protocol.spooling.shared-secret-key=jxTKysfCBuMZtFqUf8UJDQ1w9ez8rynEJsJqgJf66u0=
+        protocol.spooling.retrieval-mode=storage
+      SPOOLING_PROTOCOL_WORKER_CONFIG_PROPERTIES: |-
+        protocol.spooling.enabled=true
+        protocol.spooling.shared-secret-key=jxTKysfCBuMZtFqUf8UJDQ1w9ez8rynEJsJqgJf66u0=
+        protocol.spooling.retrieval-mode=storage
+    volumes:
+      - ./modules/admin/spooling-protocol/resources/cluster/spooling-manager.properties:/mnt/etc/spooling-manager.properties:ro
+    labels:
+      - org.minitrino.module.admin.spooling-protocol=true

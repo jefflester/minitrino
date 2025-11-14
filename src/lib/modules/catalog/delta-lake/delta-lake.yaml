@@ -1,29 +1,15 @@
 ---
 services:
 
-  trino:
-    environment:
-      MINITRINO_BOOTSTRAP: 458-native-fs-workaround.sh
-    depends_on:
-      - delta-catalog-cp
-
-  delta-catalog-cp:
-    image: busybox
-    container_name: delta-catalog-cp
+  minitrino:
     volumes:
-      - ./modules/catalog/delta-lake/resources/trino/delta.properties:/tmp/delta.properties
-      - catalogs:/etc/starburst/catalog
-    command:
-      - sh
-      - -c
-      - cp /tmp/delta.properties /etc/starburst/catalog/delta.properties
-    labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.delta-lake=catalog-delta-lake
+      - ./modules/catalog/delta-lake/resources/cluster/delta.properties:/mnt/etc/catalog/delta.properties:ro
+      - ./modules/catalog/delta-lake/resources/cluster/create-schema.sh:/mnt/bootstrap/delta-lake/create-schema.sh:ro
+      - ./modules/catalog/delta-lake/resources/cluster/458-native-fs-workaround.sh:/mnt/bootstrap/delta-lake/458-native-fs-workaround.sh:ro
 
   postgres-delta-lake:
     image: postgres:${POSTGRES_HMS_VER}
-    container_name: postgres-delta-lake
+    container_name: postgres-delta-lake-${CLUSTER_NAME}
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}']
       interval: 10s
@@ -34,66 +20,25 @@ services:
     volumes:
       - postgres-delta-lake-data:/var/lib/postgresql/data
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.delta-lake=catalog-delta-lake
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.delta-lake=true
 
   metastore-delta-lake:
     image: jefflester/hive-metastore:${HMS_VER}
-    container_name: metastore-delta-lake
+    container_name: metastore-delta-lake-${CLUSTER_NAME}
     depends_on:
       postgres-delta-lake:
         condition: service_healthy
     env_file:
       - ./modules/catalog/delta-lake/resources/hms/hms.env
-    ports:
-      - :9083
+    expose:
+      - 9083
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.delta-lake=catalog-delta-lake
-
-  minio-delta-lake:
-    image: minio/minio:${MINIO_VER}
-    container_name: minio-delta-lake
-    environment:
-      MINIO_ROOT_USER: access-key
-      MINIO_ROOT_PASSWORD: secret-key
-    command: server --address :9000 --console-address :9002 /data
-    ports:
-      - :9000
-      - 9002:9002
-    volumes:
-      - minio-delta-lake-data:/data
-    labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.delta-lake=catalog-delta-lake
-
-  create-minio-delta-lake-buckets:
-    image: minio/mc:${MINIO_MC_VER}
-    container_name: create-minio-delta-lake-buckets
-    entrypoint: |-
-      /bin/sh -c "
-      wfi=wait-for-it && \
-      curl -fsSL \\
-        https://raw.githubusercontent.com/vishnubob/$$wfi/master/$$wfi.sh \\
-        > /tmp/$$wfi.sh && \
-      chmod +x /tmp/$$wfi.sh && \
-      echo 'Waiting for MinIO to come up...' && \
-      /tmp/$$wfi.sh minio-delta-lake:9000 --strict --timeout=60 && \
-      /usr/bin/mc alias set minio \\
-        http://minio-delta-lake:9000 access-key secret-key && \
-      /usr/bin/mc mb minio/sample-bucket/wh/ && \
-      tail -f /dev/null
-      "
-    labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.delta-lake=catalog-delta-lake
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.delta-lake=true
 
 volumes:
   postgres-delta-lake-data:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.delta-lake=catalog-delta-lake
-  minio-delta-lake-data:
-    labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.delta-lake=catalog-delta-lake
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.delta-lake=true

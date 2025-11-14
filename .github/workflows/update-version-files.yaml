@@ -4,14 +4,15 @@ name: Update Version Files on New Release Branch
 on:
   create:
     branches:
-      - '[0-9]+\.[0-9]+\.[0-9]+'
+      - '^\\d+\\.\\d+\\.\\d+$'
+    types: [branch]
 
 jobs:
   update-versions:
     runs-on: ubuntu-22.04
     steps:
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Update version files
         env:
           GITHUB_TOKEN: ${{ secrets.MINITRINO_TOKEN }}
@@ -26,9 +27,9 @@ jobs:
           echo "Update ./src/lib/version"
           echo "${BRANCH}" > ./src/lib/version
 
-          echo "Update ./src/cli/setup.py"
-          sed -i "s|version=\"[0-9]\.[0-9]\.[0-9]\"|version=\"${BRANCH}\"|" \
-            ./src/cli/setup.py
+          echo "Update ./pyproject.toml"
+          sed -i "s|version = \".*\"|version = \"${BRANCH}\"|" \
+            ./pyproject.toml
 
           echo "Update ./readme.md"
           sed -i "s|\*\*Latest Stable Release\*\*: [0-9]\.[0-9]\.[0-9]|\
@@ -39,7 +40,7 @@ jobs:
             git config \
               --global user.email "${GITHUB_ACTOR}@users.noreply.github.com"
             git config --global user.name "${GITHUB_ACTOR}"
-            git add ./src/lib/version ./src/cli/setup.py ./readme.md
+            git add ./src/lib/version ./pyproject.toml ./readme.md
             git commit -m "Update version files to ${BRANCH}"
             git push
           else

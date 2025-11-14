@@ -1,0 +1,51 @@
+---
+name: 'Get Cluster Version'
+description: 'Read cluster version from minitrino.env and output Trino and Starburst versions'
+author: 'Minitrino'
+
+outputs:
+  trino_version:
+    description: 'Cluster version for Trino builds'
+    value: ${{ steps.get-version.outputs.trino_version }}
+  starburst_version:
+    description: 'Cluster version for Starburst builds (includes -e suffix)'
+    value: ${{ steps.get-version.outputs.starburst_version }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Extract cluster version from minitrino.env
+      id: get-version
+      shell: bash
+      run: |-
+        # Read CLUSTER_VER from minitrino.env
+        if [ ! -f "src/lib/minitrino.env" ]; then
+          echo "Error: src/lib/minitrino.env not found"
+          exit 1
+        fi
+
+        CLUSTER_VER=$(grep "^CLUSTER_VER=" src/lib/minitrino.env | cut -d'=' -f2)
+
+        if [ -z "${CLUSTER_VER}" ]; then
+          echo "Error: CLUSTER_VER not found in minitrino.env"
+          exit 1
+        fi
+
+        echo "Found CLUSTER_VER=${CLUSTER_VER} in minitrino.env"
+
+        # For Trino, use the version as-is
+        TRINO_VERSION="${CLUSTER_VER}"
+
+        # For Starburst, add -e suffix if not already present
+        if [[ "${CLUSTER_VER}" == *-e* ]]; then
+          STARBURST_VERSION="${CLUSTER_VER}"
+        else
+          STARBURST_VERSION="${CLUSTER_VER}-e"
+        fi
+
+        echo "Trino version: ${TRINO_VERSION}"
+        echo "Starburst version: ${STARBURST_VERSION}"
+
+        # Set outputs
+        echo "trino_version=${TRINO_VERSION}" >> $GITHUB_OUTPUT
+        echo "starburst_version=${STARBURST_VERSION}" >> $GITHUB_OUTPUT

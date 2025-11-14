@@ -1,0 +1,96 @@
+---
+name: Build Test Images
+
+on:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - src/**
+
+jobs:
+  build-trino:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
+      - name: Free up disk space
+        uses: ./.github/actions/cleanup-disk
+
+      - name: Get cluster version
+        id: version
+        uses: ./.github/actions/get-cluster-version
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Trino image
+        uses: docker/build-push-action@v6
+        with:
+          context: src/lib/image
+          file: src/lib/image/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/jefflester/minitrino:pr-${{ github.event.pull_request.number }}-trino
+            ghcr.io/jefflester/minitrino:pr-${{ github.event.pull_request.number }}-${{ steps.version.outputs.trino_version }}-trino
+          build-args: |
+            UBUNTU_VER=22.04
+            CLUSTER_VER=${{ steps.version.outputs.trino_version }}
+            CLUSTER_DIST=trino
+            SERVICE_USER=trino
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-starburst:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
+      - name: Free up disk space
+        uses: ./.github/actions/cleanup-disk
+
+      - name: Get cluster version
+        id: version
+        uses: ./.github/actions/get-cluster-version
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Starburst image
+        uses: docker/build-push-action@v6
+        with:
+          context: src/lib/image
+          file: src/lib/image/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/jefflester/minitrino:pr-${{ github.event.pull_request.number }}-starburst
+            ghcr.io/jefflester/minitrino:pr-${{ github.event.pull_request.number }}-${{ steps.version.outputs.starburst_version }}-starburst
+          build-args: |
+            UBUNTU_VER=22.04
+            CLUSTER_VER=${{ steps.version.outputs.starburst_version }}
+            CLUSTER_DIST=starburst
+            SERVICE_USER=starburst
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

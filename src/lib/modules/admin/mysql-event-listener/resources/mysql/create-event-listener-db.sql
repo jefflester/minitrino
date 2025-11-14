@@ -1,0 +1,2 @@
+GRANT ALL PRIVILEGES ON *.* TO 'admin';
+CREATE DATABASE IF NOT EXISTS event_listener;

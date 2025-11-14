@@ -1,0 +1,112 @@
+{
+  "catalogs": [
+    {
+      "group": "clusteradmins",
+      "catalog": ".*",
+      "allow": "all"
+    },
+    {
+      "group": "metadata-users|platform-users",
+      "catalog": "system",
+      "allow": "all"
+    },
+    {
+      "catalog": "system",
+      "allow": "none"
+    },
+    {
+      "catalog": ".*",
+      "allow": "none"
+    }
+  ],
+  "schemas": [
+    {
+      "group": "clusteradmins",
+      "schema": ".*",
+      "owner": true
+    },
+    {
+      "group": "metadata-users",
+      "schema": "system.*",
+      "owner": true
+    },
+    {
+      "group": "platform-users",
+      "schema": "system.runtime",
+      "owner": true
+    },
+    {
+      "catalog": ".*",
+      "schema": ".*",
+      "owner": false
+    }
+  ],
+  "tables": [
+    {
+      "group": "clusteradmins",
+      "catalog": ".*",
+      "schema": ".*",
+      "privileges": [
+        "SELECT",
+        "INSERT",
+        "DELETE",
+        "OWNERSHIP",
+        "GRANT_SELECT"
+      ]
+    },
+    {
+      "group": "metadata-users",
+      "catalog": "system",
+      "schema": "metadata",
+      "privileges": [
+        "SELECT",
+        "INSERT",
+        "DELETE",
+        "OWNERSHIP",
+        "GRANT_SELECT"
+      ]
+    },
+    {
+      "group": "metadata-users",
+      "catalog": "system",
+      "schema": "jdbc",
+      "privileges": [
+        "SELECT",
+        "INSERT",
+        "DELETE",
+        "OWNERSHIP",
+        "GRANT_SELECT"
+      ]
+    },
+    {
+      "group": "metadata-users",
+      "catalog": "system",
+      "schema": "information_schema",
+      "privileges": [
+        "SELECT",
+        "INSERT",
+        "DELETE",
+        "OWNERSHIP",
+        "GRANT_SELECT"
+      ]
+    },
+    {
+      "group": "platform-users",
+      "catalog": "system",
+      "schema": "runtime",
+      "privileges": [
+        "SELECT",
+        "INSERT",
+        "DELETE",
+        "OWNERSHIP",
+        "GRANT_SELECT"
+      ]
+    },
+    {
+      "group": ".*",
+      "catalog": ".*",
+      "schema": ".*",
+      "privileges": []
+    }
+  ]
+}

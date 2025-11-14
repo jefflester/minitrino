@@ -1,28 +1,26 @@
 ---
 services:
 
-  trino:
-    labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.test=catalog-test
+  minitrino:
+    volumes:
+      - ./modules/catalog/test/resources/cluster/bootstrap-before-after.sh:/mnt/bootstrap/test/bootstrap-before-after.sh:ro
 
   test:
     build:
       context: ./modules/catalog/test/
       labels:
-        - com.starburst.tests=minitrino
-        - com.starburst.tests.module.test=catalog-test
-    command: [tail, -f, /dev/null]  # Keep alive
+        - org.minitrino.root=true
+    command: [tail, -f, /dev/null]
     image: minitrino/test:latest
-    container_name: test
+    container_name: test-${CLUSTER_NAME}
     volumes:
       - test-data:/etc/test/
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.test=catalog-test
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.test=true
 
 volumes:
   test-data:
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.test=catalog-test
+      - org.minitrino.root=true
+      - org.minitrino.module.catalog.test=true

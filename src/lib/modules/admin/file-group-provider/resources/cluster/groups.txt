@@ -1,0 +1,3 @@
+clusteradmins:admin,cachesvc,test
+metadata-users:metadata-user,bob,test
+platform-users:platform-user,alice,test

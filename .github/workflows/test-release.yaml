@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Delete and recreate release
         env:
           GITHUB_TOKEN: ${{ secrets.MINITRINO_TOKEN }}
@@ -24,8 +24,14 @@ jobs:
 
           echo "Checking if release exists..."
           if gh release list | grep -q -e "${TAG}"; then
-            echo "Release ${TAG} found. Deleting release..."
-            gh release delete "${TAG}" -y --cleanup-tag
+            echo "Release ${TAG} found. Deleting release (without tag)..."
+            gh release delete "${TAG}" -y
+          fi
+
+          echo "Checking if tag exists..."
+          if git ls-remote --tags origin | grep -q "refs/tags/${TAG}"; then
+            echo "Tag ${TAG} found. Deleting tag..."
+            git push origin --delete "${TAG}" || echo "Tag deletion failed, continuing..."
           fi
 
           echo "Creating test release from branch ${GITHUB_HEAD_REF}..."

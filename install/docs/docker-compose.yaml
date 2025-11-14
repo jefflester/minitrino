@@ -1,0 +1,35 @@
+---
+services:
+  minitrino-docs:
+    build:
+      context: ../../
+      dockerfile: install/docs/Dockerfile
+      args:
+        PYTHON_TAG: ${PYTHON_TAG}
+    image: minitrino-docs:latest
+    container_name: minitrino-docs
+    working_dir: /docs
+    env_file:
+      - .env
+    volumes:
+      - ../../docs:/docs:ro
+      - ../../docs/_build/html:/site:ro
+    ports:
+      - "8000:8000"
+    entrypoint: ["bash", "-c", "cd /site && python -m http.server 8000"]
+
+  minitrino-docs-build:
+    build:
+      context: ../../
+      dockerfile: install/docs/Dockerfile
+      args:
+        PYTHON_TAG: ${PYTHON_TAG}
+    image: minitrino-docs:latest
+    working_dir: /docs
+    env_file:
+      - .env
+    volumes:
+      - ../../docs:/docs:rw
+      - ../../src:/src:ro
+      - ./docs-build.sh:/docs-build.sh:ro
+    entrypoint: ["bash", "/docs-build.sh"]

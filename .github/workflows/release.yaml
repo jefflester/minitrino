@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Create release
         env:
           GITHUB_TOKEN: ${{ secrets.MINITRINO_TOKEN }}
@@ -49,7 +49,7 @@ jobs:
     needs: publish-release-draft
     steps:
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Publish release
         env:
           GITHUB_TOKEN: ${{ secrets.MINITRINO_TOKEN }}
@@ -63,18 +63,17 @@ jobs:
     needs: publish-release
     steps:
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.10'
       - name: Install dependencies
         run: |-
-          pip install wheel twine
+          pip install build twine
       - name: Build and check distribution
         run: |-
-          cd src/cli
-          python setup.py sdist bdist_wheel
+          python -m build
           twine check dist/*
       - name: Publish distribution to PyPi
         env:
@@ -88,7 +87,7 @@ jobs:
             Skipping upload."
           else
             echo "Uploading package version ${GITHUB_HEAD_REF} to PyPI..."
-            twine upload src/cli/dist/*
+            twine upload dist/*
           fi
       - name: Check package
         run: |-

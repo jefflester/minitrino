@@ -1,0 +1,12 @@
+# platform-user, minitrino.com
+dn: uid=platform-user,dc=minitrino,dc=com
+changetype: add
+uid: platform-user
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: platform-user
+sn: platform-user
+mail: platform-user@minitrino.com
+userPassword: trinoRocks15

@@ -1,0 +1,79 @@
+{
+  "skipWorkers": true,
+  "tests": [
+    {
+      "type": "shell",
+      "name": "Ensure Pinot is accessible",
+      "container": "minitrino-lib-test",
+      "command": "echo 'pass'",
+      "exitCode": 0,
+      "healthcheck": {
+        "command": "trino-cli --debug --output-format CSV_HEADER --execute 'SHOW TABLES IN pinot.default' --user admin",
+        "container": "minitrino-lib-test",
+        "retries": 180,
+        "exitCode": 0,
+        "contains": [
+          "baseballstats",
+          "dimbaseballteams",
+          "githubcomplextypeevents",
+          "githubevents"
+        ]
+      }
+    },
+    {
+      "type": "query",
+      "name": "Test show tables",
+      "sql": "SHOW TABLES IN pinot.default",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'",
+        "--user admin"
+      ],
+      "contains": [
+        "baseballstats",
+        "dimbaseballteams",
+        "githubcomplextypeevents",
+        "githubevents"
+      ]
+    },
+    {
+      "type": "query",
+      "name": "Test table select - baseballstats",
+      "sql": "SELECT * FROM pinot.default.baseballstats LIMIT 10",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'",
+        "--user admin"
+      ],
+      "rowCount": 10
+    },
+    {
+      "type": "query",
+      "name": "Test table select - dimbaseballteams",
+      "sql": "SELECT * FROM pinot.default.dimbaseballteams LIMIT 10",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'",
+        "--user admin"
+      ],
+      "rowCount": 10
+    },
+    {
+      "type": "query",
+      "name": "Test table select - githubcomplextypeevents",
+      "sql": "SELECT * FROM pinot.default.githubcomplextypeevents LIMIT 10",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'",
+        "--user admin"
+      ],
+      "rowCount": 10
+    },
+    {
+      "type": "query",
+      "name": "Test table select - githubevents",
+      "sql": "SELECT * FROM pinot.default.githubevents LIMIT 10",
+      "trinoCliArgs": [
+        "--server 'http://localhost:8080'",
+        "--user admin"
+      ],
+      "rowCount": 10
+    }
+  ]
+}

@@ -1,15 +1,21 @@
 ---
 services:
 
-  trino:
+  minitrino:
     environment:
-      MINITRINO_BOOTSTRAP: bootstrap-trino.sh
-      CONFIG_PROPERTIES: |-
+      OAUTH2_CONFIG_PROPERTIES: |-
         web-ui.authentication.type=oauth2
         http-server.authentication.type=OAUTH2
-        http-server.authentication.oauth2.issuer=https://host.docker.internal:8100/example
-        http-server.authentication.oauth2.client-id=id
+        http-server.authentication.oauth2.client-id=minitrino
         http-server.authentication.oauth2.client-secret=secret
+        http-server.authentication.oauth2.scopes=openid,offline_access
+        http-server.authentication.oauth2.refresh-tokens=true
+        http-server.authentication.oauth2.refresh-tokens.issued-token.timeout=5m
+        http-server.authentication.oauth2.issuer=https://host.docker.internal:$${ENV:OAUTH2_SERVER_PORT}/minitrino-issuer
+        http-server.authentication.oauth2.user-mapping.pattern=(admin|cachesvc|bob|alice|metadata-user|platform-user|test)@minitrino\.com
+      OAUTH2_SERVER_PORT: ${__PORT_OAUTH2_SERVER}
+    volumes:
+      - ./modules/security/oauth2/resources/cluster/bootstrap.sh:/mnt/bootstrap/oauth2/bootstrap.sh:ro
     depends_on:
       oauth2-healthcheck:
         condition: service_healthy
@@ -18,25 +24,25 @@ services:
 
   oauth2-server:
     image: ghcr.io/navikt/mock-oauth2-server:${OAUTH2_SERVER_VER}
-    container_name: oauth2-server
+    container_name: oauth2-server-${CLUSTER_NAME}
     environment:
       LOG_LEVEL: debug
       SERVER_PORT: 8100
       JSON_CONFIG_PATH: /app/config.json
     ports:
-      - 8100:8100
+      - ${__PORT_OAUTH2_SERVER}:8100
     volumes:
       - ./modules/security/oauth2/resources/oauth2/config.json:/app/config.json
       - ./modules/security/oauth2/resources/oauth2/keystore.jks:/app/keystore.jks
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.oauth2=security-oauth2
+      - org.minitrino.root=true
+      - org.minitrino.module.security.oauth2=true
 
   oauth2-healthcheck:
     image: curlimages/curl:${CURL_VER}
-    container_name: oauth2-healthcheck
+    container_name: oauth2-healthcheck-${CLUSTER_NAME}
     environment:
-      OPENID_CONF: https://oauth2-server:8100/default/.well-known/openid-configuration
+      OPENID_CONF: https://oauth2-server:8100/minitrino-issuer/.well-known/openid-configuration
     healthcheck:
       test: curl --fail --insecure $${OPENID_CONF} || exit 1
       interval: 10s
@@ -45,5 +51,5 @@ services:
       timeout: 10s
     command: [tail, -f, /dev/null]
     labels:
-      - com.starburst.tests=minitrino
-      - com.starburst.tests.module.oauth2=security-oauth2
+      - org.minitrino.root=true
+      - org.minitrino.module.security.oauth2=true

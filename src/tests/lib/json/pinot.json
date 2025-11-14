@@ -1,4 +1,5 @@
 {
+  "skipWorkers": true,
   "tests": [
     {
       "type": "shell",

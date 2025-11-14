@@ -115,13 +115,6 @@ class EnvironmentVariables(dict):
             "STARTUP_SELECT_RETRIES",
             "TEXT_EDITOR",
         ]
-        try:
-            lib_env = self._parse_library_env()
-            for k, v in lib_env.items():
-                if k.startswith("__PORT"):
-                    shell_source.append(k)
-        except Exception:
-            pass
         for k, v in os.environ.items():
             k = k.upper()
             if k in shell_source and not self.get(k):

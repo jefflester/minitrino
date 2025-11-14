@@ -312,7 +312,14 @@ class MinitrinoContext:
     def _try_parse_library_env(self) -> None:
         """Attempt to parse the library environment file if present."""
         try:
-            self.env._parse_library_env()
+            lib_env = self.env._parse_library_env()
+            # Also check for port variables in OS environment
+            for k, v in lib_env.items():
+                if k.startswith("__PORT"):
+                    # Check if this port var exists in OS env and isn't already set
+                    os_val = os.environ.get(k)
+                    if os_val and not self.env.get(k):
+                        self.env[k] = str(os_val)
         except Exception:  # Skip lib-related procedures if the lib is not found
             pass
 

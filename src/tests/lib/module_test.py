@@ -98,7 +98,12 @@ class ModuleTest:
 
         self._runner(tests)
         self.cleanup(debug=self.debug)
-        self._runner(tests, workers=True)
+
+        # Skip worker test if configured (useful for memory-intensive modules)
+        if not self.json_data.get("skipWorkers", False):
+            self._runner(tests, workers=True)
+        else:
+            utils.log_status(f"Module '{self.module}' configured to skip worker test")
         return True
 
     @staticmethod

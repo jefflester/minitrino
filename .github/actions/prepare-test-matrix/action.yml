@@ -1,0 +1,46 @@
+---
+name: 'Prepare Test Matrix'
+description: 'Generate test matrix for library tests'
+author: 'Minitrino'
+
+inputs:
+  image-type:
+    description: 'Image type (trino or starburst)'
+    required: true
+  python-version:
+    description: 'Python version'
+    required: false
+    default: '3.10'
+
+outputs:
+  matrix:
+    description: 'Generated test matrix JSON'
+    value: ${{ steps.set-matrix.outputs.matrix }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Check out code
+      uses: actions/checkout@v5
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install project dependencies
+      shell: bash
+      run: pip install -e .
+
+    - name: Generate test matrix
+      id: set-matrix
+      shell: bash
+      env:
+        IS_GITHUB: ${{ vars.IS_GITHUB }}
+      run: |
+        IMAGE_TYPE="${{ inputs.image-type }}"
+        echo "Generating test matrix for ${IMAGE_TYPE}..."
+        output=$(python src/tests/lib/generate_test_matrix.py --image ${IMAGE_TYPE} --output github)
+        matrix_line=$(echo "$output" | grep "^matrix=")
+        echo "$matrix_line" >> $GITHUB_OUTPUT
+        echo "✓ Test matrix generated successfully"

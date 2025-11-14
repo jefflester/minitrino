@@ -22,7 +22,7 @@ Slack](https://img.shields.io/static/v1?logo=slack&logoColor=959DA5&label=Slack&
 
 -----
 
-**Latest Stable Release**: 3.0.0
+**Latest Stable Release**: 3.0.1
 
 -----
 

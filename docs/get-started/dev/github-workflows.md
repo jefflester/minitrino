@@ -10,25 +10,29 @@ A release branch is any branch whose name matches the following regex:
 [0-9]\.[0-9]\.[0-9]
 ```
 
-When a branch with this naming convention is created, the
-`update-version-files.yaml` workflow is triggered. This workflow updates three
-version references in three separate files to match the name of the new release
-branch, then commits the changes to the new branch:
+When working on a release branch, version files are automatically synchronized to
+match the branch name. This happens via a pre-commit hook
+(`.precommit/sync_version_files.py`) that updates the following files on your
+first commit:
 
 - `readme.md`
 - `src/lib/version`
 - `pyproject.toml`
 
-Developers must run `git pull` after this workflow completes to ensure the local
-branch remains in sync with the remote branch.
+The version sync happens automatically when you commit, so no additional steps are
+required:
 
 ```sh
 git checkout -B 3.0.0
+# Make changes
+git commit -m "Your changes"
+# Version files are automatically synced and staged by the pre-commit hook
 git push --set-upstream origin 3.0.0
-
-# Wait a few seconds for the workflow to run
-git pull
 ```
+
+Additionally, the `update-version-files.yaml` workflow runs as a fallback when a
+release branch is pushed to the remote repository, ensuring version files remain
+synchronized even if the pre-commit hook did not run.
 
 ## PR from Release Branch
 

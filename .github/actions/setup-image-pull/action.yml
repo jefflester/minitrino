@@ -1,0 +1,76 @@
+---
+name: 'Setup Image Pull'
+description: 'Handle conditional image pulling with fallback (PR-specific or latest from master)'
+author: 'Minitrino'
+
+inputs:
+  github-token:
+    description: 'GitHub token for GHCR authentication'
+    required: true
+  pr-number:
+    description: 'Pull request number'
+    required: true
+  image-type:
+    description: 'Image type (trino or starburst)'
+    required: true
+  cluster-version:
+    description: 'Cluster version for tagging'
+    required: true
+  image-changed:
+    description: 'Whether image was rebuilt in this PR (true/false)'
+    required: true
+  cleanup-disk:
+    description: 'Whether to free up disk space before pulling'
+    required: false
+    default: 'true'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ inputs.github-token }}
+
+    - name: Pull image (conditional on image-changed)
+      shell: bash
+      run: |
+        IMAGE_TYPE="${{ inputs.image-type }}"
+        PR_NUMBER="${{ inputs.pr-number }}"
+        CLUSTER_VERSION="${{ inputs.cluster-version }}"
+        IMAGE_CHANGED="${{ inputs.image-changed }}"
+
+        echo "Image type: ${IMAGE_TYPE}"
+        echo "PR number: ${PR_NUMBER}"
+        echo "Cluster version: ${CLUSTER_VERSION}"
+        echo "Image changed: ${IMAGE_CHANGED}"
+
+        if [ "${IMAGE_CHANGED}" == "true" ]; then
+          echo "Image was built in this PR, pulling PR-specific image..."
+          docker pull ghcr.io/jefflester/minitrino:pr-${PR_NUMBER}-${IMAGE_TYPE}
+          docker tag ghcr.io/jefflester/minitrino:pr-${PR_NUMBER}-${IMAGE_TYPE} \
+            ghcr.io/jefflester/minitrino:pr-${PR_NUMBER}-${CLUSTER_VERSION}-${IMAGE_TYPE}
+          echo "✓ Successfully pulled and tagged PR-specific image"
+        else
+          echo "Image build was skipped, pulling latest from master..."
+          if docker pull ghcr.io/jefflester/minitrino:latest-${IMAGE_TYPE}; then
+            echo "✓ Successfully pulled latest image from master"
+          else
+            echo "⚠ Latest image not found, will fall back to pull-test-image action"
+          fi
+        fi
+
+    - name: Pull pre-built image (fallback)
+      if: inputs.image-changed == 'true'
+      uses: ./.github/actions/pull-test-image
+      with:
+        github-token: ${{ inputs.github-token }}
+        pr-number: ${{ inputs.pr-number }}
+        image-type: ${{ inputs.image-type }}
+        cluster-version: ${{ inputs.cluster-version }}
+
+    - name: Free up disk space
+      if: inputs.cleanup-disk == 'true'
+      uses: ./.github/actions/cleanup-disk

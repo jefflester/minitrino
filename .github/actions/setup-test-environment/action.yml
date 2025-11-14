@@ -1,0 +1,54 @@
+---
+name: 'Setup Test Environment'
+description: 'Checkout code, setup Python, install dependencies, and wait for test release'
+author: 'Minitrino'
+
+inputs:
+  github-token:
+    description: 'GitHub token for authentication'
+    required: true
+  python-version:
+    description: 'Python version to install'
+    required: false
+    default: '3.10'
+  install-test-dependencies:
+    description: 'Whether to install test dependencies (src/tests/)'
+    required: false
+    default: 'true'
+  setup-license:
+    description: 'Whether to setup Starburst license file'
+    required: false
+    default: 'false'
+  license-data:
+    description: 'Starburst license data (required if setup-license is true)'
+    required: false
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Check out code
+      uses: actions/checkout@v5
+
+    - name: Wait for test release
+      uses: ./.github/actions/wait-for-test-release
+      with:
+        github-token: ${{ inputs.github-token }}
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install CLI dependencies
+      shell: bash
+      run: pip install -e .
+
+    - name: Install test dependencies
+      if: inputs.install-test-dependencies == 'true'
+      shell: bash
+      run: pip install -e ./src/tests/
+
+    - name: Set up Starburst license
+      if: inputs.setup-license == 'true'
+      shell: bash
+      run: echo "${{ inputs.license-data }}" > ~/starburstdata.license

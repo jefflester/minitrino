@@ -19,10 +19,6 @@ inputs:
   image-changed:
     description: 'Whether image was rebuilt in this PR (true/false)'
     required: true
-  cleanup-disk:
-    description: 'Whether to free up disk space before pulling'
-    required: false
-    default: 'true'
 
 runs:
   using: 'composite'
@@ -70,7 +66,3 @@ runs:
         pr-number: ${{ inputs.pr-number }}
         image-type: ${{ inputs.image-type }}
         cluster-version: ${{ inputs.cluster-version }}
-
-    - name: Free up disk space
-      if: inputs.cleanup-disk == 'true'
-      uses: ./.github/actions/cleanup-disk

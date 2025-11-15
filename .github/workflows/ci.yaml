@@ -140,10 +140,10 @@ jobs:
             CLUSTER_DIST=trino
             SERVICE_USER=trino
           cache-from: |
-            type=gha
+            type=gha,scope=trino-build
             type=registry,ref=ghcr.io/jefflester/minitrino:pr-${{ github.event.pull_request.number }}-trino
             type=registry,ref=ghcr.io/jefflester/minitrino:latest-trino
-          cache-to: type=gha,mode=max
+          cache-to: type=gha,mode=min,scope=trino-build
 
   build-starburst-image:
     name: Build Starburst Test Image
@@ -179,10 +179,10 @@ jobs:
             CLUSTER_DIST=starburst
             SERVICE_USER=starburst
           cache-from: |
-            type=gha
+            type=gha,scope=starburst-build
             type=registry,ref=ghcr.io/jefflester/minitrino:pr-${{ github.event.pull_request.number }}-starburst
             type=registry,ref=ghcr.io/jefflester/minitrino:latest-starburst
-          cache-to: type=gha,mode=max
+          cache-to: type=gha,mode=min,scope=starburst-build
 
   # ============================================================================
   # STAGE 3: CLI Tests (Always run with conditional image pulling)

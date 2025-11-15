@@ -47,12 +47,14 @@ runs:
           echo "Image was built in this PR, pulling PR-specific image..."
           docker pull ghcr.io/jefflester/minitrino:pr-${PR_NUMBER}-${IMAGE_TYPE}
           docker tag ghcr.io/jefflester/minitrino:pr-${PR_NUMBER}-${IMAGE_TYPE} \
-            ghcr.io/jefflester/minitrino:pr-${PR_NUMBER}-${CLUSTER_VERSION}-${IMAGE_TYPE}
-          echo "✓ Successfully pulled and tagged PR-specific image"
+            minitrino/cluster:${CLUSTER_VERSION}-${IMAGE_TYPE}
+          echo "✓ Successfully pulled and tagged PR-specific image as minitrino/cluster:${CLUSTER_VERSION}-${IMAGE_TYPE}"
         else
           echo "Image build was skipped, pulling latest from master..."
           if docker pull ghcr.io/jefflester/minitrino:latest-${IMAGE_TYPE}; then
-            echo "✓ Successfully pulled latest image from master"
+            docker tag ghcr.io/jefflester/minitrino:latest-${IMAGE_TYPE} \
+              minitrino/cluster:${CLUSTER_VERSION}-${IMAGE_TYPE}
+            echo "✓ Successfully pulled and tagged latest image as minitrino/cluster:${CLUSTER_VERSION}-${IMAGE_TYPE}"
           else
             echo "⚠ Latest image not found, will fall back to pull-test-image action"
           fi

@@ -38,15 +38,20 @@ runs:
 
     - name: Install CLI dependencies
       shell: bash
-      run: |
-        pip install -e .
-        # Add Python bin directory to PATH for subsequent steps
-        echo "$(python -m site --user-base)/bin" >> $GITHUB_PATH
+      run: pip install -e .
 
     - name: Install test dependencies
       if: inputs.install-test-dependencies == 'true'
       shell: bash
       run: pip install -e ./src/tests/
+
+    - name: Export Python bin to PATH
+      shell: bash
+      run: |
+        # Add Python bin directory to PATH for subsequent steps
+        PYTHON_BIN="$(python -c 'import sys; print(sys.prefix)')/bin"
+        echo "$PYTHON_BIN" >> $GITHUB_PATH
+        echo "Python bin directory exported to PATH: $PYTHON_BIN"
 
     - name: Set up Starburst license
       if: inputs.setup-license == 'true'

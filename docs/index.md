@@ -19,10 +19,8 @@ All of this can be deployed with minimal to no configuration requirements.
 
 [![PyPI
 version](https://img.shields.io/pypi/v/minitrino)](https://pypi.org/project/minitrino/)
-![CLI
-Tests](https://github.com/jefflester/minitrino/actions/workflows/cli-tests.yaml/badge.svg)
-![Library
-Tests](https://github.com/jefflester/minitrino/actions/workflows/lib-tests-trino.yaml/badge.svg)
+![CI
+Tests](https://github.com/jefflester/minitrino/actions/workflows/ci.yaml/badge.svg)
 [![Trino
 Slack](https://img.shields.io/static/v1?logo=slack&logoColor=959DA5&label=Slack&labelColor=333a41&message=join%20conversation&color=3AC358)](https://trinodb.io/slack.html)
 

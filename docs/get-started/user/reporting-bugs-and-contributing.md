@@ -28,7 +28,7 @@ release branch. To learn more about PR and release workflows, visit the
 
 After forking or cloning the repository:
 
-1. Run `./install.sh` to set up the development environment
+1. Run `make install` or `./install/src/install.sh` to set up the development environment
 1. Dependencies are managed in `pyproject.toml`
 1. Run `make pre-commit` to lint changes before committing
 

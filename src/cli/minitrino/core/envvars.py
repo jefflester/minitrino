@@ -180,7 +180,9 @@ class EnvironmentVariables(dict):
             config.read(self._ctx.config_file)
             for k, v in config.items("config"):
                 if not self.get(k) and v:
-                    self[k.upper()] = self._strip_quotes(str(v))
+                    stripped = self._strip_quotes(str(v))
+                    expanded = os.path.expanduser(stripped)
+                    self[k.upper()] = expanded
         except Exception as e:
             self._ctx.logger.warn(
                 f"Failed to parse config file {self._ctx.config_file} with error:"

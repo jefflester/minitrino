@@ -1,4 +1,4 @@
-# Stargate Parallel Catalog
+# Stargate Catalog
 
 Add a
 [Stargate catalog](https://docs.starburst.io/latest/connector/starburst-stargate.html)
@@ -11,7 +11,7 @@ to the cluster along with a remote Stargate cluster for catalog access.
 Provision the module:
 
 ```sh
-minitrino -e CLUSTER_VER=${version}-e provision -i starburst -m stargate-parallel
+minitrino -e CLUSTER_VER=${version}-e provision -i starburst -m stargate
 ```
 
 This module spins up an additional cluster to serve as the remote Stargate

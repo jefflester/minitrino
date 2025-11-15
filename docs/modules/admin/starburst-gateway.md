@@ -53,5 +53,3 @@ minitrino exec -i 'trino-cli --server starburst-gateway:9080 --user admin'
 ## Dependent Modules
 
 - [`insights`](./insights.md#insights): Enables the Starburst web UI.
-- [`faker`](../catalog/faker.md): Adds a Faker catalog to each cluster for
-  synthetic data.

@@ -36,29 +36,30 @@ synchronized even if the pre-commit hook did not run.
 
 ## PR from Release Branch
 
-When a PR is created from a release branch and targets `master`, the following
-workflows are triggered:
+When a PR is created from a release branch and targets `master`, the `ci.yaml`
+workflow is triggered, which includes the following automated jobs:
 
-- `cli-tests.yaml`
-- `lib-tests-trino.yaml` - Library tests for Trino distributions
-- `lib-tests-sep.yaml` - Library tests for Starburst Enterprise Platform (SEP)
-  distributions
-- `test-release.yaml`
+- **Change detection** - Determines which components changed (CLI, library, or image)
+- **Test release creation** - Creates a draft release and tag (`0.0.0`) with the
+  release branch as its target, allowing the testing suite to access an updated
+  Minitrino library reflective of the current state of the release branch
+- **CLI tests** - Unit and integration tests for the CLI (runs if CLI files changed)
+- **Library tests** - Tests modules with both Trino and Starburst distributions
+  (runs if library files changed)
+- **Image build tests** - Builds and tests the container image (runs if image files
+  changed)
 
-The first three workflows automate the tests described in
-[testing overview](cli-and-library-tests). The `test-release.yaml` workflow
-creates a draft release and tag (`0.0.0`) with the release branch as its target.
-This allows for the testing suite to have access to an updated Minitrino library
-reflective of the current state of the release branch.
+All tests are described in detail in the [testing overview](cli-and-library-tests).
 
 ## Merging a PR into `master`
 
-Upon completion of the code tests and the merging of a feature branch PR into
+Upon completion of the code tests and the merging of a release branch PR into
 `master`, the `release.yaml` workflow is triggered. This workflow:
 
-- Creates a release whose name matches the name of the PR branch (e.g. `3.0.0`)
+- Creates a release whose name matches the name of the merged PR branch (e.g., `3.0.0`)
 - Publishes the release and marks it as `latest`
-- Builds the CLI package and publishes it to PyPi
+- Builds the CLI package and publishes it to PyPI
+- Creates the library archive and attaches it to the GitHub release
 
 ## Automated Dependency Updates
 

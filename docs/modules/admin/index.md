@@ -3,8 +3,9 @@
 Learn about admin modules.
 
 ```{toctree}
-:hidden:
-
+---
+hidden:
+---
 cache-service
 data-products
 file-group-provider
@@ -20,6 +21,6 @@ spooling-protocol
 starburst-gateway
 ```
 
----
+______________________________________________________________________
 
 [Minitrino GitHub repository](https://github.com/jefflester/minitrino).

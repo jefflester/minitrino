@@ -7,11 +7,10 @@ from minitrino.core.logging.spinner import Spinner
 
 
 class MinitrinoLoggerHandler(logging.StreamHandler):
-    """
-    Primary user-facing log handler for Minitrino.
+    """Primary user-facing log handler for Minitrino.
 
-    Clears the spinner line before emitting each log record to ensure
-    clean CLI output during spinner operations.
+    Clears the spinner line before emitting each log record to ensure clean CLI output
+    during spinner operations.
     """
 
     def __init__(self, spinner: Spinner):
@@ -20,11 +19,10 @@ class MinitrinoLoggerHandler(logging.StreamHandler):
 
     @property
     def stream(self):
-        """
-        Always return current sys.stderr instead of cached reference.
+        """Always return current sys.stderr instead of cached reference.
 
-        This ensures the handler writes to whatever stderr currently
-        points to, including CliRunner's capture buffer during tests.
+        This ensures the handler writes to whatever stderr currently points to,
+        including CliRunner's capture buffer during tests.
         """
         return sys.stderr
 

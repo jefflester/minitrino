@@ -4,7 +4,6 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from minitrino.core.context import MinitrinoContext
 from minitrino.core.errors import MinitrinoError, UserError
 from minitrino.core.logging.levels import LogLevel
@@ -71,14 +70,16 @@ class TestMinitrinoContext:
 
         ctx = MinitrinoContext()
 
-        with patch.object(
-            ctx, "_handle_minitrino_user_dir", return_value="/home/user/.minitrino"
+        with (
+            patch.object(
+                ctx, "_handle_minitrino_user_dir", return_value="/home/user/.minitrino"
+            ),
+            patch.object(ctx, "_validate_config_file"),
+            patch.object(ctx, "_try_parse_library_env"),
+            patch.object(ctx, "_compare_versions"),
+            patch.object(ctx, "_get_lib_dir", return_value="/lib"),
         ):
-            with patch.object(ctx, "_validate_config_file"):
-                with patch.object(ctx, "_try_parse_library_env"):
-                    with patch.object(ctx, "_compare_versions"):
-                        with patch.object(ctx, "_get_lib_dir", return_value="/lib"):
-                            ctx.initialize(cluster_name="test-cluster")
+            ctx.initialize(cluster_name="test-cluster")
 
         # Verify initialization
         assert ctx._initialized is True
@@ -452,14 +453,16 @@ class TestMinitrinoContext:
         ctx = MinitrinoContext()
         ctx.logger = MagicMock()
 
-        with patch.object(
-            ctx, "_handle_minitrino_user_dir", return_value="/home/user/.minitrino"
+        with (
+            patch.object(
+                ctx, "_handle_minitrino_user_dir", return_value="/home/user/.minitrino"
+            ),
+            patch.object(ctx, "_validate_config_file"),
+            patch.object(ctx, "_try_parse_library_env"),
+            patch.object(ctx, "_compare_versions"),
+            patch.object(ctx, "_get_lib_dir", return_value="/lib"),
         ):
-            with patch.object(ctx, "_validate_config_file"):
-                with patch.object(ctx, "_try_parse_library_env"):
-                    with patch.object(ctx, "_compare_versions"):
-                        with patch.object(ctx, "_get_lib_dir", return_value="/lib"):
-                            ctx.initialize(log_level=LogLevel.DEBUG)
+            ctx.initialize(log_level=LogLevel.DEBUG)
 
         ctx.logger.set_level.assert_called_once_with(LogLevel.DEBUG)
 

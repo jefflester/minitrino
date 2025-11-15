@@ -74,7 +74,7 @@ class TestSnapshotConstants:
             "version",
             "image",
         ]
-        assert settings.SNAPSHOT_ROOT_FILES == expected_files
+        assert expected_files == settings.SNAPSHOT_ROOT_FILES
         assert len(settings.SNAPSHOT_ROOT_FILES) == 4
         assert isinstance(settings.SNAPSHOT_ROOT_FILES, list)
 

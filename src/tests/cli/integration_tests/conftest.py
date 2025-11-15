@@ -4,12 +4,12 @@ import json
 import logging
 import sys
 import time
-from typing import Generator
+from collections.abc import Generator
 
 import docker
 import pytest
-
 from minitrino.shutdown import shutdown_event
+
 from tests import common
 from tests.cli.constants import CLUSTER_NAME
 from tests.cli.integration_tests import utils
@@ -45,12 +45,11 @@ def _setup_logger(_logger):
 
 @pytest.fixture(autouse=True)
 def _clear_shutdown_event() -> Generator:
-    """
-    Clear the global shutdown_event before each test.
+    """Clear the global shutdown_event before each test.
 
-    The shutdown_event is a global threading.Event that gets set when
-    errors occur. Without clearing it between tests, it can contaminate
-    subsequent tests with stale state, causing non-deterministic failures.
+    The shutdown_event is a global threading.Event that gets set when errors occur.
+    Without clearing it between tests, it can contaminate subsequent tests with stale
+    state, causing non-deterministic failures.
     """
     shutdown_event.clear()
     yield
@@ -60,8 +59,7 @@ def _clear_shutdown_event() -> Generator:
 
 @pytest.fixture
 def log_msg(request: pytest.FixtureRequest) -> str:
-    """
-    Return the log message for a test.
+    """Return the log message for a test.
 
     Parameters
     ----------
@@ -78,8 +76,7 @@ def log_msg(request: pytest.FixtureRequest) -> str:
 
 @pytest.fixture
 def log_test(log_msg: str) -> Generator:
-    """
-    Log a test start and end message.
+    """Log a test start and end message.
 
     Parameters
     ----------
@@ -93,8 +90,7 @@ def log_test(log_msg: str) -> Generator:
 
 @pytest.fixture
 def down() -> Generator:
-    """
-    Bring down all running containers.
+    """Bring down all running containers.
 
     Notes
     -----
@@ -109,8 +105,7 @@ def down() -> Generator:
 
 @pytest.fixture
 def remove() -> Generator:
-    """
-    Remove resources for all modules in all clusters.
+    """Remove resources for all modules in all clusters.
 
     Notes
     -----
@@ -122,8 +117,7 @@ def remove() -> Generator:
 
 @pytest.fixture
 def start_docker() -> Generator:
-    """
-    Start the Docker daemon.
+    """Start the Docker daemon.
 
     Notes
     -----
@@ -136,8 +130,7 @@ def start_docker() -> Generator:
 
 @pytest.fixture(scope="session")
 def stop_docker() -> Generator:
-    """
-    Stop the Docker daemon.
+    """Stop the Docker daemon.
 
     Notes
     -----
@@ -157,8 +150,7 @@ def stop_docker() -> Generator:
 
 @pytest.fixture
 def cleanup_config() -> Generator:
-    """
-    Ensure a sample config file and directory exist.
+    """Ensure a sample config file and directory exist.
 
     Notes
     -----
@@ -173,8 +165,7 @@ def cleanup_config() -> Generator:
 
 @pytest.fixture
 def reset_metadata(request: pytest.FixtureRequest) -> Generator:
-    """
-    Reset the given module's `metadata.json` file to default values.
+    """Reset the given module's `metadata.json` file to default values.
 
     Parameters
     ----------
@@ -208,8 +199,7 @@ def reset_metadata(request: pytest.FixtureRequest) -> Generator:
 
 @pytest.fixture
 def build_test_image() -> Generator:
-    """
-    Build the test module image.
+    """Build the test module image.
 
     Notes
     -----
@@ -236,8 +226,7 @@ def build_test_image() -> Generator:
 
 @pytest.fixture
 def provision_clusters(request: pytest.FixtureRequest) -> Generator:
-    """
-    Provision one or more clusters with the `test` module by default.
+    """Provision one or more clusters with the `test` module by default.
 
     Parameters
     ----------
@@ -284,8 +273,7 @@ def provision_clusters(request: pytest.FixtureRequest) -> Generator:
 
 
 def pytest_runtest_logreport(report: pytest.TestReport):
-    """
-    Force pytest "PASS"/"FAIL" to log on its own line.
+    """Force pytest "PASS"/"FAIL" to log on its own line.
 
     Enhanced to detect and log test reruns from pytest-rerunfailures.
     """
@@ -303,9 +291,7 @@ def pytest_runtest_logreport(report: pytest.TestReport):
                     f"(succeeded on attempt {report.rerun + 1})"
                 )
 
-        if report.passed:
-            sys.stdout.write("\n")
-        elif report.failed:
+        if report.passed or report.failed:
             sys.stdout.write("\n")
 
 

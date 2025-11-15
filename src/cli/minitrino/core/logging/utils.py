@@ -13,8 +13,7 @@ DEFAULT_INDENT = " " * 5
 def configure_logging(
     log_level: lg.levels.LogLevel = lg.levels.LogLevel.INFO,
 ) -> lg.logger.MinitrinoLogger:
-    """
-    Create a singleton Minitrino logger or return the existing one.
+    """Create a singleton Minitrino logger or return the existing one.
 
     Parameters
     ----------

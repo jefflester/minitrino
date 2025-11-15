@@ -29,7 +29,6 @@ s3a://minitrino/<domain>
 ## Dependent Modules
 
 - [`hive`](../catalog/hive.md#hive-catalog): Required for Data Products to
-  function.
-- [`minio`](./minio.md#minio): Required for object storage.
+  function (includes MinIO for object storage).
 - [`insights`](./insights.md#insights): Enables the Starburst web UI and
   configures a backend database for persisting data product configuration.

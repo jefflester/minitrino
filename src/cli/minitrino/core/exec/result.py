@@ -1,13 +1,12 @@
 """CommandResult dataclass for command execution results."""
 
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 
 @dataclass
 class CommandResult:
-    """
-    Command result.
+    """Command result.
 
     Attributes
     ----------
@@ -33,6 +32,6 @@ class CommandResult:
     output: str
     exit_code: int
     duration: float
-    error: Optional[BaseException] = None
-    process_handle: Optional[Any] = None
+    error: BaseException | None = None
+    process_handle: Any | None = None
     is_completed: bool = True

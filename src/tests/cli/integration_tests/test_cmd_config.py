@@ -1,7 +1,7 @@
 import os
 import shutil
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, Optional
 
 import pytest
 
@@ -20,8 +20,7 @@ executor = common.MinitrinoExecutor(utils.CLUSTER_NAME)
 
 @dataclass
 class ConfigScenario:
-    """
-    Config file scenario.
+    """Config file scenario.
 
     Parameters
     ----------
@@ -48,14 +47,14 @@ class ConfigScenario:
     """
 
     id: str
-    setup: Optional[Callable]
+    setup: Callable | None
     cmd_args: list[str]
-    input_val: Optional[str]
+    input_val: str | None
     expected_exit_code: int
     expected_dir: bool
     expected_file: bool
-    expected_output: Optional[str]
-    expected_not_in_file: Optional[str]
+    expected_output: str | None
+    expected_not_in_file: str | None
     log_msg: str
 
 

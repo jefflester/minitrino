@@ -6,7 +6,6 @@ Tests the ClusterValidator class for configuration validation.
 from unittest.mock import Mock
 
 import pytest
-
 from minitrino.core.cluster.validator import ClusterValidator
 from minitrino.core.errors import UserError
 
@@ -172,11 +171,11 @@ class TestClusterValidator:
         mock_container.name = "minitrino-test-cluster-trino"
         mock_ctx.docker_client.containers.list.return_value = [mock_container]
 
-        validator = ClusterValidator(mock_ctx, mock_cluster)
+        ClusterValidator(mock_ctx, mock_cluster)
 
         # Method might not be public, but we can test the behavior
         # through other methods that use it
-        assert validator._ctx.docker_client.containers.list.called or True
+        assert True
 
     def test_validator_with_starburst_enterprise_version(self):
         """Test validator handles Starburst Enterprise version format."""

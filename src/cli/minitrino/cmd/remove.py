@@ -65,8 +65,7 @@ def cli(
     modules: list[str],
     force: bool,
 ):
-    """
-    Handle removal of containers, networks, and volumes.
+    """Handle removal of containers, networks, and volumes.
 
     Parameters
     ----------

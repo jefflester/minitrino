@@ -4,8 +4,7 @@ import re
 
 
 def strip_ansi(value: str = "") -> str:
-    """
-    Remove ANSI escape sequences from the given string.
+    """Remove ANSI escape sequences from the given string.
 
     Parameters
     ----------

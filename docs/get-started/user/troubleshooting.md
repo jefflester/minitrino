@@ -33,7 +33,7 @@ docker logs minitrino-default
 docker logs <container-name>
 ```
 
----
+______________________________________________________________________
 
 ## Common Issues and Solutions
 
@@ -76,7 +76,7 @@ for the complete list:
 - `__PORT_MINIO` (default: 9000)
 - And more...
 
----
+______________________________________________________________________
 
 ### Docker Out of Memory (OOM) Errors
 
@@ -120,7 +120,7 @@ high. Override with:
 minitrino -v -e JVM_CONFIG=$'-Xmx4G\n-Xms2G' provision
 ```
 
----
+______________________________________________________________________
 
 ### Module Version Incompatibility
 
@@ -156,7 +156,7 @@ requires Trino 466+).
 1. **Override module configuration** (advanced): Edit the module's YAML or
    properties files in `~/.minitrino/lib/modules/<type>/<module>/`.
 
----
+______________________________________________________________________
 
 ### ARM64 Mac Issues (Apple Silicon)
 
@@ -200,7 +200,7 @@ minitrino -v provision -m db2
 - Instead of `sqlserver`, consider `postgres` or `mysql`
 - Instead of `db2`, consider `postgres` or other OSS databases
 
----
+______________________________________________________________________
 
 ### Container Startup Failures
 
@@ -264,7 +264,7 @@ ls /tmp/minitrino/bootstrap/
 to `${node.data-dir}/var/log/server.log`. You can also view logs using
 `docker logs minitrino-default`.
 
----
+______________________________________________________________________
 
 ### Bootstrap Script Failures
 
@@ -319,7 +319,7 @@ docker logs minitrino-default 2>&1 | grep "BOOTSTRAP"
 **Note:** Bootstrap scripts are only re-executed if their content changes. After
 modifying a bootstrap script, destroy and re-provision the environment.
 
----
+______________________________________________________________________
 
 ### License File Issues (Enterprise Modules)
 
@@ -354,6 +354,7 @@ errors.
    ```
 
 1. **Verify license validity:**
+
    - Check expiration date
    - Ensure license supports the features you're using
    - Contact Starburst support if license appears invalid
@@ -365,7 +366,7 @@ errors.
    docker exec minitrino-default ls -la /mnt/etc/lic/starburstdata.license
    ```
 
----
+______________________________________________________________________
 
 ### Network and Docker Context Issues
 
@@ -433,7 +434,7 @@ commands hang.
 - Check corporate VPN interference
 - Try disabling firewall temporarily to isolate issue
 
----
+______________________________________________________________________
 
 ### Cluster Resource Cleanup Issues
 
@@ -476,7 +477,7 @@ space fills up.
    docker system prune -a --volumes
    ```
 
----
+______________________________________________________________________
 
 ### Library Version Mismatch
 
@@ -500,7 +501,7 @@ minitrino -v lib-install
 **Note:** CLI and library versions must match. Always run `lib-install` after
 upgrading the CLI.
 
----
+______________________________________________________________________
 
 ### Module Not Found After Upgrade
 
@@ -539,7 +540,7 @@ upgrading the CLI.
    ls ~/.minitrino/lib/modules/security/
    ```
 
----
+______________________________________________________________________
 
 ## Still Having Issues?
 
@@ -565,6 +566,7 @@ If none of these troubleshooting tips resolve your issue:
    ```
 
 1. **File a GitHub issue** with:
+
    - Minitrino version (`minitrino version`)
    - Docker version (`docker --version`)
    - OS and architecture (`uname -a`)
@@ -574,7 +576,7 @@ If none of these troubleshooting tips resolve your issue:
 
 See [Reporting Bugs](reporting-bugs-and-contributing) for more information.
 
----
+______________________________________________________________________
 
 ## Additional Resources
 

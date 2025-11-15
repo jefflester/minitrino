@@ -81,12 +81,12 @@ connection-password=trinoRocks15
 EOF"
 ```
 
----
+______________________________________________________________________
 
 **Note**: Passwords in default modules tend to be `trinoRocks15`. For
 consistency throughout the library, it is recommended to use this password.
 
----
+______________________________________________________________________
 
 ## Add the Docker Compose YAML
 
@@ -194,6 +194,7 @@ EOF'
   `starburst-gateway` and `stargate` for federated query scenarios.
 
   Each object requires:
+
   - `name` (string): Unique name for the dependent cluster
   - `modules` (array of strings): Modules to provision in the dependent cluster
   - `workers` (number): Number of worker nodes (0 for coordinator-only)
@@ -345,7 +346,7 @@ labeled with the same label sets (as seen in the
 [`hive` module's](https://github.com/jefflester/minitrino/blob/master/src/lib/modules/catalog/hive/hive.yaml)
 Compose file).
 
----
+______________________________________________________________________
 
 **Note**: The example above already includes a named volume (`postgres-data`) in
 the Compose file. Named volumes should always have labels applied to them, as

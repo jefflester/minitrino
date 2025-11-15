@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from importlib.metadata import version
-from typing import List
 
 import pytest
 
@@ -12,8 +11,7 @@ executor = common.MinitrinoExecutor(utils.CLUSTER_NAME)
 
 @dataclass
 class VersionScenario:
-    """
-    Scenario for testing the version command.
+    """Scenario for testing the version command.
 
     Parameters
     ----------
@@ -34,10 +32,10 @@ class VersionScenario:
     """
 
     id: str
-    prepend: List[str]
-    append: List[str]
-    expected_output: List[str]
-    unexpected_output: List[str]
+    prepend: list[str]
+    append: list[str]
+    expected_output: list[str]
+    unexpected_output: list[str]
     log_msg: str
     expected_exit_code: int = 0
 

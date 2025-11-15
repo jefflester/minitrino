@@ -10,7 +10,7 @@ import traceback
 from functools import wraps
 from importlib.metadata import version
 from inspect import signature
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any
 
 import docker
 from click import echo, make_pass_decorator
@@ -31,8 +31,7 @@ if TYPE_CHECKING:
 # CLI Decorators & Exception Handling
 # ----------------------------------------------------------------------
 def pass_environment() -> Any:
-    """
-    Return a Click pass decorator for the MinitrinoContext.
+    """Return a Click pass decorator for the MinitrinoContext.
 
     Returns
     -------
@@ -46,12 +45,11 @@ def pass_environment() -> Any:
 
 def handle_exception(
     error: BaseException,
-    ctx: Optional[Any] = None,
+    ctx: Any | None = None,
     additional_msg: str = "",
     skip_traceback: bool = False,
 ) -> None:
-    """
-    Handle a single exception.
+    """Handle a single exception.
 
     Parameters
     ----------
@@ -109,8 +107,7 @@ def handle_exception(
 
 
 def exception_handler(func: Any) -> Any:
-    """
-    Handle unhandled exceptions.
+    """Handle unhandled exceptions.
 
     Parameters
     ----------
@@ -148,8 +145,7 @@ def exception_handler(func: Any) -> Any:
 # Docker/Container Utilities
 # ----------------------------------------------------------------------
 def check_daemon(docker_client: Any) -> None:
-    """
-    Check if the Docker daemon is running.
+    """Check if the Docker daemon is running.
 
     Parameters
     ----------
@@ -171,12 +167,11 @@ def check_daemon(docker_client: Any) -> None:
             "running, check whether you are using the intended Docker context "
             "(e.g. Colima or OrbStack). You can view existing contexts with `docker "
             "context ls` and switch with `docker context use <context>`.",
-        )
+        ) from e
 
 
 def check_lib(ctx: MinitrinoContext) -> None:
-    """
-    Check if a Minitrino library exists.
+    """Check if a Minitrino library exists.
 
     Parameters
     ----------
@@ -189,15 +184,12 @@ def check_lib(ctx: MinitrinoContext) -> None:
     if not ctx.lib_dir:
         ctx.library_manager.auto_install_or_update()
 
-    ctx.lib_dir
-
 
 def container_user_and_id(
-    ctx: Optional[MinitrinoContext] = None,
+    ctx: MinitrinoContext | None = None,
     container: Container | MinitrinoContainer | str = "",
 ) -> tuple[str, str]:
-    """
-    Return the build user and build user ID for a cluster container.
+    """Return the build user and build user ID for a cluster container.
 
     Parameters
     ----------
@@ -252,9 +244,8 @@ def container_user_and_id(
 # ----------------------------------------------------------------------
 # Miscellaneous
 # ----------------------------------------------------------------------
-def generate_identifier(identifiers: Optional[Dict[str, Any]] = None) -> str:
-    """
-    Return an object identifier string used for creating log messages.
+def generate_identifier(identifiers: dict[str, Any] | None = None) -> str:
+    """Return an object identifier string used for creating log messages.
 
     Parameters
     ----------
@@ -286,8 +277,7 @@ def generate_identifier(identifiers: Optional[Dict[str, Any]] = None) -> str:
 def parse_key_value_pair(
     ctx: MinitrinoContext, pair: str, hard_fail: bool = False
 ) -> tuple[str, str]:
-    """
-    Parse a key-value pair from a string.
+    """Parse a key-value pair from a string.
 
     Parameters
     ----------
@@ -303,21 +293,18 @@ def parse_key_value_pair(
         Tuple of key and value.
     """
     pair = pair.strip()
-    if "=" not in pair:
-        if hard_fail:
-            raise UserError(f"Invalid key-value pair: {pair}")
+    if "=" not in pair and hard_fail:
+        raise UserError(f"Invalid key-value pair: {pair}")
     key, value = pair.split("=", 1)
-    if not key or not value:
-        if hard_fail:
-            raise UserError(f"Invalid key-value pair: {pair}")
+    if (not key or not value) and hard_fail:
+        raise UserError(f"Invalid key-value pair: {pair}")
     return key, value
 
 
 def closest_match_or_error(
     name: str, valid_names: list[str], context: str = "item"
 ) -> str:
-    """
-    Return the name or fail with a closest match suggestion.
+    """Return the name or fail with a closest match suggestion.
 
     Parameters
     ----------
@@ -351,8 +338,7 @@ def closest_match_or_error(
 
 
 def validate_yes(value: str) -> bool:
-    """
-    Validate if the input is an affirmative response.
+    """Validate if the input is an affirmative response.
 
     Parameters
     ----------
@@ -366,17 +352,14 @@ def validate_yes(value: str) -> bool:
         otherwise.
     """
     response = value.replace(" ", "")
-    if response.lower() == "y" or response.lower() == "yes":
-        return True
-    return False
+    return bool(response.lower() == "y" or response.lower() == "yes")
 
 
 # ----------------------------------------------------------------------
 # Version Helpers
 # ----------------------------------------------------------------------
 def cli_ver() -> str:
-    """
-    Return the CLI version.
+    """Return the CLI version.
 
     Returns
     -------
@@ -386,9 +369,8 @@ def cli_ver() -> str:
     return version("Minitrino")
 
 
-def lib_ver(ctx: Optional[MinitrinoContext] = None, lib_path: str = "") -> str:
-    """
-    Return the library version.
+def lib_ver(ctx: MinitrinoContext | None = None, lib_path: str = "") -> str:
+    """Return the library version.
 
     Returns
     -------
@@ -403,7 +385,7 @@ def lib_ver(ctx: Optional[MinitrinoContext] = None, lib_path: str = "") -> str:
 
     version_file = os.path.join(lib_path, "version")
     try:
-        with open(version_file, "r") as f:
+        with open(version_file) as f:
             return next((line.strip() for line in f if line.strip()), "NOT INSTALLED")
     except Exception:
         return "NOT INSTALLED"

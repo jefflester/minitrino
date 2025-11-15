@@ -1,13 +1,12 @@
 from dataclasses import dataclass
-from typing import Optional
 
 import pytest
-
 from minitrino.settings import (
     MODULE_ADMIN,
     MODULE_CATALOG,
     MODULE_SECURITY,
 )
+
 from tests import common
 from tests.cli.integration_tests import utils
 
@@ -17,8 +16,7 @@ executor = common.MinitrinoExecutor(utils.CLUSTER_NAME)
 
 @dataclass
 class ModuleNameScenario:
-    """
-    Module name scenario.
+    """Module name scenario.
 
     Parameters
     ----------
@@ -38,7 +36,7 @@ class ModuleNameScenario:
 
     id: str
     module_name: str
-    type_flag: Optional[str]
+    type_flag: str | None
     expected_exit_code: int
     expected_output: str
     log_msg: str
@@ -89,8 +87,7 @@ def test_module_name_scenarios(scenario: ModuleNameScenario) -> None:
 
 @dataclass
 class TypeScenario:
-    """
-    Module type scenario.
+    """Module type scenario.
 
     Parameters
     ----------
@@ -158,10 +155,8 @@ ALL_MODULES_MSG = "Print all module metadata if no module name is passed"
 
 @pytest.mark.parametrize("log_msg", [ALL_MODULES_MSG], indirect=True)
 def test_all_modules() -> None:
-    """
-    Ensure all module metadata is printed to the console if no module
-    name is passed.
-    """
+    """Ensure all module metadata is printed to the console if no module name is
+    passed."""
     result = executor.exec(executor.build_cmd(base="modules"))
     utils.assert_exit_code(result)
     expected_fields = [
@@ -208,8 +203,7 @@ def test_type_module_mismatch() -> None:
 )
 @pytest.mark.usefixtures("provision_clusters", "down")
 def test_running() -> None:
-    """Ensure the `module` command can output metadata for running
-    modules."""
+    """Ensure the `module` command can output metadata for running modules."""
     result = executor.exec(
         executor.build_cmd(base="modules", append=["--json", "--running"])
     )
@@ -232,10 +226,8 @@ RUNNING_CLUSTER_MSG = "Output metadata for running modules in a specific cluster
 )
 @pytest.mark.usefixtures("provision_clusters", "down")
 def test_running_cluster() -> None:
-    """
-    Ensure module metadata is outputted for running modules tied to a
-    specific cluster.
-    """
+    """Ensure module metadata is outputted for running modules tied to a specific
+    cluster."""
     cmd = executor.build_cmd(base="modules", append=["--json", "--running"])
     result = executor.exec(cmd)
     utils.assert_exit_code(result)

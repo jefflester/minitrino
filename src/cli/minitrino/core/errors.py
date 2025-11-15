@@ -2,8 +2,7 @@
 
 
 class MinitrinoError(Exception):
-    """
-    Base exception class for all Minitrino-related errors.
+    """Base exception class for all Minitrino-related errors.
 
     Parameters
     ----------
@@ -30,8 +29,7 @@ class MinitrinoError(Exception):
 
 
 class UserError(MinitrinoError):
-    """
-    User errors that Minitrino can safely log and display.
+    """User errors that Minitrino can safely log and display.
 
     Attributes
     ----------

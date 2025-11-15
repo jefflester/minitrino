@@ -6,7 +6,6 @@ Tests the ClusterResourceManager class for Docker resource operations.
 from unittest.mock import Mock, patch
 
 import pytest
-
 from minitrino.core.cluster.resource import ClusterResourceManager
 from minitrino.core.docker.wrappers import MinitrinoContainer
 

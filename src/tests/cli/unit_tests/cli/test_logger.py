@@ -1,5 +1,4 @@
-"""
-Unit tests for Minitrino logging (logger, formatter, sink, spinner).
+"""Unit tests for Minitrino logging (logger, formatter, sink, spinner).
 
 Covers: - MinitrinoLogger log level routing and sink - Formatter
 prefixes, colors, wrapping - SinkCollector and SinkOnlyHandler buffering
@@ -15,15 +14,12 @@ import logging
 import sys
 
 import pytest
-
 from minitrino.core import logging as lg
 
 
 @pytest.fixture(autouse=True)
 def reset_logging():
-    """
-    Reset logging state before each test.
-    """
+    """Reset logging state before each test."""
     logging.shutdown()
     import importlib
 
@@ -51,9 +47,7 @@ class DummySink:
 def test_logger_levels(
     level: lg.levels.LogLevel, log_method: str, expected_level: int
 ) -> None:
-    """
-    Test that MinitrinoLogger routes logs to correct level and sink.
-    """
+    """Test that MinitrinoLogger routes logs to correct level and sink."""
     logger = lg.logger.MinitrinoLogger("minitrino-test")
     sink = DummySink()
     logger.set_log_sink(sink)
@@ -66,9 +60,7 @@ def test_logger_levels(
 
 
 def test_logger_sink_buffering() -> None:
-    """
-    Test SinkCollector buffering and trimming logic.
-    """
+    """Test SinkCollector buffering and trimming logic."""
     sink = lg.sink.SinkCollector()
     msg = "a" * 1024
     for _ in range(200):
@@ -84,9 +76,9 @@ def test_logger_sink_buffering() -> None:
 
 
 def test_sink_only_handler_emits(monkeypatch) -> None:
-    """
-    Test SinkOnlyHandler emits to sink for all levels. Attach handler to
-    root logger to mimic real Minitrino setup.
+    """Test SinkOnlyHandler emits to sink for all levels.
+
+    Attach handler to root logger to mimic real Minitrino setup.
     """
     sink = lg.sink.SinkCollector()
     handler = lg.sink.SinkOnlyHandler(sink, logging.Formatter("%(message)s"))
@@ -112,9 +104,7 @@ def test_sink_only_handler_emits(monkeypatch) -> None:
 
 
 def test_formatter_prefix_and_color(monkeypatch) -> None:
-    """
-    Test MinitrinoLogFormatter applies correct prefix and color.
-    """
+    """Test MinitrinoLogFormatter applies correct prefix and color."""
     fmt = lg.formatter.MinitrinoLogFormatter(always_verbose=True)
     record = logging.LogRecord(
         name="minitrino",
@@ -132,9 +122,7 @@ def test_formatter_prefix_and_color(monkeypatch) -> None:
 
 
 def test_formatter_wrap_lines_plain(monkeypatch) -> None:
-    """
-    Test formatter wraps lines in non-TTY mode.
-    """
+    """Test formatter wraps lines in non-TTY mode."""
     fmt = lg.formatter.MinitrinoLogFormatter(always_verbose=True)
     record = logging.LogRecord(
         name="minitrino",
@@ -152,17 +140,17 @@ def test_formatter_wrap_lines_plain(monkeypatch) -> None:
 
 
 def test_configure_logging_sets_handlers(monkeypatch) -> None:
-    """
-    Test configure_logging sets up handlers and formatter correctly.
+    """Test configure_logging sets up handlers and formatter correctly.
+
     Skip this test as it requires complex mocking of MinitrinoLogger.
     """
     pytest.skip("Skipping due to complex MinitrinoLogger mocking requirements")
 
 
 def test_spinner_buffer_and_flush(monkeypatch, capsys) -> None:
-    """
-    Test Spinner buffers logs and flushes after context exit. Log should
-    appear in terminal output and/or sink after spinner context.
+    """Test Spinner buffers logs and flushes after context exit.
+
+    Log should appear in terminal output and/or sink after spinner context.
     """
     logger = lg.logger.MinitrinoLogger("minitrino-spin")
     sink = DummySink()
@@ -193,10 +181,7 @@ def test_spinner_buffer_and_flush(monkeypatch, capsys) -> None:
 
 
 def test_log_buffer_buffer_and_flush(capsys) -> None:
-    """
-    Test LogBuffer buffers messages and flushes them to the correct
-    stream.
-    """
+    """Test LogBuffer buffers messages and flushes them to the correct stream."""
     from minitrino.core.logging.spinner import LogBuffer
 
     buf = LogBuffer()
@@ -212,9 +197,9 @@ def test_log_buffer_buffer_and_flush(capsys) -> None:
 
 
 def test_spinner_no_buffer_if_always_verbose(monkeypatch, capsys) -> None:
-    """
-    Test Spinner disables buffering in always_verbose mode. Log should
-    appear immediately in terminal output.
+    """Test Spinner disables buffering in always_verbose mode.
+
+    Log should appear immediately in terminal output.
     """
     logger = lg.logger.MinitrinoLogger("minitrino-spin2")
     sink = DummySink()

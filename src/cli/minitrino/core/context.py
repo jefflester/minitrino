@@ -1,9 +1,10 @@
 """Core context and controls for Minitrino CLI."""
 
+import contextlib
 import logging
 import os
 from pathlib import Path
-from typing import Optional, cast
+from typing import cast
 
 import docker
 
@@ -20,8 +21,7 @@ from minitrino.core.modules import Modules
 
 
 class MinitrinoContext:
-    """
-    Expose context and core controls to CLI scripts.
+    """Expose context and core controls to CLI scripts.
 
     Attributes
     ----------
@@ -71,8 +71,8 @@ class MinitrinoContext:
     env: EnvironmentVariables
     modules: Modules
     cmd_executor: CommandExecutor
-    docker_client: Optional[docker.DockerClient]
-    api_client: Optional[docker.APIClient]
+    docker_client: docker.DockerClient | None
+    api_client: docker.APIClient | None
     library_manager: LibraryManager
     all_clusters: bool
     provisioned_clusters: list[str]
@@ -93,12 +93,12 @@ class MinitrinoContext:
         self.provisioned_clusters = []
 
         self.logger: MinitrinoLogger = logging.getLogger("minitrino")
-        self.cluster: Optional[Cluster] = None
-        self.env: Optional[EnvironmentVariables] = None
-        self.modules: Optional[Modules] = None
-        self.cmd_executor: Optional[CommandExecutor] = None
-        self.docker_client: Optional[docker.DockerClient] = None
-        self.api_client: Optional[docker.APIClient] = None
+        self.cluster: Cluster | None = None
+        self.env: EnvironmentVariables | None = None
+        self.modules: Modules | None = None
+        self.cmd_executor: CommandExecutor | None = None
+        self.docker_client: docker.DockerClient | None = None
+        self.api_client: docker.APIClient | None = None
         self.lib_manager = LibraryManager(self)
 
         self.user_home_dir = os.path.expanduser("~")
@@ -117,10 +117,9 @@ class MinitrinoContext:
         self,
         cluster_name: str = "",
         version_only: bool = False,
-        log_level: Optional[LogLevel] = None,
+        log_level: LogLevel | None = None,
     ) -> None:
-        """
-        Initialize core CLI context attributes.
+        """Initialize core CLI context attributes.
 
         This method sets up logging, environment variables, and
         context-specific resources like the cluster and Docker clients.
@@ -161,8 +160,7 @@ class MinitrinoContext:
 
     @property
     def user_log_level(self) -> LogLevel:
-        """
-        The user-configured log level for this context.
+        """The user-configured log level for this context.
 
         Immutable once set.
 
@@ -175,8 +173,7 @@ class MinitrinoContext:
 
     @user_log_level.setter
     def user_log_level(self, value: LogLevel) -> None:
-        """
-        Set the user log level once. Further attempts to set will raise.
+        """Set the user log level once. Further attempts to set will raise.
 
         Parameters
         ----------
@@ -195,8 +192,7 @@ class MinitrinoContext:
 
     @property
     def lib_dir(self) -> str:
-        """
-        Get the library directory.
+        """Get the library directory.
 
         Returns
         -------
@@ -210,8 +206,7 @@ class MinitrinoContext:
 
         1. Use `LIB_PATH` if provided via environment.
         2. Check if the library exists relative to the location of this
-           file,
-        assuming the project is running in a repository context.
+           file, assuming the project is running in a repository context.
         """
         if not self._lib_safe:
             raise MinitrinoError("lib_dir accessed before initialization")
@@ -220,8 +215,7 @@ class MinitrinoContext:
         return self._lib_dir
 
     def _get_lib_dir(self) -> str:
-        """
-        Determine and validate the path to the library directory.
+        """Determine and validate the path to the library directory.
 
         Returns
         -------
@@ -234,10 +228,8 @@ class MinitrinoContext:
             If a valid library cannot be found.
         """
         lib_dir = ""
-        try:
+        with contextlib.suppress(Exception):
             lib_dir = self.env.get("LIB_PATH", "")
-        except Exception:
-            pass
 
         if not lib_dir and os.path.isdir(os.path.join(self.minitrino_user_dir, "lib")):
             lib_dir = os.path.join(self.minitrino_user_dir, "lib")
@@ -264,8 +256,7 @@ class MinitrinoContext:
         return lib_dir
 
     def _handle_minitrino_user_dir(self) -> str:
-        """
-        Create the `~/.minitrino` directory if not exists.
+        """Create the `~/.minitrino` directory if not exists.
 
         Returns
         -------
@@ -282,7 +273,7 @@ class MinitrinoContext:
                 raise UserError(
                     "Failed to create the minitrino user directory.",
                     str(e),
-                )
+                ) from e
         return minitrino_user_dir
 
     def _validate_config_file(self) -> None:
@@ -298,8 +289,7 @@ class MinitrinoContext:
                 self._logged_config_file_missing = True
 
     def _config_file(self) -> str:
-        """
-        Return the path to the user's `minitrino.cfg` file.
+        """Return the path to the user's `minitrino.cfg` file.
 
         Returns
         -------
@@ -314,7 +304,7 @@ class MinitrinoContext:
         try:
             lib_env = self.env._parse_library_env()
             # Also check for port variables in OS environment
-            for k, v in lib_env.items():
+            for k, _v in lib_env.items():
                 if k.startswith("__PORT"):
                     # Check if this port var exists in OS env and isn't already set
                     os_val = os.environ.get(k)
@@ -336,8 +326,7 @@ class MinitrinoContext:
             )
 
     def _set_cluster_attrs(self, cluster_name: str) -> None:
-        """
-        Set cluster-related attributes for the context.
+        """Set cluster-related attributes for the context.
 
         Parameters
         ----------
@@ -355,8 +344,7 @@ class MinitrinoContext:
         )
 
     def _set_cluster_name(self, cluster_name: str) -> None:
-        """
-        Determine and validate the active cluster name.
+        """Determine and validate the active cluster name.
 
         Parameters
         ----------
@@ -378,9 +366,8 @@ class MinitrinoContext:
         self.env.update({"CLUSTER_NAME": self.cluster_name})
         self.logger.debug(f"Cluster name set to: {self.cluster_name}")
 
-    def _set_docker_clients(self, env: Optional[dict] = None) -> None:
-        """
-        Initialize Docker clients.
+    def _set_docker_clients(self, env: dict | None = None) -> None:
+        """Initialize Docker clients.
 
         Parameters
         ----------

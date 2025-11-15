@@ -6,7 +6,6 @@ Tests the ClusterPortManager class for dynamic port assignment.
 from unittest.mock import Mock, patch
 
 import pytest
-
 from minitrino.core.cluster.ports import ClusterPortManager
 from minitrino.core.errors import UserError
 

@@ -1,5 +1,6 @@
 """Common utilities for Minitrino integration and system tests."""
 
+import contextlib
 import logging
 import os
 import shlex
@@ -10,12 +11,10 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from time import sleep
-from typing import Dict, Optional
 
 import docker
 from click.testing import CliRunner, Result
 from docker.models.containers import Container
-
 from minitrino.ansi import strip_ansi
 from minitrino.cli import cli
 from minitrino.core.docker.socket import get_docker_context_name, resolve_docker_socket
@@ -34,8 +33,7 @@ MINITRINO_LIB_DIR = os.path.join(
 
 
 def get_logger(log_level: int | None = None) -> logging.Logger:
-    """
-    Get or create the logger for the test module.
+    """Get or create the logger for the test module.
 
     If the logger has already been created, always set its log level if
     log_level is provided. Otherwise, use the environment variable or
@@ -85,8 +83,7 @@ logger: logging.Logger = get_logger()
 
 
 class MinitrinoExecutor:
-    """
-    Minitrino CLI command builder and executor.
+    """Minitrino CLI command builder and executor.
 
     Parameters
     ----------
@@ -111,12 +108,11 @@ class MinitrinoExecutor:
         self,
         base: str = "",
         cluster: str = "",
-        append: Optional[list[str]] = None,
-        prepend: Optional[list[str]] = None,
-        debug: Optional[bool] = None,
+        append: list[str] | None = None,
+        prepend: list[str] | None = None,
+        debug: bool | None = None,
     ) -> list[str]:
-        """
-        Build a CLI command for CliRunner.
+        """Build a CLI command for CliRunner.
 
             [minitrino (<impl>)] [-v] [--cluster <cluster>] <prepend>
             <base> <append>
@@ -173,11 +169,10 @@ class MinitrinoExecutor:
         self,
         cmd: list[str],
         input: str | None = None,
-        env: Optional[Dict[str, str]] = None,
+        env: dict[str, str] | None = None,
         log_output: bool = True,
     ) -> Result:
-        """
-        Log and execute a CLI command.
+        """Log and execute a CLI command.
 
         Parameters
         ----------
@@ -203,7 +198,7 @@ class MinitrinoExecutor:
                 msg
                 % (
                     f"minitrino {' '.join(cmd) if cmd else ''}",
-                    " with input: %s" % input if input else "",
+                    f" with input: {input}" if input else "",
                 )
             )
         # Mix stderr into stdout so logs are captured in result.output
@@ -221,8 +216,7 @@ class MinitrinoExecutor:
 
 
 def is_docker_running() -> bool:
-    """
-    Check if the Docker daemon is currently running and accessible.
+    """Check if the Docker daemon is currently running and accessible.
 
     Returns
     -------
@@ -240,8 +234,7 @@ def is_docker_running() -> bool:
 
 
 def try_start(cmd: list[str]) -> bool:
-    """
-    Attempt to start a process using the provided command.
+    """Attempt to start a process using the provided command.
 
     Parameters
     ----------
@@ -262,9 +255,8 @@ def try_start(cmd: list[str]) -> bool:
         return False
 
 
-def start_docker_daemon(context: Optional[str] = None) -> None:
-    """
-    Start the Docker daemon on macOS or Linux.
+def start_docker_daemon(context: str | None = None) -> None:
+    """Start the Docker daemon on macOS or Linux.
 
     Parameters
     ----------
@@ -361,8 +353,7 @@ def start_docker_daemon(context: Optional[str] = None) -> None:
 
 
 def try_stop(cmd: list[str]) -> bool:
-    """
-    Attempt to stop a process or service using the provided command.
+    """Attempt to stop a process or service using the provided command.
 
     Parameters
     ----------
@@ -384,21 +375,18 @@ def try_stop(cmd: list[str]) -> bool:
 
 
 def force_quit_docker_backends():
-    """
-    Immediately quit all known Docker backends on macOS.
+    """Immediately quit all known Docker backends on macOS.
 
-    Tries AppleScript for graceful quit, then killall for UI and backend
-    processes. No sudo required. For Colima, uses 'colima stop'.
+    Tries AppleScript for graceful quit, then killall for UI and backend processes. No
+    sudo required. For Colima, uses 'colima stop'.
     """
     import shutil
     from time import sleep
 
     for app in ["Docker", "OrbStack", "Rancher Desktop"]:
         if shutil.which("osascript"):
-            try:
+            with contextlib.suppress(Exception):
                 execute_cmd(cmd=f"osascript -e 'quit app \"{app}\"'")
-            except Exception:
-                pass
     sleep(2)
     for proc in [
         "Docker",
@@ -412,17 +400,14 @@ def force_quit_docker_backends():
         "qemu-system-aarch64",
         "qemu-system-x86_64",
     ]:
-        try:
+        with contextlib.suppress(Exception):
             execute_cmd(cmd=f"killall -9 {proc}")
-        except Exception:
-            pass
     if shutil.which("colima"):
         execute_cmd(cmd="colima stop")
 
 
 def stop_docker_daemon() -> None:
-    """
-    Force-stop the Docker daemon.
+    """Force-stop the Docker daemon.
 
     Raises
     ------
@@ -457,8 +442,7 @@ def stop_docker_daemon() -> None:
 
 
 def get_containers(container_name: str = "", all: bool = False) -> list[Container]:
-    """
-    Fetch Minitrino containers.
+    """Fetch Minitrino containers.
 
     If a name is provided, return the container with the specified name.
     If no name is provided, return all containers.
@@ -496,8 +480,7 @@ def get_containers(container_name: str = "", all: bool = False) -> list[Containe
 
 
 def execute_in_coordinator(cmd: str = "", container_name: str = "") -> "CommandResult":
-    """
-    Execute a command in the coordinator container.
+    """Execute a command in the coordinator container.
 
     Parameters
     ----------
@@ -524,8 +507,7 @@ def execute_in_coordinator(cmd: str = "", container_name: str = "") -> "CommandR
 
 @dataclass
 class CommandResult:
-    """
-    Command result.
+    """Command result.
 
     Attributes
     ----------
@@ -544,12 +526,11 @@ class CommandResult:
 
 def execute_cmd(
     cmd: str = "",
-    container: Optional[str] = None,
-    env: Optional[dict[str, str]] = None,
+    container: str | None = None,
+    env: dict[str, str] | None = None,
     user: str = "root",
 ) -> CommandResult:
-    """
-    Execute a command in the user's shell or inside of a container.
+    """Execute a command in the user's shell or inside of a container.
 
     Parameters
     ----------
@@ -577,10 +558,9 @@ def execute_cmd(
 
 
 def _execute_in_shell(
-    cmd: str = "", env: Optional[dict[str, str]] = None
+    cmd: str = "", env: dict[str, str] | None = None
 ) -> CommandResult:
-    """
-    Execute a command in the host shell.
+    """Execute a command in the host shell.
 
     Parameters
     ----------
@@ -623,11 +603,10 @@ def _execute_in_shell(
 def _execute_in_container(
     cmd: str = "",
     container_name: str = "",
-    env: Optional[dict[str, str]] = None,
+    env: dict[str, str] | None = None,
     user: str = "root",
 ) -> CommandResult:
-    """
-    Execute a command inside of a container.
+    """Execute a command inside of a container.
 
     Parameters
     ----------

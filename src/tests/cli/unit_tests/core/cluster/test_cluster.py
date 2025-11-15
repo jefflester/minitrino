@@ -63,11 +63,13 @@ class TestCluster:
         """Test that Cluster stores the context."""
         mock_ctx = self.create_mock_context()
 
-        with patch("minitrino.core.cluster.cluster.ClusterOperations"):
-            with patch("minitrino.core.cluster.cluster.ClusterPortManager"):
-                with patch("minitrino.core.cluster.cluster.ClusterResourceManager"):
-                    with patch("minitrino.core.cluster.cluster.ClusterValidator"):
-                        cluster = Cluster(mock_ctx)
+        with (
+            patch("minitrino.core.cluster.cluster.ClusterOperations"),
+            patch("minitrino.core.cluster.cluster.ClusterPortManager"),
+            patch("minitrino.core.cluster.cluster.ClusterResourceManager"),
+            patch("minitrino.core.cluster.cluster.ClusterValidator"),
+        ):
+            cluster = Cluster(mock_ctx)
 
         assert cluster._ctx == mock_ctx
 

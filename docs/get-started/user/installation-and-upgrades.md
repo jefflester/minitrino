@@ -34,7 +34,7 @@
 ### Operating System
 
 - **Linux**: Any modern distribution (Ubuntu 20.04+, Fedora 35+, etc.)
-- **macOS**: macOS 11 (Big Sur) or higher
+- **macOS**: macOS 11 (Big Sure) or higher
 - **Windows**: Windows 10/11 with WSL2 (Windows Subsystem for Linux)
   - Minitrino must be run from within WSL2, not from Windows directly
   - Docker Desktop for Windows should be configured to use WSL2 backend

@@ -5,7 +5,7 @@ from __future__ import annotations
 import concurrent.futures
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from docker.errors import APIError, NotFound
 
@@ -27,8 +27,7 @@ if TYPE_CHECKING:
 
 
 class ClusterOperations:
-    """
-    Cluster operations manager for the current cluster.
+    """Cluster operations manager for the current cluster.
 
     Parameters
     ----------
@@ -75,8 +74,7 @@ class ClusterOperations:
         workers: int,
         no_rollback: bool,
     ) -> None:
-        """
-        Provision the cluster and environment dependencies.
+        """Provision the cluster and environment dependencies.
 
         Dependencies include any service/configuration that is defined
         in the module(s) that are to be provisioned.
@@ -104,8 +102,7 @@ class ClusterOperations:
         self._provisioner.provision(modules, image, workers, no_rollback)
 
     def reconcile_workers(self, workers: int = 0) -> None:
-        """
-        Reconcile the number of workers in the cluster.
+        """Reconcile the number of workers in the cluster.
 
         Notes
         -----
@@ -275,8 +272,7 @@ class ClusterOperations:
         )
 
     def down(self, sig_kill: bool = False, keep: bool = False) -> None:
-        """
-        Stop and optionally remove all containers from the cluster.
+        """Stop and optionally remove all containers from the cluster.
 
         Parameters
         ----------
@@ -358,9 +354,8 @@ class ClusterOperations:
             f"Restarted containers in cluster '{self._ctx.cluster_name}'."
         )
 
-    def restart_containers(self, c_restart: Optional[list[str]] = None) -> None:
-        """
-        Restart all the containers in the provided list.
+    def restart_containers(self, c_restart: list[str] | None = None) -> None:
+        """Restart all the containers in the provided list.
 
         Parameters
         ----------
@@ -373,8 +368,7 @@ class ClusterOperations:
         c_restart = list(set(c_restart))
 
         def _restart_container(container_name: str) -> None:
-            """
-            Restart a single container by name.
+            """Restart a single container by name.
 
             Parameters
             ----------
@@ -415,10 +409,9 @@ class ClusterOperations:
                     ) from e
 
     def remove(
-        self, obj_type: str, force: bool, modules: Optional[list[str]] = None
+        self, obj_type: str, force: bool, modules: list[str] | None = None
     ) -> None:
-        """
-        Remove Docker objects associated with the current cluster.
+        """Remove Docker objects associated with the current cluster.
 
         Parameters
         ----------
@@ -525,8 +518,7 @@ class ClusterOperations:
     def _get_identifier_fields(
         self, obj_type: str, item: MinitrinoDockerObject
     ) -> dict[str, str]:
-        """
-        Return a dictionary of identifying fields for Docker resources.
+        """Return a dictionary of identifying fields for Docker resources.
 
         Parameters
         ----------
@@ -547,7 +539,7 @@ class ClusterOperations:
             # _try_get_image_tag
             if isinstance(item, MinitrinoImage):
                 tag_val = self._try_get_image_tag(item)
-                tag_val = "<none>" if not tag_val else tag_val
+                tag_val = tag_val if tag_val else "<none>"
             return {"ID": id_val, "Image:Tag": tag_val}
         else:
             id_val = (

@@ -20,12 +20,14 @@ workflows that handle version management, testing, and releases. Learn about
 release branch conventions and the automated release process.
 
 ```{toctree}
-:hidden:
+---
+hidden:
+---
 build-a-module
 cli-and-library-tests
 github-workflows
 ```
 
----
+______________________________________________________________________
 
 [Minitrino GitHub repository](https://github.com/jefflester/minitrino).

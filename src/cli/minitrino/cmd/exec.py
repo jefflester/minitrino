@@ -48,8 +48,7 @@ from minitrino.core.exec.utils import detect_container_shell
 def cli(
     ctx: MinitrinoContext, command: tuple, container: str, user: str, interactive: bool
 ) -> None:
-    """
-    Run a command in a container.
+    """Run a command in a container.
 
     Parameters
     ----------
@@ -83,7 +82,7 @@ def cli(
         raise UserError(
             f"Container '{fqcn}' not found or not running.",
             "Provide a valid container name and try again.",
-        )
+        ) from None
     cmd = build_cmd(command, fqcn, user, interactive)
     if interactive:
         try:

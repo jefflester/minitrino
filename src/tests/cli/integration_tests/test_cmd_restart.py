@@ -12,8 +12,7 @@ executor = common.MinitrinoExecutor(utils.CLUSTER_NAME)
 
 @dataclass
 class RestartScenario:
-    """
-    Restart scenario.
+    """Restart scenario.
 
     Parameters
     ----------

@@ -1,13 +1,9 @@
 # CLI and Library Tests
 
 Tests are broken into CLI and library tests. PRs targeting the `master` branch
-and new commits to said PRs trigger the following workflows, which automate each
-test type:
-
-- `.github/workflows/cli-tests.yaml`
-- `.github/workflows/lib-tests-trino.yaml`
-- `.github/workflows/lib-tests-sep.yaml`
-- `.github/workflows/test-release.yaml`
+and new commits to said PRs trigger the CI workflow (`.github/workflows/ci.yaml`),
+which automates all test types including CLI tests, library tests for both Trino
+and Starburst distributions, and test release creation.
 
 To learn more about the workflows, visit the
 [GitHub workflows overview](github-workflows).
@@ -261,12 +257,9 @@ IMAGE=starburst CLUSTER_VER=476-e python src/tests/lib/runner.py
 
 ### CI/CD Integration
 
-GitHub workflows automatically run library tests:
-
-- **lib-tests-trino.yaml**: Tests modules with Trino distributions
-- **lib-tests-sep.yaml**: Tests modules with Starburst Enterprise distributions
-
-Each workflow tests multiple Trino/Starburst versions to ensure compatibility.
+The GitHub CI workflow (`.github/workflows/ci.yaml`) automatically runs library
+tests for both Trino and Starburst Enterprise distributions, testing multiple
+versions to ensure compatibility.
 
 ### Test Duration
 

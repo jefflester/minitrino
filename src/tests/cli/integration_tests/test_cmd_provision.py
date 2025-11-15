@@ -2,8 +2,8 @@ from dataclasses import dataclass
 
 import pytest
 from click.testing import Result
-
 from minitrino.settings import DEFAULT_CLUSTER_VER, ETC_DIR, MIN_CLUSTER_VER
+
 from tests import common
 from tests.cli.constants import (
     CLUSTER_NAME,
@@ -36,8 +36,7 @@ def clean_before_test():
 
 @dataclass
 class VersionScenario:
-    """
-    Version scenario.
+    """Version scenario.
 
     Parameters
     ----------
@@ -118,8 +117,7 @@ def test_version_scenarios(scenario: VersionScenario) -> None:
 
 @dataclass
 class ModuleRequirementsScenario:
-    """
-    Module requirements scenario.
+    """Module requirements scenario.
 
     Parameters
     ----------
@@ -192,8 +190,7 @@ def test_module_requirements_scenarios(scenario: ModuleRequirementsScenario) -> 
 
 @dataclass
 class EnterpriseScenario:
-    """
-    Enterprise scenario.
+    """Enterprise scenario.
 
     Parameters
     ----------
@@ -268,7 +265,7 @@ def test_enterprise_scenarios(scenario: EnterpriseScenario, monkeypatch) -> None
     import json
 
     metadata_path = utils.get_metadata_json_path("test")
-    with open(metadata_path, "r") as f:
+    with open(metadata_path) as f:
         updated = json.load(f)
         assert updated.get("enterprise") == scenario.enterprise, (
             f"Metadata not updated: expected={scenario.enterprise}, "
@@ -294,8 +291,7 @@ def test_enterprise_scenarios(scenario: EnterpriseScenario, monkeypatch) -> None
 
 @dataclass
 class ClusterDependencyScenario:
-    """
-    Cluster dependency scenario.
+    """Cluster dependency scenario.
 
     Parameters
     ----------
@@ -395,8 +391,7 @@ def test_cluster_dependency_scenarios(scenario: ClusterDependencyScenario) -> No
 
 @dataclass
 class AppendConfigScenario:
-    """
-    Append config scenario.
+    """Append config scenario.
 
     Parameters
     ----------
@@ -484,8 +479,7 @@ def test_append_config_scenarios(scenario: AppendConfigScenario) -> None:
 
 @dataclass
 class ModuleAddScenario:
-    """
-    Module-add scenario.
+    """Module-add scenario.
 
     Parameters
     ----------
@@ -590,8 +584,7 @@ def _assert_catalog_files(modules: list[str]) -> None:
 
 @dataclass
 class WorkerScenario:
-    """
-    Worker provisioning scenario.
+    """Worker provisioning scenario.
 
     Parameters
     ----------
@@ -702,9 +695,9 @@ TEST_BOOTSTRAP_MSG = "Test bootstrap script execution in containers"
 def test_bootstrap() -> None:
     """Ensure bootstrap scripts execute in minitrino containers.
 
-    Bootstrap functionality is only supported for minitrino containers,
-    not other containers in the compose project. Tests verify that
-    before/after bootstrap hooks execute correctly.
+    Bootstrap functionality is only supported for minitrino containers, not other
+    containers in the compose project. Tests verify that before/after bootstrap hooks
+    execute correctly.
     """
 
     cmd_args = CMD_PROVISION_MOD.copy()
@@ -779,8 +772,7 @@ TEST_DUPLICATE_CONFIG_PROPS_MSG = "Test duplicate configuration properties warni
 
 @pytest.mark.parametrize("log_msg", [TEST_DUPLICATE_CONFIG_PROPS_MSG], indirect=True)
 def test_duplicate_config_props() -> None:
-    """Ensure that duplicate config properties are logged as a warning
-    to the user."""
+    """Ensure that duplicate config properties are logged as a warning to the user."""
     from minitrino.core.cluster.cluster import Cluster
     from minitrino.core.cluster.validator import ClusterValidator
     from minitrino.core.context import MinitrinoContext
@@ -822,9 +814,8 @@ def test_duplicate_config_props() -> None:
     assert "-Xms1G" in log_text
 
 
-def dep_cluster_metadata(name="test", modules=["postgres"], workers=0) -> dict:
-    """
-    Return a dictionary with dependent cluster metadata.
+def dep_cluster_metadata(name="test", modules=None, workers=0) -> dict:
+    """Return a dictionary with dependent cluster metadata.
 
     Parameters
     ----------
@@ -835,6 +826,8 @@ def dep_cluster_metadata(name="test", modules=["postgres"], workers=0) -> dict:
     workers : int
         Number of workers to be provisioned in the dependent cluster.
     """
+    if modules is None:
+        modules = ["postgres"]
     return {
         "dependentClusters": [
             {"name": name, "modules": modules, "workers": workers, "env": {}}

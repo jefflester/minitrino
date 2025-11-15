@@ -105,8 +105,8 @@ def ensure_group(groupname):
 
 def update_group_members(group, user_objs):
     """Update group membership in SCIM."""
-    user_ids = set(u["id"] for u in user_objs if u)
-    current_members = set(m["value"] for m in group.get("members", []) if "value" in m)
+    user_ids = {u["id"] for u in user_objs if u}
+    current_members = {m["value"] for m in group.get("members", []) if "value" in m}
     if user_ids == current_members:
         return
     new_members = [{"value": uid} for uid in user_ids]

@@ -31,7 +31,7 @@ main() {
     print_suppressed_logs
     SUPPRESSED_LOGS_PRINTED=1
     rm -f /tmp/.server.log
-} 
+}
 
 post_start() {
     local pipe="$1"

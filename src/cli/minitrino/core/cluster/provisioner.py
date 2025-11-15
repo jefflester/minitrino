@@ -7,7 +7,8 @@ import os
 import shutil
 import threading
 import time
-from typing import TYPE_CHECKING, Callable, Optional
+from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 from docker.errors import NotFound
 
@@ -21,8 +22,7 @@ if TYPE_CHECKING:
 
 
 class ClusterProvisioner:
-    """
-    Provision the cluster and provided modules.
+    """Provision the cluster and provided modules.
 
     Parameters
     ----------
@@ -59,8 +59,7 @@ class ClusterProvisioner:
         workers: int,
         no_rollback: bool,
     ) -> None:
-        """
-        Provision the cluster and provided modules.
+        """Provision the cluster and provided modules.
 
         Notes
         -----
@@ -150,11 +149,12 @@ class ClusterProvisioner:
                     f.write("CONTAINER LOGS\n")
                     f.write("=" * 80 + "\n\n")
                     f.write("No container logs were captured.\n")
-            raise MinitrinoError(f"{str(e)}\nFull provision log written to {crashdump}")
+            raise MinitrinoError(
+                f"{str(e)}\nFull provision log written to {crashdump}"
+            ) from e
 
-    def _runner(self, cluster: Optional[dict] = None) -> None:
-        """
-        Execute the provisioning sequence for a cluster and modules.
+    def _runner(self, cluster: dict | None = None) -> None:
+        """Execute the provisioning sequence for a cluster and modules.
 
         If provisioning a dependent cluster, update the cluster context,
         instance attributes, and environment variables before executing
@@ -227,8 +227,7 @@ class ClusterProvisioner:
             raise MinitrinoError("Failed to provision cluster.") from e
 
     def _capture_container_logs_for_crashdump(self) -> None:
-        """
-        Capture container logs before rollback destroys them.
+        """Capture container logs before rollback destroys them.
 
         Stores logs in self._captured_container_logs for later use in crashdump.
         """
@@ -304,8 +303,7 @@ class ClusterProvisioner:
         self._captured_container_logs = "".join(logs_buffer)
 
     def _provision_workers_when_safe(self) -> None:
-        """
-        Wait for the worker-safe event, then provision workers.
+        """Wait for the worker-safe event, then provision workers.
 
         Notes
         -----
@@ -361,9 +359,8 @@ class ClusterProvisioner:
                 },
             )
 
-    def _append_running_modules(self, modules: Optional[list[str]] = None) -> list[str]:
-        """
-        Add running modules to the modules list.
+    def _append_running_modules(self, modules: list[str] | None = None) -> list[str]:
+        """Add running modules to the modules list.
 
         Parameters
         ----------
@@ -392,8 +389,7 @@ class ClusterProvisioner:
         return list(set(modules))
 
     def _module_yaml_paths(self) -> list[str]:
-        """
-        Return a list of YAML file paths for enabled modules.
+        """Return a list of YAML file paths for enabled modules.
 
         Returns
         -------
@@ -408,8 +404,7 @@ class ClusterProvisioner:
         return paths
 
     def _resolve_compose_bin(self) -> tuple[str, list[str]]:
-        """
-        Resolve the Docker Compose executable and base command.
+        """Resolve the Docker Compose executable and base command.
 
         Returns
         -------
@@ -436,10 +431,9 @@ class ClusterProvisioner:
             )
 
     def _build_compose_command(
-        self, module_yaml_paths: Optional[list[str]] = None
+        self, module_yaml_paths: list[str] | None = None
     ) -> list[str]:
-        """
-        Build the Docker Compose command as a list of arguments.
+        """Build the Docker Compose command as a list of arguments.
 
         Parameters
         ----------
@@ -474,8 +468,7 @@ class ClusterProvisioner:
         self._ctx.env.update({"COMPOSE_PROJECT_NAME": compose_project_name})
 
     def _run_compose_and_wait(self, compose_cmd: list[str]) -> None:
-        """
-        Run the compose command asynchronously.
+        """Run the compose command asynchronously.
 
         Parameters
         ----------
@@ -497,7 +490,7 @@ class ClusterProvisioner:
         )
 
         self._compose_failed = threading.Event()
-        self._compose_error: Optional[BaseException] = None
+        self._compose_error: BaseException | None = None
         self._compose_output_lines: list[str] = []
 
         def _run_compose() -> None:
@@ -578,8 +571,7 @@ class ClusterProvisioner:
         get_result: Callable,
         timeout: int = 180,
     ) -> None:
-        """
-        Wait for the coordinator container to be running.
+        """Wait for the coordinator container to be running.
 
         Parameters
         ----------
@@ -704,9 +696,8 @@ class ClusterProvisioner:
                                 )
                         except NotFound:
                             raise MinitrinoError(
-                                f"Coordinator container exited with code "
-                                f"{exit_code}."
-                            )
+                                f"Coordinator container exited with code {exit_code}."
+                            ) from None
             except NotFound:
                 pass
 
@@ -765,7 +756,7 @@ class ClusterProvisioner:
                     f"Failed to resolve valid license path: {e}",
                     f"Please provide a valid license path. "
                     f"Path provided: {user_provided_path}",
-                )
+                ) from e
 
     def _determine_build(self) -> bool:
         """Determine if the image should be built."""
@@ -821,8 +812,7 @@ class ClusterProvisioner:
         return hashobj.hexdigest()
 
     def _image_src_changed(self) -> bool:
-        """
-        Compare current image source checksum to recorded checksum.
+        """Compare current image source checksum to recorded checksum.
 
         If the image source checksum has not been recorded, always
         return True to force a build.
@@ -848,7 +838,7 @@ class ClusterProvisioner:
 
         self.checksum_file = os.path.join(self.checksum_dir, f"{image_name}")
         if os.path.isfile(self.checksum_file):
-            with open(self.checksum_file, "r") as f:
+            with open(self.checksum_file) as f:
                 recorded_checksum = f.read().strip()
             self._ctx.logger.debug(
                 f"Minitrino image source last recorded checksum "

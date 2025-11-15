@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Optional
 
 import pytest
 
@@ -22,8 +21,7 @@ executor = common.MinitrinoExecutor(CLUSTER_NAME)
 
 @dataclass
 class DownScenario:
-    """
-    Down scenario.
+    """Down scenario.
 
     Parameters
     ----------
@@ -52,8 +50,8 @@ class DownScenario:
     provision: bool
     down_args: list[str]
     expected_exit_code: int
-    expected_output: Optional[str | list[str]]
-    unexpected_output: Optional[str]
+    expected_output: str | list[str] | None
+    unexpected_output: str | None
     num_running: int
     num_total: int
     log_msg: str
@@ -176,8 +174,7 @@ CLUSTER_KEEP_MSG = "Testing --cluster flag with --keep and --sig-kill flags"
     indirect=True,
 )
 def test_cluster_keep() -> None:
-    """Verify `--cluster ${name}` works as expected with the `--keep`
-    flag."""
+    """Verify `--cluster ${name}` works as expected with the `--keep` flag."""
     append = ["--sig-kill", "--keep"]
     cmd = executor.build_cmd(base="down", cluster=CLUSTER_NAME, append=append)
     result = executor.exec(cmd)

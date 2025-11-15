@@ -66,7 +66,7 @@ Each module has a `readme` associated with it. The list below points to the
 Minitrino supports both Trino (open-source) and Starburst Enterprise modules.
 The table below shows which modules require a Starburst license.
 
-:::{tip} **Quick Reference:** ⭐ = Requires Starburst Enterprise license and
+:::\{tip} **Quick Reference:** ⭐ = Requires Starburst Enterprise license and
 `IMAGE=starburst` :::
 
 | Module Type  | Module Name              | License       | Description                                          |
@@ -456,7 +456,7 @@ directory by passing the `--directory` option to the `snapshot` command.
 
 ### Point to a Starburst License File for Enterprise Modules
 
-:::{note} **Which modules require a license?** See the
+:::\{note} **Which modules require a license?** See the
 [Enterprise Module Reference](#enterprise-vs-open-source-modules) table above
 for a complete list of enterprise vs open-source modules. :::
 
@@ -581,11 +581,13 @@ augment the startup process.
 **Execution Phases:**
 
 1. **`before_start()`**:
+
    - Runs before Trino/Starburst server starts
    - Use for: config generation, certificate setup, schema initialization
    - Trino/Starburst service is NOT available yet
 
 1. **`after_start()`**:
+
    - Runs after Trino/Starburst is accepting queries
    - Use for: data loading, SQL execution, post-startup validation
    - Trino/Starburst service IS available (can use `trino-cli`)

@@ -1,16 +1,16 @@
 """Snapshot command for Minitrino CLI.
 
-Provides functionality to create, validate, and manage snapshots of
-Minitrino environments, including modules and configuration files.
+Provides functionality to create, validate, and manage snapshots of Minitrino
+environments, including modules and configuration files.
 """
 
+import contextlib
 import fileinput
 import os
 import shutil
 import stat
 import tarfile
 import tempfile
-from typing import Optional
 
 import click
 
@@ -94,8 +94,7 @@ def cli(
     force: bool,
     no_scrub: bool,
 ) -> None:
-    """
-    CLI entrypoint for snapshot command.
+    """CLI entrypoint for snapshot command.
 
     Parameters
     ----------
@@ -168,15 +167,13 @@ def validate_name(name: str) -> None:
         if all((char != "_", char != "-", not char.isalnum())):
             raise UserError(
                 f"Illegal character found in provided filename: '{char}'. ",
-                "Alphanumeric, hyphens, and underscores are allowed. "
-                "Rename and retry.",
+                "Alphanumeric, hyphens, and underscores are allowed. Rename and retry.",
             )
 
 
 @utils.pass_environment()
 def check_exists(ctx: MinitrinoContext, name: str, directory: str, force: bool) -> None:
-    """
-    Check if the snapshot tarball exists and handle overwrite logic.
+    """Check if the snapshot tarball exists and handle overwrite logic.
 
     Parameters
     ----------
@@ -200,8 +197,7 @@ def check_exists(ctx: MinitrinoContext, name: str, directory: str, force: bool) 
 
 
 def create_temp_snapshot_dir(name: str, no_scrub: bool, modules: list[str]) -> str:
-    """
-    Create and populate a temporary directory for snapshot staging.
+    """Create and populate a temporary directory for snapshot staging.
 
     Parameters
     ----------
@@ -228,10 +224,9 @@ def create_temp_snapshot_dir(name: str, no_scrub: bool, modules: list[str]) -> s
 
 @utils.pass_environment()
 def write_provision_script(
-    ctx: MinitrinoContext, temp_snapshot_dir: str, modules: Optional[list[str]] = None
+    ctx: MinitrinoContext, temp_snapshot_dir: str, modules: list[str] | None = None
 ) -> None:
-    """
-    Write the provisioning shell script for restoring the snapshot.
+    """Write the provisioning shell script for restoring the snapshot.
 
     Parameters
     ----------
@@ -260,9 +255,8 @@ def write_provision_script(
         provision_snapshot_file.write(command_string)
 
 
-def build_command_string(modules: Optional[list[str]] = None) -> str:
-    """
-    Build the shell command for provisioning from the snapshot.
+def build_command_string(modules: list[str] | None = None) -> str:
+    """Build the shell command for provisioning from the snapshot.
 
     Parameters
     ----------
@@ -294,8 +288,7 @@ def build_command_string(modules: Optional[list[str]] = None) -> str:
 def copy_core_lib_structure(
     ctx: MinitrinoContext, temp_snapshot_dir: str, name: str
 ) -> None:
-    """
-    Copy core Minitrino library files and structure to the snapshot dir.
+    """Copy core Minitrino library files and structure to the snapshot dir.
 
     Parameters
     ----------
@@ -334,8 +327,7 @@ def copy_core_lib_structure(
 def copy_user_config(
     ctx: MinitrinoContext, temp_snapshot_dir: str, no_scrub: bool
 ) -> None:
-    """
-    Copy user config, optionally scrub sensitive data.
+    """Copy user config, optionally scrub sensitive data.
 
     Parameters
     ----------
@@ -362,8 +354,7 @@ def copy_user_config(
 def copy_and_scrub_user_config(
     ctx: MinitrinoContext, temp_snapshot_dir: str, no_scrub: bool = False
 ) -> None:
-    """
-    Copy the user config file and scrub sensitive data if requested.
+    """Copy the user config file and scrub sensitive data if requested.
 
     Parameters
     ----------
@@ -387,8 +378,7 @@ def copy_and_scrub_user_config(
 
 @utils.pass_environment()
 def scrub_user_config(ctx: MinitrinoContext, temp_snapshot_dir: str) -> None:
-    """
-    Scrub sensitive data from the user config file.
+    """Scrub sensitive data from the user config file.
 
     Parameters
     ----------
@@ -397,11 +387,12 @@ def scrub_user_config(ctx: MinitrinoContext, temp_snapshot_dir: str) -> None:
     """
     snapshot_config_file = os.path.join(temp_snapshot_dir, "minitrino.cfg")
     if os.path.isfile(snapshot_config_file):
-        for line in fileinput.input(snapshot_config_file, inplace=True):
-            if "=" in line:
-                print(line.replace(line, scrub_line(line)))
-            else:
-                print(line.replace(line, line.rstrip()))
+        with fileinput.input(snapshot_config_file, inplace=True) as f:
+            for line in f:
+                if "=" in line:
+                    print(line.replace(line, scrub_line(line)))
+                else:
+                    print(line.replace(line, line.rstrip()))
     else:
         ctx.logger.warn(
             f"No user config file at path: {ctx.config_file}. Nothing to scrub.",
@@ -410,8 +401,7 @@ def scrub_user_config(ctx: MinitrinoContext, temp_snapshot_dir: str) -> None:
 
 @utils.pass_environment()
 def scrub_line(ctx: MinitrinoContext, line: str) -> str:
-    """
-    Scrub a single line of config if it contains a sensitive key.
+    """Scrub a single line of config if it contains a sensitive key.
 
     Parameters
     ----------
@@ -431,10 +421,9 @@ def scrub_line(ctx: MinitrinoContext, line: str) -> str:
 
 @utils.pass_environment()
 def copy_module_dirs(
-    ctx: MinitrinoContext, temp_snapshot_dir: str, modules: Optional[list[str]] = None
+    ctx: MinitrinoContext, temp_snapshot_dir: str, modules: list[str] | None = None
 ) -> None:
-    """
-    Copy specified module directories into the snapshot directory.
+    """Copy specified module directories into the snapshot directory.
 
     Parameters
     ----------
@@ -455,8 +444,7 @@ def copy_module_dirs(
 
 
 def create_snapshot_tarball(name: str, temp_snapshot_dir: str, save_dir: str) -> None:
-    """
-    Create a tarball archive of the snapshot directory.
+    """Create a tarball archive of the snapshot directory.
 
     Parameters
     ----------
@@ -474,8 +462,7 @@ def create_snapshot_tarball(name: str, temp_snapshot_dir: str, save_dir: str) ->
 def move_snapshot_to_destination(
     name: str, temp_snapshot_dir: str, directory: str
 ) -> None:
-    """
-    Move resources to the user-specified directory.
+    """Move resources to the user-specified directory.
 
     Parameters
     ----------
@@ -503,20 +490,17 @@ def move_snapshot_to_destination(
 
     temp_root = os.path.dirname(temp_snapshot_dir)
     if os.path.exists(temp_root):
-        try:
+        with contextlib.suppress(OSError):
             os.rmdir(temp_root)
-        except OSError:
-            pass
 
 
 def snapshot_runner(
     name: str,
     no_scrub: bool,
-    modules: Optional[list[str]] = None,
+    modules: list[str] | None = None,
     directory: str = "",
 ) -> None:
-    """
-    Orchestrate the full snapshot creation and output process.
+    """Orchestrate the full snapshot creation and output process.
 
     Parameters
     ----------
@@ -537,8 +521,7 @@ def snapshot_runner(
 
 
 def check_complete(name: str, directory: str):
-    """
-    Check if the snapshot tarball was created successfully.
+    """Check if the snapshot tarball was created successfully.
 
     Parameters
     ----------

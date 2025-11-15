@@ -9,7 +9,7 @@ Iceberg HMS catalog for metadata management.
 {{ persistent_storage_warning }}
 
 ```sh
-minitrino provision -m iceberg_hms
+minitrino provision -m iceberg-hms
 ```
 
 {{ connect_trino_cli }}

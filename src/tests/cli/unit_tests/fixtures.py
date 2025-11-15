@@ -9,8 +9,8 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from click.testing import CliRunner
-
 from minitrino.core.errors import MinitrinoError
+
 from tests.cli.unit_tests.base import (
     MinitrinoAssertions,
     TestDataFactory,

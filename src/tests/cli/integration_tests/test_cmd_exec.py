@@ -12,8 +12,7 @@ executor = common.MinitrinoExecutor(CLUSTER_NAME)
 
 @dataclass
 class ExecScenario:
-    """
-    Exec scenario.
+    """Exec scenario.
 
     Parameters
     ----------

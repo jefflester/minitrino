@@ -1,33 +1,85 @@
 ---
+# Minitrino Pre-commit Configuration
+# Enforces code quality, formatting, and project standards
+
+exclude: ^(venv/|build/|dist/|\.eggs/)
+
 repos:
-  - repo: https://github.com/psf/black
-    rev: 25.1.0
-    hooks:
-      - id: black
-        stages: [pre-commit, manual]
-        always_run: true
-        pass_filenames: false
-        args: ["."]
-        exclude: "venv/"
+  # ============================================================================
+  # Code Formatting & Style
+  # ============================================================================
 
-  - repo: https://github.com/pycqa/flake8
-    rev: 7.3.0
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.4
     hooks:
-      - id: flake8
+      - id: ruff
+        name: Ruff linter
+        args: [--fix, --unsafe-fixes]
+      - id: ruff-format
+        name: Ruff formatter
+
+  - repo: local
+    hooks:
+      - id: docformatter
+        name: Format docstrings
+        description: Format docstrings to 88 characters
+        entry: docformatter
+        language: python
+        types: [python]
+        additional_dependencies: [docformatter]
         args: [
-          "--max-line-length", "88",
-          "--ignore", "E203,W503",
-          "--exclude", "__pycache__,.git,venv,build,dist",
-          "src/"
+          "--wrap-summaries", "88",
+          "--wrap-descriptions", "88",
+          "--in-place"
         ]
+        exclude: ^docs/conf.py
 
-  - repo: https://github.com/pycqa/isort
-    rev: 6.0.1
+  # ============================================================================
+  # General File Checks
+  # ============================================================================
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
     hooks:
-      - id: isort
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+
+  # ============================================================================
+  # Linting & Quality
+  # ============================================================================
+
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.37.1
+    hooks:
+      - id: yamllint
+        args: [-c, .yamllint]
+
+  - repo: https://github.com/executablebooks/mdformat
+    rev: 0.7.22
+    hooks:
+      - id: mdformat
+        additional_dependencies:
+          - mdformat-myst
+          - mdformat-gfm
+
+  - repo: https://github.com/crate-ci/typos
+    rev: v1.39.0
+    hooks:
+      - id: typos
+        files: \.(md|rst|txt)$
+
+  # ============================================================================
+  # Python Type Checking & Documentation
+  # ============================================================================
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.16.1
+    rev: v1.18.1
     hooks:
       - id: mypy
         additional_dependencies:
@@ -41,14 +93,6 @@ repos:
           - types-python-dateutil
         exclude: docs/conf.py
 
-  # npm install --save-dev prettier
-  - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v4.0.0-alpha.8
-    hooks:
-      - id: prettier
-        files: ^docs/.*\.md$
-        args: ["--prose-wrap", "always", "--print-width", "80"]
-
   - repo: https://github.com/pycqa/pydocstyle
     rev: 6.3.0
     hooks:
@@ -56,9 +100,41 @@ repos:
         additional_dependencies: [tomli]
         exclude: 'docs/conf.py|.precommit/.*'
 
-  # brew install shellcheck (or: sudo apt-get install shellcheck, etc.)
+  # ============================================================================
+  # Security & Code Quality Analysis (Informational)
+  # ============================================================================
+
+  - repo: local
+    hooks:
+      - id: bandit
+        name: bandit (informational)
+        entry: bash -c 'venv/bin/bandit -r src/cli/ --skip B101,B603 -q || true'
+        language: system
+        types: [python]
+        pass_filenames: false
+        verbose: true
+
+      - id: vulture
+        name: Log unused code (vulture)
+        entry: .precommit/run-vulture.sh
+        language: script
+        types: [python]
+        pass_filenames: false
+
+      - id: deptry
+        name: Check dependency usage (deptry)
+        entry: bash -c 'venv/bin/deptry . || true'
+        language: system
+        types: [python]
+        pass_filenames: false
+        verbose: true
+
+  # ============================================================================
+  # Shell Scripts
+  # ============================================================================
+
   - repo: https://github.com/koalaman/shellcheck-precommit
-    rev: v0.10.0
+    rev: v0.11.0
     hooks:
       - id: shellcheck
         name: shellcheck
@@ -66,20 +142,20 @@ repos:
         language: system
         types: [shell]
 
-  - repo: local
-    hooks:
-      - id: update-switcher-json
-        name: Update Sphinx Switcher JSON
-        entry: python .precommit/update_switcher_json.py
-        language: python
-        pass_filenames: false
+  # ============================================================================
+  # Docker Files
+  # ============================================================================
 
-  - repo: https://github.com/adrienverge/yamllint
-    rev: v1.37.1
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.14.0
     hooks:
-      - id: yamllint
+      - id: hadolint-docker
+        args: [--ignore, DL3008, --ignore, DL3009]
 
-  # brew install jq (or: sudo apt-get install jq, etc.)
+  # ============================================================================
+  # JSON Formatting
+  # ============================================================================
+
   - repo: local
     hooks:
       - id: jq-format
@@ -110,10 +186,51 @@ repos:
         always_run: true
         pass_filenames: false
 
+  # ============================================================================
+  # Project-Specific Maintenance
+  # ============================================================================
+
   - repo: local
     hooks:
+      - id: update-switcher-json
+        name: Update Sphinx Switcher JSON
+        entry: python .precommit/update_switcher_json.py
+        language: python
+        pass_filenames: false
+
       - id: sync-cluster-version
         name: Sync cluster version across files
         entry: python .precommit/sync_cluster_version.py
         language: python
         files: ^src/lib/minitrino.env|src/lib/docker-compose.yaml|src/cli/minitrino/settings.py
+
+      - id: sync-version-files
+        name: Sync version files to branch name
+        entry: python .precommit/sync_version_files.py
+        language: python
+        pass_filenames: false
+        always_run: true
+
+  # ============================================================================
+  # Validation & Testing
+  # ============================================================================
+
+  - repo: local
+    hooks:
+      - id: validate-pytest-collection
+        name: Validate tests can be collected
+        entry: bash -lc '.precommit/validate_pytest_collection.sh'
+        language: system
+        pass_filenames: false
+        files: ^src/tests/.*\.py$
+        description: Ensure pytest can collect all tests without errors
+
+  # ============================================================================
+  # CI/CD Workflows
+  # ============================================================================
+
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.8
+    hooks:
+      - id: actionlint
+        args: [-shellcheck=, -pyflakes=]

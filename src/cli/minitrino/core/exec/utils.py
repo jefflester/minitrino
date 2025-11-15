@@ -15,8 +15,7 @@ if TYPE_CHECKING:
 def detect_container_shell(
     ctx: MinitrinoContext, container: MinitrinoContainer | str, user: str = "root"
 ) -> str:
-    """
-    Detect the shell in the container.
+    """Detect the shell in the container.
 
     Waits up to 10 seconds for the container to accept commands.
 

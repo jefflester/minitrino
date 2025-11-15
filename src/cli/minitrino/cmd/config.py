@@ -26,8 +26,7 @@ from minitrino.settings import CONFIG_TEMPLATE
 @utils.exception_handler
 @utils.pass_environment()
 def cli(ctx: MinitrinoContext, reset: bool) -> None:
-    """
-    Edit or reset the Minitrino config file.
+    """Edit or reset the Minitrino config file.
 
     Parameters
     ----------

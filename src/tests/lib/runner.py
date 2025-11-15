@@ -30,8 +30,7 @@ CONTAINER_NAME = "minitrino-lib-test"
 def log_complete_msgs(
     complete_msgs: list[tuple[str, bool, str]], error: BaseException | None = None
 ) -> None:
-    """
-    Log the status of each completed test, including timestamp.
+    """Log the status of each completed test, including timestamp.
 
     - If error is not None, raise it.
     - If any test failed, exit with code 1.
@@ -82,8 +81,7 @@ def run_module_test(
     complete_msgs: list[tuple[str, bool, str]],
     any_failed: bool,
 ) -> bool:
-    """
-    Run tests for a single module.
+    """Run tests for a single module.
 
     Parameters
     ----------
@@ -130,8 +128,7 @@ def run_module_test(
 
 
 def get_retry_count() -> int:
-    """
-    Determine retry count based on environment variables.
+    """Determine retry count based on environment variables.
 
     Returns
     -------
@@ -166,8 +163,7 @@ def get_retry_count() -> int:
 def determine_modules_to_run(
     args: argparse.Namespace, all_modules: list[str]
 ) -> list[str]:
-    """
-    Determine which modules to run based on command-line arguments.
+    """Determine which modules to run based on command-line arguments.
 
     Parameters
     ----------
@@ -226,8 +222,7 @@ def run_module_with_retry(
     any_failed: bool,
     retry_count: int,
 ) -> bool:
-    """
-    Run a module test with retry logic.
+    """Run a module test with retry logic.
 
     Parameters
     ----------
@@ -255,8 +250,7 @@ def run_module_with_retry(
     for attempt in range(retry_count + 1):
         if attempt > 0:
             common.logger.info(
-                f"Retrying module '{module}' "
-                f"(attempt {attempt + 1}/{retry_count + 1})"
+                f"Retrying module '{module}' (attempt {attempt + 1}/{retry_count + 1})"
             )
             # Cleanup between retries
             ModuleTest.cleanup(args.remove_images, args.debug)
@@ -287,8 +281,7 @@ def run_module_with_retry(
 def execute_module_tests(
     args: argparse.Namespace, modules_to_run: list[str], retry_count: int
 ) -> tuple[list[tuple[str, bool, str]], bool]:
-    """
-    Execute tests for all specified modules.
+    """Execute tests for all specified modules.
 
     Parameters
     ----------
@@ -342,8 +335,7 @@ def execute_module_tests(
 
 
 def record_failed_modules(failed_modules: list[str]) -> None:
-    """
-    Record failed modules to .lastfailed file for --lf flag.
+    """Record failed modules to .lastfailed file for --lf flag.
 
     Parameters
     ----------

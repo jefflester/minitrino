@@ -36,8 +36,7 @@ class MinitrinoLogFormatter(logging.Formatter):
         self.enable_color = sys.stdout.isatty()
 
     def format(self, record: logging.LogRecord) -> str:
-        """
-        Format a log record for output.
+        """Format a log record for output.
 
         Parameters
         ----------
@@ -64,8 +63,7 @@ class MinitrinoLogFormatter(logging.Formatter):
             return self._wrap_lines_plain(lines, left)
 
     def _get_prefix(self, record: logging.LogRecord) -> str:
-        """
-        Get the prefix for the log record, applying color if enabled.
+        """Get the prefix for the log record, applying color if enabled.
 
         Parameters
         ----------
@@ -84,8 +82,7 @@ class MinitrinoLogFormatter(logging.Formatter):
         return prefix
 
     def _get_left_prefix(self, record: logging.LogRecord, prefix: str) -> str:
-        """
-        Get the left-side prefix for the log message.
+        """Get the left-side prefix for the log message.
 
         Parameters
         ----------
@@ -108,8 +105,7 @@ class MinitrinoLogFormatter(logging.Formatter):
         return prefix
 
     def _wrap_lines_tty(self, lines: list[str], left: str) -> str:
-        """
-        Wrap lines for TTY output using textwrap, with indentation.
+        """Wrap lines for TTY output using textwrap, with indentation.
 
         Parameters
         ----------
@@ -145,8 +141,7 @@ class MinitrinoLogFormatter(logging.Formatter):
         return "\n".join(wrapped_lines)
 
     def _wrap_lines_plain(self, lines: list[str], left: str) -> str:
-        """
-        Format lines for non-TTY output.
+        """Format lines for non-TTY output.
 
         Parameters
         ----------

@@ -324,6 +324,7 @@ jobs:
         uses: ./.github/actions/prepare-test-matrix
         with:
           image-type: trino
+          is-github: ${{ vars.IS_GITHUB }}
 
   lib-tests-trino:
     name: Library Tests (Trino) - Segment ${{ matrix.segment }}
@@ -390,6 +391,7 @@ jobs:
         uses: ./.github/actions/prepare-test-matrix
         with:
           image-type: starburst
+          is-github: ${{ vars.IS_GITHUB }}
 
   lib-tests-starburst:
     name: Library Tests (Starburst) - Segment ${{ matrix.segment }}

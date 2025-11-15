@@ -11,6 +11,9 @@ inputs:
     description: 'Python version'
     required: false
     default: '3.10'
+  is-github:
+    description: 'IS_GITHUB environment variable value'
+    required: false
 
 outputs:
   matrix:
@@ -33,7 +36,7 @@ runs:
       id: set-matrix
       shell: bash
       env:
-        IS_GITHUB: ${{ vars.IS_GITHUB }}
+        IS_GITHUB: ${{ inputs.is-github }}
       run: |
         IMAGE_TYPE="${{ inputs.image-type }}"
         echo "Generating test matrix for ${IMAGE_TYPE}..."

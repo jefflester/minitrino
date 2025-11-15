@@ -200,7 +200,6 @@ jobs:
         uses: ./.github/actions/setup-test-environment
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          install-test-dependencies: true
 
       - name: Run unit tests with coverage
         env:
@@ -231,7 +230,6 @@ jobs:
         uses: ./.github/actions/setup-test-environment
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          install-test-dependencies: true
           setup-license: true
           license-data: ${{ secrets.LIC_DATA }}
 
@@ -276,7 +274,6 @@ jobs:
         uses: ./.github/actions/setup-test-environment
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          install-test-dependencies: true
           setup-license: true
           license-data: ${{ secrets.LIC_DATA }}
 
@@ -347,7 +344,6 @@ jobs:
         uses: ./.github/actions/setup-test-environment
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          install-test-dependencies: true
 
       - name: Setup image pull
         uses: ./.github/actions/setup-image-pull
@@ -414,7 +410,6 @@ jobs:
         uses: ./.github/actions/setup-test-environment
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          install-test-dependencies: true
           setup-license: true
           license-data: ${{ secrets.LIC_DATA }}
 

@@ -11,10 +11,6 @@ inputs:
     description: 'Python version to install'
     required: false
     default: '3.10'
-  install-test-dependencies:
-    description: 'Whether to install test dependencies (src/tests/)'
-    required: false
-    default: 'true'
   setup-license:
     description: 'Whether to setup Starburst license file'
     required: false
@@ -41,7 +37,6 @@ runs:
       run: pip install -e .
 
     - name: Install test dependencies
-      if: inputs.install-test-dependencies == 'true'
       shell: bash
       run: pip install -e ./src/tests/
 

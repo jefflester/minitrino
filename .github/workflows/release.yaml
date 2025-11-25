@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Check out code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       - name: Create release
         env:
           GITHUB_TOKEN: ${{ secrets.MINITRINO_TOKEN }}
@@ -49,7 +49,7 @@ jobs:
     needs: publish-release-draft
     steps:
       - name: Check out code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       - name: Publish release
         env:
           GITHUB_TOKEN: ${{ secrets.MINITRINO_TOKEN }}
@@ -63,7 +63,7 @@ jobs:
     needs: publish-release
     steps:
       - name: Check out code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       - name: Set up Python
         uses: actions/setup-python@v6
         with:

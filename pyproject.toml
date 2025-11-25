@@ -23,7 +23,7 @@ name = "minitrino"
 readme = "readme.md"
 requires-python = ">=3.10.12"
 urls = {"Homepage" = "https://github.com/jefflester/minitrino"}
-version = "3.0.1"
+version = "3.0.2"
 
 [project.optional-dependencies]
 dev = [
@@ -69,7 +69,7 @@ minitrino = "minitrino.cli:cli"
 
 [tool.ruff]
 line-length = 88
-target-version = "py310"
+target-version = "3.0.2"
 src = ["src"]
 
 [tool.ruff.lint]
@@ -108,7 +108,7 @@ check_untyped_defs = true
 explicit_package_bases = true
 ignore_missing_imports = true
 mypy_path = "src"
-python_version = "3.10"
+python_version = "3.0.2"
 
 [tool.pydocstyle]
 convention = "numpy"

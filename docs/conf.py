@@ -192,6 +192,6 @@ html_sidebars = {}
 html_context = {
     "github_user": "jefflester",
     "github_repo": "minitrino",
-    "github_version": "master",
+    "github_version": release,
     "doc_path": "docs",
 }

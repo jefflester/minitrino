@@ -15,8 +15,7 @@ if TYPE_CHECKING:
 
 
 class EnvironmentVariables(dict):
-    """
-    Minitrino environment variables.
+    """Minitrino environment variables.
 
     Parameters
     ----------
@@ -48,8 +47,7 @@ class EnvironmentVariables(dict):
         self._parse_minitrino_config()
 
     def get(self, key: Any, default: Any = None) -> str:
-        """
-        Return the value for a given environment variable key.
+        """Return the value for a given environment variable key.
 
         Parameters
         ----------
@@ -67,9 +65,49 @@ class EnvironmentVariables(dict):
         val = super().get(key, default)
         return str(val) if val is not None else ""
 
-    def _parse_user_env_args(self) -> None:
+    def _strip_quotes(self, value: str) -> str:
+        r"""Strip surrounding quotes from a string value.
+
+        Removes matching single or double quotes from the beginning and end
+        of a string. Only strips if both ends have the same quote character.
+
+        Parameters
+        ----------
+        value : str
+            The string value to process.
+
+        Returns
+        -------
+        str
+            The value with surrounding quotes removed, if applicable.
+
+        Examples
+        --------
+        >>> env._strip_quotes('"hello"')
+        'hello'
+        >>> env._strip_quotes("'world'")
+        'world'
+        >>> env._strip_quotes('"mixed\\'')
+        '"mixed\\'
+        >>> env._strip_quotes('no-quotes')
+        'no-quotes'
+
+        Notes
+        -----
+        This method only strips quotes from values parsed from the
+        minitrino.cfg configuration file. It does not affect user-provided
+        command-line arguments or OS environment variables.
         """
-        Parse user-specified environment variables from the config file.
+        value = value.strip()
+        if len(value) >= 2 and (
+            (value[0] == '"' and value[-1] == '"')
+            or (value[0] == "'" and value[-1] == "'")
+        ):
+            return value[1:-1]
+        return value
+
+    def _parse_user_env_args(self) -> None:
+        """Parse user-specified environment variables from the config file.
 
         Notes
         -----
@@ -84,8 +122,7 @@ class EnvironmentVariables(dict):
             self[k.upper()] = str(v)
 
     def _parse_os_env(self) -> None:
-        """
-        Parse environment variables from the user's shell.
+        """Parse environment variables from the user's shell.
 
         Notes
         -----
@@ -121,8 +158,7 @@ class EnvironmentVariables(dict):
                 self[k] = str(v)
 
     def _parse_minitrino_config(self) -> None:
-        """
-        Parse the user's `minitrino.cfg` file.
+        """Parse the user's `minitrino.cfg` file.
 
         Notes
         -----
@@ -144,7 +180,9 @@ class EnvironmentVariables(dict):
             config.read(self._ctx.config_file)
             for k, v in config.items("config"):
                 if not self.get(k) and v:
-                    self[k.upper()] = str(v)
+                    stripped = self._strip_quotes(str(v))
+                    expanded = os.path.expanduser(stripped)
+                    self[k.upper()] = expanded
         except Exception as e:
             self._ctx.logger.warn(
                 f"Failed to parse config file {self._ctx.config_file} with error:"
@@ -158,8 +196,7 @@ class EnvironmentVariables(dict):
             return
 
     def _parse_library_env(self) -> dict:
-        """
-        Parse the Minitrino library's `minitrino.env` file.
+        """Parse the Minitrino library's `minitrino.env` file.
 
         Returns
         -------
@@ -188,7 +225,7 @@ class EnvironmentVariables(dict):
             )
 
         lib_env = {}
-        with open(env_file, "r") as f:
+        with open(env_file) as f:
             for env_var in f:
                 if not env_var.strip():
                     continue
@@ -201,8 +238,7 @@ class EnvironmentVariables(dict):
         return lib_env
 
     def _log_env_vars(self) -> None:
-        """
-        Log the currently-registered environment variables.
+        """Log the currently-registered environment variables.
 
         Notes
         -----

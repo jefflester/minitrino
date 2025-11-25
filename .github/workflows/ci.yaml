@@ -1,0 +1,450 @@
+---
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - src/**
+
+jobs:
+  # ============================================================================
+  # STAGE 0: Detect File Changes
+  # ============================================================================
+  detect-changes:
+    name: Detect File Changes
+    runs-on: ubuntu-22.04
+    outputs:
+      image-changed: ${{ steps.changes.outputs.image }}
+      cli-changed: ${{ steps.changes.outputs.cli }}
+      lib-changed: ${{ steps.changes.outputs.lib }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # Need full history for diff
+
+      - name: Detect which files changed
+        id: changes
+        run: |
+          # Get base and head SHAs
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+
+          echo "Comparing $BASE_SHA...$HEAD_SHA"
+
+          # Get list of changed files
+          CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          # Check if image-related files changed
+          if echo "$CHANGED_FILES" | grep -qE '^src/lib/image/|^src/lib/minitrino\.env$'; then
+            echo "✓ Image files changed"
+            echo "image=true" >> $GITHUB_OUTPUT
+          else
+            echo "✗ No image files changed"
+            echo "image=false" >> $GITHUB_OUTPUT
+          fi
+
+          # Check if CLI files changed
+          if echo "$CHANGED_FILES" | grep -qE '^src/cli/'; then
+            echo "✓ CLI files changed"
+            echo "cli=true" >> $GITHUB_OUTPUT
+          else
+            echo "✗ No CLI files changed"
+            echo "cli=false" >> $GITHUB_OUTPUT
+          fi
+
+          # Check if library files changed
+          if echo "$CHANGED_FILES" | grep -qE '^src/lib/'; then
+            echo "✓ Library files changed"
+            echo "lib=true" >> $GITHUB_OUTPUT
+          else
+            echo "✗ No library files changed"
+            echo "lib=false" >> $GITHUB_OUTPUT
+          fi
+
+  # ============================================================================
+  # STAGE 1: Test Release
+  # ============================================================================
+  test-release:
+    name: Create Test Release (0.0.0)
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+      - name: Delete and recreate release
+        env:
+          GITHUB_TOKEN: ${{ secrets.MINITRINO_TOKEN }}
+        run: |-
+          TAG="0.0.0"
+          DESCRIPTION="Used as a placeholder to give test builds access \
+          to the PR branch's module library."
+
+          echo "Checking if release exists..."
+          if gh release list | grep -q -e "${TAG}"; then
+            echo "Release ${TAG} found. Deleting release (without tag)..."
+            gh release delete "${TAG}" -y
+          fi
+
+          echo "Checking if tag exists..."
+          if git ls-remote --tags origin | grep -q "refs/tags/${TAG}"; then
+            echo "Tag ${TAG} found. Deleting tag..."
+            git push origin --delete "${TAG}" || echo "Tag deletion failed, continuing..."
+          fi
+
+          echo "Creating test release from branch ${GITHUB_HEAD_REF}..."
+          gh release create "${TAG}" \
+            --prerelease \
+            --draft=false \
+            --title "${TAG}" \
+            --notes "${DESCRIPTION}" \
+            --target "${GITHUB_HEAD_REF}"
+
+  # ============================================================================
+  # STAGE 2: Build Test Images (Conditional, Parallel)
+  # ============================================================================
+  build-trino-image:
+    name: Build Trino Test Image
+    needs: [test-release, detect-changes]
+    if: needs.detect-changes.outputs.image-changed == 'true'
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
+      - name: Setup Docker build environment
+        id: setup
+        uses: ./.github/actions/setup-docker-build
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          cleanup-disk: true
+
+      - name: Build and push Trino image
+        uses: docker/build-push-action@v6
+        with:
+          context: src/lib/image
+          file: src/lib/image/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/jefflester/minitrino:pr-${{ github.event.pull_request.number }}-trino
+            ghcr.io/jefflester/minitrino:pr-${{ github.event.pull_request.number }}-${{ steps.setup.outputs.trino-version }}-trino
+          build-args: |
+            UBUNTU_VER=22.04
+            CLUSTER_VER=${{ steps.setup.outputs.trino-version }}
+            CLUSTER_DIST=trino
+            SERVICE_USER=trino
+          cache-from: |
+            type=gha,scope=trino-build
+            type=registry,ref=ghcr.io/jefflester/minitrino:pr-${{ github.event.pull_request.number }}-trino
+            type=registry,ref=ghcr.io/jefflester/minitrino:latest-trino
+          cache-to: type=gha,mode=min,scope=trino-build
+
+  build-starburst-image:
+    name: Build Starburst Test Image
+    needs: [test-release, detect-changes]
+    if: needs.detect-changes.outputs.image-changed == 'true'
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
+      - name: Setup Docker build environment
+        id: setup
+        uses: ./.github/actions/setup-docker-build
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          cleanup-disk: true
+
+      - name: Build and push Starburst image
+        uses: docker/build-push-action@v6
+        with:
+          context: src/lib/image
+          file: src/lib/image/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/jefflester/minitrino:pr-${{ github.event.pull_request.number }}-starburst
+            ghcr.io/jefflester/minitrino:pr-${{ github.event.pull_request.number }}-${{ steps.setup.outputs.starburst-version }}-starburst
+          build-args: |
+            UBUNTU_VER=22.04
+            CLUSTER_VER=${{ steps.setup.outputs.starburst-version }}
+            CLUSTER_DIST=starburst
+            SERVICE_USER=starburst
+          cache-from: |
+            type=gha,scope=starburst-build
+            type=registry,ref=ghcr.io/jefflester/minitrino:pr-${{ github.event.pull_request.number }}-starburst
+            type=registry,ref=ghcr.io/jefflester/minitrino:latest-starburst
+          cache-to: type=gha,mode=min,scope=starburst-build
+
+  # ============================================================================
+  # STAGE 3: CLI Tests (Always run with conditional image pulling)
+  # ============================================================================
+  cli-unit-tests:
+    name: CLI Unit Tests
+    needs: [test-release, build-trino-image, build-starburst-image, detect-changes]
+    if: always() && needs.test-release.result == 'success'
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
+      - name: Setup test environment
+        uses: ./.github/actions/setup-test-environment
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run unit tests with coverage
+        env:
+          IS_GITHUB: ${{ vars.IS_GITHUB }}
+          MINITRINO_TEST_LOG_LEVEL: DEBUG
+        run: |-
+          minitrino --help || exit 1
+          pytest -x --debug \
+            --cov=minitrino \
+            --cov-report=term-missing \
+            --cov-report=xml \
+            src/tests/cli/unit_tests/
+
+  cli-integration-provision:
+    name: CLI Integration Tests (Provision)
+    needs: [test-release, build-trino-image, build-starburst-image, detect-changes]
+    if: always() && needs.test-release.result == 'success'
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
+      - name: Free up disk space
+        uses: ./.github/actions/cleanup-disk
+
+      - name: Get cluster version
+        id: version
+        uses: ./.github/actions/get-cluster-version
+
+      - name: Setup test environment
+        uses: ./.github/actions/setup-test-environment
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          setup-license: true
+          license-data: ${{ secrets.LIC_DATA }}
+
+      - name: Setup image pull
+        uses: ./.github/actions/setup-image-pull
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          pr-number: ${{ github.event.pull_request.number }}
+          image-type: trino
+          cluster-version: ${{ steps.version.outputs.trino_version }}
+          image-changed: ${{ needs.detect-changes.outputs.image-changed }}
+
+      - name: Run CLI integration tests (provision)
+        env:
+          IS_GITHUB: ${{ vars.IS_GITHUB }}
+          MINITRINO_TEST_LOG_LEVEL: DEBUG
+          LIC_PATH: ~/starburstdata.license
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |-
+          minitrino --help || exit 1
+          pytest -x --debug \
+            --cov=minitrino \
+            --cov-report=term-missing \
+            --cov-report=xml \
+            src/tests/cli/integration_tests/test_cmd_provision.py
+
+  cli-integration-other:
+    name: CLI Integration Tests (Other)
+    needs: [test-release, build-trino-image, build-starburst-image, detect-changes]
+    if: always() && needs.test-release.result == 'success'
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
+      - name: Free up disk space
+        uses: ./.github/actions/cleanup-disk
+
+      - name: Get cluster version
+        id: version
+        uses: ./.github/actions/get-cluster-version
+
+      - name: Setup test environment
+        uses: ./.github/actions/setup-test-environment
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          setup-license: true
+          license-data: ${{ secrets.LIC_DATA }}
+
+      - name: Setup image pull
+        uses: ./.github/actions/setup-image-pull
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          pr-number: ${{ github.event.pull_request.number }}
+          image-type: trino
+          cluster-version: ${{ steps.version.outputs.trino_version }}
+          image-changed: ${{ needs.detect-changes.outputs.image-changed }}
+
+      - name: Run CLI integration tests (other)
+        env:
+          IS_GITHUB: ${{ vars.IS_GITHUB }}
+          MINITRINO_TEST_LOG_LEVEL: DEBUG
+          LIC_PATH: ~/starburstdata.license
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |-
+          minitrino --help || exit 1
+          pytest -x --debug \
+            --cov=minitrino \
+            --cov-report=term-missing \
+            --cov-report=xml \
+            src/tests/cli/integration_tests/ \
+            --ignore=src/tests/cli/integration_tests/test_cmd_provision.py
+
+  # ============================================================================
+  # STAGE 4: Library Tests (Always run with conditional image pulling)
+  # ============================================================================
+  prepare-trino-matrix:
+    name: Prepare Trino Test Matrix
+    needs: [test-release, build-trino-image, build-starburst-image, detect-changes]
+    if: always() && needs.test-release.result == 'success'
+    runs-on: ubuntu-22.04
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
+      - name: Prepare test matrix
+        id: matrix
+        uses: ./.github/actions/prepare-test-matrix
+        with:
+          image-type: trino
+          is-github: ${{ vars.IS_GITHUB }}
+
+  lib-tests-trino:
+    name: Library Tests (Trino) - Segment ${{ matrix.segment }}
+    needs: [prepare-trino-matrix, build-trino-image, build-starburst-image, detect-changes]
+    if: always() && needs.prepare-trino-matrix.result == 'success'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare-trino-matrix.outputs.matrix) }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
+      - name: Free up disk space
+        uses: ./.github/actions/cleanup-disk
+
+      - name: Get cluster version
+        id: version
+        uses: ./.github/actions/get-cluster-version
+
+      - name: Setup test environment
+        uses: ./.github/actions/setup-test-environment
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup image pull
+        uses: ./.github/actions/setup-image-pull
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          pr-number: ${{ github.event.pull_request.number }}
+          image-type: trino
+          cluster-version: ${{ steps.version.outputs.trino_version }}
+          image-changed: ${{ needs.detect-changes.outputs.image-changed }}
+
+      - name: Write config file
+        run: |-
+          mkdir ~/.minitrino/
+          cat <<EOF > ~/.minitrino/minitrino.cfg
+          [config]
+          IMAGE=trino
+          EOF
+
+      - name: Run library tests (Segment ${{ matrix.segment }})
+        env:
+          IS_GITHUB: ${{ vars.IS_GITHUB }}
+        run: |-
+          python ./src/tests/lib/runner.py \
+            --debug --remove-images --image trino \
+            ${{ matrix.modules }}
+
+  prepare-starburst-matrix:
+    name: Prepare Starburst Test Matrix
+    needs: [test-release, build-trino-image, build-starburst-image, detect-changes]
+    if: always() && needs.test-release.result == 'success'
+    runs-on: ubuntu-22.04
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
+      - name: Prepare test matrix
+        id: matrix
+        uses: ./.github/actions/prepare-test-matrix
+        with:
+          image-type: starburst
+          is-github: ${{ vars.IS_GITHUB }}
+
+  lib-tests-starburst:
+    name: Library Tests (Starburst) - Segment ${{ matrix.segment }}
+    needs: [prepare-starburst-matrix, build-trino-image, build-starburst-image, detect-changes]
+    if: always() && needs.prepare-starburst-matrix.result == 'success'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare-starburst-matrix.outputs.matrix) }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
+      - name: Free up disk space
+        uses: ./.github/actions/cleanup-disk
+
+      - name: Get cluster version
+        id: version
+        uses: ./.github/actions/get-cluster-version
+
+      - name: Setup test environment
+        uses: ./.github/actions/setup-test-environment
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          setup-license: true
+          license-data: ${{ secrets.LIC_DATA }}
+
+      - name: Setup image pull
+        uses: ./.github/actions/setup-image-pull
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          pr-number: ${{ github.event.pull_request.number }}
+          image-type: starburst
+          cluster-version: ${{ steps.version.outputs.starburst_version }}
+          image-changed: ${{ needs.detect-changes.outputs.image-changed }}
+
+      - name: Write config file
+        run: |-
+          mkdir ~/.minitrino/
+          cat <<EOF > ~/.minitrino/minitrino.cfg
+          [config]
+          LIC_PATH=~/starburstdata.license
+          IMAGE=starburst
+          EOF
+
+      - name: Run library tests (Segment ${{ matrix.segment }})
+        env:
+          IS_GITHUB: ${{ vars.IS_GITHUB }}
+          LIC_PATH: ~/starburstdata.license
+        run: |-
+          python ./src/tests/lib/runner.py \
+            --debug --remove-images --image starburst \
+            ${{ matrix.modules }}

@@ -13,7 +13,7 @@ COPY src/cli /tmp/minitrino/src/cli
 
 # Install minitrino package with docs extras
 # This provides all main dependencies (docker, click, etc.) + Sphinx packages
-RUN pip install --upgrade pip && \
+RUN pip install --no-cache-dir "pip>=24.0,<25.0" && \
     pip install --no-cache-dir /tmp/minitrino[docs]
 
 ENTRYPOINT ["bash"]

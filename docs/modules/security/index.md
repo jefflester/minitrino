@@ -3,8 +3,9 @@
 Learn about security modules.
 
 ```{toctree}
-:hidden:
-
+---
+hidden:
+---
 biac
 file-access-control
 kerberos
@@ -14,6 +15,6 @@ password-file
 tls
 ```
 
----
+______________________________________________________________________
 
 [Minitrino GitHub repository](https://github.com/jefflester/minitrino).

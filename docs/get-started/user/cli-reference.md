@@ -24,7 +24,7 @@ The following options are available for all Minitrino commands:
    :nested: full
 ```
 
----
+______________________________________________________________________
 
 ### down
 
@@ -34,7 +34,7 @@ The following options are available for all Minitrino commands:
    :nested: full
 ```
 
----
+______________________________________________________________________
 
 ### remove
 
@@ -44,7 +44,7 @@ The following options are available for all Minitrino commands:
    :nested: full
 ```
 
----
+______________________________________________________________________
 
 ### restart
 
@@ -54,7 +54,7 @@ The following options are available for all Minitrino commands:
    :nested: full
 ```
 
----
+______________________________________________________________________
 
 ### exec
 
@@ -64,7 +64,7 @@ The following options are available for all Minitrino commands:
    :nested: full
 ```
 
----
+______________________________________________________________________
 
 ### resources
 
@@ -74,7 +74,7 @@ The following options are available for all Minitrino commands:
    :nested: full
 ```
 
----
+______________________________________________________________________
 
 ### snapshot
 
@@ -84,7 +84,7 @@ The following options are available for all Minitrino commands:
    :nested: full
 ```
 
----
+______________________________________________________________________
 
 ### modules
 
@@ -94,7 +94,7 @@ The following options are available for all Minitrino commands:
    :nested: full
 ```
 
----
+______________________________________________________________________
 
 ### config
 
@@ -104,7 +104,7 @@ The following options are available for all Minitrino commands:
    :nested: full
 ```
 
----
+______________________________________________________________________
 
 ### lib-install
 

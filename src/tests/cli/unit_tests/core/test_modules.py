@@ -3,7 +3,6 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from minitrino.core.errors import MinitrinoError, UserError
 from minitrino.core.modules import Modules
 

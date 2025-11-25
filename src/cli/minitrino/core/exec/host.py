@@ -8,7 +8,8 @@ import subprocess
 import sys
 import threading
 import time
-from typing import TYPE_CHECKING, Any, Callable, Iterator, Optional, Tuple
+from collections.abc import Callable, Iterator
+from typing import TYPE_CHECKING, Any
 
 from minitrino.ansi import strip_ansi
 from minitrino.core.errors import MinitrinoError
@@ -22,7 +23,7 @@ from minitrino.core.exec.result import CommandResult
 class HostCommandExecutor:
     """Executes commands on the host via subprocess."""
 
-    def __init__(self, ctx: "MinitrinoContext") -> None:
+    def __init__(self, ctx: MinitrinoContext) -> None:
         self._ctx = ctx
 
     def execute(
@@ -30,7 +31,7 @@ class HostCommandExecutor:
         command: list[str],
         interactive: bool = False,
         **kwargs: Any,
-    ) -> "CommandResult":
+    ) -> CommandResult:
         """Execute a command on the host via subprocess."""
         self._ctx.logger.debug(f"Executing command on host:\n{command}")
         start_time = time.monotonic()
@@ -125,7 +126,7 @@ class HostCommandExecutor:
             universal_newlines=True,
         )
         try:
-            suppress = False if not kwargs.get("suppress_output", False) else True
+            suppress = bool(kwargs.get("suppress_output", False))
             if not suppress:
                 self._ctx.logger.debug(f"Streaming command on host:\n{command}")
             if process.stdout is not None:
@@ -138,11 +139,8 @@ class HostCommandExecutor:
         finally:
             process.stdout and process.stdout.close()
 
-    def _handle_env(
-        self, env_override: Optional[dict[str, Any]] = None
-    ) -> dict[str, str]:
-        """
-        Handle environment variables for subprocess execution.
+    def _handle_env(self, env_override: dict[str, Any] | None = None) -> dict[str, str]:
+        """Handle environment variables for subprocess execution.
 
         Parameters
         ----------
@@ -164,9 +162,8 @@ class HostCommandExecutor:
         self,
         command: list[str],
         **kwargs: Any,
-    ) -> Tuple[Iterator[str], threading.Event, Callable[[], CommandResult]]:
-        """
-        Stream output lines from a subprocess with access to exit code.
+    ) -> tuple[Iterator[str], threading.Event, Callable[[], CommandResult]]:
+        """Stream output lines from a subprocess with access to exit code.
 
         Returns a tuple of:
         - Iterator[str]: Yields output lines as they are produced
@@ -193,7 +190,7 @@ class HostCommandExecutor:
         start_time = time.monotonic()
         output_lines: list[str] = []
         exit_code_holder: dict[str, int] = {"exit_code": -1}
-        error_holder: dict[str, Optional[BaseException]] = {"error": None}
+        error_holder: dict[str, BaseException | None] = {"error": None}
         completion_event = threading.Event()
 
         process = subprocess.Popen(
@@ -257,8 +254,7 @@ class HostCommandExecutor:
         return output_iterator(), completion_event, get_result
 
     def _iter_lines(self, process: subprocess.Popen):
-        """
-        Iterate lines from a process.
+        """Iterate lines from a process.
 
         Parameters
         ----------

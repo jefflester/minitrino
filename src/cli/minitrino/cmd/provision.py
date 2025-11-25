@@ -50,8 +50,7 @@ def cli(
     workers: int,
     no_rollback: bool,
 ) -> None:
-    """
-    Provision the cluster and environment dependencies.
+    """Provision the cluster and environment dependencies.
 
     Parameters
     ----------

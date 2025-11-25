@@ -1,12 +1,11 @@
 """Minitrino resource management.
 
-This module provides classes and functions to manage Docker resources
-(containers, volumes, images, networks). All Docker objects are
-associated with a cluster name **except** for images, which are global.
+This module provides classes and functions to manage Docker resources (containers,
+volumes, images, networks). All Docker objects are associated with a cluster name
+**except** for images, which are global.
 """
 
 from abc import ABC, abstractmethod
-from typing import Optional, Union
 
 from docker.models.containers import Container
 from docker.models.images import Image
@@ -17,8 +16,7 @@ from minitrino.settings import COMPOSE_LABEL_KEY
 
 
 class MinitrinoDockerObjectMixin(ABC):
-    """
-    Abstract base mixin for Minitrino Docker objects.
+    """Abstract base mixin for Minitrino Docker objects.
 
     Parameters
     ----------
@@ -26,11 +24,11 @@ class MinitrinoDockerObjectMixin(ABC):
         The name of the cluster this Docker object belongs to.
     """
 
-    def __init__(self, cluster_name: Optional[str] = None):
+    def __init__(self, cluster_name: str | None = None):
         self._cluster_name = cluster_name
 
     @property
-    def cluster_name(self) -> Optional[str]:
+    def cluster_name(self) -> str | None:
         """Return the cluster name associated with this object."""
         return self._cluster_name
 
@@ -60,8 +58,7 @@ class MinitrinoDockerObjectMixin(ABC):
     @property
     @abstractmethod
     def id(self) -> str:
-        """
-        The unique identifier of the Docker object.
+        """The unique identifier of the Docker object.
 
         Returns
         -------
@@ -73,8 +70,7 @@ class MinitrinoDockerObjectMixin(ABC):
     @property
     @abstractmethod
     def kind(self) -> str:
-        """
-        The kind of the Docker object.
+        """The kind of the Docker object.
 
         Returns
         -------
@@ -86,8 +82,7 @@ class MinitrinoDockerObjectMixin(ABC):
 
 
 class MinitrinoContainer(MinitrinoDockerObjectMixin, Container):
-    """
-    Minitrino-wrapped container object.
+    """Minitrino-wrapped container object.
 
     Parameters
     ----------
@@ -97,7 +92,7 @@ class MinitrinoContainer(MinitrinoDockerObjectMixin, Container):
         The name of the cluster this container belongs to.
     """
 
-    def __init__(self, base: Container, cluster_name: Optional[str] = None):
+    def __init__(self, base: Container, cluster_name: str | None = None):
         super().__init__(cluster_name)
         self._base = base
         self.__dict__.update(base.__dict__)
@@ -129,8 +124,7 @@ class MinitrinoContainer(MinitrinoDockerObjectMixin, Container):
         return str(getattr(self, "_cluster_name", None)) or str(super().cluster_name)
 
     def ports_and_host_endpoints(self) -> tuple[list[str], list[str]]:
-        """
-        Get published and exposed ports and host endpoints.
+        """Get published and exposed ports and host endpoints.
 
         Returns
         -------
@@ -176,8 +170,7 @@ class MinitrinoContainer(MinitrinoDockerObjectMixin, Container):
 
 
 class MinitrinoVolume(MinitrinoDockerObjectMixin, Volume):
-    """
-    Minitrino-wrapped volume object.
+    """Minitrino-wrapped volume object.
 
     Parameters
     ----------
@@ -187,7 +180,7 @@ class MinitrinoVolume(MinitrinoDockerObjectMixin, Volume):
         The name of the cluster this volume belongs to.
     """
 
-    def __init__(self, base: Volume, cluster_name: Optional[str] = None):
+    def __init__(self, base: Volume, cluster_name: str | None = None):
         super().__init__(cluster_name)
         self._base = base
         self.__dict__.update(base.__dict__)
@@ -220,8 +213,7 @@ class MinitrinoVolume(MinitrinoDockerObjectMixin, Volume):
 
 
 class MinitrinoNetwork(MinitrinoDockerObjectMixin, Network):
-    """
-    Minitrino-wrapped network object.
+    """Minitrino-wrapped network object.
 
     Parameters
     ----------
@@ -231,7 +223,7 @@ class MinitrinoNetwork(MinitrinoDockerObjectMixin, Network):
         The name of the cluster this network belongs to.
     """
 
-    def __init__(self, base: Network, cluster_name: Optional[str] = None):
+    def __init__(self, base: Network, cluster_name: str | None = None):
         super().__init__(cluster_name)
         self._base = base
         self.__dict__.update(base.__dict__)
@@ -262,8 +254,7 @@ class MinitrinoNetwork(MinitrinoDockerObjectMixin, Network):
 
 
 class MinitrinoImage(MinitrinoDockerObjectMixin, Image):
-    """
-    Minitrino-wrapped image object.
+    """Minitrino-wrapped image object.
 
     Unlike other Docker resources, images are global and not tied to a
     specific cluster. For consistency, they are assigned a special
@@ -305,6 +296,6 @@ class MinitrinoImage(MinitrinoDockerObjectMixin, Image):
         return "images"
 
 
-MinitrinoDockerObject = Union[
-    MinitrinoContainer, MinitrinoVolume, MinitrinoNetwork, MinitrinoImage
-]
+MinitrinoDockerObject = (
+    MinitrinoContainer | MinitrinoVolume | MinitrinoNetwork | MinitrinoImage
+)

@@ -101,9 +101,11 @@ class TestEnvironmentVariablesSimple:
         with patch("minitrino.core.envvars.utils.parse_key_value_pair") as mock_parse:
             mock_parse.return_value = ("KEY", "user_value")
 
-            with patch.dict(os.environ, {"KEY": "os_value"}):
-                with patch.object(EnvironmentVariables, "_parse_minitrino_config"):
-                    env = EnvironmentVariables(mock_ctx)
+            with (
+                patch.dict(os.environ, {"KEY": "os_value"}),
+                patch.object(EnvironmentVariables, "_parse_minitrino_config"),
+            ):
+                env = EnvironmentVariables(mock_ctx)
 
             # User value should win
             assert env["KEY"] == "user_value"
@@ -227,3 +229,180 @@ class TestEnvironmentVariablesSimple:
             assert env.get("TAB") == "col1\tcol2"
             assert env.get("QUOTES") == 'value "with" quotes'
             assert env.get("PATH") == "/usr/bin:/usr/local/bin"
+
+
+class TestQuoteStripping:
+    """Test suite for quote stripping in config file values."""
+
+    def create_mock_context(self):
+        """Create a mock context for testing."""
+        mock_ctx = Mock()
+        mock_ctx._user_env_args = []
+        mock_ctx.logger = Mock()
+        mock_ctx.lib_dir = Path("/test/lib")
+        mock_ctx.lib_env_dir = Path("/test/lib/env")
+        mock_ctx.config_file = "/test/.minitrino/minitrino.cfg"
+        return mock_ctx
+
+    def test_strip_quotes_double_quotes(self):
+        """Test stripping of double quotes."""
+        mock_ctx = self.create_mock_context()
+
+        with (
+            patch.object(EnvironmentVariables, "_parse_os_env"),
+            patch.object(EnvironmentVariables, "_parse_minitrino_config"),
+        ):
+            env = EnvironmentVariables(mock_ctx)
+
+        # Test the _strip_quotes method directly
+        assert env._strip_quotes('"bar"') == "bar"
+        assert env._strip_quotes('"hello world"') == "hello world"
+        assert env._strip_quotes('"path/to/file"') == "path/to/file"
+
+    def test_strip_quotes_single_quotes(self):
+        """Test stripping of single quotes."""
+        mock_ctx = self.create_mock_context()
+
+        with (
+            patch.object(EnvironmentVariables, "_parse_os_env"),
+            patch.object(EnvironmentVariables, "_parse_minitrino_config"),
+        ):
+            env = EnvironmentVariables(mock_ctx)
+
+        # Test the _strip_quotes method directly
+        assert env._strip_quotes("'bar'") == "bar"
+        assert env._strip_quotes("'hello world'") == "hello world"
+        assert env._strip_quotes("'path/to/file'") == "path/to/file"
+
+    def test_strip_quotes_no_quotes(self):
+        """Test that values without quotes are unchanged."""
+        mock_ctx = self.create_mock_context()
+
+        with (
+            patch.object(EnvironmentVariables, "_parse_os_env"),
+            patch.object(EnvironmentVariables, "_parse_minitrino_config"),
+        ):
+            env = EnvironmentVariables(mock_ctx)
+
+        # Test the _strip_quotes method directly
+        assert env._strip_quotes("bar") == "bar"
+        assert env._strip_quotes("hello world") == "hello world"
+        assert env._strip_quotes("path/to/file") == "path/to/file"
+
+    def test_strip_quotes_mismatched_quotes(self):
+        """Test that mismatched quotes are not stripped."""
+        mock_ctx = self.create_mock_context()
+
+        with (
+            patch.object(EnvironmentVariables, "_parse_os_env"),
+            patch.object(EnvironmentVariables, "_parse_minitrino_config"),
+        ):
+            env = EnvironmentVariables(mock_ctx)
+
+        # Test the _strip_quotes method directly
+        assert env._strip_quotes("\"bar'") == "\"bar'"
+        assert env._strip_quotes("'bar\"") == "'bar\""
+        assert env._strip_quotes('"bar') == '"bar'
+        assert env._strip_quotes('bar"') == 'bar"'
+        assert env._strip_quotes("'bar") == "'bar"
+        assert env._strip_quotes("bar'") == "bar'"
+
+    def test_strip_quotes_quotes_in_middle(self):
+        """Test that quotes in the middle are not stripped."""
+        mock_ctx = self.create_mock_context()
+
+        with (
+            patch.object(EnvironmentVariables, "_parse_os_env"),
+            patch.object(EnvironmentVariables, "_parse_minitrino_config"),
+        ):
+            env = EnvironmentVariables(mock_ctx)
+
+        # Test the _strip_quotes method directly
+        assert env._strip_quotes('ba"r') == 'ba"r'
+        assert env._strip_quotes("ba'r") == "ba'r"
+        assert env._strip_quotes('path/to/"special"/file') == 'path/to/"special"/file'
+
+    def test_strip_quotes_empty_value(self):
+        """Test stripping of empty quoted values."""
+        mock_ctx = self.create_mock_context()
+
+        with (
+            patch.object(EnvironmentVariables, "_parse_os_env"),
+            patch.object(EnvironmentVariables, "_parse_minitrino_config"),
+        ):
+            env = EnvironmentVariables(mock_ctx)
+
+        # Test the _strip_quotes method directly
+        assert env._strip_quotes('""') == ""
+        assert env._strip_quotes("''") == ""
+
+    def test_strip_quotes_whitespace_handling(self):
+        """Test whitespace handling with quotes."""
+        mock_ctx = self.create_mock_context()
+
+        with (
+            patch.object(EnvironmentVariables, "_parse_os_env"),
+            patch.object(EnvironmentVariables, "_parse_minitrino_config"),
+        ):
+            env = EnvironmentVariables(mock_ctx)
+
+        # Test the _strip_quotes method directly
+        # Whitespace inside quotes should be preserved
+        assert env._strip_quotes('" bar "') == " bar "
+        assert env._strip_quotes("' bar '") == " bar "
+
+        # Whitespace outside quotes should be stripped first
+        assert env._strip_quotes('  "bar"  ') == "bar"
+        assert env._strip_quotes("  'bar'  ") == "bar"
+
+        # Mixed whitespace
+        assert env._strip_quotes(' " bar " ') == " bar "
+
+    def test_strip_quotes_single_character(self):
+        """Test that single characters and edge cases are handled."""
+        mock_ctx = self.create_mock_context()
+
+        with (
+            patch.object(EnvironmentVariables, "_parse_os_env"),
+            patch.object(EnvironmentVariables, "_parse_minitrino_config"),
+        ):
+            env = EnvironmentVariables(mock_ctx)
+
+        # Test the _strip_quotes method directly
+        assert env._strip_quotes('"a"') == "a"
+        assert env._strip_quotes("'a'") == "a"
+        assert env._strip_quotes("a") == "a"
+        assert env._strip_quotes('"') == '"'
+        assert env._strip_quotes("'") == "'"
+        assert env._strip_quotes("") == ""
+
+    @patch("minitrino.core.envvars.ConfigParser")
+    @patch("os.path.isfile")
+    def test_config_file_quote_stripping_integration(
+        self, mock_isfile, mock_config_parser
+    ):
+        """Test that quote stripping works in config file parsing."""
+        mock_ctx = self.create_mock_context()
+        mock_isfile.return_value = True
+
+        mock_parser = Mock()
+        mock_config_parser.return_value = mock_parser
+
+        # Mock config file content with quotes
+        mock_parser.read.return_value = ["/test/.minitrino/minitrino.cfg"]
+        mock_parser.has_section.return_value = True
+        mock_parser.items.return_value = [
+            ("lib_path", '"/home/user/lib"'),
+            ("cluster_name", "'my-cluster'"),
+            ("image", "trino:latest"),  # No quotes
+            ("empty", '""'),
+        ]
+
+        with patch.object(EnvironmentVariables, "_parse_os_env"):
+            env = EnvironmentVariables(mock_ctx)
+
+        # Verify that quotes were stripped
+        assert env.get("LIB_PATH") == "/home/user/lib"
+        assert env.get("CLUSTER_NAME") == "my-cluster"
+        assert env.get("IMAGE") == "trino:latest"
+        assert env.get("EMPTY") == ""

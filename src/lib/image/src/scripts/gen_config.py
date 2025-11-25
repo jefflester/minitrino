@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Generate cluster config files from environment variables."""
+
 import os
 import re
 from pathlib import Path
@@ -14,8 +15,7 @@ internal-communication.shared-secret=bWluaXRyaW5vUm9ja3MxNQo="""
 
 
 def get_java_version() -> int:
-    """
-    Get the Java major version based on the Trino/Starburst version.
+    """Get the Java major version based on the Trino/Starburst version.
 
     Uses the same version mapping as install-java.sh:
     - >= 436 <= 446: Java 21
@@ -45,8 +45,7 @@ def get_java_version() -> int:
 
 
 def is_security_manager_option(jvm_flag: str) -> bool:
-    """
-    Check if a JVM flag is related to Security Manager.
+    """Check if a JVM flag is related to Security Manager.
 
     The Security Manager was deprecated in Java 17 and removed in Java 21+.
     This function identifies JVM options that attempt to enable or configure
@@ -72,8 +71,7 @@ def is_security_manager_option(jvm_flag: str) -> bool:
 
 
 def split_config(content: str) -> list[tuple]:
-    """
-    Split config file content into tuples for merging.
+    """Split config file content into tuples for merging.
 
     For JVM flags:
       - Lines like '-Xmx1G' become ('key_value', '-Xmx', '1G')
@@ -105,8 +103,7 @@ def split_config(content: str) -> list[tuple]:
 
 
 def extract_jvm_flag_key(line: str) -> str:
-    """
-    Extract the deduplication key for a JVM flag line.
+    """Extract the deduplication key for a JVM flag line.
 
     - For -Xmx2G, returns -Xmx
     - For -Xms1G, returns -Xms
@@ -159,8 +156,7 @@ def read_existing_config(filename: str) -> list[tuple]:
 def merge_configs(
     base_cfgs: list[tuple], user_cfgs: list[tuple], is_jvm: bool = False
 ) -> list[tuple]:
-    """
-    Merge default and user configs.
+    """Merge default and user configs.
 
     For each config (config.properties or jvm.config):
 
@@ -255,12 +251,10 @@ def merge_configs(
 def collect_configs(
     modules: list[str], worker: bool = False
 ) -> tuple[list[tuple], list[tuple]]:
-    """
-    Collect config and JVM config fragments from env.
+    """Collect config and JVM config fragments from env.
 
-    For each module, if a config env var exists, use it; otherwise,
-    skip. Modules that do not supply config envs (e.g., POSTGRES) are
-    ignored.
+    For each module, if a config env var exists, use it; otherwise, skip. Modules that
+    do not supply config envs (e.g., POSTGRES) are ignored.
     """
     role = "worker" if worker else "coordinator"
     print(f"{LOG_PREFIX} Collecting configs for role: {role}")
@@ -332,8 +326,7 @@ def write_config_file(filename: str, cfgs: list[tuple]) -> None:
 
 
 def get_modules_and_roles() -> tuple[list[str], int, bool, bool]:
-    """
-    Parse modules and determine node roles from environment variables.
+    """Parse modules and determine node roles from environment variables.
 
     Returns: modules, workers, is_coordinator, is_worker
     """

@@ -7,7 +7,6 @@ from time import monotonic, sleep
 
 import click
 import jsonschema
-
 from minitrino.settings import DEFAULT_CLUSTER_VER
 
 here = os.path.abspath(os.path.dirname(__file__))
@@ -30,8 +29,7 @@ logger = common.logger
 
 
 class ModuleTest:
-    """
-    Test class for Minitrino modules.
+    """Test class for Minitrino modules.
 
     Parameters
     ----------
@@ -71,8 +69,7 @@ class ModuleTest:
         self.module_overrides = json_data.get("moduleOverrides", {})
 
     def run(self) -> bool:
-        """
-        Run all tests for the module.
+        """Run all tests for the module.
 
         Returns
         -------
@@ -108,8 +105,7 @@ class ModuleTest:
 
     @staticmethod
     def cleanup(remove_images=False, debug=False) -> None:
-        """
-        Remove containers, networks, and volumes.
+        """Remove containers, networks, and volumes.
 
         Parameters
         ----------
@@ -134,8 +130,7 @@ class ModuleTest:
 
     @staticmethod
     def log_success(msg: str, timestamp: str | None = None) -> None:
-        """
-        Log a success message.
+        """Log a success message.
 
         Parameters
         ----------
@@ -160,8 +155,7 @@ class ModuleTest:
     def log_failure(
         msg: str, error: BaseException | None = None, timestamp: str | None = None
     ) -> None:
-        """
-        Log a failure message.
+        """Log a failure message.
 
         Parameters
         ----------
@@ -187,8 +181,7 @@ class ModuleTest:
         )
 
     def _skip_enterprise(self) -> bool:
-        """
-        Skip enterprise tests under certain conditions.
+        """Skip enterprise tests under certain conditions.
 
         Returns
         -------
@@ -214,8 +207,7 @@ class ModuleTest:
         return False
 
     def _skip_ci(self) -> bool:
-        """
-        Skip tests in CI if configured via test JSON.
+        """Skip tests in CI if configured via test JSON.
 
         Returns
         -------
@@ -234,8 +226,7 @@ class ModuleTest:
         return is_github and skip_ci
 
     def _runner(self, tests: list[dict], workers: bool = False) -> None:
-        """
-        Run all tests for the module.
+        """Run all tests for the module.
 
         Parameters
         ----------
@@ -281,7 +272,11 @@ class ModuleTest:
             prepend=prepend_args,
             append=append_args,
         )
-        cmd_result = executor.exec(cmd)
+        # Build env dict with LIC_PATH if available (needed for SEP tests)
+        test_env = {}
+        if "LIC_PATH" in os.environ:
+            test_env["LIC_PATH"] = os.environ["LIC_PATH"]
+        cmd_result = executor.exec(cmd, env=test_env)
         if cmd_result.exit_code != 0:
             common.logger.info(cmd_result.output)
             raise RuntimeError(
@@ -308,8 +303,7 @@ class ModuleTest:
         self.log_success(f"Module test type 'restart' for module: '{self.module}'")
 
     def _test_query(self, json_data: dict) -> None:
-        """
-        Test query execution.
+        """Test query execution.
 
         Parameters
         ----------
@@ -318,7 +312,7 @@ class ModuleTest:
         """
         # Check inputs
         contains = json_data.get("contains", [])
-        row_count = json_data.get("rowCount", None)
+        row_count = json_data.get("rowCount")
         retries = json_data.get("retries", 1)
 
         if not contains and row_count is None:
@@ -382,8 +376,7 @@ class ModuleTest:
                     raise e
 
     def _test_shell(self, json_data: dict) -> None:
-        """
-        Test shell command execution.
+        """Test shell command execution.
 
         Parameters
         ----------
@@ -391,7 +384,7 @@ class ModuleTest:
             JSON containing shell test data.
         """
         contains = json_data.get("contains", [])
-        exit_code = json_data.get("exitCode", None)
+        exit_code = json_data.get("exitCode")
 
         if not contains and exit_code is None:
             raise KeyError(
@@ -402,13 +395,13 @@ class ModuleTest:
         if healthcheck:
             self._execute_subcommand(healthcheck, healthcheck=True)
         cmd = json_data.get("command", "")
-        container = json_data.get("container", None)
+        container = json_data.get("container")
         cmd_result = common.execute_cmd(cmd, container, json_data.get("env", {}))
 
         if exit_code is not None:
-            assert (
-                exit_code == cmd_result.exit_code
-            ), f"Unexpected exit code: {cmd_result.exit_code} expected: {exit_code}"
+            assert exit_code == cmd_result.exit_code, (
+                f"Unexpected exit code: {cmd_result.exit_code} expected: {exit_code}"
+            )
 
         for c in contains:
             assert c in cmd_result.output, f"'{c}' not in command output"
@@ -420,8 +413,7 @@ class ModuleTest:
                 prev_output = self._execute_subcommand(s, prev_output=prev_output)
 
     def _test_logs(self, json_data: dict) -> None:
-        """
-        Test log output.
+        """Test log output.
 
         Parameters
         ----------
@@ -475,8 +467,7 @@ class ModuleTest:
     def _execute_subcommand(
         self, json_data: dict, healthcheck: bool = False, prev_output: str = ""
     ) -> str:
-        """
-        Execute a subcommand and return the output.
+        """Execute a subcommand and return the output.
 
         Parameters
         ----------
@@ -502,9 +493,9 @@ class ModuleTest:
         cmd = re.sub(
             r"\$\{PREV_OUTPUT\}", prev_output.strip(), json_data.get("command", "")
         )
-        container = json_data.get("container", None)
+        container = json_data.get("container")
         contains = json_data.get("contains", [])
-        exit_code = json_data.get("exitCode", None)
+        exit_code = json_data.get("exitCode")
 
         if not contains and exit_code is None:
             raise KeyError(
@@ -534,11 +525,10 @@ class ModuleTest:
                     raise TimeoutError(
                         f"'{c}' not in {cmd_type} output after {retry} retries. "
                         f"Last error: {e}"
-                    )
+                    ) from e
 
     def _validate(self, json_data: dict) -> None:
-        """
-        Validate JSON input.
+        """Validate JSON input.
 
         Parameters
         ----------

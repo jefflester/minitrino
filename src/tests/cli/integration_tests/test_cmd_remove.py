@@ -1,7 +1,8 @@
 import io
 import time
+from collections.abc import Generator
 from dataclasses import dataclass
-from typing import Any, Generator, Optional, cast
+from typing import Any, cast
 
 import pytest
 from click.testing import Result
@@ -9,12 +10,12 @@ from docker import DockerClient
 from docker.models.images import Image, ImageCollection
 from docker.models.networks import NetworkCollection
 from docker.models.volumes import VolumeCollection
-
 from minitrino.settings import (
     COMPOSE_LABEL_KEY,
     MODULE_LABEL_KEY,
     ROOT_LABEL,
 )
+
 from tests import common
 from tests.cli.constants import (
     CLUSTER_NAME,
@@ -48,8 +49,7 @@ executor = common.MinitrinoExecutor(utils.CLUSTER_NAME)
 
 @pytest.fixture(scope="session")
 def dummy_resources() -> Generator:
-    """
-    Spin up dummy Docker resources for testing.
+    """Spin up dummy Docker resources for testing.
 
     Returns
     -------
@@ -125,8 +125,7 @@ pytestmark = pytest.mark.usefixtures(
 
 @dataclass
 class RemoveAllScenario:
-    """
-    Remove-all scenario.
+    """Remove-all scenario.
 
     Parameters
     ----------
@@ -146,9 +145,9 @@ class RemoveAllScenario:
 
     id: str
     expected_remove_types: list[str]
-    cmd_flags: Optional[list[str]]
-    label: Optional[str]
-    image_name: Optional[str]
+    cmd_flags: list[str] | None
+    label: str | None
+    image_name: str | None
     log_msg: str
 
 
@@ -208,9 +207,8 @@ def test_remove_all_scenarios(
 ) -> None:
     """Run each RemoveAllScenario."""
 
-    if "images" in scenario.expected_remove_types:
-        if not IS_GITHUB:
-            return
+    if "images" in scenario.expected_remove_types and not IS_GITHUB:
+        return
 
     append_flags: list[str] = []
     if scenario.cmd_flags:
@@ -234,8 +232,7 @@ def test_remove_all_scenarios(
 
 @dataclass
 class RemoveModuleScenario:
-    """
-    Remove module scenario.
+    """Remove module scenario.
 
     Parameters
     ----------
@@ -257,10 +254,10 @@ class RemoveModuleScenario:
 
     id: str
     expected_remove_types: list[str]
-    cmd_flag: Optional[str]
+    cmd_flag: str | None
     label: str
-    module_flag: Optional[str]
-    module_name: Optional[str]
+    module_flag: str | None
+    module_name: str | None
     log_msg: str
 
 
@@ -327,8 +324,7 @@ def test_remove_module_scenarios(
 
 @dataclass
 class RemoveClusterResourceScenario:
-    """
-    Remove cluster resource scenario.
+    """Remove cluster resource scenario.
 
     Parameters
     ----------
@@ -419,8 +415,7 @@ def test_remove_cluster_resource_scenarios(
 
 @dataclass
 class RemoveForceScenario:
-    """
-    Remove dependent resources via force scenario.
+    """Remove dependent resources via force scenario.
 
     Parameters
     ----------
@@ -518,8 +513,7 @@ def test_remove_force_scenarios(
 
 @dataclass
 class RemoveImagesNegativeScenario:
-    """
-    Remove images (negative) scenario.
+    """Remove images (negative) scenario.
 
     Parameters
     ----------
@@ -653,8 +647,7 @@ def test_remove_module_invalid() -> None:
 
 @dataclass
 class DockerResourceCount:
-    """
-    Dataclass for Docker resource count, filtered by label.
+    """Dataclass for Docker resource count, filtered by label.
 
     Parameters
     ----------
@@ -677,9 +670,7 @@ class DockerResourceCount:
 
 
 def assert_docker_resource_count(*args: DockerResourceCount) -> None:
-    """
-    Assert the accuracy of the count returned from a Docker resource
-    lookup.
+    """Assert the accuracy of the count returned from a Docker resource lookup.
 
     Parameters
     ----------
@@ -703,9 +694,9 @@ def assert_docker_resource_count(*args: DockerResourceCount) -> None:
     ]
     for resource_type, resource_list in resources:
         actual = len(resource_list)
-        assert (
-            actual == 1
-        ), f"Unexpected number of dummy {resource_type}s found: {actual} (expected 1)"
+        assert actual == 1, (
+            f"Unexpected number of dummy {resource_type}s found: {actual} (expected 1)"
+        )
 
     for resource in args:
         resource_list = resource.resource_type.list(filters={"label": resource.label})

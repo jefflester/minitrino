@@ -45,7 +45,6 @@ testable.
 - [`postgres`](../catalog/postgres.md#postgres-catalog): Used as a redirect
   source for table scan redirections.
 - [`hive`](../catalog/hive.md#hive-catalog): Required for the `hive_mv_tsr`
-  catalog.
-- [`minio`](./minio.md#minio): Required for object storage.
+  catalog (includes MinIO for object storage).
 - [`insights`](./insights.md#insights): Enables the Starburst web UI and
   configures a backend database for persisting cache service configuration.

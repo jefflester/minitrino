@@ -1,13 +1,13 @@
 """Minitrino resource management.
 
-This module provides classes and functions to manage Docker resources
-(containers, volumes, images, networks). All Docker objects are
-associated with a cluster name **except** for images, which are global.
+This module provides classes and functions to manage Docker resources (containers,
+volumes, images, networks). All Docker objects are associated with a cluster name
+**except** for images, which are global.
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from minitrino.core.docker.wrappers import (
     MinitrinoContainer,
@@ -23,8 +23,7 @@ if TYPE_CHECKING:
 
 
 class ClusterResourceManager:
-    """
-    Expose cluster resources operations.
+    """Expose cluster resources operations.
 
     Parameters
     ----------
@@ -55,11 +54,8 @@ class ClusterResourceManager:
         self._ctx = ctx
         self._logged_cluster_resource_msg = False
 
-    def resources(
-        self, addl_labels: Optional[list[str]] = None
-    ) -> MinitrinoResourcesView:
-        """
-        Fetch Docker objects for the current context.
+    def resources(self, addl_labels: list[str] | None = None) -> MinitrinoResourcesView:
+        """Fetch Docker objects for the current context.
 
         Parameters
         ----------
@@ -118,8 +114,7 @@ class ClusterResourceManager:
     def unfiltered_resources(
         self,
     ) -> dict[str, list[MinitrinoDockerObject]]:
-        """
-        Collect all Docker objects associated with Minitrino.
+        """Collect all Docker objects associated with Minitrino.
 
         Returns
         -------
@@ -167,8 +162,7 @@ class ClusterResourceManager:
         }
 
     def cluster_containers(self) -> list[MinitrinoContainer]:
-        """
-        Fetch coordinator and workers for the active cluster.
+        """Fetch coordinator and workers for the active cluster.
 
         Returns
         -------
@@ -178,15 +172,14 @@ class ClusterResourceManager:
         containers: list[MinitrinoContainer] = self.resources().containers()
         cluster_containers = []
         for c in containers:
-            if c.name == self.fq_container_name("minitrino"):
-                cluster_containers.append(c)
-            elif c.name.startswith(self.fq_container_name("minitrino-worker-")):
+            if c.name == self.fq_container_name("minitrino") or c.name.startswith(
+                self.fq_container_name("minitrino-worker-")
+            ):
                 cluster_containers.append(c)
         return cluster_containers
 
     def compose_project_name(self, cluster_name: str = "") -> str:
-        """
-        Compute the Docker Compose project name for a cluster.
+        """Compute the Docker Compose project name for a cluster.
 
         Parameters
         ----------
@@ -204,8 +197,7 @@ class ClusterResourceManager:
         return f"minitrino-{cluster_name}"
 
     def fq_container_name(self, name: str = "") -> str:
-        """
-        Construct and return a fully-qualified Docker container name.
+        """Construct and return a fully-qualified Docker container name.
 
         Parameters
         ----------
@@ -227,8 +219,7 @@ class ClusterResourceManager:
         return f"{name}-{self._ctx.cluster_name}"
 
     def container(self, fq_container_name: str = "") -> MinitrinoContainer:
-        """
-        Retrieve a MinitrinoContainer by fully-qualified name.
+        """Retrieve a MinitrinoContainer by fully-qualified name.
 
         Parameters
         ----------
@@ -248,8 +239,7 @@ class ClusterResourceManager:
         self,
         resources: dict[str, list[MinitrinoDockerObject]],
     ) -> list[str]:
-        """
-        Derive cluster names from Docker resources.
+        """Derive cluster names from Docker resources.
 
         Parameters
         ----------
@@ -277,7 +267,7 @@ class ClusterResourceManager:
                 if project:
                     cluster_names.append(project.split("minitrino-")[1])
 
-        cluster_names = sorted(list(set(cluster_names)))
+        cluster_names = sorted(set(cluster_names))
         if not self._logged_cluster_resource_msg:
             self._ctx.logger.debug(
                 f"Identified the following clusters with existing "
@@ -305,10 +295,9 @@ class ClusterResourceManager:
         self,
         resources: dict[str, list[MinitrinoDockerObject]],
         clusters: list[str],
-        addl_labels: Optional[list[str]] = None,
+        addl_labels: list[str] | None = None,
     ) -> dict[str, list[MinitrinoDockerObject]]:
-        """
-        Filter resources by cluster name and optional label criteria.
+        """Filter resources by cluster name and optional label criteria.
 
         Parameters
         ----------
@@ -334,7 +323,7 @@ class ClusterResourceManager:
                 k, v = label.split("=", 1)
                 label_filters[k] = v
 
-        filtered: dict[str, list] = {k: [] for k in resources.keys()}
+        filtered: dict[str, list] = {k: [] for k in resources}
         for obj_type, objects in resources.items():
             for obj in objects:
                 if (  # Images are global. Cluster name does not apply.
@@ -353,8 +342,7 @@ class ClusterResourceManager:
 
 
 class MinitrinoResourcesView:
-    """
-    Provide structured access to Docker resources grouped by type.
+    """Provide structured access to Docker resources grouped by type.
 
     Parameters
     ----------
@@ -373,8 +361,7 @@ class MinitrinoResourcesView:
         self,
         resources: dict[str, list[MinitrinoDockerObject]],
     ):
-        """
-        Initialize a view of Docker resources grouped by type.
+        """Initialize a view of Docker resources grouped by type.
 
         Parameters
         ----------
@@ -397,8 +384,7 @@ class MinitrinoResourcesView:
         ]
 
     def containers(self) -> list[MinitrinoContainer]:
-        """
-        Return a list of MinitrinoContainer objects.
+        """Return a list of MinitrinoContainer objects.
 
         Returns
         -------
@@ -408,8 +394,7 @@ class MinitrinoResourcesView:
         return self._containers
 
     def volumes(self) -> list[MinitrinoVolume]:
-        """
-        Return a list of MinitrinoVolume objects.
+        """Return a list of MinitrinoVolume objects.
 
         Returns
         -------
@@ -419,8 +404,7 @@ class MinitrinoResourcesView:
         return self._volumes
 
     def networks(self) -> list[MinitrinoNetwork]:
-        """
-        Return a list of MinitrinoNetwork objects.
+        """Return a list of MinitrinoNetwork objects.
 
         Returns
         -------
@@ -430,8 +414,7 @@ class MinitrinoResourcesView:
         return self._networks
 
     def images(self) -> list[MinitrinoImage]:
-        """
-        Return a list of MinitrinoImage objects.
+        """Return a list of MinitrinoImage objects.
 
         Returns
         -------
@@ -441,8 +424,7 @@ class MinitrinoResourcesView:
         return self._images
 
     def raw(self) -> dict[str, list[MinitrinoDockerObject]]:
-        """
-        Return raw grouped Docker resources.
+        """Return raw grouped Docker resources.
 
         Returns
         -------

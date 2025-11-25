@@ -7,8 +7,9 @@ import logging
 import sys
 import threading
 import time
+from collections.abc import Callable
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Callable, Optional
+from typing import TYPE_CHECKING
 
 from minitrino.core.logging.levels import LogLevel
 from minitrino.shutdown import shutdown_event
@@ -18,11 +19,10 @@ if TYPE_CHECKING:
 
 
 class LogBuffer:
-    """
-    Helper class for buffering and replaying log messages.
+    """Helper class for buffering and replaying log messages.
 
-    Buffers messages as (msg, is_spinner_artifact, stream) tuples and
-    can flush them to the appropriate output stream.
+    Buffers messages as (msg, is_spinner_artifact, stream) tuples and can flush them to
+    the appropriate output stream.
     """
 
     def __init__(self) -> None:
@@ -41,8 +41,7 @@ class LogBuffer:
 
 
 class _SpinnerThread(threading.Thread):
-    """
-    Helper thread for displaying spinner animation.
+    """Helper thread for displaying spinner animation.
 
     Parameters
     ----------
@@ -64,7 +63,7 @@ class _SpinnerThread(threading.Thread):
         message: str,
         output_lock: threading.RLock,
         spinner_done: threading.Event,
-        log_buffer: Optional[LogBuffer] = None,
+        log_buffer: LogBuffer | None = None,
     ) -> None:
         super().__init__(daemon=True)
         self.prefix = prefix
@@ -94,8 +93,7 @@ class _SpinnerThread(threading.Thread):
 
 
 class Spinner:
-    """
-    Spinner logging utility.
+    """Spinner logging utility.
 
     Displays a spinner while a task is in progress.
 
@@ -117,22 +115,21 @@ class Spinner:
     def __init__(
         self,
         logger: MinitrinoLogger,
-        log_sink: Optional[Callable[[str, str, bool], None]] = None,
+        log_sink: Callable[[str, str, bool], None] | None = None,
         always_verbose: bool = False,
     ) -> None:
         self.logger: MinitrinoLogger = logger
-        self.log_sink: Optional[Callable[[str, str, bool], None]] = log_sink
+        self.log_sink: Callable[[str, str, bool], None] | None = log_sink
         self.spinner_active = threading.local()
         self.spinner_active.value = False
 
         self.output_lock = threading.RLock()
-        self._spinner_thread: Optional[threading.Thread] = None
+        self._spinner_thread: threading.Thread | None = None
         self.always_verbose = always_verbose
 
     @contextmanager
     def spinner(self, message: str = ""):
-        """
-        Display a spinner while a task is in progress.
+        """Display a spinner while a task is in progress.
 
         If not a TTY or logging to a file, disables spinner and
         buffering.
@@ -169,7 +166,7 @@ class Spinner:
     def _start_spinner(
         self,
         message: str = "",
-        log_buffer: Optional[LogBuffer] = None,
+        log_buffer: LogBuffer | None = None,
     ) -> threading.Event:
         """Start the spinner animation."""
         spinner_done = threading.Event()
@@ -185,8 +182,7 @@ class Spinner:
         return spinner_done
 
     def _stop_spinner(self, spinner_done: threading.Event, delay: float = 0.1) -> None:
-        """
-        Stop the spinner and clear the terminal line.
+        """Stop the spinner and clear the terminal line.
 
         Parameters
         ----------

@@ -12,7 +12,7 @@ author = "jefflester"
 def _read_version_file():
     try:
         here = os.path.dirname(__file__)
-        with open(os.path.abspath(os.path.join(here, "../src/lib/version")), "r") as f:
+        with open(os.path.abspath(os.path.join(here, "../src/lib/version"))) as f:
             return f.read().strip()
     except Exception:
         return "unknown"

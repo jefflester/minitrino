@@ -60,8 +60,7 @@ def filter_skip_ci_modules(modules: list[str]) -> list[str]:
 
 
 def get_modules(image: str) -> list[str]:
-    """
-    Get list of modules to test based on image type.
+    """Get list of modules to test based on image type.
 
     Parameters
     ----------
@@ -113,8 +112,7 @@ def get_modules(image: str) -> list[str]:
 
 
 def split_into_chunks(modules: list[str]) -> list[list[str]]:
-    """
-    Split module list evenly across optimal number of runners.
+    """Split module list evenly across optimal number of runners.
 
     The algorithm targets ~5 modules per runner, then distributes
     modules as evenly as possible across the calculated number of runners.
@@ -166,8 +164,7 @@ def split_into_chunks(modules: list[str]) -> list[list[str]]:
 
 
 def generate_matrix(image: str) -> dict[str, Any]:
-    """
-    Generate GitHub Actions matrix configuration.
+    """Generate GitHub Actions matrix configuration.
 
     Automatically calculates optimal number of runners and distributes
     modules evenly across them (targeting ~5 modules per runner).

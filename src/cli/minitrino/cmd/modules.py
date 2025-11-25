@@ -1,8 +1,8 @@
 """Commands for displaying and filtering Minitrino module metadata."""
 
+import contextlib
 import json
 import sys
-from typing import Optional
 
 import click
 
@@ -108,10 +108,7 @@ def cli(
         return
 
     if json_format:
-        all_metadata = {
-            module: module_metadata
-            for module, module_metadata in sorted(filtered_modules.items())
-        }
+        all_metadata = dict(sorted(filtered_modules.items()))
         sys.stdout.write(json.dumps(all_metadata, indent=2) + "\n")
     else:
         for module, module_metadata in sorted(filtered_modules.items()):
@@ -123,7 +120,7 @@ def cli(
 
 @utils.pass_environment()
 def filter_modules(
-    ctx: MinitrinoContext, modules: list[str], module_type: Optional[str]
+    ctx: MinitrinoContext, modules: list[str], module_type: str | None
 ) -> dict[str, dict]:
     """Filter the given modules by the specified type.
 
@@ -173,11 +170,9 @@ def log_info(ctx: MinitrinoContext, module_name: str, module_metadata: dict) -> 
         "dependentClusters",
     ]
     for key in keys:
-        val = module_metadata.get(key, None)
+        val = module_metadata.get(key)
         if val is not None:
-            try:
+            with contextlib.suppress(TypeError):
                 val = json.dumps(val, indent=2)
-            except TypeError:
-                pass
             log_msg.append(f"{key[0].upper() + key[1:]}: {val}\n")
     ctx.logger.info("".join(log_msg))

@@ -1,15 +1,13 @@
-"""
-Tests for the LibraryManager class in minitrino.core.library.
+"""Tests for the LibraryManager class in minitrino.core.library.
 
-This test suite verifies the functionality of the LibraryManager class,
-including library installation, version management, and error handling.
+This test suite verifies the functionality of the LibraryManager class, including
+library installation, version management, and error handling.
 """
 
 import os
 from unittest.mock import MagicMock, call, patch
 
 import pytest
-
 from minitrino.core.errors import MinitrinoError, UserError
 from minitrino.core.library import LibraryManager
 
@@ -72,8 +70,7 @@ class TestAutoInstallOrUpdate:
     def test_version_mismatch_upgrade(
         self, mock_validate, mock_lib_ver, mock_cli_ver, library_manager, mock_ctx
     ):
-        """Test auto_install when versions don't match and user
-        chooses to upgrade."""
+        """Test auto_install when versions don't match and user chooses to upgrade."""
         mock_lib_ver.return_value = "1.0.0"
         library_manager.install = MagicMock()
 
@@ -91,8 +88,8 @@ class TestAutoInstallOrUpdate:
     def test_version_mismatch_no_upgrade(
         self, mock_validate, mock_lib_ver, mock_cli_ver, library_manager, mock_ctx
     ):
-        """Test auto_install when versions don't match
-        and user chooses not to upgrade."""
+        """Test auto_install when versions don't match and user chooses not to
+        upgrade."""
         mock_lib_ver.return_value = "1.0.0"
         library_manager.install = MagicMock()
 
@@ -155,9 +152,11 @@ class TestLibraryValidation:
 
     def test_validate_nonexistent_version(self, library_manager):
         """Test validation of a version that doesn't exist."""
-        with patch.object(library_manager, "list_releases", return_value=["1.0.0"]):
-            with pytest.raises(MinitrinoError, match="not found on GitHub"):
-                library_manager.validate("9.9.9")
+        with (
+            patch.object(library_manager, "list_releases", return_value=["1.0.0"]),
+            pytest.raises(MinitrinoError, match="not found on GitHub"),
+        ):
+            library_manager.validate("9.9.9")
 
 
 class TestFileOperations:

@@ -1,22 +1,20 @@
 #!/usr/bin/env python3
-"""
-Plugin pruner for Minitrino images.
+"""Plugin pruner for Minitrino images.
 
-Removes unused plugins from the plugin directory of a Trino/Starburst
-installation, keeping only those in a static allowlist and any specified
-by KEEP_PLUGINS (env var or argument).
+Removes unused plugins from the plugin directory of a Trino/Starburst installation,
+keeping only those in a static allowlist and any specified by KEEP_PLUGINS (env var or
+argument).
 """
+
 import argparse
 import os
 import shutil
-from typing import Optional
 
 LOG_PREFIX = "[prune_plugins]"
 
 
-def prune_plugins(cluster_dist: str, keep_plugins_env: Optional[str] = None) -> None:
-    """
-    Remove unused plugins from the plugin directory.
+def prune_plugins(cluster_dist: str, keep_plugins_env: str | None = None) -> None:
+    """Remove unused plugins from the plugin directory.
 
     Keep only those in the static list and any specified by
     KEEP_PLUGINS. If KEEP_PLUGINS is "ALL", keeps all plugins.

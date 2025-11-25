@@ -1,5 +1,4 @@
-"""
-Resolve the Docker socket to use.
+"""Resolve the Docker socket to use.
 
 For internal and external use (e.g. CLI and tests).
 """
@@ -9,7 +8,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from minitrino.core.errors import MinitrinoError
 
@@ -17,9 +16,8 @@ if TYPE_CHECKING:
     from minitrino.core.context import MinitrinoContext
 
 
-def get_docker_context_name(ctx: Optional[MinitrinoContext] = None, env=None) -> str:
-    """
-    Return the name of the active Docker context.
+def get_docker_context_name(ctx: MinitrinoContext | None = None, env=None) -> str:
+    """Return the name of the active Docker context.
 
     Parameters
     ----------
@@ -67,9 +65,8 @@ def get_docker_context_name(ctx: Optional[MinitrinoContext] = None, env=None) ->
         return ""
 
 
-def resolve_docker_socket(ctx: Optional[MinitrinoContext] = None, env=None) -> str:
-    """
-    Return the Docker socket to use, preferring DOCKER_HOST if set.
+def resolve_docker_socket(ctx: MinitrinoContext | None = None, env=None) -> str:
+    """Return the Docker socket to use, preferring DOCKER_HOST if set.
 
     Parameters
     ----------

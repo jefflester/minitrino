@@ -3,8 +3,9 @@
 Learn about catalog modules.
 
 ```{toctree}
-:hidden:
-
+---
+hidden:
+---
 clickhouse
 db2
 delta-lake
@@ -22,6 +23,6 @@ stargate
 stargate-parallel
 ```
 
----
+______________________________________________________________________
 
 [Minitrino GitHub repository](https://github.com/jefflester/minitrino).

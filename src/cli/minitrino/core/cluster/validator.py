@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from minitrino import utils
 from minitrino.core.docker.wrappers import MinitrinoContainer
@@ -21,8 +21,7 @@ if TYPE_CHECKING:
 
 
 class ClusterValidator:
-    """
-    Validate cluster configuration and environment variables.
+    """Validate cluster configuration and environment variables.
 
     Parameters
     ----------
@@ -52,8 +51,7 @@ class ClusterValidator:
         self._cluster = cluster
 
     def check_cluster_name(self) -> None:
-        """
-        Validate that the cluster name is valid.
+        """Validate that the cluster name is valid.
 
         Raises
         ------
@@ -75,8 +73,7 @@ class ClusterValidator:
             )
 
     def check_cluster_ver(self) -> None:
-        """
-        Validate that the cluster version meets minimum requirements.
+        """Validate that the cluster version meets minimum requirements.
 
         Raises
         ------
@@ -96,7 +93,7 @@ class ClusterValidator:
                 if cluster_ver_int < MIN_CLUSTER_VER or "-e" not in cluster_ver:
                     raise UserError(error_msg)
             except Exception:
-                raise UserError(error_msg)
+                raise UserError(error_msg) from None
         elif cluster_dist == "trino":
             error_msg = (
                 f"Provided Trino version '{cluster_ver}' is invalid. "
@@ -112,13 +109,10 @@ class ClusterValidator:
                 if cluster_ver_int < MIN_CLUSTER_VER:
                     raise UserError(error_msg)
             except Exception:
-                raise UserError(error_msg)
+                raise UserError(error_msg) from None
 
-    def check_dependent_clusters(
-        self, modules: Optional[list[str]] = None
-    ) -> list[dict]:
-        """
-        Identify dependent clusters for the specified modules.
+    def check_dependent_clusters(self, modules: list[str] | None = None) -> list[dict]:
+        """Identify dependent clusters for the specified modules.
 
         Parameters
         ----------
@@ -244,8 +238,7 @@ class ClusterValidator:
     def _current_config(
         self, container: MinitrinoContainer
     ) -> tuple[list[tuple], list[tuple]]:
-        """
-        Fetch current cluster configs from a cluster container.
+        """Fetch current cluster configs from a cluster container.
 
         Parameters
         ----------
@@ -272,11 +265,10 @@ class ClusterValidator:
         return current_cluster_cfgs, current_jvm_cfg
 
     def _split_config(self, cfgs: str = "") -> list[tuple]:
-        """
-        Split raw config strings into an ordered list of tuples.
+        """Split raw config strings into an ordered list of tuples.
 
-        Each tuple is either ('key_value', key, value) or ('unified',
-        line). Preserves the original ordering and comments.
+        Each tuple is either ('key_value', key, value) or ('unified', line). Preserves
+        the original ordering and comments.
         """
         cfgs_list = cfgs.strip().split("\n")
         parsed = []

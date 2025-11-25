@@ -27,7 +27,9 @@ debugging Minitrino clusters and Docker containers.
 file issues, contribute code, and participate in the Minitrino project.
 
 ```{toctree}
-:hidden:
+---
+hidden:
+---
 installation-and-upgrades
 workflow-examples
 cli-reference
@@ -36,6 +38,6 @@ troubleshooting
 reporting-bugs-and-contributing
 ```
 
----
+______________________________________________________________________
 
 [Minitrino GitHub repository](https://github.com/jefflester/minitrino).

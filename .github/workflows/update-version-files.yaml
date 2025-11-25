@@ -2,13 +2,13 @@
 name: Update Version Files on New Release Branch
 
 on:
-  create:
+  push:
     branches:
-      - '^\\d+\\.\\d+\\.\\d+$'
-    types: [branch]
+      - '[0-9]+.[0-9]+.[0-9]+'
 
 jobs:
   update-versions:
+    if: github.event.created
     runs-on: ubuntu-22.04
     steps:
       - name: Check out code
@@ -18,11 +18,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.MINITRINO_TOKEN }}
         run: |-
           BRANCH=$(echo "${GITHUB_REF#refs/heads/}")
-          if [[ "$GITHUB_REF" == "$BRANCH" ]]; then
-            echo "This workflow can only be triggered by a branch"
-            exit 0
-          fi
-
           echo "Updating version files to version ${BRANCH}"
           echo "Update ./src/lib/version"
           echo "${BRANCH}" > ./src/lib/version

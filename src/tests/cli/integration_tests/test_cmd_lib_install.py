@@ -1,7 +1,7 @@
 import os
 import shutil
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 import pytest
 
@@ -31,8 +31,7 @@ def clean_before_test():
 
 @dataclass
 class LibInstallScenario:
-    """
-    Library install scenario.
+    """Library install scenario.
 
     Parameters
     ----------
@@ -52,9 +51,9 @@ class LibInstallScenario:
 
     id: str
     cmd: dict[str, Any]
-    input_val: Optional[str]
+    input_val: str | None
     expected_exit_code: int
-    expected_output: Optional[str]
+    expected_output: str | None
     log_msg: str
 
 

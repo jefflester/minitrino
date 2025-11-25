@@ -1,0 +1,121 @@
+# Dependabot configuration for automated dependency updates
+#
+# Note: Docker images defined in src/lib/minitrino.env (e.g., POSTGRES_VER, MINIO_VER)
+# cannot be auto-detected by Dependabot and require manual updates.
+
+version: 2
+
+updates:
+  # ============================================================================
+  # Python Dependencies (pip)
+  # ============================================================================
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "jefflester"
+    labels:
+      - "dependencies"
+      - "python"
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps-dev"
+      include: "scope"
+    groups:
+      # Group all type stub updates together
+      type-stubs:
+        patterns:
+          - "types-*"
+      # Group documentation dependencies
+      documentation:
+        patterns:
+          - "sphinx*"
+          - "myst*"
+          - "numpydoc"
+          - "pydata-sphinx-theme"
+          - "ablog"
+      # Group testing/dev tools
+      development-tools:
+        patterns:
+          - "pytest*"
+          - "ruff"
+          - "mypy"
+          - "bandit"
+          - "vulture"
+          - "deptry"
+          - "pydocstyle"
+          - "docformatter"
+          - "mdformat*"
+      # Critical security updates (docker, click, requests, PyYAML) will
+      # create individual PRs for visibility (not grouped)
+
+  # ============================================================================
+  # GitHub Actions
+  # ============================================================================
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "jefflester"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    groups:
+      # Group Docker-related actions
+      docker-actions:
+        patterns:
+          - "docker/*"
+      # Group GitHub official actions
+      github-actions:
+        patterns:
+          - "actions/*"
+
+  # ============================================================================
+  # Docker - Main Image Dockerfile
+  # ============================================================================
+  - package-ecosystem: "docker"
+    directory: "/src/lib/image"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 2
+    reviewers:
+      - "jefflester"
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+
+  # ============================================================================
+  # Docker - Documentation Build Image
+  # ============================================================================
+  - package-ecosystem: "docker"
+    directory: "/install/docs"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 1
+    reviewers:
+      - "jefflester"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "documentation"
+    commit-message:
+      prefix: "docs"
+      include: "scope"

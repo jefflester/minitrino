@@ -44,7 +44,7 @@ after_start() {
   )
   AS
   (SELECT orderkey, orderdate FROM tpch.tiny.orders LIMIT 500)
-  UNION ALL 
+  UNION ALL
   (SELECT orderkey, orderdate FROM tpch.tiny.orders LIMIT 500)"
 
   trino-cli --user admin --output-format TSV_HEADER --execute "${QUERY}"

@@ -202,7 +202,12 @@ class MinitrinoExecutor:
                 )
             )
         # Mix stderr into stdout so logs are captured in result.output
-        runner = CliRunner(mix_stderr=True)
+        # Note: mix_stderr was removed in Click 8.2.0, but we support both versions
+        try:
+            runner = CliRunner(mix_stderr=True)
+        except TypeError:
+            # Click 8.2.0+ removed mix_stderr parameter
+            runner = CliRunner()
         env = env or {}
         result = runner.invoke(cli, cmd, input=input, env=env)
         if log_output:

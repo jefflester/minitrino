@@ -59,7 +59,6 @@ Upon completion of the code tests and the merging of a release branch PR into
 - Creates a release whose name matches the name of the merged PR branch (e.g., `3.0.0`)
 - Publishes the release and marks it as `latest`
 - Builds the CLI package and publishes it to PyPI
-- Creates the library archive and attaches it to the GitHub release
 
 ## Automated Dependency Updates
 

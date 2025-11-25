@@ -1,5 +1,10 @@
 [
   {
+    "version": "3.0.2",
+    "url": "https://minitrino.readthedocs.io/en/3.0.2/",
+    "preferred": true
+  },
+  {
     "version": "3.0.1",
     "url": "https://minitrino.readthedocs.io/en/3.0.1/",
     "preferred": true

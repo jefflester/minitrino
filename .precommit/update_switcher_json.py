@@ -6,6 +6,8 @@ from pathlib import Path
 
 SWITCHER_PATH = Path("docs/_static/switcher.json")
 VERSION_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
+# Blacklisted versions with broken documentation builds
+BLACKLISTED_VERSIONS = {"3.0.0"}
 
 
 def get_current_version():
@@ -31,10 +33,18 @@ if current_version not in ("master", "main", "latest") and not VERSION_PATTERN.m
     )
     sys.exit(0)
 
+# Skip blacklisted versions
+if current_version in BLACKLISTED_VERSIONS:
+    print(f"Skipping switcher update: {current_version} is blacklisted.")
+    sys.exit(0)
+
 current_url = f"https://minitrino.readthedocs.io/en/{current_version}/"
 
 with open(SWITCHER_PATH) as f:
     entries = json.load(f)
+
+# Remove any blacklisted versions from existing entries
+entries = [e for e in entries if e["version"] not in BLACKLISTED_VERSIONS]
 
 if not any(e["version"] == current_version for e in entries):
     new_entry = {"version": current_version, "url": current_url, "preferred": True}
@@ -50,6 +60,7 @@ if not any(e["version"] == current_version for e in entries):
     entries = sorted(entries, key=version_key, reverse=True)
     with open(SWITCHER_PATH, "w") as f:
         json.dump(entries, f, indent=2)
+    subprocess.run(["git", "add", str(SWITCHER_PATH)], check=True)
     print(f"Added entry for {current_version}")
 else:
     print(f"Entry for {current_version} already exists.")

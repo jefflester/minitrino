@@ -9,7 +9,7 @@ authors = [
 description = "A command line tool that makes it easy to run modular Trino environments locally."
 dependencies = [
   "PyYAML>=6.0.1",
-  "click==8.1.8",
+  "click==8.3.1",
   "docker==7.1.0",
   "humanize",
   "jsonschema>=4.18.0",
@@ -23,7 +23,7 @@ name = "minitrino"
 readme = "readme.md"
 requires-python = ">=3.10.12"
 urls = {"Homepage" = "https://github.com/jefflester/minitrino"}
-version = "3.0.1"
+version = "3.0.2"
 
 [project.optional-dependencies]
 dev = [
@@ -108,7 +108,7 @@ check_untyped_defs = true
 explicit_package_bases = true
 ignore_missing_imports = true
 mypy_path = "src"
-python_version = "3.10"
+python_version = "3.0.2"
 
 [tool.pydocstyle]
 convention = "numpy"

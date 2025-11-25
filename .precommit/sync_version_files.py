@@ -37,15 +37,15 @@ def update_lib_version(version: str) -> None:
 
 
 def update_pyproject_toml(version: str) -> None:
-    """Update version in pyproject.toml."""
+    """Update version in pyproject.toml [project] section only."""
     pyproject_path = Path("pyproject.toml")
     pyproject_text = pyproject_path.read_text()
-    # Match version field in [project] section, not python_version
+    # Match version field specifically in [project] section only
     updated_text = re.sub(
-        r'^version = "[^"]*"',
-        f'version = "{version}"',
+        r'(\[project\][^\[]*?)^version = "[^"]*"',
+        rf'\1version = "{version}"',
         pyproject_text,
-        flags=re.MULTILINE,
+        flags=re.MULTILINE | re.DOTALL,
     )
     pyproject_path.write_text(updated_text)
     print(f"Updated {pyproject_path}")

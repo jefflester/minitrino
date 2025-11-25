@@ -272,7 +272,11 @@ class ModuleTest:
             prepend=prepend_args,
             append=append_args,
         )
-        cmd_result = executor.exec(cmd)
+        # Build env dict with LIC_PATH if available (needed for SEP tests)
+        test_env = {}
+        if "LIC_PATH" in os.environ:
+            test_env["LIC_PATH"] = os.environ["LIC_PATH"]
+        cmd_result = executor.exec(cmd, env=test_env)
         if cmd_result.exit_code != 0:
             common.logger.info(cmd_result.output)
             raise RuntimeError(

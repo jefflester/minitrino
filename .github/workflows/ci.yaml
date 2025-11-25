@@ -443,6 +443,7 @@ jobs:
       - name: Run library tests (Segment ${{ matrix.segment }})
         env:
           IS_GITHUB: ${{ vars.IS_GITHUB }}
+          LIC_PATH: ~/starburstdata.license
         run: |-
           python ./src/tests/lib/runner.py \
             --debug --remove-images --image starburst \

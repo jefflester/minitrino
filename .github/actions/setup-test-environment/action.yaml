@@ -51,4 +51,6 @@ runs:
     - name: Set up Starburst license
       if: inputs.setup-license == 'true'
       shell: bash
-      run: echo "${{ inputs.license-data }}" > ~/starburstdata.license
+      env:
+        LIC_DATA: ${{ inputs.license-data }}
+      run: echo "${LIC_DATA}" > ~/starburstdata.license

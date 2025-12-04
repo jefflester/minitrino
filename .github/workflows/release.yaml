@@ -66,10 +66,51 @@ jobs:
           echo "Package ${GITHUB_HEAD_REF} is available on PyPI"
 
   # ============================================================================
-  # STAGE 2: Smoke Test (Gate for Release)
+  # STAGE 2: Create Draft GitHub Release (needed for lib-install in smoke test)
+  # ============================================================================
+  draft-release:
+    needs: pypi-publish
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+        with:
+          ref: master
+
+      - name: Create draft release
+        env:
+          GITHUB_TOKEN: ${{ secrets.MINITRINO_TOKEN }}
+        run: |
+          VERSION="${GITHUB_HEAD_REF}"
+          RELEASE_NOTES="./release-notes/${VERSION}.md"
+
+          if [ ! -f "${RELEASE_NOTES}" ]; then
+            echo "Release notes file not found at ${RELEASE_NOTES}. Exiting..."
+            exit 1
+          fi
+
+          DESCRIPTION=$(cat "${RELEASE_NOTES}")
+
+          echo "Checking existing releases..."
+          if gh release list | grep -q -e "${VERSION}"; then
+            echo "Release ${VERSION} found. Deleting..."
+            gh release delete "${VERSION}" -y --cleanup-tag || true
+          fi
+
+          echo "Creating draft release ${VERSION}..."
+          gh release create "${VERSION}" \
+            --title "${VERSION}" \
+            --notes "${DESCRIPTION}" \
+            --target master \
+            --draft
+
+          echo "Draft release ${VERSION} created successfully!"
+
+  # ============================================================================
+  # STAGE 3: Smoke Test (Gate for Release)
   # ============================================================================
   smoke-test:
-    needs: pypi-publish
+    needs: draft-release
     strategy:
       fail-fast: false
       matrix:
@@ -185,42 +226,20 @@ jobs:
           minitrino remove --volumes 2>/dev/null || true
 
   # ============================================================================
-  # STAGE 3: Create and Publish GitHub Release (only if smoke test passes)
+  # STAGE 4: Publish GitHub Release (only if smoke test passes)
   # ============================================================================
   publish-release:
     needs: smoke-test
     runs-on: ubuntu-22.04
     steps:
-      - name: Check out code
-        uses: actions/checkout@v6
-        with:
-          ref: master
-
-      - name: Create and publish release
+      - name: Publish release
         env:
           GITHUB_TOKEN: ${{ secrets.MINITRINO_TOKEN }}
         run: |
           VERSION="${GITHUB_HEAD_REF}"
-          RELEASE_NOTES="./release-notes/${VERSION}.md"
-
-          if [ ! -f "${RELEASE_NOTES}" ]; then
-            echo "Release notes file not found at ${RELEASE_NOTES}. Exiting..."
-            exit 1
-          fi
-
-          DESCRIPTION=$(cat "${RELEASE_NOTES}")
-
-          echo "Checking existing releases..."
-          if gh release list | grep -q -e "${VERSION}"; then
-            echo "Release ${VERSION} found. Deleting..."
-            gh release delete "${VERSION}" -y --cleanup-tag || true
-          fi
-
-          echo "Creating and publishing release ${VERSION}..."
-          gh release create "${VERSION}" \
-            --title "${VERSION}" \
-            --notes "${DESCRIPTION}" \
-            --target master \
+          echo "Publishing release ${VERSION} (marking as non-draft and latest)..."
+          gh release edit "${VERSION}" \
+            --repo "${{ github.repository }}" \
+            --draft=false \
             --latest
-
           echo "Release ${VERSION} published successfully!"

@@ -7,13 +7,23 @@ on:
       - master
     types:
       - closed
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g., 3.0.3)"
+        required: true
+        type: string
+
+env:
+  # Normalize version: use input for workflow_dispatch, head_ref for PR triggers
+  RELEASE_VERSION: ${{ inputs.version || github.head_ref }}
 
 jobs:
   # ============================================================================
   # STAGE 1: Publish to PyPI
   # ============================================================================
   pypi-publish:
-    if: github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-22.04
     steps:
       - name: Check out code
@@ -39,13 +49,13 @@ jobs:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
         run: |
-          PYPI_URL="https://pypi.org/pypi/minitrino/${GITHUB_HEAD_REF}/json"
+          PYPI_URL="https://pypi.org/pypi/minitrino/${RELEASE_VERSION}/json"
           RESPONSE=$(curl --silent "${PYPI_URL}")
-          if echo "${RESPONSE}" | grep -q "\"${GITHUB_HEAD_REF}\""; then
-            echo "Package version ${GITHUB_HEAD_REF} already exists on PyPI."
+          if echo "${RESPONSE}" | grep -q "\"${RELEASE_VERSION}\""; then
+            echo "Package version ${RELEASE_VERSION} already exists on PyPI."
             echo "Skipping upload."
           else
-            echo "Uploading package version ${GITHUB_HEAD_REF} to PyPI..."
+            echo "Uploading package version ${RELEASE_VERSION} to PyPI..."
             twine upload dist/*
           fi
 
@@ -54,7 +64,7 @@ jobs:
           echo "Waiting for package to be available on PyPI..."
           MAX_ATTEMPTS=10
           ATTEMPT=1
-          until pip download minitrino==${GITHUB_HEAD_REF} --no-deps -d /tmp; do
+          until pip download minitrino==${RELEASE_VERSION} --no-deps -d /tmp; do
             if [ $ATTEMPT -ge $MAX_ATTEMPTS ]; then
               echo "Package not available on PyPI after ${ATTEMPT} attempts."
               exit 1
@@ -63,7 +73,7 @@ jobs:
             ATTEMPT=$((ATTEMPT+1))
             sleep 30
           done
-          echo "Package ${GITHUB_HEAD_REF} is available on PyPI"
+          echo "Package ${RELEASE_VERSION} is available on PyPI"
 
   # ============================================================================
   # STAGE 2: Create Draft GitHub Release (needed for lib-install in smoke test)
@@ -81,7 +91,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.MINITRINO_TOKEN }}
         run: |
-          VERSION="${GITHUB_HEAD_REF}"
+          VERSION="${RELEASE_VERSION}"
           RELEASE_NOTES="./release-notes/${VERSION}.md"
 
           if [ ! -f "${RELEASE_NOTES}" ]; then
@@ -129,7 +139,7 @@ jobs:
 
       - name: Install minitrino from PyPI
         env:
-          VERSION: ${{ github.head_ref }}
+          VERSION: ${{ env.RELEASE_VERSION }}
         run: |
           echo "Installing minitrino version ${VERSION} from PyPI..."
           pip install minitrino==${VERSION} --no-cache-dir
@@ -157,7 +167,7 @@ jobs:
 
       - name: Test lib-install command
         env:
-          VERSION: ${{ github.head_ref }}
+          VERSION: ${{ env.RELEASE_VERSION }}
         run: |
           echo "Testing 'minitrino lib-install' for version ${VERSION}..."
           echo "y" | minitrino -v lib-install --version "${VERSION}" || {
@@ -236,7 +246,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.MINITRINO_TOKEN }}
         run: |
-          VERSION="${GITHUB_HEAD_REF}"
+          VERSION="${RELEASE_VERSION}"
           echo "Publishing release ${VERSION} (marking as non-draft and latest)..."
           gh release edit "${VERSION}" \
             --repo "${{ github.repository }}" \

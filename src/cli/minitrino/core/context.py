@@ -118,6 +118,7 @@ class MinitrinoContext:
         cluster_name: str = "",
         version_only: bool = False,
         log_level: LogLevel | None = None,
+        minimal: bool = False,
     ) -> None:
         """Initialize core CLI context attributes.
 
@@ -136,6 +137,11 @@ class MinitrinoContext:
             version fetching (e.g. `minitrino --version`).
         log_level : LogLevel, optional
             The log level to set for the logger.
+        minimal : bool, optional
+            If True, initializes only the attributes required for
+            commands that don't need the library (e.g. `lib-install`,
+            `config`). This skips module loading, cluster setup, and
+            Docker client initialization.
         """
         if self._initialized:
             raise MinitrinoError("Context has already been initialized.")
@@ -144,8 +150,13 @@ class MinitrinoContext:
         if version_only:
             return
         self._validate_config_file()
+        if minimal:
+            if log_level:
+                self.logger.set_level(log_level)
+            self._initialized = True
+            return
         self._try_parse_library_env()
-        self._compare_versions()
+        self._try_compare_versions()
         self.modules = Modules(self)
         self.cmd_executor = CommandExecutor(self)
         if cluster_name:
@@ -313,17 +324,25 @@ class MinitrinoContext:
         except Exception:  # Skip lib-related procedures if the lib is not found
             pass
 
-    def _compare_versions(self) -> None:
-        """Compare CLI and library versions for compatibility."""
-        cli_ver = utils.cli_ver()
-        lib_ver = utils.lib_ver(lib_path=self.lib_dir)
-        if cli_ver != lib_ver:
-            self.logger.warn(
-                f"CLI version {cli_ver} and library version {lib_ver} "
-                f"do not match. You can update the Minitrino library "
-                f"version to match the CLI version by running 'minitrino "
-                f"lib-install'.",
-            )
+    def _try_compare_versions(self) -> None:
+        """Attempt to compare CLI and library versions for compatibility.
+
+        This is a best-effort check that gracefully handles missing
+        libraries. Commands like `lib-install` and `config` need to run
+        even when no library is installed yet.
+        """
+        try:
+            cli_ver = utils.cli_ver()
+            lib_ver = utils.lib_ver(lib_path=self.lib_dir)
+            if cli_ver != lib_ver:
+                self.logger.warn(
+                    f"CLI version {cli_ver} and library version {lib_ver} "
+                    f"do not match. You can update the Minitrino library "
+                    f"version to match the CLI version by running 'minitrino "
+                    f"lib-install'.",
+                )
+        except Exception:  # Skip version comparison if lib is not found
+            pass
 
     def _set_cluster_attrs(self, cluster_name: str) -> None:
         """Set cluster-related attributes for the context.

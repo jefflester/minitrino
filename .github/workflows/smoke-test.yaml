@@ -1,0 +1,184 @@
+---
+name: PyPI Smoke Test
+
+# Run after the release workflow completes successfully
+on:
+  workflow_run:
+    workflows: ["Publish Release on Merge to Master"]
+    types:
+      - completed
+
+jobs:
+  smoke-test:
+    # Only run if the release workflow succeeded
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-15]
+    runs-on: ${{ matrix.os }}
+    steps:
+      # NOTE: We intentionally do NOT checkout the repo here.
+      # This simulates an end-user installing from PyPI without access
+      # to the source repository, which catches bugs like lib_dir
+      # falling back to src/lib in the repo tree.
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+
+      - name: Get release version
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Get the latest release version from GitHub API
+          # This is more reliable than extracting from workflow_run.head_branch
+          VERSION=$(curl -s https://api.github.com/repos/jefflester/minitrino/releases/latest \
+            | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+
+          if [ -z "${VERSION}" ]; then
+            echo "ERROR: Could not determine release version from GitHub API"
+            exit 1
+          fi
+
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Release version: ${VERSION}"
+
+      - name: Install minitrino from PyPI
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          echo "Installing minitrino version ${VERSION} from PyPI..."
+
+          # Retry logic for PyPI propagation delay
+          MAX_ATTEMPTS=10
+          ATTEMPT=1
+          until pip install minitrino==${VERSION} --no-cache-dir; do
+            if [ $ATTEMPT -ge $MAX_ATTEMPTS ]; then
+              echo "Failed to install minitrino ${VERSION} after ${ATTEMPT} attempts."
+              exit 1
+            fi
+            echo "Attempt ${ATTEMPT} failed. Retrying in 30 seconds..."
+            ATTEMPT=$((ATTEMPT+1))
+            sleep 30
+          done
+
+          echo "Successfully installed minitrino ${VERSION}"
+
+      - name: Verify CLI is accessible
+        run: |
+          minitrino --version
+          minitrino --help
+
+      - name: Test config command (no library required)
+        run: |
+          # The config command should work without a library installed
+          echo "Testing 'minitrino config --reset' without library..."
+
+          # Use --reset to create config non-interactively (avoids editor)
+          # Set TEXT_EDITOR to avoid interactive editor prompts
+          export TEXT_EDITOR=true
+          echo "y" | minitrino -v config --reset || {
+            echo "ERROR: 'minitrino config --reset' failed without library installed"
+            exit 1
+          }
+
+          # Verify config file was created
+          if [ ! -f ~/.minitrino/minitrino.cfg ]; then
+            echo "ERROR: Config file not created"
+            exit 1
+          fi
+
+          echo "Config command succeeded"
+
+      - name: Test lib-install command
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          echo "Testing 'minitrino lib-install' for version ${VERSION}..."
+
+          # Install the library - this should work without an existing library
+          # The -v flag enables verbose output for debugging
+          minitrino -v lib-install --version "${VERSION}" << 'EOF'
+          y
+          EOF
+
+          # Verify library was installed
+          if [ ! -d ~/.minitrino/lib ]; then
+            echo "ERROR: Library directory not created"
+            exit 1
+          fi
+
+          if [ ! -f ~/.minitrino/lib/version ]; then
+            echo "ERROR: Library version file not found"
+            exit 1
+          fi
+
+          INSTALLED_VERSION=$(cat ~/.minitrino/lib/version)
+          echo "Installed library version: ${INSTALLED_VERSION}"
+
+          if [ "${INSTALLED_VERSION}" != "${VERSION}" ]; then
+            echo "ERROR: Library version mismatch. Expected ${VERSION}, got ${INSTALLED_VERSION}"
+            exit 1
+          fi
+
+          echo "Library installation succeeded"
+
+      - name: Test modules command
+        run: |
+          echo "Testing 'minitrino modules' command..."
+          minitrino modules || {
+            echo "ERROR: 'minitrino modules' failed"
+            exit 1
+          }
+          echo "Modules command succeeded"
+
+      - name: Set up Docker (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          # Install coreutils for gtimeout, docker, and colima
+          brew install coreutils docker colima
+          colima start --cpu 2 --memory 4
+
+      - name: Test provision command (30s timeout)
+        run: |
+          echo "Testing 'minitrino provision' with 30s timeout..."
+          echo "This validates the basic provisioning flow starts correctly."
+
+          # Use gtimeout on macOS, timeout on Linux
+          if command -v gtimeout &> /dev/null; then
+            TIMEOUT_CMD="gtimeout"
+          else
+            TIMEOUT_CMD="timeout"
+          fi
+
+          # Run provision with a 30 second timeout
+          # We expect it to be killed by timeout, but should not error before that
+          # The provision command will start pulling images and setting up,
+          # which takes longer than 30s, so timeout is expected
+
+          set +e  # Don't exit on error (timeout returns non-zero)
+          $TIMEOUT_CMD 30 minitrino -v provision 2>&1 | tee provision.log
+          EXIT_CODE=$?
+          set -e
+
+          # timeout returns 124 when it kills the process
+          if [ $EXIT_CODE -eq 124 ]; then
+            echo "Provision command ran for 30s as expected (killed by timeout)"
+          elif [ $EXIT_CODE -eq 0 ]; then
+            echo "Provision command completed successfully (faster than expected)"
+          else
+            echo "ERROR: Provision command failed with exit code ${EXIT_CODE}"
+            echo "=== Provision log ==="
+            cat provision.log
+            exit 1
+          fi
+
+          echo "Provision smoke test passed"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          # Clean up any running containers
+          minitrino down || true
+          minitrino remove --volumes || true

@@ -60,6 +60,49 @@ Upon completion of the code tests and the merging of a release branch PR into
 - Publishes the release and marks it as `latest`
 - Builds the CLI package and publishes it to PyPI
 
+## Post-Release Smoke Test
+
+After the release workflow completes successfully, the `smoke-test.yaml` workflow
+automatically runs to verify the PyPI package works correctly in an isolated
+environment. This catches issues that only manifest when the package is installed
+from PyPI without access to the source repository.
+
+### Test Environment
+
+The smoke test intentionally does **not** checkout the repository. This simulates
+an end-user installation experience and catches bugs like library path resolution
+that might incorrectly fall back to repository paths during development.
+
+The workflow runs on both **Ubuntu 22.04** and **macOS 13** to ensure
+cross-platform compatibility.
+
+### Tests Performed
+
+1. **Install from PyPI** - Installs the newly released version with retry logic
+   for PyPI propagation delays
+1. **CLI accessibility** - Verifies `minitrino --version` and `--help` work
+1. **Config command** - Tests `minitrino config --reset` without a library
+   installed
+1. **Library installation** - Tests `minitrino lib-install` without a library
+   installed
+1. **Modules command** - Verifies `minitrino modules` works with the installed
+   library
+1. **Provision smoke test** - Runs `minitrino provision` for 30 seconds to
+   validate the basic provisioning flow starts correctly
+
+### Handling Failures
+
+If the smoke test fails, the PyPI package has already been published (PyPI
+versions are immutable). You will need to:
+
+1. Fix the bug on a new release branch
+1. Bump the version (e.g., `3.0.3` → `3.0.4`)
+1. Create a new release PR
+
+The PyPI upload step is idempotent—it checks if the version already exists
+before uploading, so re-running the release workflow after a smoke test failure
+will not fail.
+
 ## Automated Dependency Updates
 
 Dependabot is configured to automatically monitor and update dependencies across

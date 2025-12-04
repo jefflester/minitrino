@@ -41,7 +41,7 @@ def cli(ctx: MinitrinoContext, version: str, list_releases: bool) -> None:
     list_releases : bool
         If True, list all available releases and exit.
     """
-    ctx.initialize()
+    ctx.initialize(minimal=True)
 
     if list_releases:
         releases = ctx.lib_manager.list_releases()

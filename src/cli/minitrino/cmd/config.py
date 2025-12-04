@@ -33,7 +33,7 @@ def cli(ctx: MinitrinoContext, reset: bool) -> None:
     reset : bool
         If True, resets the config file with default values.
     """
-    ctx.initialize()
+    ctx.initialize(minimal=True)
     if os.path.isfile(ctx.config_file) and not reset:
         ctx.logger.debug(
             f"Opening existing config file at path: {ctx.config_file}",

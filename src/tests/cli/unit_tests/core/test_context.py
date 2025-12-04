@@ -76,7 +76,7 @@ class TestMinitrinoContext:
             ),
             patch.object(ctx, "_validate_config_file"),
             patch.object(ctx, "_try_parse_library_env"),
-            patch.object(ctx, "_compare_versions"),
+            patch.object(ctx, "_try_compare_versions"),
             patch.object(ctx, "_get_lib_dir", return_value="/lib"),
         ):
             ctx.initialize(cluster_name="test-cluster")
@@ -108,6 +108,48 @@ class TestMinitrinoContext:
             assert ctx._initialized is False  # Not fully initialized
             assert ctx.modules is None
             assert ctx.cmd_executor is None
+
+    def test_initialize_minimal(self):
+        """Test minimal initialization for commands that don't need the library.
+
+        Commands like lib-install and config need to run even when no library is
+        installed. The minimal=True mode skips library-dependent operations like module
+        loading, cluster setup, and Docker client initialization.
+        """
+        ctx = MinitrinoContext()
+
+        with patch("minitrino.core.context.EnvironmentVariables") as mock_env_class:
+            mock_env_instance = MagicMock()
+            mock_env_class.return_value = mock_env_instance
+
+            with patch.object(ctx, "_validate_config_file"):
+                ctx.initialize(minimal=True)
+
+            # Should be fully initialized but without library-dependent components
+            assert ctx._lib_safe is True
+            assert ctx._initialized is True
+            assert ctx.env is not None
+
+            # Library-dependent components should NOT be initialized
+            assert ctx.modules is None
+            assert ctx.cmd_executor is None
+            assert ctx.cluster is None
+            assert ctx.docker_client is None
+            assert ctx.api_client is None
+
+    def test_initialize_minimal_with_log_level(self):
+        """Test minimal initialization respects log level parameter."""
+        ctx = MinitrinoContext()
+        ctx.logger = MagicMock()
+
+        with patch("minitrino.core.context.EnvironmentVariables") as mock_env_class:
+            mock_env_instance = MagicMock()
+            mock_env_class.return_value = mock_env_instance
+
+            with patch.object(ctx, "_validate_config_file"):
+                ctx.initialize(minimal=True, log_level=LogLevel.DEBUG)
+
+            ctx.logger.set_level.assert_called_once_with(LogLevel.DEBUG)
 
     def test_initialize_already_initialized(self):
         """Test error when already initialized."""
@@ -290,7 +332,7 @@ class TestMinitrinoContext:
         ctx._try_parse_library_env()
 
     @patch("minitrino.core.context.utils")
-    def test_compare_versions_match(self, mock_utils):
+    def test_try_compare_versions_match(self, mock_utils):
         """Test version comparison when versions match."""
         ctx = MinitrinoContext()
         ctx.logger = MagicMock()
@@ -300,12 +342,12 @@ class TestMinitrinoContext:
         mock_utils.cli_ver.return_value = "1.0.0"
         mock_utils.lib_ver.return_value = "1.0.0"
 
-        ctx._compare_versions()
+        ctx._try_compare_versions()
 
         ctx.logger.warn.assert_not_called()
 
     @patch("minitrino.core.context.utils")
-    def test_compare_versions_mismatch(self, mock_utils):
+    def test_try_compare_versions_mismatch(self, mock_utils):
         """Test version comparison when versions differ."""
         ctx = MinitrinoContext()
         ctx.logger = MagicMock()
@@ -315,10 +357,30 @@ class TestMinitrinoContext:
         mock_utils.cli_ver.return_value = "1.0.0"
         mock_utils.lib_ver.return_value = "2.0.0"
 
-        ctx._compare_versions()
+        ctx._try_compare_versions()
 
         ctx.logger.warn.assert_called_once()
         assert "do not match" in ctx.logger.warn.call_args[0][0]
+
+    def test_try_compare_versions_no_library(self):
+        """Test that version comparison gracefully handles missing library.
+
+        This is critical for commands like lib-install and config that need to run
+        before a library is installed.
+        """
+        ctx = MinitrinoContext()
+        ctx.logger = MagicMock()
+        ctx._lib_safe = True
+
+        # Mock _get_lib_dir to raise UserError (simulating no library)
+        with patch.object(
+            ctx, "_get_lib_dir", side_effect=UserError("No library installed")
+        ):
+            # Should not raise - gracefully handles missing library
+            ctx._try_compare_versions()
+
+        # Should not log warning since it silently catches the exception
+        ctx.logger.warn.assert_not_called()
 
     @patch("minitrino.core.context.Cluster")
     def test_set_cluster_attrs(self, mock_cluster_class):
@@ -459,7 +521,7 @@ class TestMinitrinoContext:
             ),
             patch.object(ctx, "_validate_config_file"),
             patch.object(ctx, "_try_parse_library_env"),
-            patch.object(ctx, "_compare_versions"),
+            patch.object(ctx, "_try_compare_versions"),
             patch.object(ctx, "_get_lib_dir", return_value="/lib"),
         ):
             ctx.initialize(log_level=LogLevel.DEBUG)

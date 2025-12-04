@@ -259,6 +259,98 @@ jobs:
             --cov-report=xml \
             src/tests/cli/integration_tests/test_cmd_provision.py
 
+  cli-integration-snapshot:
+    name: CLI Integration Tests (Snapshot)
+    needs: [test-release, build-trino-image, build-starburst-image, detect-changes]
+    if: always() && needs.test-release.result == 'success'
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+
+      - name: Free up disk space
+        uses: ./.github/actions/cleanup-disk
+
+      - name: Get cluster version
+        id: version
+        uses: ./.github/actions/get-cluster-version
+
+      - name: Setup test environment
+        uses: ./.github/actions/setup-test-environment
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          setup-license: true
+          license-data: ${{ secrets.LIC_DATA }}
+
+      - name: Setup image pull
+        uses: ./.github/actions/setup-image-pull
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          pr-number: ${{ github.event.pull_request.number }}
+          image-type: trino
+          cluster-version: ${{ steps.version.outputs.trino_version }}
+          image-changed: ${{ needs.detect-changes.outputs.image-changed }}
+
+      - name: Run CLI integration tests (snapshot)
+        env:
+          IS_GITHUB: ${{ vars.IS_GITHUB }}
+          MINITRINO_TEST_LOG_LEVEL: DEBUG
+          LIC_PATH: ~/starburstdata.license
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |-
+          minitrino --help || exit 1
+          pytest -x --debug \
+            --cov=minitrino \
+            --cov-report=term-missing \
+            --cov-report=xml \
+            src/tests/cli/integration_tests/test_cmd_snapshot.py
+
+  cli-integration-remove:
+    name: CLI Integration Tests (Remove)
+    needs: [test-release, build-trino-image, build-starburst-image, detect-changes]
+    if: always() && needs.test-release.result == 'success'
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+
+      - name: Free up disk space
+        uses: ./.github/actions/cleanup-disk
+
+      - name: Get cluster version
+        id: version
+        uses: ./.github/actions/get-cluster-version
+
+      - name: Setup test environment
+        uses: ./.github/actions/setup-test-environment
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          setup-license: true
+          license-data: ${{ secrets.LIC_DATA }}
+
+      - name: Setup image pull
+        uses: ./.github/actions/setup-image-pull
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          pr-number: ${{ github.event.pull_request.number }}
+          image-type: trino
+          cluster-version: ${{ steps.version.outputs.trino_version }}
+          image-changed: ${{ needs.detect-changes.outputs.image-changed }}
+
+      - name: Run CLI integration tests (remove)
+        env:
+          IS_GITHUB: ${{ vars.IS_GITHUB }}
+          MINITRINO_TEST_LOG_LEVEL: DEBUG
+          LIC_PATH: ~/starburstdata.license
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |-
+          minitrino --help || exit 1
+          pytest -x --debug \
+            --cov=minitrino \
+            --cov-report=term-missing \
+            --cov-report=xml \
+            src/tests/cli/integration_tests/test_cmd_remove.py
+
   cli-integration-other:
     name: CLI Integration Tests (Other)
     needs: [test-release, build-trino-image, build-starburst-image, detect-changes]
@@ -304,7 +396,9 @@ jobs:
             --cov-report=term-missing \
             --cov-report=xml \
             src/tests/cli/integration_tests/ \
-            --ignore=src/tests/cli/integration_tests/test_cmd_provision.py
+            --ignore=src/tests/cli/integration_tests/test_cmd_provision.py \
+            --ignore=src/tests/cli/integration_tests/test_cmd_snapshot.py \
+            --ignore=src/tests/cli/integration_tests/test_cmd_remove.py
 
   # ============================================================================
   # STAGE 4: Library Tests (Always run with conditional image pulling)

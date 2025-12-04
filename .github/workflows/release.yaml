@@ -168,6 +168,9 @@ jobs:
       - name: Test lib-install command
         env:
           VERSION: ${{ env.RELEASE_VERSION }}
+          # Enable authenticated GitHub API to avoid rate limits
+          IS_GITHUB: "true"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "Testing 'minitrino lib-install' for version ${VERSION}..."
           echo "y" | minitrino -v lib-install --version "${VERSION}" || {

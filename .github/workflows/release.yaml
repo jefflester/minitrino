@@ -9,7 +9,10 @@ on:
       - closed
 
 jobs:
-  publish-release-draft:
+  # ============================================================================
+  # STAGE 1: Publish to PyPI
+  # ============================================================================
+  pypi-publish:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-22.04
     steps:
@@ -17,97 +20,207 @@ jobs:
         uses: actions/checkout@v6
         with:
           ref: master
-      - name: Create release
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: pip install build twine
+
+      - name: Build and check distribution
+        run: |
+          python -m build
+          twine check dist/*
+
+      - name: Publish distribution to PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+        run: |
+          PYPI_URL="https://pypi.org/pypi/minitrino/${GITHUB_HEAD_REF}/json"
+          RESPONSE=$(curl --silent "${PYPI_URL}")
+          if echo "${RESPONSE}" | grep -q "\"${GITHUB_HEAD_REF}\""; then
+            echo "Package version ${GITHUB_HEAD_REF} already exists on PyPI."
+            echo "Skipping upload."
+          else
+            echo "Uploading package version ${GITHUB_HEAD_REF} to PyPI..."
+            twine upload dist/*
+          fi
+
+      - name: Wait for PyPI availability
+        run: |
+          echo "Waiting for package to be available on PyPI..."
+          MAX_ATTEMPTS=10
+          ATTEMPT=1
+          until pip download minitrino==${GITHUB_HEAD_REF} --no-deps -d /tmp; do
+            if [ $ATTEMPT -ge $MAX_ATTEMPTS ]; then
+              echo "Package not available on PyPI after ${ATTEMPT} attempts."
+              exit 1
+            fi
+            echo "Attempt ${ATTEMPT} failed. Retrying in 30 seconds..."
+            ATTEMPT=$((ATTEMPT+1))
+            sleep 30
+          done
+          echo "Package ${GITHUB_HEAD_REF} is available on PyPI"
+
+  # ============================================================================
+  # STAGE 2: Smoke Test (Gate for Release)
+  # ============================================================================
+  smoke-test:
+    needs: pypi-publish
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-15]
+    runs-on: ${{ matrix.os }}
+    steps:
+      # NOTE: We intentionally do NOT checkout the repo here.
+      # This simulates an end-user installing from PyPI without access
+      # to the source repository, which catches bugs like lib_dir
+      # falling back to src/lib in the repo tree.
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+
+      - name: Install minitrino from PyPI
+        env:
+          VERSION: ${{ github.head_ref }}
+        run: |
+          echo "Installing minitrino version ${VERSION} from PyPI..."
+          pip install minitrino==${VERSION} --no-cache-dir
+          echo "Successfully installed minitrino ${VERSION}"
+
+      - name: Verify CLI is accessible
+        run: |
+          minitrino --version
+          minitrino --help
+
+      - name: Test config command (no library required)
+        run: |
+          # The config command should work without a library installed
+          echo "Testing 'minitrino config --reset' without library..."
+          export TEXT_EDITOR=true
+          echo "y" | minitrino -v config --reset || {
+            echo "ERROR: 'minitrino config --reset' failed without library"
+            exit 1
+          }
+          if [ ! -f ~/.minitrino/minitrino.cfg ]; then
+            echo "ERROR: Config file not created"
+            exit 1
+          fi
+          echo "Config command succeeded"
+
+      - name: Test lib-install command
+        env:
+          VERSION: ${{ github.head_ref }}
+        run: |
+          echo "Testing 'minitrino lib-install' for version ${VERSION}..."
+          echo "y" | minitrino -v lib-install --version "${VERSION}" || {
+            echo "ERROR: 'minitrino lib-install' failed"
+            exit 1
+          }
+          if [ ! -d ~/.minitrino/lib ]; then
+            echo "ERROR: Library directory not created"
+            exit 1
+          fi
+          INSTALLED_VERSION=$(cat ~/.minitrino/lib/version)
+          echo "Installed library version: ${INSTALLED_VERSION}"
+          if [ "${INSTALLED_VERSION}" != "${VERSION}" ]; then
+            echo "ERROR: Version mismatch. Expected ${VERSION}, got ${INSTALLED_VERSION}"
+            exit 1
+          fi
+          echo "Library installation succeeded"
+
+      - name: Test modules command
+        run: |
+          echo "Testing 'minitrino modules' command..."
+          minitrino modules || {
+            echo "ERROR: 'minitrino modules' failed"
+            exit 1
+          }
+          echo "Modules command succeeded"
+
+      - name: Set up Docker (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install coreutils docker colima
+          colima start --cpu 2 --memory 4
+
+      - name: Test provision command (30s timeout)
+        run: |
+          echo "Testing 'minitrino provision' with 30s timeout..."
+
+          # Use gtimeout on macOS, timeout on Linux
+          if command -v gtimeout &> /dev/null; then
+            TIMEOUT_CMD="gtimeout"
+          else
+            TIMEOUT_CMD="timeout"
+          fi
+
+          set +e
+          $TIMEOUT_CMD 30 minitrino -v provision 2>&1 | tee provision.log
+          EXIT_CODE=$?
+          set -e
+
+          # timeout returns 124 when it kills the process
+          if [ $EXIT_CODE -eq 124 ]; then
+            echo "Provision ran for 30s as expected (killed by timeout)"
+          elif [ $EXIT_CODE -eq 0 ]; then
+            echo "Provision completed successfully"
+          else
+            echo "ERROR: Provision failed with exit code ${EXIT_CODE}"
+            cat provision.log
+            exit 1
+          fi
+          echo "Provision smoke test passed"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          minitrino down 2>/dev/null || true
+          minitrino remove --volumes 2>/dev/null || true
+
+  # ============================================================================
+  # STAGE 3: Create and Publish GitHub Release (only if smoke test passes)
+  # ============================================================================
+  publish-release:
+    needs: smoke-test
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+        with:
+          ref: master
+
+      - name: Create and publish release
         env:
           GITHUB_TOKEN: ${{ secrets.MINITRINO_TOKEN }}
-        run: |-
-          RELEASE_NOTES=./release-notes/"${GITHUB_HEAD_REF}".md
-          DESCRIPTION=$(cat "${RELEASE_NOTES}")
+        run: |
+          VERSION="${GITHUB_HEAD_REF}"
+          RELEASE_NOTES="./release-notes/${VERSION}.md"
 
           if [ ! -f "${RELEASE_NOTES}" ]; then
             echo "Release notes file not found at ${RELEASE_NOTES}. Exiting..."
             exit 1
           fi
 
+          DESCRIPTION=$(cat "${RELEASE_NOTES}")
+
           echo "Checking existing releases..."
-          gh release list
-
-          if gh release list | grep -q -e "${GITHUB_HEAD_REF}"; then
-            echo "Release ${GITHUB_HEAD_REF} found. Deleting release..."
-            gh release delete "${GITHUB_HEAD_REF}" -y --cleanup-tag || echo "Release not found during deletion."
-          else
-            echo "Release ${GITHUB_HEAD_REF} not found. Proceeding to creation..."
+          if gh release list | grep -q -e "${VERSION}"; then
+            echo "Release ${VERSION} found. Deleting..."
+            gh release delete "${VERSION}" -y --cleanup-tag || true
           fi
 
-          echo "Creating release from master branch..."
-          gh release create "${GITHUB_HEAD_REF}" \
-            --prerelease \
-            --draft=true \
-            --title "${GITHUB_HEAD_REF}" \
+          echo "Creating and publishing release ${VERSION}..."
+          gh release create "${VERSION}" \
+            --title "${VERSION}" \
             --notes "${DESCRIPTION}" \
-            --target master
-  publish-release:
-    runs-on: ubuntu-22.04
-    needs: publish-release-draft
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v6
-        with:
-          ref: master
-      - name: Publish release
-        env:
-          GITHUB_TOKEN: ${{ secrets.MINITRINO_TOKEN }}
-        run: |-
-          gh release edit "${GITHUB_HEAD_REF}" \
-            --prerelease=false \
-            --draft=false \
+            --target master \
             --latest
-  pypi-publish:
-    runs-on: ubuntu-22.04
-    needs: publish-release
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v6
-        with:
-          ref: master
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.10'
-      - name: Install dependencies
-        run: |-
-          pip install build twine
-      - name: Build and check distribution
-        run: |-
-          python -m build
-          twine check dist/*
-      - name: Publish distribution to PyPi
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
-        run: |-
-          PYPI_URL="https://pypi.org/pypi/minitrino/${GITHUB_HEAD_REF}/json"
-          RESPONSE=$(curl --silent "${PYPI_URL}")
-          if echo "${RESPONSE}" | grep -q "\"${GITHUB_HEAD_REF}\""; then
-            echo "Package version ${GITHUB_HEAD_REF} already exists on PyPI. \
-            Skipping upload."
-          else
-            echo "Uploading package version ${GITHUB_HEAD_REF} to PyPI..."
-            twine upload dist/*
-          fi
-      - name: Check package
-        run: |-
-          MAX_ATTEMPTS=5
-          ATTEMPT=1
-          pip uninstall -y minitrino
-          until pip install minitrino==${GITHUB_HEAD_REF} --no-cache-dir; do
-            if [ $ATTEMPT -ge $MAX_ATTEMPTS ]; then
-              echo "Failed to install the latest version after \
-              $ATTEMPT attempts."
-              exit 1
-            fi
-            echo "Attempt $ATTEMPT failed. Retrying in 30 seconds..."
-            ATTEMPT=$((ATTEMPT+1))
-            sleep 30
-          done
-          minitrino --help || exit 1
+
+          echo "Release ${VERSION} published successfully!"

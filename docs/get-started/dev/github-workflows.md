@@ -54,32 +54,28 @@ All tests are described in detail in the [testing overview](cli-and-library-test
 ## Merging a PR into `master`
 
 Upon completion of the code tests and the merging of a release branch PR into
-`master`, the `release.yaml` workflow is triggered. This workflow:
+`master`, the `release.yaml` workflow is triggered. This workflow runs in three
+stages:
 
-- Creates a release whose name matches the name of the merged PR branch (e.g., `3.0.0`)
-- Publishes the release and marks it as `latest`
-- Builds the CLI package and publishes it to PyPI
+### Stage 1: PyPI Publish
 
-## Post-Release Smoke Test
+- Builds the CLI package
+- Publishes it to PyPI (idempotent - skips if version exists)
+- Waits for PyPI availability before proceeding
 
-After the release workflow completes successfully, the `smoke-test.yaml` workflow
-automatically runs to verify the PyPI package works correctly in an isolated
-environment. This catches issues that only manifest when the package is installed
-from PyPI without access to the source repository.
+### Stage 2: Smoke Test (Release Gate)
 
-### Test Environment
+Before creating the GitHub release, the workflow runs comprehensive smoke tests
+on both **Ubuntu 22.04** and **macOS 13** to verify the PyPI package works
+correctly in an isolated environment.
 
 The smoke test intentionally does **not** checkout the repository. This simulates
 an end-user installation experience and catches bugs like library path resolution
 that might incorrectly fall back to repository paths during development.
 
-The workflow runs on both **Ubuntu 22.04** and **macOS 13** to ensure
-cross-platform compatibility.
+**Tests performed:**
 
-### Tests Performed
-
-1. **Install from PyPI** - Installs the newly released version with retry logic
-   for PyPI propagation delays
+1. **Install from PyPI** - Installs the newly released version
 1. **CLI accessibility** - Verifies `minitrino --version` and `--help` work
 1. **Config command** - Tests `minitrino config --reset` without a library
    installed
@@ -90,18 +86,31 @@ cross-platform compatibility.
 1. **Provision smoke test** - Runs `minitrino provision` for 30 seconds to
    validate the basic provisioning flow starts correctly
 
+### Stage 3: GitHub Release (Only if Smoke Test Passes)
+
+Only after the smoke test passes on all platforms:
+
+- Creates a GitHub release whose name matches the merged PR branch (e.g., `3.0.0`)
+- Publishes the release and marks it as `latest`
+
 ### Handling Failures
 
-If the smoke test fails, the PyPI package has already been published (PyPI
-versions are immutable). You will need to:
+If the smoke test fails, the PyPI package has been published but no GitHub
+release is created. This means:
 
-1. Fix the bug on a new release branch
+- The package exists on PyPI but is not "officially" released
+- Users who install by specific version can still access it
+- No announcement or `latest` tag points to the broken version
+
+To fix:
+
+1. Create a new release branch with the fix
 1. Bump the version (e.g., `3.0.3` → `3.0.4`)
 1. Create a new release PR
 
 The PyPI upload step is idempotent—it checks if the version already exists
-before uploading, so re-running the release workflow after a smoke test failure
-will not fail.
+before uploading, so re-running the release workflow will not fail on the
+upload step.
 
 ## Automated Dependency Updates
 

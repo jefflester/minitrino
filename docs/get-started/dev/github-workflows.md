@@ -30,10 +30,6 @@ git commit -m "Your changes"
 git push --set-upstream origin 3.0.0
 ```
 
-Additionally, the `update-version-files.yaml` workflow runs as a fallback when a
-release branch is pushed to the remote repository, ensuring version files remain
-synchronized even if the pre-commit hook did not run.
-
 ## PR from Release Branch
 
 When a PR is created from a release branch and targets `master`, the `ci.yaml`

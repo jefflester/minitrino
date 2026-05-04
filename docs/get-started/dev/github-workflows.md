@@ -10,25 +10,16 @@ A release branch is any branch whose name matches the following regex:
 [0-9]\.[0-9]\.[0-9]
 ```
 
-When working on a release branch, version files are automatically synchronized to
-match the branch name. This happens via a pre-commit hook
-(`.precommit/sync_version_files.py`) that updates the following files on your
-first commit:
+The workflow `update-version-files.yaml` runs on release branches, updating the
+following files to stay in sync with the current release:
 
 - `readme.md`
 - `src/lib/version`
 - `pyproject.toml`
 
-The version sync happens automatically when you commit, so no additional steps are
-required:
-
-```sh
-git checkout -B 3.0.0
-# Make changes
-git commit -m "Your changes"
-# Version files are automatically synced and staged by the pre-commit hook
-git push --set-upstream origin 3.0.0
-```
+The version sync happens as soon as a release branch is created, so developers
+should ensure they pull the remote changes or rebase before merging their
+feature branches to a release branch.
 
 ## PR from Release Branch
 

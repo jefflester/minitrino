@@ -204,12 +204,6 @@ repos:
         language: python
         files: ^src/lib/minitrino.env|src/lib/docker-compose.yaml|src/cli/minitrino/settings.py
 
-      - id: sync-version-files
-        name: Sync version files to branch name
-        entry: python .precommit/sync_version_files.py
-        language: python
-        pass_filenames: false
-        always_run: true
 
   # ============================================================================
   # Validation & Testing

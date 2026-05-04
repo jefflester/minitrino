@@ -259,7 +259,7 @@ minitrino -v -e CLUSTER_VER=${VER} provision -m postgres
 Provision with Starburst instead of Trino:
 
 ```sh
-minitrino -v -e IMAGE=starburst -e CLUSTER_VER=476-e provision -m postgres
+minitrino -v -e IMAGE=starburst -e CLUSTER_VER=479-e provision -m postgres
 ```
 
 Provision the `hive` catalog module with two worker nodes:
@@ -598,7 +598,7 @@ Your bootstrap script has access to these key variables:
 
 ```bash
 $CLUSTER_DIST         # "trino" or "starburst"
-$CLUSTER_VER          # Version number (e.g., "476")
+$CLUSTER_VER          # Version number (e.g., "479")
 $CLUSTER_NAME         # Cluster name (e.g., "default")
 $SERVICE_USER         # Service user ("trino" or "starburst")
 $HOSTNAME             # Container hostname

@@ -550,7 +550,7 @@ class TestGetJavaVersion:
         """Test Java 24 version mapping (Trino 468+)."""
         with patch.dict("os.environ", {"CLUSTER_VER": "468"}):
             assert get_java_version() == 24
-        with patch.dict("os.environ", {"CLUSTER_VER": "476"}):
+        with patch.dict("os.environ", {"CLUSTER_VER": "479"}):
             assert get_java_version() == 24
 
     def test_no_cluster_ver_defaults_to_21(self):
@@ -653,7 +653,7 @@ class TestSecurityManagerFiltering:
             ("key_value", "-Djava.security.manager", "allow"),
         ]
 
-        with patch.dict("os.environ", {"CLUSTER_VER": "476"}):
+        with patch.dict("os.environ", {"CLUSTER_VER": "479"}):
             result = merge_configs(base_jvm, user_jvm, is_jvm=True)
 
         # Security Manager option from user should be filtered out

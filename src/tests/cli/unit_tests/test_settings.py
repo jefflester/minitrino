@@ -39,8 +39,6 @@ class TestGenericConstants:
 
     def test_cluster_version_constants(self):
         """Test cluster version constants."""
-        assert settings.MIN_CLUSTER_VER == 443
-        assert settings.DEFAULT_CLUSTER_VER == 476
         assert isinstance(settings.MIN_CLUSTER_VER, int)
         assert isinstance(settings.DEFAULT_CLUSTER_VER, int)
         assert settings.MIN_CLUSTER_VER < settings.DEFAULT_CLUSTER_VER

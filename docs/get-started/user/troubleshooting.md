@@ -150,7 +150,7 @@ requires Trino 466+).
 1. **Use a compatible version:**
 
    ```sh
-   minitrino -v -e CLUSTER_VER=476 provision -m <module>
+   minitrino -v -e CLUSTER_VER=479 provision -m <module>
    ```
 
 1. **Override module configuration** (advanced): Edit the module's YAML or

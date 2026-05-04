@@ -134,7 +134,7 @@ minitrino -c all down
 Environment variables can be set via the `-e` flag:
 
 ```sh
-minitrino -e CLUSTER_VER=476 -e LIC_PATH=/path/to/license provision
+minitrino -e CLUSTER_VER=479 -e LIC_PATH=/path/to/license provision
 ```
 
 ### Choosing Trino or Starburst Distribution

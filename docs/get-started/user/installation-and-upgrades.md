@@ -140,7 +140,7 @@ minitrino config
 # STARBURST_VER=443-e
 #
 # New:
-CLUSTER_VER=476
+CLUSTER_VER=479
 IMAGE=trino  # or 'starburst'
 ```
 
@@ -220,7 +220,7 @@ If you see version errors, either:
 
 1. Upgrade your Trino/Starburst version:
    ```sh
-   minitrino -v -e CLUSTER_VER=476 provision -m spooling-protocol
+   minitrino -v -e CLUSTER_VER=479 provision -m spooling-protocol
    ```
 1. Use a module without version constraints
 

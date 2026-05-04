@@ -13,7 +13,7 @@ MODULE_CATALOG = "catalog"
 MODULE_SECURITY = "security"
 MODULE_RESOURCES = "resources"
 MIN_CLUSTER_VER = 443
-DEFAULT_CLUSTER_VER = 476
+DEFAULT_CLUSTER_VER = 479
 ETC_DIR = "/etc/${CLUSTER_DIST}"
 LIC_VOLUME_MOUNT = (
     "${LIC_PATH:-./modules/resources/dummy.license}:"

@@ -6,8 +6,14 @@
   - [Overview](#overview)
   - [Command Line Options](#command-line-options)
   - [Shell Environment Variables](#shell-environment-variables)
+    - [User-Facing Variables](#user-facing-variables)
+    - [Advanced Variables](#advanced-variables)
   - [`minitrino.cfg` File](#minitrinocfg-file)
   - [`minitrino.env` File](#minitrinoenv-file)
+    - [Port Variables](#port-variables)
+    - [Version Variables](#version-variables)
+    - [Overriding Variables](#overriding-variables)
+    - [Precedence Example](#precedence-example)
   - [Text Editor](#text-editor)
 
 Environment variables and configuration are sourced through the following
@@ -24,9 +30,9 @@ Environment variables can be passed to any Minitrino command with the `--env` /
 `-e` options:
 
 ```sh
-minitrino -e CLUSTER_VER=476 provision
-minitrino -e IMAGE=starburst -e CLUSTER_VER=476-e provision
-minitrino -e LIC_PATH=~/starburstdata.license -e CLUSTER_VER=476-e provision
+minitrino -e CLUSTER_VER=479 provision
+minitrino -e IMAGE=starburst -e CLUSTER_VER=479-e provision
+minitrino -e LIC_PATH=~/starburstdata.license -e CLUSTER_VER=479-e provision
 ```
 
 These variables have the highest order of precedence and will override all other
@@ -39,7 +45,7 @@ The following shell environment variables are picked up by the CLI:
 ### User-Facing Variables
 
 - `CLUSTER_NAME` - Name of the cluster (defaults to `default`)
-- `CLUSTER_VER` - Version of Trino or Starburst to use (e.g., `476` or `476-e`)
+- `CLUSTER_VER` - Version of Trino or Starburst to use (e.g., `479` or `479-e`)
 - `CONFIG_PROPERTIES` - Additional Trino/Starburst config properties for
   coordinator
 - `DOCKER_HOST` - Docker daemon socket location
@@ -127,7 +133,7 @@ The following port variables control service port mappings (prefixed with
 The following variables define container image versions used by modules:
 
 - `CLICKHOUSE_VER` - ClickHouse database version (default: 23.10-alpine)
-- `CLUSTER_VER` - Trino/Starburst version (default: 476)
+- `CLUSTER_VER` - Trino/Starburst version (default: 479)
 - `CURL_VER` - cURL tool version (default: 8.14.1)
 - `DB2_VER` - IBM DB2 version (default: 11.5.8.0)
 - `ELASTICSEARCH_VER` - Elasticsearch version (default: 8.18.2)
@@ -174,23 +180,11 @@ minitrino -e __PORT_MINITRINO=8090 provision
 Here's a practical example showing how precedence works:
 
 ```sh
-# In minitrino.env: CLUSTER_VER=476
-# In minitrino.cfg: CLUSTER_VER=475
-# Shell environment: export CLUSTER_VER=474
-# Command line: minitrino -e CLUSTER_VER=473 provision
+# In minitrino.env: CLUSTER_VER=479
+# Shell environment: export CLUSTER_VER=479
+# Command line: minitrino -e CLUSTER_VER=476 provision
 
-# Result: CLUSTER_VER=473 (command line wins)
-```
-
-If you remove the command line option:
-
-```sh
-# In minitrino.env: CLUSTER_VER=476
-# In minitrino.cfg: CLUSTER_VER=475
-# Shell environment: export CLUSTER_VER=474
-# Command line: minitrino provision
-
-# Result: CLUSTER_VER=474 (shell environment wins)
+# Result: CLUSTER_VER=476 (command line wins)
 ```
 
 ## Text Editor

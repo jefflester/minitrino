@@ -23,7 +23,7 @@ name = "minitrino"
 readme = "readme.md"
 requires-python = ">=3.10.12"
 urls = {"Homepage" = "https://github.com/jefflester/minitrino"}
-version = "3.0.3"
+version = "3.1.0"
 
 [project.optional-dependencies]
 dev = [

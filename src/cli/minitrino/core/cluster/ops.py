@@ -477,12 +477,12 @@ class ClusterOperations:
         for c in containers:
             try:
                 c.kill()
-                self._ctx.logger.debug(f"Rolled back {repr(c)}")
+                self._ctx.logger.debug(f"Killed {repr(c)}")
             except Exception:
                 pass
             try:
                 c.remove()
-                self._ctx.logger.debug(f"Rolled back {repr(c)}")
+                self._ctx.logger.debug(f"Removed {repr(c)}")
             except Exception:
                 pass
 

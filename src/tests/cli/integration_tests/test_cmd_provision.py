@@ -236,7 +236,7 @@ enterprise_scenarios = [
         enterprise=True,
         license_path="/tmp/dummy.license",
         expected_exit_code=1,
-        expected_output="Failed to provision cluster",
+        expected_output="Full provision log written to",
         unexpected_output=EnterpriseScenario.LIC_MSG,
         log_msg="Enterprise: with invalid license should fail gracefully",
     ),

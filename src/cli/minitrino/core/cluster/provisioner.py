@@ -128,9 +128,6 @@ class ClusterProvisioner:
             raise e
         except Exception as e:
             crashdump = os.path.join(self._ctx.minitrino_user_dir, "crashdump.log")
-            self._ctx.logger.error(
-                f"{str(e)}\nFull provision log written to {crashdump}"
-            )
             with open(crashdump, "w") as f:
                 # Write Minitrino logs
                 f.write("=" * 80 + "\n")
@@ -202,29 +199,24 @@ class ClusterProvisioner:
         self._ctx.modules.check_volumes()
         self._ctx.cluster.ports.set_external_ports(self.modules)
 
-        try:
-            module_yaml_paths = self._module_yaml_paths()
-            compose_cmd = self._build_compose_command(module_yaml_paths)
+        module_yaml_paths = self._module_yaml_paths()
+        compose_cmd = self._build_compose_command(module_yaml_paths)
 
-            worker_thread = None
-            if self.workers > 0:
-                worker_thread = threading.Thread(
-                    target=self._provision_workers_when_safe,
-                    name="ProvisionWorkersThread",
-                    daemon=True,
-                )
-                worker_thread.start()
+        worker_thread = None
+        if self.workers > 0:
+            worker_thread = threading.Thread(
+                target=self._provision_workers_when_safe,
+                name="ProvisionWorkersThread",
+                daemon=True,
+            )
+            worker_thread.start()
 
-            self._run_compose_and_wait(compose_cmd)
+        self._run_compose_and_wait(compose_cmd)
 
-            if worker_thread:
-                worker_thread.join()
+        if worker_thread:
+            worker_thread.join()
 
-            self._ctx.cluster.validator.check_dup_config()
-
-        except Exception as e:
-            self._rollback()
-            raise MinitrinoError("Failed to provision cluster.") from e
+        self._ctx.cluster.validator.check_dup_config()
 
     def _capture_container_logs_for_crashdump(self) -> None:
         """Capture container logs before rollback destroys them.
@@ -716,6 +708,7 @@ class ClusterProvisioner:
                     else:
                         # New container exists, safe to reduce timeout
                         timeout = default_timeout
+                        poll_start = time.time()
                         reset_timeout = True
                         self._ctx.logger.debug(
                             f"Compose thread finished and new container exists "

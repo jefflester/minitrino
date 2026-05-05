@@ -585,7 +585,7 @@ class ClusterProvisioner:
             Function to get the final command result.
         """
         timeout = (
-            int(self._ctx.env.get("PROVISION_BUILD_TIMEOUT", 1200))
+            int(self._ctx.env.get("PROVISION_BUILD_TIMEOUT", 1800))
             if self.build
             else 120
         )

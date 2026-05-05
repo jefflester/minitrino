@@ -62,7 +62,7 @@ These variables provide fine-grained control over Minitrino's behavior:
 - `WORKER_CONFIG_PROPERTIES` - Additional config properties specific to workers
 - `WORKER_JVM_CONFIG` - Additional JVM configuration specific to workers
 - `PROVISION_BUILD_TIMEOUT` - Docker image build timeout in seconds (default:
-  1200\)
+  1800\)
 - `STARTUP_SELECT_RETRIES` - Number of retries for startup health check
   (default: 30)
 - `KEEP_PLUGINS` - Preserve plugin directory during provisioning (set to `true`

@@ -87,7 +87,12 @@ install_trino_cli() {
     local trino_cli_jar="/usr/local/bin/trino-cli.jar"
     local trino_cli_wrapper="/usr/local/bin/trino-cli"
 
+    # TODO: drop the Maven Central fallback once Trino 476 and earlier are out
+    # of support. Trino stopped publishing the CLI to Maven Central after 476;
+    # 477+ is only on GitHub Releases.
     curl -#LfS -o "${trino_cli_jar}" \
+        "https://github.com/trinodb/trino/releases/download/${TRINO_VER}/trino-cli-${TRINO_VER}" \
+     || curl -#LfS -o "${trino_cli_jar}" \
         "https://repo1.maven.org/maven2/io/trino/trino-cli/${TRINO_VER}/trino-cli-${TRINO_VER}-executable.jar"
 
     # Wrapper with logging disabled

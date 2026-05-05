@@ -27,7 +27,7 @@ jobs:
             ./pyproject.toml
 
           echo "Update ./readme.md"
-          sed -i "s|\*\*Latest Stable Release\*\*: [0-9]\.[0-9]\.[0-9]|\
+          sed -i -E "s|\*\*Latest Stable Release\*\*: [0-9]+\.[0-9]+\.[0-9]+|\
           \*\*Latest Stable Release\*\*: ${BRANCH}|" ./readme.md
 
           if [[ -n $(git status --porcelain) ]]; then

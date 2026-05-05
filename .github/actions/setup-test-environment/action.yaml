@@ -22,10 +22,21 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Wait for test release
-      uses: ./.github/actions/wait-for-test-release
-      with:
-        github-token: ${{ inputs.github-token }}
+    - name: Wait for test release 0.0.0
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: |
+        for i in $(seq 1 30); do
+          if gh release view 0.0.0 >/dev/null 2>&1; then
+            echo "Release 0.0.0 is available"
+            exit 0
+          fi
+          echo "Waiting for release 0.0.0... (attempt $i/30)"
+          sleep 10
+        done
+        echo "Timeout waiting for release 0.0.0"
+        exit 1
 
     - name: Set up Python
       uses: actions/setup-python@v6

@@ -1,30 +1,22 @@
 #!/usr/bin/env bash
 
-# Trino versions and their corresponding Java versions:
-# >= 436 <= 446: Java 21
-# >= 447 <= 463: Java 22
-# >= 464 <= 467: Java 23
-# >= 468: Java 24
-
 set -euxo pipefail
 
 SERVICE_USER="${1}"
 CLUSTER_VER="${2}"
+SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+JAVA_MATRIX="${SCRIPT_DIR}/java-matrix.json"
 
 # Extract numeric version from version string (e.g., "474-e" -> "474")
 TRINO_VER=$(echo "${CLUSTER_VER}" | sed 's/-.*//' | head -c 3)
 
 echo "Detected Trino version: ${TRINO_VER}"
 
-if [ "${TRINO_VER}" -ge 436 ] && [ "${TRINO_VER}" -le 446 ]; then
-    JAVA_VER=21.0.5
-elif [ "${TRINO_VER}" -ge 447 ] && [ "${TRINO_VER}" -le 463 ]; then
-    JAVA_VER=22.0.2
-elif [ "${TRINO_VER}" -ge 464 ] && [ "${TRINO_VER}" -le 467 ]; then
-    JAVA_VER=23.0.2
-elif [ "${TRINO_VER}" -ge 468 ]; then
-    JAVA_VER=24.0.2
-else
+JAVA_VER=$(jq -r --argjson ver "${TRINO_VER}" \
+    '.[] | select(.min_trino <= $ver and (.max_trino == null or .max_trino >= $ver)) | .java_full' \
+    "${JAVA_MATRIX}")
+
+if [ -z "${JAVA_VER}" ] || [ "${JAVA_VER}" = "null" ]; then
     echo "Unsupported Trino version: ${TRINO_VER}. Exiting..."
     exit 1
 fi

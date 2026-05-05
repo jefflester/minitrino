@@ -54,7 +54,7 @@ ARG SERVICE_USER
 
 RUN useradd -m ${SERVICE_USER}
 
-COPY ./src/scripts/install-java-builder.sh /tmp/
+COPY ./src/scripts/install-java-builder.sh ./src/scripts/java-matrix.json /tmp/
 RUN chmod +x /tmp/install-java-builder.sh && \
     /tmp/install-java-builder.sh ${SERVICE_USER} ${CLUSTER_VER}
 

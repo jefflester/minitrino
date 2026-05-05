@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """Generate cluster config files from environment variables."""
 
+import json
 import os
 import re
 from pathlib import Path
 
 LOG_PREFIX = "[gen_config]"
 ETC_DIR = f"/etc/{os.environ.get('CLUSTER_DIST', 'trino')}"
+JAVA_MATRIX_PATH = Path(__file__).parent / "java-matrix.json"
 
 WORKER_CONFIG_PROPS = """coordinator=false
 http-server.http.port=8080
@@ -17,31 +19,33 @@ internal-communication.shared-secret=bWluaXRyaW5vUm9ja3MxNQo="""
 def get_java_version() -> int:
     """Get the Java major version based on the Trino/Starburst version.
 
-    Uses the same version mapping as install-java.sh:
-    - >= 436 <= 446: Java 21
-    - >= 447 <= 463: Java 22
-    - >= 464 <= 467: Java 23
-    - >= 468: Java 24
+    Reads version ranges from java-matrix.json (shared with
+    install-java-builder.sh).
 
     Returns
     -------
     int
-        Java major version number (e.g., 21, 22, 23, 24).
+        Java major version number (e.g., 23, 24, 25).
     """
     cluster_ver = os.environ.get("CLUSTER_VER", "")
     if not cluster_ver:
-        return 21  # Default to Java 21 if version not available
+        return _default_java_major()
     trino_ver = int(cluster_ver[:3])
-    if 436 <= trino_ver <= 446:
-        return 21
-    elif 447 <= trino_ver <= 463:
-        return 22
-    elif 464 <= trino_ver <= 467:
-        return 23
-    elif trino_ver >= 468:
-        return 24
-    else:
-        return 21  # Default for older versions
+    with open(JAVA_MATRIX_PATH) as f:
+        matrix = json.load(f)
+    for entry in matrix:
+        if trino_ver >= entry["min_trino"] and (
+            entry["max_trino"] is None or trino_ver <= entry["max_trino"]
+        ):
+            return entry["java_major"]
+    return _default_java_major()
+
+
+def _default_java_major() -> int:
+    """Return the highest java_major in the matrix as the default."""
+    with open(JAVA_MATRIX_PATH) as f:
+        matrix = json.load(f)
+    return max(entry["java_major"] for entry in matrix)
 
 
 def is_security_manager_option(jvm_flag: str) -> bool:

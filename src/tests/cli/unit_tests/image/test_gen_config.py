@@ -1,5 +1,6 @@
 """Unit tests for gen_config.py script."""
 
+import json
 import os
 import sys
 import tempfile
@@ -12,6 +13,7 @@ HERE = os.path.dirname(SCRIPT_PATH)
 SCRIPTS_DIR = os.path.abspath(os.path.join(HERE, "../../../../lib/image/src/scripts"))
 sys.path.insert(0, SCRIPTS_DIR)
 from gen_config import (  # noqa: E402
+    JAVA_MATRIX_PATH,
     WORKER_CONFIG_PROPS,
     collect_configs,
     extract_jvm_flag_key,
@@ -27,6 +29,9 @@ from gen_config import (  # noqa: E402
     split_config,
     write_config_file,
 )
+
+with open(JAVA_MATRIX_PATH) as _f:
+    JAVA_MATRIX = json.load(_f)
 
 
 class TestSplitConfig:
@@ -531,37 +536,42 @@ class TestMain:
 class TestGetJavaVersion:
     """Test get_java_version function."""
 
-    def test_java_21_mapping(self):
-        """Test Java 21 version mapping (Trino 436-446)."""
-        with patch.dict("os.environ", {"CLUSTER_VER": "440"}):
-            assert get_java_version() == 21
+    def test_each_range_min_boundary(self):
+        """Test that the min_trino boundary of each range returns the correct Java
+        version."""
+        for entry in JAVA_MATRIX:
+            ver = str(entry["min_trino"])
+            with patch.dict("os.environ", {"CLUSTER_VER": ver}):
+                assert get_java_version() == entry["java_major"]
 
-    def test_java_22_mapping(self):
-        """Test Java 22 version mapping (Trino 447-463)."""
-        with patch.dict("os.environ", {"CLUSTER_VER": "450"}):
-            assert get_java_version() == 22
+    def test_each_range_max_boundary(self):
+        """Test that the max_trino boundary of each bounded range returns the correct
+        Java version."""
+        for entry in JAVA_MATRIX:
+            if entry["max_trino"] is None:
+                continue
+            ver = str(entry["max_trino"])
+            with patch.dict("os.environ", {"CLUSTER_VER": ver}):
+                assert get_java_version() == entry["java_major"]
 
-    def test_java_23_mapping(self):
-        """Test Java 23 version mapping (Trino 464-467)."""
-        with patch.dict("os.environ", {"CLUSTER_VER": "466"}):
-            assert get_java_version() == 23
+    def test_unbounded_range_future_version(self):
+        """Test that a high Trino version matches the open-ended range."""
+        unbounded = [e for e in JAVA_MATRIX if e["max_trino"] is None]
+        assert len(unbounded) == 1
+        with patch.dict("os.environ", {"CLUSTER_VER": "999"}):
+            assert get_java_version() == unbounded[0]["java_major"]
 
-    def test_java_24_mapping(self):
-        """Test Java 24 version mapping (Trino 468+)."""
-        with patch.dict("os.environ", {"CLUSTER_VER": "468"}):
-            assert get_java_version() == 24
-        with patch.dict("os.environ", {"CLUSTER_VER": "479"}):
-            assert get_java_version() == 24
-
-    def test_no_cluster_ver_defaults_to_21(self):
-        """Test that missing CLUSTER_VER defaults to Java 21."""
+    def test_no_cluster_ver_defaults_to_highest(self):
+        """Test that missing CLUSTER_VER defaults to the highest Java version."""
+        highest = max(e["java_major"] for e in JAVA_MATRIX)
         with patch.dict("os.environ", {}, clear=True):
-            assert get_java_version() == 21
+            assert get_java_version() == highest
 
-    def test_old_version_defaults_to_21(self):
-        """Test that Trino versions < 436 default to Java 21."""
-        with patch.dict("os.environ", {"CLUSTER_VER": "400"}):
-            assert get_java_version() == 21
+    def test_old_version_defaults_to_highest(self):
+        """Test that unsupported Trino versions default to the highest Java version."""
+        highest = max(e["java_major"] for e in JAVA_MATRIX)
+        with patch.dict("os.environ", {"CLUSTER_VER": "100"}):
+            assert get_java_version() == highest
 
 
 class TestIsSecurityManagerOption:
@@ -594,8 +604,9 @@ class TestIsSecurityManagerOption:
 class TestSecurityManagerFiltering:
     """Test Security Manager filtering in merge_configs."""
 
-    def test_filter_security_manager_java_24(self):
-        """Test that Security Manager options are filtered for Java 24."""
+    def test_filter_security_manager_all_ranges(self):
+        """Test that Security Manager options are filtered for every supported Java
+        version."""
         base_jvm = [
             ("key_value", "-Xmx", "2G"),
             ("key_value", "-Djava.security.manager", "allow"),
@@ -605,25 +616,25 @@ class TestSecurityManagerFiltering:
             ("key_value", "-Xms", "1G"),
         ]
 
-        with patch.dict("os.environ", {"CLUSTER_VER": "468"}):
-            result = merge_configs(base_jvm, user_jvm, is_jvm=True)
+        for entry in JAVA_MATRIX:
+            with patch.dict("os.environ", {"CLUSTER_VER": str(entry["min_trino"])}):
+                result = merge_configs(base_jvm, user_jvm, is_jvm=True)
 
-        # Security Manager option should be filtered out
-        result_keys = [entry[1] for entry in result if entry[0] == "key_value"]
-        assert "-Djava.security.manager" not in result_keys
-        assert "-Xmx" in result_keys
-        assert "-XX:+UseG1GC" in result_keys
-        assert "-Xms" in result_keys
+            result_keys = [e[1] for e in result if e[0] == "key_value"]
+            assert "-Djava.security.manager" not in result_keys
+            assert "-Xmx" in result_keys
+            assert "-XX:+UseG1GC" in result_keys
+            assert "-Xms" in result_keys
 
-    def test_filter_security_manager_java_21(self):
-        """Test that Security Manager options are filtered for Java 21."""
+    def test_filter_security_manager_unsupported_version(self):
+        """Test that Security Manager options are filtered for unsupported versions."""
         base_jvm = [
             ("key_value", "-Xmx", "2G"),
             ("key_value", "-Djava.security.manager", "allow"),
         ]
         user_jvm: list[tuple] = []
 
-        with patch.dict("os.environ", {"CLUSTER_VER": "440"}):
+        with patch.dict("os.environ", {"CLUSTER_VER": "400"}):
             result = merge_configs(base_jvm, user_jvm, is_jvm=True)
 
         # Security Manager option should be filtered out

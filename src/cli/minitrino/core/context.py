@@ -1,10 +1,13 @@
 """Core context and controls for Minitrino CLI."""
 
 import contextlib
+import json
 import logging
 import os
+from importlib.metadata import PackageNotFoundError, distribution
 from pathlib import Path
 from typing import cast
+from urllib.parse import urlparse
 
 import docker
 
@@ -216,8 +219,13 @@ class MinitrinoContext:
         precedence:
 
         1. Use `LIB_PATH` if provided via environment.
-        2. Check if the library exists relative to the location of this
-           file, assuming the project is running in a repository context.
+        2. If the running CLI is an editable install pointing at a repo
+           that contains `src/lib`, use that. Edits to lib code in the
+           repo flow through to the running CLI without re-syncing.
+        3. Use `~/.minitrino/lib` if it exists (the snapshot installed
+           by `lib-install`).
+        4. Walk up from this file looking for `src/lib` — covers running
+           from a checkout without `pip install`.
         """
         if not self._lib_safe:
             raise MinitrinoError("lib_dir accessed before initialization")
@@ -242,8 +250,19 @@ class MinitrinoContext:
         with contextlib.suppress(Exception):
             lib_dir = self.env.get("LIB_PATH", "")
 
-        if not lib_dir and os.path.isdir(os.path.join(self.minitrino_user_dir, "lib")):
-            lib_dir = os.path.join(self.minitrino_user_dir, "lib")
+        user_lib = os.path.join(self.minitrino_user_dir, "lib")
+
+        if not lib_dir and (editable_lib := _editable_install_lib_dir()):
+            lib_dir = editable_lib
+            if os.path.isdir(user_lib):
+                self.logger.debug(
+                    f"Editable install detected; using repo lib at "
+                    f"{lib_dir} instead of the snapshot at {user_lib}. "
+                    f"Set LIB_PATH to override.",
+                )
+
+        if not lib_dir and os.path.isdir(user_lib):
+            lib_dir = user_lib
         elif not lib_dir:  # Use repo root, fail if this doesn't exist
             repo_root = Path(__file__).resolve().parents
             for parent in repo_root:
@@ -411,3 +430,43 @@ class MinitrinoContext:
         except Exception:
             self.docker_client = cast(docker.DockerClient, object())
             self.api_client = cast(docker.APIClient, object())
+
+
+def _editable_install_lib_dir() -> str | None:
+    """Return the repo's `src/lib` if `minitrino` is an editable install.
+
+    PEP 660 editable installs record the source path in
+    `direct_url.json` with `dir_info.editable = true`. This is the
+    unambiguous "I'm developing on this repo" signal — when present,
+    edits to lib code should flow through without re-running
+    lib-install.
+    """
+    try:
+        dist = distribution("minitrino")
+    except PackageNotFoundError:
+        return None
+
+    try:
+        text = dist.read_text("direct_url.json")
+    except Exception:
+        return None
+    if not text:
+        return None
+
+    try:
+        durl = json.loads(text)
+    except json.JSONDecodeError:
+        return None
+
+    if not durl.get("dir_info", {}).get("editable"):
+        return None
+
+    url = durl.get("url", "")
+    if not url.startswith("file://"):
+        return None
+
+    repo_root = Path(urlparse(url).path)
+    candidate = repo_root / "src" / "lib"
+    if (candidate / "minitrino.env").is_file():
+        return str(candidate)
+    return None

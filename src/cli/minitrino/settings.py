@@ -62,6 +62,10 @@ LIC_PATH=
 
 CLUSTER_VER=
 TEXT_EDITOR=
+
+# Set to 1/true/yes to assume 'yes' for all interactive prompts.
+# Equivalent to passing --yes / -y on every invocation.
+MINITRINO_ASSUME_YES=
 """
 
 # fmt: off

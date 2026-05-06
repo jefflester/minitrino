@@ -87,6 +87,7 @@ class MinitrinoContext:
     def __init__(self):
         # ------------------------------
         # ---- User-provided inputs ----
+        self.assume_yes: bool = False
         self.cluster_name = "default"
         self._user_env_args = []
         self._user_log_level = LogLevel.INFO
@@ -203,6 +204,22 @@ class MinitrinoContext:
         if self._user_log_level != LogLevel.INFO:
             raise MinitrinoError("user_log_level is immutable once set.")
         self._user_log_level = value
+
+    @property
+    def effective_assume_yes(self) -> bool:
+        """Whether to short-circuit interactive prompts to "yes".
+
+        True when either the `--yes` / `-y` CLI flag was passed or
+        `MINITRINO_ASSUME_YES` is set to a truthy value (1/true/yes,
+        case-insensitive).
+        """
+        if self.assume_yes:
+            return True
+        if self.env is not None:
+            raw = self.env.get("MINITRINO_ASSUME_YES", "")
+        else:
+            raw = os.environ.get("MINITRINO_ASSUME_YES", "")
+        return raw.strip().lower() in {"1", "true", "yes"}
 
     @property
     def lib_dir(self) -> str:

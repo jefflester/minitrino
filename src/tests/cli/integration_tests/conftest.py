@@ -2,6 +2,7 @@
 
 import json
 import logging
+import os
 import sys
 import time
 from collections.abc import Generator
@@ -13,6 +14,13 @@ from minitrino.shutdown import shutdown_event
 from tests import common
 from tests.cli.constants import CLUSTER_NAME
 from tests.cli.integration_tests import utils
+
+# Run integration tests non-interactively. Allows the `--yes` /
+# MINITRINO_ASSUME_YES short-circuit to bypass prompts (lib install,
+# lib sync, etc.) without per-test mocking. Use setdefault so a
+# developer running tests with this var unset to "0" can still observe
+# the interactive paths if needed.
+os.environ.setdefault("MINITRINO_ASSUME_YES", "1")
 
 executor = common.MinitrinoExecutor(CLUSTER_NAME)
 logger = common.get_logger()

@@ -53,6 +53,8 @@ The following shell environment variables are picked up by the CLI:
 - `JVM_CONFIG` - Additional JVM configuration for coordinator
 - `LIB_PATH` - Path to Minitrino library files
 - `LIC_PATH` - Path to Starburst license file (for Enterprise modules)
+- `MINITRINO_ASSUME_YES` - Set to `1`, `true`, or `yes` to assume "yes" for all
+  interactive prompts (equivalent to passing `--yes` / `-y` on every invocation)
 - `TEXT_EDITOR` - Text editor to use for config commands
 
 ### Advanced Variables
@@ -94,6 +96,10 @@ LIC_PATH=
 
 CLUSTER_VER=
 TEXT_EDITOR=
+
+# Set to 1/true/yes to assume 'yes' for all interactive prompts.
+# Equivalent to passing --yes / -y on every invocation.
+MINITRINO_ASSUME_YES=
 ```
 
 This file can be directly edited by running:

@@ -87,6 +87,15 @@ class CommandLineInterface(click.MultiCommand):
     type=str,
     help="Sets the cluster name. Defaults to 'default'.",
 )
+@click.option(
+    "-y",
+    "--yes",
+    "assume_yes",
+    is_flag=True,
+    default=False,
+    help="Assume 'yes' for all interactive prompts. Equivalent to "
+    "setting MINITRINO_ASSUME_YES=1.",
+)
 @utils.exception_handler
 @utils.pass_environment()
 def cli(
@@ -95,6 +104,7 @@ def cli(
     log_level: str,
     env: list[str],
     cluster_name: str,
+    assume_yes: bool,
 ) -> None:
     """Welcome to the Minitrino command line interface.
 
@@ -103,6 +113,7 @@ def cli(
     """
     ctx._user_env_args = env
     ctx.cluster_name = cluster_name
+    ctx.assume_yes = assume_yes
 
     effective_log_level = LogLevel.DEBUG if verbose else LogLevel[log_level.upper()]
     ctx.logger = configure_logging(effective_log_level)

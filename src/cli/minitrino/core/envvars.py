@@ -148,6 +148,7 @@ class EnvironmentVariables(dict):
             "KEEP_PLUGINS",
             "LIB_PATH",
             "LIC_PATH",
+            "MINITRINO_ASSUME_YES",
             "PROVISION_BUILD_TIMEOUT",
             "STARTUP_SELECT_RETRIES",
             "TEXT_EDITOR",

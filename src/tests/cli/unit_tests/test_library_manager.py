@@ -262,3 +262,134 @@ class TestFileOperations:
 
         with pytest.raises(MinitrinoError, match="Failed to remove tarball"):
             library_manager._cleanup(tarball)
+
+
+class TestInstallBackups:
+    """Tests for install()'s backup-and-rename, restore-on-failure, and backup pruning
+    behavior.
+
+    These tests use a real tmp_path filesystem instead of mocking os.rename / os.listdir
+    so the directory shuffling is exercised end-to-end.
+    """
+
+    @pytest.fixture
+    def install_ctx(self, mock_ctx, tmp_path):
+        """Configure mock_ctx with a real tmp dir for filesystem ops."""
+        mock_ctx.minitrino_user_dir = str(tmp_path)
+        mock_ctx.effective_assume_yes = True
+        return mock_ctx
+
+    @pytest.fixture
+    def install_manager(self, install_ctx):
+        """LibraryManager wired to the tmp-dir context, validate stubbed."""
+        manager = LibraryManager(install_ctx)
+        manager._ctx = install_ctx
+        manager.validate = MagicMock()
+        return manager
+
+    def _stub_download(self, manager, marker: str = "v"):
+        """Make download_and_extract create a real lib dir with a marker.
+
+        Lets tests assert against actual on-disk state to verify which version of the
+        lib is in place after success or rollback.
+        """
+
+        def _fake(version):
+            lib_dir = os.path.join(manager._ctx.minitrino_user_dir, "lib")
+            os.makedirs(lib_dir, exist_ok=True)
+            with open(os.path.join(lib_dir, "version"), "w") as f:
+                f.write(f"{marker}-{version}")
+
+        manager.download_and_extract = MagicMock(side_effect=_fake)
+
+    def test_fresh_install_no_backup(self, install_manager, tmp_path):
+        """No existing lib → no backup directory is created."""
+        self._stub_download(install_manager, marker="new")
+        install_manager.install("1.0.0")
+
+        assert (tmp_path / "lib" / "version").read_text() == "new-1.0.0"
+        backups = [p.name for p in tmp_path.iterdir() if p.name.startswith("lib.bak.")]
+        assert backups == []
+
+    def test_existing_lib_backed_up(self, install_manager, tmp_path):
+        """Existing lib renamed to lib.bak.<ts>; new lib in place."""
+        old = tmp_path / "lib"
+        old.mkdir()
+        (old / "version").write_text("old-0.9.0")
+
+        self._stub_download(install_manager, marker="new")
+        install_manager.install("1.0.0")
+
+        assert (tmp_path / "lib" / "version").read_text() == "new-1.0.0"
+        backups = sorted(p for p in tmp_path.iterdir() if p.name.startswith("lib.bak."))
+        assert len(backups) == 1
+        assert (backups[0] / "version").read_text() == "old-0.9.0"
+
+    def test_install_failure_restores_backup(self, install_manager, tmp_path):
+        """download_and_extract failure → backup restored to lib_dir."""
+        old = tmp_path / "lib"
+        old.mkdir()
+        (old / "version").write_text("old-0.9.0")
+
+        install_manager.download_and_extract = MagicMock(
+            side_effect=MinitrinoError("network kaboom")
+        )
+
+        with pytest.raises(MinitrinoError, match="network kaboom"):
+            install_manager.install("1.0.0")
+
+        assert (tmp_path / "lib" / "version").read_text() == "old-0.9.0"
+        backups = [p for p in tmp_path.iterdir() if p.name.startswith("lib.bak.")]
+        assert backups == [], "restore should leave no lib.bak.* behind"
+
+    def test_prune_keeps_two_newest(self, install_manager, tmp_path):
+        """After install, only the BACKUP_RETENTION newest backups remain."""
+        # Pre-create 3 stale backups with monotonically increasing mtimes.
+        for i in range(3):
+            d = tmp_path / f"lib.bak.2020010{i}-000000"
+            d.mkdir()
+            (d / "marker").write_text(str(i))
+            os.utime(d, (1000 + i * 1000, 1000 + i * 1000))
+        # Existing lib that this install will back up (becoming the 4th).
+        old = tmp_path / "lib"
+        old.mkdir()
+
+        self._stub_download(install_manager, marker="new")
+        install_manager.install("1.0.0")
+
+        backups = sorted(p for p in tmp_path.iterdir() if p.name.startswith("lib.bak."))
+        assert len(backups) == 2, f"expected 2 backups, got {[b.name for b in backups]}"
+        # The newest pruned backup was the just-renamed old lib + the
+        # most-recent pre-existing one. The two oldest pre-existing ones
+        # (markers 0 and 1) should be gone.
+        markers = sorted(
+            (b / "marker").read_text() for b in backups if (b / "marker").exists()
+        )
+        assert "0" not in markers and "1" not in markers
+
+    def test_prompt_decline_skips_install(self, install_manager, tmp_path, mock_ctx):
+        """User answers N → no install, no backup, lib untouched."""
+        mock_ctx.effective_assume_yes = False
+        mock_ctx.logger.prompt_msg.return_value = "n"
+
+        old = tmp_path / "lib"
+        old.mkdir()
+        (old / "version").write_text("old-0.9.0")
+
+        install_manager.download_and_extract = MagicMock()
+        install_manager.install("1.0.0")
+
+        install_manager.download_and_extract.assert_not_called()
+        assert (tmp_path / "lib" / "version").read_text() == "old-0.9.0"
+        backups = [p for p in tmp_path.iterdir() if p.name.startswith("lib.bak.")]
+        assert backups == []
+
+    def test_assume_yes_skips_prompt(self, install_manager, tmp_path, mock_ctx):
+        """effective_assume_yes=True → prompt_msg never called."""
+        old = tmp_path / "lib"
+        old.mkdir()
+
+        self._stub_download(install_manager, marker="new")
+        install_manager.install("1.0.0")
+
+        mock_ctx.logger.prompt_msg.assert_not_called()

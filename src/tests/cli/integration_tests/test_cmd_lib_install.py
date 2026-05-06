@@ -1,3 +1,4 @@
+import glob
 import os
 import shutil
 from dataclasses import dataclass
@@ -10,19 +11,28 @@ from tests.cli.integration_tests import utils
 
 CMD_INSTALL = {"base": "lib-install", "append": ["--version", "0.0.0"]}
 LIB_DIR = os.path.join(common.MINITRINO_USER_DIR, "lib")
+BACKUP_GLOB = os.path.join(common.MINITRINO_USER_DIR, "lib.bak.*")
 
 logger = common.logger
 executor = common.MinitrinoExecutor(utils.CLUSTER_NAME)
 
 
+def _list_backups() -> list[str]:
+    """Return all `lib.bak.*` directories in the user dir."""
+    return [p for p in glob.glob(BACKUP_GLOB) if os.path.isdir(p)]
+
+
 @pytest.fixture(autouse=True, scope="module")
 def clean_before_test():
-    """Clean up the lib directory before and after tests."""
+    """Clean up the lib directory and any backups before and after tests."""
 
     def _uninstall():
         if os.path.isdir(LIB_DIR):
             logger.debug(f"Removing existing library directory: {LIB_DIR}")
             shutil.rmtree(LIB_DIR)
+        for backup in _list_backups():
+            logger.debug(f"Removing leftover library backup: {backup}")
+            shutil.rmtree(backup, ignore_errors=True)
 
     _uninstall()
     yield
@@ -71,8 +81,8 @@ lib_install_scenarios = [
         cmd=CMD_INSTALL,
         input_val="y\n",
         expected_exit_code=0,
-        expected_output="Removing existing library directory",
-        log_msg="Overwrite existing library",
+        expected_output="Backing up existing library to",
+        log_msg="Overwrite existing library (creates backup)",
     ),
     LibInstallScenario(
         id="invalid_version",
@@ -120,5 +130,13 @@ def test_lib_install_scenarios(
     # Only check library directory exists for successful install scenarios
     if scenario.id in ["install", "install_overwrite"]:
         utils.assert_is_dir(LIB_DIR)
+    # Overwrite must produce a `lib.bak.*` directory containing the
+    # previous library, so accidental overwrites are recoverable.
+    if scenario.id == "install_overwrite":
+        backups = _list_backups()
+        assert backups, (
+            f"Expected at least one lib.bak.* backup after overwrite; "
+            f"found none in {common.MINITRINO_USER_DIR}"
+        )
     if scenario.expected_output:
         utils.assert_in_output(scenario.expected_output, result=result)

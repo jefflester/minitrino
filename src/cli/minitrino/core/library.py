@@ -4,12 +4,16 @@ import os
 import re
 import shutil
 import tarfile
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 import requests
 
 from minitrino import utils
 from minitrino.core.errors import MinitrinoError, UserError
+
+BACKUP_PREFIX = "lib.bak."
+BACKUP_RETENTION = 2
 
 if TYPE_CHECKING:
     from minitrino.core.context import MinitrinoContext
@@ -39,26 +43,93 @@ class LibraryManager:
         return headers
 
     def install(self, version: str = "") -> None:
-        """Install or update the Minitrino library."""
+        """Install or update the Minitrino library.
+
+        If a library already exists at the destination, it is renamed
+        aside as `lib.bak.<UTC timestamp>` rather than deleted, then
+        replaced with the freshly downloaded version. On any failure
+        during download or extract, the backup is restored. Successful
+        installs prune older backups, retaining the most recent
+        `BACKUP_RETENTION` (default: 2).
+        """
         if not version:
             version = utils.cli_ver()
 
         self.validate(version)
         lib_dir = os.path.join(self._ctx.minitrino_user_dir, "lib")
 
+        backup_path = ""
         if os.path.isdir(lib_dir):
-            response = self._ctx.logger.prompt_msg(
-                f"The Minitrino library at {lib_dir} will be overwritten. "
-                f"Continue? [Y/N]"
-            )
-            if not utils.validate_yes(response):
-                self._ctx.logger.info("Opted to skip library installation.")
-                return
-            self._ctx.logger.info("Removing existing library directory...")
-            shutil.rmtree(lib_dir)
+            if not self._ctx.effective_assume_yes:
+                response = self._ctx.logger.prompt_msg(
+                    f"The Minitrino library at {lib_dir} will be backed up "
+                    f"and replaced with version {version}. Continue? [Y/N]"
+                )
+                if not utils.validate_yes(response):
+                    self._ctx.logger.info("Opted to skip library installation.")
+                    return
+            backup_path = self._reserve_backup_path()
+            self._ctx.logger.info(f"Backing up existing library to {backup_path}...")
+            os.rename(lib_dir, backup_path)
 
-        self.download_and_extract(version)
+        try:
+            self.download_and_extract(version)
+        except Exception:
+            if backup_path and os.path.isdir(backup_path):
+                self._ctx.logger.warn(
+                    f"Install failed; restoring previous library from {backup_path}."
+                )
+                if os.path.isdir(lib_dir):
+                    shutil.rmtree(lib_dir, ignore_errors=True)
+                os.rename(backup_path, lib_dir)
+            raise
+
+        self._prune_backups()
         self._ctx.logger.info("Library installation complete.")
+
+    def _reserve_backup_path(self) -> str:
+        """Return a fresh, non-colliding `lib.bak.<ts>` directory path."""
+        ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+        candidate = os.path.join(self._ctx.minitrino_user_dir, f"{BACKUP_PREFIX}{ts}")
+        # Disambiguate if multiple installs land within a one-second window.
+        suffix = 1
+        while os.path.exists(candidate):
+            candidate = os.path.join(
+                self._ctx.minitrino_user_dir, f"{BACKUP_PREFIX}{ts}-{suffix}"
+            )
+            suffix += 1
+        return candidate
+
+    def _prune_backups(self, keep: int = BACKUP_RETENTION) -> None:
+        """Remove old `lib.bak.*` directories, keeping the N newest by mtime.
+
+        Best-effort: failures are logged but never raised. The freshly
+        installed lib stays intact even if pruning hits trouble.
+        """
+        parent = self._ctx.minitrino_user_dir
+        try:
+            names = os.listdir(parent)
+        except OSError:
+            return
+        backups = []
+        for name in names:
+            if not name.startswith(BACKUP_PREFIX):
+                continue
+            path = os.path.join(parent, name)
+            if not os.path.isdir(path):
+                continue
+            try:
+                mtime = os.path.getmtime(path)
+            except OSError:
+                continue
+            backups.append((mtime, path))
+        backups.sort(reverse=True)
+        for _, path in backups[keep:]:
+            try:
+                shutil.rmtree(path)
+                self._ctx.logger.debug(f"Pruned old library backup: {path}")
+            except OSError as e:
+                self._ctx.logger.warn(f"Failed to prune library backup {path}: {e}")
 
     def list_releases(self) -> list[str]:
         """List all available releases from GitHub."""

@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
+import io
 import re
+import tarfile
 from typing import TYPE_CHECKING
 
-from minitrino import utils
 from minitrino.core.docker.wrappers import MinitrinoContainer
 from minitrino.core.errors import UserError
 from minitrino.settings import (
     CLUSTER_CONFIG,
     CLUSTER_JVM_CONFIG,
-    ETC_DIR,
     MIN_CLUSTER_VER,
 )
 
@@ -250,19 +250,28 @@ class ClusterValidator:
         tuple[list[tuple], list[tuple]]
             A tuple of parsed config tuples for both files.
         """
-        _, uid = utils.container_user_and_id(self._ctx, container)
-        current_cfgs = self._ctx.cmd_executor.execute(
-            [f"cat {ETC_DIR}/{CLUSTER_CONFIG}"],
-            [f"cat {ETC_DIR}/{CLUSTER_JVM_CONFIG}"],
-            container=container,
-            suppress_output=True,
-            user=uid,
-        )
+        dist = self._ctx.env.get("CLUSTER_DIST")
+        cluster_cfg = self._read_file(container, f"/etc/{dist}/{CLUSTER_CONFIG}")
+        jvm_cfg = self._read_file(container, f"/etc/{dist}/{CLUSTER_JVM_CONFIG}")
+        return self._split_config(cluster_cfg), self._split_config(jvm_cfg)
 
-        current_cluster_cfgs = self._split_config(current_cfgs[0].output)
-        current_jvm_cfg = self._split_config(current_cfgs[1].output)
+    @staticmethod
+    def _read_file(container: MinitrinoContainer, path: str) -> str:
+        """Return the text contents of a file inside a container.
 
-        return current_cluster_cfgs, current_jvm_cfg
+        Uses the Docker archive API rather than shelling into the container, so no UID
+        juggling or shell-quoting is required.
+        """
+        bits, _ = container.get_archive(path)
+        buf = io.BytesIO(b"".join(bits))
+        basename = path.rsplit("/", 1)[-1]
+        with tarfile.open(fileobj=buf, mode="r|") as tar:
+            for member in tar:
+                if member.name == basename and member.isfile():
+                    fileobj = tar.extractfile(member)
+                    if fileobj is not None:
+                        return fileobj.read().decode("utf-8")
+        return ""
 
     def _split_config(self, cfgs: str = "") -> list[tuple]:
         """Split raw config strings into an ordered list of tuples.

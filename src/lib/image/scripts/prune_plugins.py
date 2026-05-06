@@ -21,7 +21,7 @@ def load_removelist() -> list[str]:
         List of plugin names to remove.
     """
     candidates = [
-        os.path.join(os.path.dirname(__file__), "plugin-removelist.txt"),
+        os.path.join(os.path.dirname(__file__), "..", "data", "plugin-removelist.txt"),
         "/tmp/plugin-removelist.txt",
     ]
     for path in candidates:

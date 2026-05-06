@@ -8,7 +8,12 @@ from pathlib import Path
 
 LOG_PREFIX = "[gen_config]"
 ETC_DIR = f"/etc/{os.environ.get('CLUSTER_DIST', 'trino')}"
-JAVA_MATRIX_PATH = Path(__file__).parent / "java-matrix.json"
+_PARENT = Path(__file__).parent
+JAVA_MATRIX_PATH = (
+    _PARENT / "java-matrix.json"
+    if (_PARENT / "java-matrix.json").exists()
+    else _PARENT.parent / "data" / "java-matrix.json"
+)
 
 WORKER_CONFIG_PROPS = """coordinator=false
 http-server.http.port=8080

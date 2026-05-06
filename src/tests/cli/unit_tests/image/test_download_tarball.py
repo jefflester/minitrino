@@ -1,4 +1,4 @@
-"""Unit tests for the downloader script."""
+"""Unit tests for the download_tarball script."""
 
 import os
 import sys
@@ -9,10 +9,10 @@ import pytest
 # Add the scripts directory to the path dynamically
 SCRIPT_PATH = os.path.realpath(__file__)
 HERE = os.path.dirname(SCRIPT_PATH)
-SCRIPTS_DIR = os.path.abspath(os.path.join(HERE, "../../../../lib/image/src/scripts"))
+SCRIPTS_DIR = os.path.abspath(os.path.join(HERE, "../../../../lib/image/scripts"))
 sys.path.insert(0, SCRIPTS_DIR)
 
-from downloader import (  # noqa: E402
+from download_tarball import (  # noqa: E402
     download_tarball,
     get_arch,
     main,
@@ -78,7 +78,7 @@ class TestGetArch:
 class TestResolveTarballInfo:
     """Test suite for resolve_tarball_info function."""
 
-    @patch("downloader.get_arch")
+    @patch("download_tarball.get_arch")
     def test_resolve_trino(self, mock_get_arch):
         """Test resolving Trino tarball info."""
         mock_get_arch.return_value = ("x86_64", "amd64")
@@ -93,7 +93,7 @@ class TestResolveTarballInfo:
         assert unpack_dir == "trino-server-443"
         assert arch_bin == "amd64"
 
-    @patch("downloader.get_arch")
+    @patch("download_tarball.get_arch")
     def test_resolve_starburst_new_version(self, mock_get_arch):
         """Test resolving Starburst tarball info for version >= 462."""
         mock_get_arch.return_value = ("aarch64", "arm64")
@@ -110,7 +110,7 @@ class TestResolveTarballInfo:
         assert unpack_dir == "starburst-enterprise-462-e.0-aarch64"
         assert arch_bin == "arm64"
 
-    @patch("downloader.get_arch")
+    @patch("download_tarball.get_arch")
     def test_resolve_starburst_old_version(self, mock_get_arch):
         """Test resolving Starburst tarball info for version < 462."""
         mock_get_arch.return_value = ("x86_64", "amd64")
@@ -127,7 +127,7 @@ class TestResolveTarballInfo:
         assert unpack_dir == "starburst-enterprise-438-e.12"
         assert arch_bin == "amd64"
 
-    @patch("downloader.get_arch")
+    @patch("download_tarball.get_arch")
     def test_resolve_invalid_dist(self, mock_get_arch):
         """Test invalid distribution raises error."""
         mock_get_arch.return_value = ("x86_64", "amd64")
@@ -168,10 +168,10 @@ class TestDownloadTarball:
 
         # Verify progress messages
         mock_print.assert_any_call(
-            "[downloader] Downloading http://example.com/file.tar.gz ..."
+            "[download_tarball] Downloading http://example.com/file.tar.gz ..."
         )
         mock_print.assert_any_call(
-            "[downloader] Downloading tarball... 100.0% complete"
+            "[download_tarball] Downloading tarball... 100.0% complete"
         )
 
     @patch("urllib.request.urlopen")
@@ -208,8 +208,8 @@ class TestUnpackTarball:
 
         mock_tarfile.assert_called_once_with("/tmp/file.tar.gz", "r:gz")
         mock_tar.extractall.assert_called_once_with(path="/dest/dir")
-        mock_print.assert_any_call("[downloader] Extracting /tmp/file.tar.gz ...")
-        mock_print.assert_any_call("[downloader] Extracted to /dest/dir")
+        mock_print.assert_any_call("[download_tarball] Extracting /tmp/file.tar.gz ...")
+        mock_print.assert_any_call("[download_tarball] Extracted to /dest/dir")
 
 
 class TestUnpackAndCopy:
@@ -272,10 +272,10 @@ class TestUnpackAndCopy:
             "/usr/lib/trino/bin/linux-arm64", ignore_errors=True
         )
 
-    @patch("downloader.os.makedirs")
-    @patch("downloader.os.listdir")
-    @patch("downloader.os.path.isdir")
-    @patch("downloader.shutil.copy2")
+    @patch("download_tarball.os.makedirs")
+    @patch("download_tarball.os.listdir")
+    @patch("download_tarball.os.path.isdir")
+    @patch("download_tarball.shutil.copy2")
     def test_unpack_and_copy_single_file(
         self, mock_copy2, mock_isdir, mock_listdir, mock_makedirs
     ):
@@ -299,11 +299,11 @@ class TestUnpackAndCopy:
 class TestMain:
     """Test suite for main function."""
 
-    @patch("downloader.resolve_tarball_info")
-    @patch("downloader.download_tarball")
-    @patch("downloader.unpack_tarball")
-    @patch("downloader.unpack_and_copy")
-    @patch("downloader.os.chdir")
+    @patch("download_tarball.resolve_tarball_info")
+    @patch("download_tarball.download_tarball")
+    @patch("download_tarball.unpack_tarball")
+    @patch("download_tarball.unpack_and_copy")
+    @patch("download_tarball.os.chdir")
     def test_main(
         self,
         mock_chdir,
@@ -330,13 +330,16 @@ class TestMain:
         mock_unpack.assert_called_once_with("/tmp/file.tar.gz", "/tmp")
         mock_unpack_copy.assert_called_once_with("trino", "unpack_dir", "amd64")
 
-    @patch("sys.argv", ["downloader.py"])
-    @patch("downloader.os.environ", {"CLUSTER_DIST": "trino", "CLUSTER_VERSION": "443"})
-    @patch("downloader.unpack_and_copy")
-    @patch("downloader.unpack_tarball")
-    @patch("downloader.download_tarball")
-    @patch("downloader.resolve_tarball_info")
-    @patch("downloader.os.chdir")
+    @patch("sys.argv", ["download_tarball.py"])
+    @patch(
+        "download_tarball.os.environ",
+        {"CLUSTER_DIST": "trino", "CLUSTER_VERSION": "443"},
+    )
+    @patch("download_tarball.unpack_and_copy")
+    @patch("download_tarball.unpack_tarball")
+    @patch("download_tarball.download_tarball")
+    @patch("download_tarball.resolve_tarball_info")
+    @patch("download_tarball.os.chdir")
     def test_main_cli(
         self, mock_chdir, mock_resolve, mock_download, mock_unpack, mock_copy
     ):

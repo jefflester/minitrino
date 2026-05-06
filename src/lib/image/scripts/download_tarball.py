@@ -57,7 +57,7 @@ import tarfile
 import time
 import urllib.request
 
-LOG_PREFIX = "[downloader]"
+LOG_PREFIX = "[download_tarball]"
 TRINO_URL = "https://repo1.maven.org/maven2/io/trino/trino-server"
 STARBURST_URL = "https://s3.us-east-2.amazonaws.com/software.starburstdata.net"
 
@@ -244,6 +244,6 @@ def main(cluster_ver: str, cluster_dist: str) -> None:
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
-        print("Usage: downloader.py <CLUSTER_VER> <CLUSTER_DIST>")
+        print("Usage: download_tarball.py <CLUSTER_VER> <CLUSTER_DIST>")
         sys.exit(1)
     main(sys.argv[1], sys.argv[2])

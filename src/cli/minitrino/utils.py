@@ -232,12 +232,22 @@ def container_user_and_id(
         raise MinitrinoError("Container object or container name must be provided")
     if isinstance(container, str):
         container = ctx.cluster.resource.container(container)
-    usr = ctx.cmd_executor.execute(["echo ${SERVICE_USER}"], container=container)[
-        0
-    ].output.strip()
-    uid = ctx.cmd_executor.execute([f"id -u {usr}"], container=container)[
-        0
-    ].output.strip()
+
+    # Read SERVICE_USER and SERVICE_UID from the container's baked-in env
+    # vars (set via `ENV ...` in the Dockerfile) rather than shelling out.
+    env_list = container.attrs.get("Config", {}).get("Env", []) or []
+    env_map = {}
+    for entry in env_list:
+        if "=" in entry:
+            k, v = entry.split("=", 1)
+            env_map[k] = v
+    usr = env_map.get("SERVICE_USER", "")
+    uid = env_map.get("SERVICE_UID", "")
+    if not usr or not uid:
+        raise MinitrinoError(
+            "SERVICE_USER and/or SERVICE_UID not set in container env for "
+            f"{container.name!r}; rebuild the image to pick up these vars."
+        )
     return usr, uid
 
 

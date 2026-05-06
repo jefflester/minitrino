@@ -8,12 +8,44 @@ from __future__ import annotations
 import json
 import os
 import subprocess
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from minitrino.core.errors import MinitrinoError
 
 if TYPE_CHECKING:
     from minitrino.core.context import MinitrinoContext
+
+
+def _inspect_active_context(
+    ctx: MinitrinoContext | None, env: dict | os._Environ
+) -> dict[str, Any] | None:
+    """Run `docker context inspect` and return the first context entry, or None.
+
+    Routes through `ctx.cmd_executor` when a context is provided, otherwise
+    invokes the `docker` binary via subprocess. Returns None on any failure.
+    """
+    try:
+        if ctx is None:
+            stdout = subprocess.run(
+                ["docker", "context", "inspect"],
+                capture_output=True,
+                check=True,
+                text=True,
+                env=env,
+            ).stdout
+        else:
+            cmd_results = ctx.cmd_executor.execute(
+                ["docker", "context", "inspect"],
+                environment=env,
+                suppress_output=True,
+            )
+            if not cmd_results:
+                return None
+            stdout = cmd_results[0].output
+        parsed = json.loads(stdout)
+        return parsed[0] if parsed else None
+    except Exception:
+        return None
 
 
 def get_docker_context_name(ctx: MinitrinoContext | None = None, env=None) -> str:
@@ -37,32 +69,10 @@ def get_docker_context_name(ctx: MinitrinoContext | None = None, env=None) -> st
     """
     if env is None:
         env = os.environ
-    try:
-        if ctx is None:
-            subproc_result = subprocess.run(
-                ["docker", "context", "inspect"],
-                capture_output=True,
-                check=True,
-                text=True,
-                env=env,
-            )
-            stdout = subproc_result.stdout
-        else:
-            try:
-                cmd_results = ctx.cmd_executor.execute(
-                    ["docker", "context", "inspect"],
-                    environment=env,
-                    suppress_output=True,
-                )
-                if not cmd_results:
-                    return ""
-                stdout = cmd_results[0].output
-            except Exception:
-                return ""
-        context = json.loads(stdout)[0]
-        return context.get("Name", "")
-    except Exception:
+    context = _inspect_active_context(ctx, env)
+    if context is None:
         return ""
+    return context.get("Name", "")
 
 
 def resolve_docker_socket(ctx: MinitrinoContext | None = None, env=None) -> str:
@@ -92,31 +102,10 @@ def resolve_docker_socket(ctx: MinitrinoContext | None = None, env=None) -> str:
     socket_path = env.get("DOCKER_HOST")
     if socket_path:
         return socket_path
+    context = _inspect_active_context(ctx, env)
+    if context is None:
+        raise MinitrinoError("Failed to determine Docker socket.")
     try:
-        if ctx is None:
-            subproc_result = subprocess.run(
-                ["docker", "context", "inspect"],
-                capture_output=True,
-                check=True,
-                text=True,
-                env=env,
-            )
-            stdout = subproc_result.stdout
-        else:
-            try:
-                cmd_results = ctx.cmd_executor.execute(
-                    ["docker", "context", "inspect"],
-                    environment=env,
-                    suppress_output=True,
-                )
-                if not cmd_results:
-                    raise MinitrinoError("No results from docker context inspect")
-                stdout = cmd_results[0].output
-            except Exception as e:
-                raise MinitrinoError(
-                    "Error raised trying to resolve Docker socket."
-                ) from e
-        context = json.loads(stdout)[0]
         return context["Endpoints"]["docker"].get("Host", "")
-    except Exception as e:
+    except (KeyError, TypeError) as e:
         raise MinitrinoError("Failed to determine Docker socket.") from e

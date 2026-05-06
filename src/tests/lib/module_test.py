@@ -9,14 +9,13 @@ import click
 import jsonschema
 from minitrino.settings import DEFAULT_CLUSTER_VER
 
-here = os.path.abspath(os.path.dirname(__file__))
-src_dir = os.path.abspath(os.path.join(here, "../.."))
-repo_root = os.path.abspath(os.path.join(src_dir, ".."))
+_src_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+_repo_root = os.path.abspath(os.path.join(_src_dir, ".."))
 
-if src_dir not in sys.path:
-    sys.path.insert(0, src_dir)
-if repo_root not in sys.path:
-    sys.path.insert(0, repo_root)
+if _src_dir not in sys.path:
+    sys.path.insert(0, _src_dir)
+if _repo_root not in sys.path:
+    sys.path.insert(0, _repo_root)
 
 
 from tests import common  # noqa: E402

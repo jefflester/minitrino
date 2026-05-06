@@ -8,16 +8,15 @@ import os
 import sys
 import traceback
 
-SCRIPT_PATH = os.path.realpath(__file__)
-HERE = os.path.dirname(SCRIPT_PATH)
+HERE = os.path.dirname(os.path.realpath(__file__))
 
-src_dir = os.path.abspath(os.path.join(HERE, "../.."))
-repo_root = os.path.abspath(os.path.join(src_dir, ".."))
+_src_dir = os.path.abspath(os.path.join(HERE, "../.."))
+_repo_root = os.path.abspath(os.path.join(_src_dir, ".."))
 
-if src_dir not in sys.path:
-    sys.path.insert(0, src_dir)
-if repo_root not in sys.path:
-    sys.path.insert(0, repo_root)
+if _src_dir not in sys.path:
+    sys.path.insert(0, _src_dir)
+if _repo_root not in sys.path:
+    sys.path.insert(0, _repo_root)
 
 
 from tests import common  # noqa: E402

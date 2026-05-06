@@ -23,9 +23,9 @@ from minitrino.settings import ROOT_LABEL
 USER_HOME_DIR = os.path.expanduser("~")
 MINITRINO_USER_DIR = os.path.abspath(os.path.join(USER_HOME_DIR, ".minitrino"))
 CONFIG_FILE = os.path.abspath(os.path.join(MINITRINO_USER_DIR, "minitrino.cfg"))
-MINITRINO_LIB_DIR = os.path.join(
-    Path(os.path.abspath(__file__)).resolve().parents[2], "lib"
-)
+REPO_ROOT = str(Path(os.path.abspath(__file__)).resolve().parents[2])
+MINITRINO_LIB_DIR = os.path.join(REPO_ROOT, "src", "lib")
+LIB_IMAGE_SCRIPTS_DIR = os.path.join(MINITRINO_LIB_DIR, "image", "scripts")
 
 # ------------------------
 # Logging Utilities

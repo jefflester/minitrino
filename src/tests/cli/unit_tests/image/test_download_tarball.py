@@ -1,16 +1,13 @@
 """Unit tests for the download_tarball script."""
 
-import os
 import sys
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
-# Add the scripts directory to the path dynamically
-SCRIPT_PATH = os.path.realpath(__file__)
-HERE = os.path.dirname(SCRIPT_PATH)
-SCRIPTS_DIR = os.path.abspath(os.path.join(HERE, "../../../../lib/image/scripts"))
-sys.path.insert(0, SCRIPTS_DIR)
+from tests.common import LIB_IMAGE_SCRIPTS_DIR
+
+sys.path.insert(0, LIB_IMAGE_SCRIPTS_DIR)
 
 from download_tarball import (  # noqa: E402
     download_tarball,

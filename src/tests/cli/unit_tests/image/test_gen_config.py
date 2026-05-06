@@ -1,17 +1,14 @@
 """Unit tests for gen_config.py script."""
 
 import json
-import os
 import sys
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-# Add the image scripts directory to path for imports dynamically
-SCRIPT_PATH = os.path.realpath(__file__)
-HERE = os.path.dirname(SCRIPT_PATH)
-SCRIPTS_DIR = os.path.abspath(os.path.join(HERE, "../../../../lib/image/scripts"))
-sys.path.insert(0, SCRIPTS_DIR)
+from tests.common import LIB_IMAGE_SCRIPTS_DIR
+
+sys.path.insert(0, LIB_IMAGE_SCRIPTS_DIR)
 from gen_config import (  # noqa: E402
     JAVA_MATRIX_PATH,
     WORKER_CONFIG_PROPS,

@@ -361,23 +361,17 @@ class MinitrinoContext:
             pass
 
     def _try_compare_versions(self) -> None:
-        """Attempt to compare CLI and library versions for compatibility.
+        """Check CLI/library version compatibility and auto-sync if needed.
 
-        This is a best-effort check that gracefully handles missing
-        libraries. Commands like `lib-install` and `config` need to run
-        even when no library is installed yet.
+        Delegates to LibraryManager.auto_install_or_update(). UserError propagates (e.g.
+        user declined install of a required library). All other exceptions are swallowed
+        so commands degrade gracefully when the library is absent or unreadable.
         """
         try:
-            cli_ver = utils.cli_ver()
-            lib_ver = utils.lib_ver(lib_path=self.lib_dir)
-            if cli_ver != lib_ver:
-                self.logger.warn(
-                    f"CLI version {cli_ver} and library version {lib_ver} "
-                    f"do not match. You can update the Minitrino library "
-                    f"version to match the CLI version by running 'minitrino "
-                    f"lib-install'.",
-                )
-        except Exception:  # Skip version comparison if lib is not found
+            self.library_manager.auto_install_or_update()
+        except UserError:
+            raise
+        except Exception:
             pass
 
     def _set_cluster_attrs(self, cluster_name: str) -> None:

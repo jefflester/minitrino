@@ -5,6 +5,7 @@ library installation, version management, and error handling.
 """
 
 import os
+from datetime import datetime, timezone
 from unittest.mock import MagicMock, call, patch
 
 import pytest
@@ -21,6 +22,7 @@ def mock_ctx(tmp_path, mock_logger):
     ctx.logger = mock_logger
     ctx.lib_dir = str(tmp_path / "lib")
     ctx.minitrino_user_dir = str(tmp_path / "minitrino")
+    ctx.effective_assume_yes = False
     ctx.config = MagicMock()
     ctx.config.get_library_version.return_value = None
     return ctx
@@ -39,22 +41,44 @@ class TestAutoInstallOrUpdate:
 
     @patch("minitrino.core.library.utils.cli_ver", return_value="1.0.0")
     @patch("minitrino.core.library.utils.lib_ver")
-    def test_not_installed(self, mock_lib_ver, mock_cli_ver, library_manager, mock_ctx):
-        """Test auto_install when library is not installed."""
+    @patch("minitrino.core.library.utils.validate_yes", return_value=True)
+    def test_not_installed_accept(
+        self, mock_validate, mock_lib_ver, mock_cli_ver, library_manager, mock_ctx
+    ):
+        """Not installed, user accepts prompt → install."""
         mock_lib_ver.return_value = "NOT INSTALLED"
         library_manager.install = MagicMock()
 
         library_manager.auto_install_or_update()
 
-        mock_ctx.logger.warn.assert_called_once()
+        mock_ctx.logger.prompt_msg.assert_called_once()
         library_manager.install.assert_called_once_with(version="1.0.0")
+
+    @patch("minitrino.core.library.utils.cli_ver", return_value="1.0.0")
+    @patch("minitrino.core.library.utils.lib_ver")
+    @patch("minitrino.core.library.utils.validate_yes", return_value=False)
+    def test_not_installed_decline_raises(
+        self, mock_validate, mock_lib_ver, mock_cli_ver, library_manager, mock_ctx
+    ):
+        """Not installed, user declines → UserError, decline cache written."""
+        mock_lib_ver.return_value = "NOT INSTALLED"
+        library_manager.install = MagicMock()
+        library_manager._write_decline_cache = MagicMock()
+
+        with pytest.raises(UserError, match="required for this operation"):
+            library_manager.auto_install_or_update()
+
+        library_manager.install.assert_not_called()
+        library_manager._write_decline_cache.assert_called_once_with(
+            "1.0.0", "NOT INSTALLED"
+        )
 
     @patch("minitrino.core.library.utils.cli_ver", return_value="1.0.0")
     @patch("minitrino.core.library.utils.lib_ver", return_value="1.0.0")
     def test_versions_match(
         self, mock_lib_ver, mock_cli_ver, library_manager, mock_ctx
     ):
-        """Test auto_install when versions match."""
+        """Versions match → no-op, debug log."""
         library_manager.install = MagicMock()
 
         library_manager.auto_install_or_update()
@@ -70,38 +94,153 @@ class TestAutoInstallOrUpdate:
     def test_version_mismatch_upgrade(
         self, mock_validate, mock_lib_ver, mock_cli_ver, library_manager, mock_ctx
     ):
-        """Test auto_install when versions don't match and user chooses to upgrade."""
+        """Mismatch, no fresh cache, user accepts → install."""
         mock_lib_ver.return_value = "1.0.0"
         library_manager.install = MagicMock()
+        library_manager._read_decline_cache = MagicMock(return_value=None)
 
         library_manager.auto_install_or_update()
 
         mock_ctx.logger.prompt_msg.assert_called_once()
-        library_manager.install.assert_called_once_with(version="1.1.0")
-        mock_ctx.logger.info.assert_called_once_with(
-            "Overwriting existing Minitrino library to version 1.1.0"
+        library_manager.install.assert_called_once_with(
+            version="1.1.0", _skip_confirm=True
         )
 
     @patch("minitrino.core.library.utils.cli_ver", return_value="1.1.0")
     @patch("minitrino.core.library.utils.lib_ver")
     @patch("minitrino.core.library.utils.validate_yes", return_value=False)
-    def test_version_mismatch_no_upgrade(
+    def test_version_mismatch_decline(
         self, mock_validate, mock_lib_ver, mock_cli_ver, library_manager, mock_ctx
     ):
-        """Test auto_install when versions don't match and user chooses not to
-        upgrade."""
+        """Mismatch, no fresh cache, user declines → cache written, warn."""
         mock_lib_ver.return_value = "1.0.0"
         library_manager.install = MagicMock()
+        library_manager._read_decline_cache = MagicMock(return_value=None)
+        library_manager._write_decline_cache = MagicMock()
 
         library_manager.auto_install_or_update()
 
         mock_ctx.logger.prompt_msg.assert_called_once()
         library_manager.install.assert_not_called()
+        library_manager._write_decline_cache.assert_called_once_with("1.1.0", "1.0.0")
         mock_ctx.logger.warn.assert_called_once()
         assert (
-            "highly recommended to use matching CLI and library versions"
+            "Mismatched CLI and library versions"
             in mock_ctx.logger.warn.call_args[0][0]
         )
+
+    @patch("minitrino.core.library.utils.cli_ver", return_value="1.1.0")
+    @patch("minitrino.core.library.utils.lib_ver")
+    def test_mismatch_fresh_cache_skips_prompt(
+        self, mock_lib_ver, mock_cli_ver, library_manager, mock_ctx
+    ):
+        """Fresh decline cache → no prompt, debug log only."""
+        mock_lib_ver.return_value = "1.0.0"
+        library_manager.install = MagicMock()
+        library_manager._read_decline_cache = MagicMock(
+            return_value={"declined_at": datetime.now(timezone.utc).isoformat()}
+        )
+        library_manager._decline_is_fresh = MagicMock(return_value=True)
+
+        library_manager.auto_install_or_update()
+
+        mock_ctx.logger.prompt_msg.assert_not_called()
+        library_manager.install.assert_not_called()
+        mock_ctx.logger.debug.assert_called_once()
+
+    @patch("minitrino.core.library.utils.cli_ver", return_value="1.1.0")
+    @patch("minitrino.core.library.utils.lib_ver")
+    @patch("minitrino.core.library.utils.validate_yes", return_value=True)
+    def test_mismatch_stale_cache_reprompts(
+        self, mock_validate, mock_lib_ver, mock_cli_ver, library_manager, mock_ctx
+    ):
+        """Stale decline cache → prompt fires again."""
+        mock_lib_ver.return_value = "1.0.0"
+        library_manager.install = MagicMock()
+        library_manager._read_decline_cache = MagicMock(
+            return_value={"declined_at": "2020-01-01T00:00:00+00:00"}
+        )
+        library_manager._decline_is_fresh = MagicMock(return_value=False)
+
+        library_manager.auto_install_or_update()
+
+        mock_ctx.logger.prompt_msg.assert_called_once()
+        library_manager.install.assert_called_once_with(
+            version="1.1.0", _skip_confirm=True
+        )
+
+    @patch("minitrino.core.library.utils.cli_ver", return_value="1.0.0")
+    @patch("minitrino.core.library.utils.lib_ver")
+    def test_assume_yes_not_installed(
+        self, mock_lib_ver, mock_cli_ver, library_manager, mock_ctx
+    ):
+        """assume_yes + not installed → auto-install, no prompt."""
+        mock_lib_ver.return_value = "NOT INSTALLED"
+        mock_ctx.effective_assume_yes = True
+        library_manager.install = MagicMock()
+
+        library_manager.auto_install_or_update()
+
+        mock_ctx.logger.prompt_msg.assert_not_called()
+        library_manager.install.assert_called_once_with(version="1.0.0")
+
+    @patch("minitrino.core.library.utils.cli_ver", return_value="1.1.0")
+    @patch("minitrino.core.library.utils.lib_ver")
+    def test_assume_yes_mismatch(
+        self, mock_lib_ver, mock_cli_ver, library_manager, mock_ctx
+    ):
+        """assume_yes + mismatch → auto-install, no prompt."""
+        mock_lib_ver.return_value = "1.0.0"
+        mock_ctx.effective_assume_yes = True
+        library_manager.install = MagicMock()
+
+        library_manager.auto_install_or_update()
+
+        mock_ctx.logger.prompt_msg.assert_not_called()
+        library_manager.install.assert_called_once_with(
+            version="1.1.0", _skip_confirm=True
+        )
+
+
+class TestDeclineCache:
+    """Tests for the decline cache helper methods."""
+
+    def test_write_and_read_cache(self, library_manager, mock_ctx, tmp_path):
+        mock_ctx.minitrino_user_dir = str(tmp_path)
+        library_manager._write_decline_cache("1.1.0", "1.0.0")
+        cache = library_manager._read_decline_cache()
+        assert cache is not None
+        assert cache["cli_ver"] == "1.1.0"
+        assert cache["lib_ver"] == "1.0.0"
+        assert "declined_at" in cache
+
+    def test_read_missing_cache(self, library_manager, mock_ctx, tmp_path):
+        mock_ctx.minitrino_user_dir = str(tmp_path)
+        assert library_manager._read_decline_cache() is None
+
+    def test_decline_is_fresh_within_ttl(self, library_manager):
+        cache = {"declined_at": datetime.now(timezone.utc).isoformat()}
+        assert library_manager._decline_is_fresh(cache) is True
+
+    def test_decline_is_stale_past_ttl(self, library_manager):
+        old = datetime(2020, 1, 1, tzinfo=timezone.utc).isoformat()
+        cache = {"declined_at": old}
+        assert library_manager._decline_is_fresh(cache) is False
+
+    def test_decline_is_fresh_bad_data(self, library_manager):
+        assert library_manager._decline_is_fresh({}) is False
+        assert library_manager._decline_is_fresh({"declined_at": "garbage"}) is False
+
+    def test_clear_cache(self, library_manager, mock_ctx, tmp_path):
+        mock_ctx.minitrino_user_dir = str(tmp_path)
+        library_manager._write_decline_cache("1.1.0", "1.0.0")
+        assert library_manager._read_decline_cache() is not None
+        library_manager._clear_decline_cache()
+        assert library_manager._read_decline_cache() is None
+
+    def test_clear_cache_missing_file(self, library_manager, mock_ctx, tmp_path):
+        mock_ctx.minitrino_user_dir = str(tmp_path)
+        library_manager._clear_decline_cache()
 
 
 class TestLibraryReleases:
@@ -393,3 +532,13 @@ class TestInstallBackups:
         install_manager.install("1.0.0")
 
         mock_ctx.logger.prompt_msg.assert_not_called()
+
+    def test_install_clears_decline_cache(self, install_manager, tmp_path):
+        """Successful install removes any stale decline cache."""
+        cache_path = tmp_path / "lib_sync_state.json"
+        cache_path.write_text('{"declined_at": "2020-01-01T00:00:00+00:00"}')
+
+        self._stub_download(install_manager, marker="new")
+        install_manager.install("1.0.0")
+
+        assert not cache_path.exists()

@@ -1,5 +1,7 @@
 """Handles installation and management of Minitrino libraries."""
 
+import contextlib
+import json
 import os
 import re
 import shutil
@@ -42,7 +44,7 @@ class LibraryManager:
             headers["Authorization"] = f"Bearer {self._github_token}"
         return headers
 
-    def install(self, version: str = "") -> None:
+    def install(self, version: str = "", _skip_confirm: bool = False) -> None:
         """Install or update the Minitrino library.
 
         If a library already exists at the destination, it is renamed
@@ -60,7 +62,7 @@ class LibraryManager:
 
         backup_path = ""
         if os.path.isdir(lib_dir):
-            if not self._ctx.effective_assume_yes:
+            if not _skip_confirm and not self._ctx.effective_assume_yes:
                 response = self._ctx.logger.prompt_msg(
                     f"The Minitrino library at {lib_dir} will be backed up "
                     f"and replaced with version {version}. Continue? [Y/N]"
@@ -85,6 +87,7 @@ class LibraryManager:
             raise
 
         self._prune_backups()
+        self._clear_decline_cache()
         self._ctx.logger.info("Library installation complete.")
 
     def _reserve_backup_path(self) -> str:
@@ -196,41 +199,105 @@ class LibraryManager:
         with tarfile.open(tarball_path, "r:gz") as tar:
             tar.extractall(path=extract_dir, filter="fully_trusted")
 
-    def auto_install_or_update(self) -> None:
-        """Automatically install or update Minitrino libraries to match the CLI version.
+    def _decline_cache_path(self) -> str:
+        return os.path.join(self._ctx.minitrino_user_dir, "lib_sync_state.json")
 
-        This method checks if the Minitrino library is installed and if its version
-        matches the CLI version. If not installed, it will automatically install the
-        library. If versions don't match, it will prompt the user to update.
+    def _read_decline_cache(self) -> dict | None:
+        try:
+            with open(self._decline_cache_path()) as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            return None
+
+    def _write_decline_cache(self, cli_ver: str, lib_ver: str) -> None:
+        payload = {
+            "declined_at": datetime.now(timezone.utc).isoformat(),
+            "cli_ver": cli_ver,
+            "lib_ver": lib_ver,
+        }
+        with open(self._decline_cache_path(), "w") as f:
+            json.dump(payload, f)
+
+    def _decline_is_fresh(self, cache: dict, ttl_hours: int = 24) -> bool:
+        try:
+            declined_at = datetime.fromisoformat(cache["declined_at"])
+            age = datetime.now(timezone.utc) - declined_at
+            return age.total_seconds() < ttl_hours * 3600
+        except (KeyError, ValueError, TypeError):
+            return False
+
+    def _clear_decline_cache(self) -> None:
+        with contextlib.suppress(FileNotFoundError):
+            os.unlink(self._decline_cache_path())
+
+    def auto_install_or_update(self) -> None:
+        """Check CLI/library version compatibility and auto-sync if needed.
+
+        State machine:
+        - Not installed → prompt (default Y). No → cache decline, raise UserError.
+        - Installed, versions match → no-op (debug log).
+        - Installed, mismatch, assume_yes → auto-install.
+        - Installed, mismatch, fresh decline cache → skip prompt, debug note.
+        - Installed, mismatch, stale/no cache → prompt. Yes → install; No → cache, warn.
         """
         cli_version = utils.cli_ver()
-        library_version = utils.lib_ver(ctx=self._ctx, lib_path=self._ctx.lib_dir)
+        lib_version = utils.lib_ver(ctx=self._ctx, lib_path=self._ctx.lib_dir)
 
-        if library_version == "NOT INSTALLED":
-            self._ctx.logger.warn(
-                "Minitrino library is not installed. Installing Minitrino libraries... "
-            )
-            self.install(version=cli_version)
-        elif cli_version != library_version:
-            response = self._ctx.logger.prompt_msg(
-                f"The current CLI version is {cli_version} which does not match "
-                f"the installed library version {library_version}. "
-                f"Install library version {cli_version}? [Y/N]"
-            )
-            if utils.validate_yes(response):
+        if lib_version == "NOT INSTALLED":
+            if self._ctx.effective_assume_yes:
                 self._ctx.logger.info(
-                    f"Overwriting existing Minitrino library to version {cli_version}"
+                    f"Library not installed. Auto-installing version {cli_version}..."
                 )
                 self.install(version=cli_version)
+                return
+            response = self._ctx.logger.prompt_msg(
+                f"The Minitrino library is not installed. Install version "
+                f"{cli_version} to "
+                f"{self._ctx.minitrino_user_dir}/lib? [Y/N]"
+            )
+            if utils.validate_yes(response):
+                self.install(version=cli_version)
             else:
-                self._ctx.logger.warn(
-                    "It is highly recommended to use matching CLI and library versions."
-                    " Mismatched versions are likely to cause errors."
-                    " To install the library manually, run `minitrino lib-install`."
+                self._write_decline_cache(cli_version, lib_version)
+                raise UserError(
+                    "The Minitrino library is required for this operation.",
+                    "Run 'minitrino lib-install' to install it manually.",
                 )
-        else:
+            return
+
+        if cli_version == lib_version:
             self._ctx.logger.debug(
                 "CLI and library versions match. No action required."
+            )
+            return
+
+        if self._ctx.effective_assume_yes:
+            self._ctx.logger.info(
+                f"Version mismatch (CLI {cli_version} vs lib "
+                f"{lib_version}). Auto-syncing library..."
+            )
+            self.install(version=cli_version, _skip_confirm=True)
+            return
+
+        cache = self._read_decline_cache()
+        if cache and self._decline_is_fresh(cache):
+            self._ctx.logger.debug(
+                f"Library sync declined recently (CLI {cli_version} vs "
+                f"lib {lib_version}). Skipping prompt."
+            )
+            return
+
+        response = self._ctx.logger.prompt_msg(
+            f"CLI version {cli_version} does not match library version "
+            f"{lib_version}. Sync library to {cli_version}? [Y/N]"
+        )
+        if utils.validate_yes(response):
+            self.install(version=cli_version, _skip_confirm=True)
+        else:
+            self._write_decline_cache(cli_version, lib_version)
+            self._ctx.logger.warn(
+                "Mismatched CLI and library versions may cause errors. "
+                "Run 'minitrino lib-install' to sync manually."
             )
 
     def _cleanup(

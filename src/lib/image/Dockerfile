@@ -2,8 +2,11 @@ ARG CLUSTER_VER
 ARG CLUSTER_DIST
 ARG SERVICE_USER
 ARG UBUNTU_VER=22.04
+ARG DIST_SOURCE=download
 
-FROM ubuntu:${UBUNTU_VER} AS tarball
+FROM scratch AS local-dist
+
+FROM ubuntu:${UBUNTU_VER} AS tarball-download
 
 ARG CLUSTER_VER
 ARG CLUSTER_DIST
@@ -14,6 +17,18 @@ RUN apt-get -y update && apt-get install -y --no-install-recommends \
         ca-certificates \
         python3 && \
     python3 /tmp/download_tarball.py ${CLUSTER_VER} ${CLUSTER_DIST}
+
+FROM ubuntu:${UBUNTU_VER} AS tarball-local
+
+ARG CLUSTER_DIST
+
+RUN apt-get -y update && apt-get install -y --no-install-recommends python3 && \
+    rm -rf /var/lib/apt/lists/*
+RUN mkdir -p /usr/lib/${CLUSTER_DIST}
+COPY --from=local-dist / /usr/lib/${CLUSTER_DIST}
+
+# hadolint ignore=DL3006
+FROM tarball-${DIST_SOURCE} AS tarball
 
 FROM tarball AS pruned
 

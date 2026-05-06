@@ -4,11 +4,15 @@ services:
   minitrino:
     build:
       context: ./image/
+      additional_contexts:
+        local-dist: ${LOCAL_DIST_CONTEXT:-./image/}
       args:
         UBUNTU_VER: ${UBUNTU_VER:-22.04}
         CLUSTER_VER: ${CLUSTER_VER:-479}
         CLUSTER_DIST: ${CLUSTER_DIST:-trino}
         SERVICE_USER: ${SERVICE_USER:-trino}
+        DIST_SOURCE: ${DIST_SOURCE:-download}
+        KEEP_PLUGINS: ${KEEP_PLUGINS:-}
       labels:
         - org.minitrino.root=true
         - org.minitrino.module.minitrino=true

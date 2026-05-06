@@ -41,6 +41,18 @@ from minitrino.core.context import MinitrinoContext
     default=False,
     help="Disables cluster rollback if provisioning fails.",
 )
+@click.option(
+    "-s",
+    "--source-code",
+    "source_code",
+    default=None,
+    type=click.Path(exists=True, file_okay=False, resolve_path=True),
+    help=(
+        "Path to a local Trino or Starburst source repo (or direct "
+        "distribution directory). Builds the image from local Maven "
+        "output instead of downloading a published tarball."
+    ),
+)
 @utils.exception_handler
 @utils.pass_environment()
 def cli(
@@ -49,6 +61,7 @@ def cli(
     image: str,
     workers: int,
     no_rollback: bool,
+    source_code: str | None,
 ) -> None:
     """Provision the cluster and environment dependencies.
 
@@ -62,6 +75,8 @@ def cli(
         Number of cluster workers to provision.
     no_rollback : bool
         If True, disables rollback on failure.
+    source_code : str or None
+        Path to a local source repository or distribution directory.
 
     Notes
     -----
@@ -72,4 +87,4 @@ def cli(
     """
     ctx.initialize()
     modules_list = list(modules)
-    ctx.cluster.ops.provision(modules_list, image, workers, no_rollback)
+    ctx.cluster.ops.provision(modules_list, image, workers, no_rollback, source_code)

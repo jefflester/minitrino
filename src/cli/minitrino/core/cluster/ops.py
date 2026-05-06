@@ -73,6 +73,7 @@ class ClusterOperations:
         image: str,
         workers: int,
         no_rollback: bool,
+        source_code: str | None = None,
     ) -> None:
         """Provision the cluster and environment dependencies.
 
@@ -89,6 +90,9 @@ class ClusterOperations:
             Number of cluster workers to provision.
         no_rollback : bool
             If True, disables rollback on failure.
+        source_code : str or None, optional
+            Path to a local source repository or distribution
+            directory.
 
         Notes
         -----
@@ -99,7 +103,7 @@ class ClusterOperations:
         - Dependent clusters are automatically provisioned after the
           primary cluster is launched.
         """
-        self._provisioner.provision(modules, image, workers, no_rollback)
+        self._provisioner.provision(modules, image, workers, no_rollback, source_code)
 
     def reconcile_workers(self, workers: int = 0) -> None:
         """Reconcile the number of workers in the cluster.

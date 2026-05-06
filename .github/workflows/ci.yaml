@@ -179,6 +179,7 @@ jobs:
               --ignore=src/tests/cli/integration_tests/test_cmd_provision.py
               --ignore=src/tests/cli/integration_tests/test_cmd_snapshot.py
               --ignore=src/tests/cli/integration_tests/test_cmd_remove.py
+              --ignore=src/tests/cli/integration_tests/test_source_build.py
     steps:
       - name: Check out code
         uses: actions/checkout@v6

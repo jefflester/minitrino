@@ -46,6 +46,7 @@ class ClusterProvisioner:
         self.image: str = "trino"
         self.workers: int = 0
         self.no_rollback: bool = False
+        self.source_code: str | None = None
         self.build: bool = False
         self._captured_container_logs: str = ""  # Store container logs before rollback
 
@@ -58,6 +59,7 @@ class ClusterProvisioner:
         image: str,
         workers: int,
         no_rollback: bool,
+        source_code: str | None = None,
     ) -> None:
         """Provision the cluster and provided modules.
 
@@ -80,8 +82,14 @@ class ClusterProvisioner:
             self.image = image
             self.workers = workers
             self.no_rollback = no_rollback
+            self.source_code = source_code
             self._set_license()
+
+            if self.source_code:
+                self._resolve_source_code()
+
             self._set_distribution()
+
             self.build = self._determine_build()
 
             for module in self.modules:
@@ -148,7 +156,7 @@ class ClusterProvisioner:
                     f.write("No container logs were captured.\n")
             raise MinitrinoError(
                 f"{str(e)}\nFull provision log written to {crashdump}"
-            ) from e
+            ) from None
 
     def _runner(self, cluster: dict | None = None) -> None:
         """Execute the provisioning sequence for a cluster and modules.
@@ -314,6 +322,32 @@ class ClusterProvisioner:
         with self._ctx.logger.spinner(f"Provisioning {self.workers} workers..."):
             self._ctx.cluster.ops.reconcile_workers(self.workers)
             self._ctx.logger.info(f"{self.workers} workers provisioned successfully.")
+
+    def _resolve_source_code(self) -> None:
+        """Resolve the source code path and stage the distribution."""
+        from minitrino.core.cluster.source import resolve_and_stage
+
+        if self._ctx.env.get("KEEP_PLUGINS") is None:
+            self._ctx.env["KEEP_PLUGINS"] = "ALL"
+
+        source_build = resolve_and_stage(
+            self.source_code,
+            self.image,
+            self._ctx.env,
+            self._ctx.minitrino_user_dir,
+            self._ctx.lib_dir,
+            self._ctx.logger,
+        )
+        if source_build.distribution != self.image:
+            self.image = source_build.distribution
+
+        self._ctx.env.update(
+            {
+                "CLUSTER_VER": source_build.version,
+                "LOCAL_DIST_CONTEXT": source_build.staging_dir,
+                "DIST_SOURCE": "local",
+            }
+        )
 
     def _set_distribution(self) -> None:
         """Determine the cluster distribution.
@@ -753,7 +787,10 @@ class ClusterProvisioner:
 
     def _determine_build(self) -> bool:
         """Determine if the image should be built."""
-        # Check if image source has changed
+        if self.source_code:
+            self._ctx.logger.debug("--source-code flag is set. Forcing image build.")
+            return True
+
         if self._image_src_changed():
             self._ctx.logger.debug(
                 "Image source has changed. "
@@ -843,6 +880,11 @@ class ClusterProvisioner:
 
     def _record_image_src_checksum(self) -> None:
         """Record the image source checksum."""
+        if self.source_code:
+            self._ctx.logger.debug(
+                "Skipping image source checksum recording for --source-code build."
+            )
+            return
         checksum = self._image_src_checksum
         self._ctx.logger.debug(
             f"Recording Minitrino image source checksum: "

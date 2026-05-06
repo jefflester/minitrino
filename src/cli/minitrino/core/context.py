@@ -103,7 +103,7 @@ class MinitrinoContext:
         self.cmd_executor: CommandExecutor | None = None
         self.docker_client: docker.DockerClient | None = None
         self.api_client: docker.APIClient | None = None
-        self.lib_manager = LibraryManager(self)
+        self.library_manager = LibraryManager(self)
 
         self.user_home_dir = os.path.expanduser("~")
         self.minitrino_user_dir = self._handle_minitrino_user_dir()

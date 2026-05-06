@@ -110,7 +110,6 @@ def cli(
         If True, do not scrub sensitive data from user config file.
     """
     ctx.initialize()
-    utils.check_lib(ctx)
 
     if directory and not os.path.isdir(directory):
         raise UserError(

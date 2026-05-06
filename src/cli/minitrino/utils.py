@@ -170,21 +170,6 @@ def check_daemon(docker_client: Any) -> None:
         ) from e
 
 
-def check_lib(ctx: MinitrinoContext) -> None:
-    """Check if a Minitrino library exists.
-
-    Parameters
-    ----------
-    ctx : MinitrinoContext
-        Context object containing library directory information.
-    """
-    if not ctx:
-        raise ValueError("MinitrinoContext must be provided for library version check")
-
-    if not ctx.lib_dir:
-        ctx.library_manager.auto_install_or_update()
-
-
 def container_user_and_id(
     ctx: MinitrinoContext | None = None,
     container: Container | MinitrinoContainer | str = "",

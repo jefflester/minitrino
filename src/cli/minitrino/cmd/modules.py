@@ -83,7 +83,6 @@ def cli(
     for module in modules:
         ctx.modules.validate_module_name(module)
 
-    utils.check_lib(ctx)
     valid_types = {MODULE_ADMIN, MODULE_CATALOG, MODULE_SECURITY}
     if module_type and module_type not in valid_types:
         raise UserError(

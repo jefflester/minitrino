@@ -101,7 +101,6 @@ class ClusterProvisioner:
                 )
 
             utils.check_daemon(self._ctx.docker_client)
-            utils.check_lib(self._ctx)
             self._ctx.cluster.validator.check_cluster_ver()
             self._ctx.modules.check_module_version_requirements(self.modules)
             self.modules = self._append_running_modules(self.modules)

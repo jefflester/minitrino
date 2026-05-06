@@ -21,6 +21,7 @@ ARG CLUSTER_DIST
 ARG KEEP_PLUGINS=""
 ENV KEEP_PLUGINS=${KEEP_PLUGINS}
 COPY ./src/scripts/prune_plugins.py /tmp/
+COPY ./src/scripts/plugin-removelist.txt /tmp/
 RUN python3 /tmp/prune_plugins.py ${CLUSTER_DIST}
 
 FROM ubuntu:${UBUNTU_VER} AS base

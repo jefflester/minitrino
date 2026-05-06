@@ -65,8 +65,8 @@ These variables provide fine-grained control over Minitrino's behavior:
   1800\)
 - `STARTUP_SELECT_RETRIES` - Number of retries for startup health check
   (default: 30)
-- `KEEP_PLUGINS` - Preserve plugin directory during provisioning (set to `true`
-  to enable)
+- `KEEP_PLUGINS` - Override plugin removal: set to `ALL` to keep all plugins, or
+  specify plugin names (comma/space-separated) to preserve from the removelist
 - `COMPOSE_BAKE` - Enable Docker Compose bake mode for debugging (internal use)
 
 All `__PORT_*` variables (e.g., `__PORT_MINITRINO`, `__PORT_POSTGRES`) are also

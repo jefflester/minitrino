@@ -1,15 +1,25 @@
+# Python
 Pipfile*
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+*.egg
+*.egg-info/
+.eggs/
+.installed.cfg
+.python-version
+MANIFEST
+*.manifest
+*.spec
+
+# Build & Distribution
 build/
 develop-eggs/
 dist/
 downloads/
 eggs/
-.eggs/
 lib64/
 parts/
 sdist/
@@ -17,46 +27,57 @@ var/
 wheels/
 pip-wheel-metadata/
 share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-*.manifest
-*.spec
-pip-log.txt
-pip-delete-this-directory.txt
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-.pytest_cache/
+
+# Virtual Environments
 .venv
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
-.firebase
+
+# Testing & Coverage
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+.hypothesis/
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+
+# Type Checking & Linting
+.mypy_cache
+
+# Logs
 logs
 *.log
+pip-log.txt
+pip-delete-this-directory.txt
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-*vscode*
-*DS_Store
-*todo.txt*
-*minio.sys*
-*.tar.gz
-.mypy_cache
+
+# Documentation
 docs/_build/**
+
+# Node
 node_modules
+
+# macOS
+*DS_Store
+
+# IDEs & Editors
+*vscode*
+
+# Project-Specific
+.firebase
 .local
 .windsurf
-.python-version
+*.tar.gz
+*todo.txt*
+*minio.sys*

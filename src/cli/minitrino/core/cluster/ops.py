@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import concurrent.futures
+import io
 import re
+import tarfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import TYPE_CHECKING
 
@@ -171,20 +173,24 @@ class ClusterOperations:
         fq_container_name = self._cluster.resource.fq_container_name("minitrino")
         coordinator = self._cluster.resource.container(fq_container_name)
 
-        # Create tar archive of coordinator's /etc/${CLUSTER_DIST};
-        user = self._ctx.env.get("SERVICE_USER")
-        tar_path = "/tmp/${CLUSTER_DIST}.tar.gz"
-        self._ctx.cmd_executor.execute(
-            ["rm -rf /tmp/${CLUSTER_DIST}_copy"],
-            ["rm /tmp/${CLUSTER_DIST}.tar.gz"],
-            ["cp -a /etc/${CLUSTER_DIST} /tmp/${CLUSTER_DIST}_copy"],
-            ["rm /tmp/${CLUSTER_DIST}_copy/config.properties"],
-            ["rm /tmp/${CLUSTER_DIST}_copy/jvm.config"],
-            [f"tar czf {tar_path} -C /tmp/${{CLUSTER_DIST}}_copy ."],
-            ["rm -rf /tmp/${CLUSTER_DIST}_copy"],
-            container=coordinator,
-            user=user,
-        )
+        # Pull /etc/<dist> from the coordinator as a tar stream, drop the
+        # files that must not be inherited by workers (config.properties and
+        # jvm.config), and rebuild the payload in memory. Avoids shelling out
+        # into the coordinator and leaves no residual /tmp state behind.
+        src_bits, _ = coordinator.get_archive(f"/etc/{dist}")
+        src_buf = io.BytesIO(b"".join(src_bits))
+        exclude = {f"{dist}/config.properties", f"{dist}/jvm.config"}
+        out_buf = io.BytesIO()
+        with (
+            tarfile.open(fileobj=src_buf, mode="r|") as src_tar,
+            tarfile.open(fileobj=out_buf, mode="w") as out_tar,
+        ):
+            for member in src_tar:
+                if member.name in exclude:
+                    continue
+                fileobj = src_tar.extractfile(member) if member.isfile() else None
+                out_tar.addfile(member, fileobj)
+        etc_payload = out_buf.getvalue()
 
         def _provision_worker(i: int) -> None:
             if shutdown_event.is_set():
@@ -237,20 +243,7 @@ class ClusterOperations:
                     f"in network '{network_name}'."
                 )
 
-            # Copy the tar archive from the coordinator container
-            bits, _ = coordinator.get_archive(
-                f"/tmp/{self._ctx.env.get('CLUSTER_DIST')}.tar.gz"
-            )
-            tar_stream = b"".join(bits)
-
-            worker.put_archive("/tmp", tar_stream)
-
-            # Extract the tar archive into the new worker container
-            self._ctx.cmd_executor.execute(
-                [f"tar xzf {tar_path} -C /etc/${{CLUSTER_DIST}}"],
-                container=worker,
-                user=user,
-            )
+            worker.put_archive("/etc", etc_payload)
             self._ctx.logger.debug(f"Copied {ETC_DIR} to '{fq_worker_name}'")
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
@@ -267,13 +260,6 @@ class ClusterOperations:
                     future.result()
                 except Exception as exc:
                     raise MinitrinoError("Worker provisioning failed") from exc
-
-        # Remove the tar archive
-        self._ctx.cmd_executor.execute(
-            ["rm /tmp/${CLUSTER_DIST}.tar.gz"],
-            container=coordinator,
-            user=user,
-        )
 
     def down(self, sig_kill: bool = False, keep: bool = False) -> None:
         """Stop and optionally remove all containers from the cluster.

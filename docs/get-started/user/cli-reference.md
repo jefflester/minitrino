@@ -13,6 +13,8 @@ The following options are available for all Minitrino commands:
 - `-e, --env` - Set environment variables (format: `KEY=VALUE`)
 - `-c, --cluster` - Specify the cluster name (use `'*'` or `'all'` for all
   clusters)
+- `-y, --yes` - Assume "yes" for all interactive prompts (equivalent to
+  `MINITRINO_ASSUME_YES=1`)
 
 ## Commands
 

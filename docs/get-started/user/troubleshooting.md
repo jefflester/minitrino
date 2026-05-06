@@ -481,25 +481,26 @@ ______________________________________________________________________
 
 ### Library Version Mismatch
 
-**Symptom:** Error message "Library version mismatch" or commands fail with
-version errors.
+**Symptom:** Minitrino prompts to sync the library on every command, or commands
+fail with version errors.
 
 **Detection:**
 
 ```sh
 minitrino version
-# CLI Version: 3.0.0
-# Library Version: 2.2.4  ← Mismatch!
+# CLI Version: 3.1.0
+# Library Version: 3.0.0  ← Mismatch!
 ```
 
-**Solution:** Install the matching library version:
+**Solution:** Accept the automatic sync prompt, or install the matching library
+manually:
 
 ```sh
-minitrino -v lib-install
+minitrino lib-install
 ```
 
-**Note:** CLI and library versions must match. Always run `lib-install` after
-upgrading the CLI.
+If you previously declined and the 24-hour prompt cache hasn't expired, running
+`lib-install` manually will sync immediately and clear the cache.
 
 ______________________________________________________________________
 

@@ -93,8 +93,8 @@ COPY --from=java-builder --chown=${SERVICE_USER}:${SERVICE_GROUP} /tmp/tls-jvm /
 ENV JAVA_HOME="/opt/java"
 ENV PATH="${JAVA_HOME}/bin:${PATH}"
 
-COPY ./src/scripts /tmp/
-COPY ./src/data /tmp/
+COPY ./scripts /tmp/
+COPY ./data /tmp/
 # Use --chown to set ownership during copy, avoiding duplication in RUN layer
 COPY --chown=${SERVICE_USER}:${SERVICE_GROUP} ./etc/app-config /etc/${CLUSTER_DIST}
 COPY --from=pruned --chown=${SERVICE_USER}:${SERVICE_GROUP} /usr/lib/${CLUSTER_DIST} /usr/lib/${CLUSTER_DIST}

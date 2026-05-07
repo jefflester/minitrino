@@ -117,7 +117,7 @@ class TestCommandExecutor:
 
         assert len(results) == 1
         assert results[0].exit_code == 1
-        assert results[0].error == "Command failed"
+        assert str(results[0].error) == "Command failed"
 
     @patch("minitrino.exec.cmd.HostCommandExecutor")
     def test_execute_with_kwargs(self, mock_host_executor_class):

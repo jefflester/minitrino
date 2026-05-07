@@ -14,7 +14,11 @@ Tarball Name
 Unpack Dir
     trino-server-{TRINO_VER}
 e.g.
-    trino-server-438.tar.gz
+    trino-server-479.tar.gz
+
+Source URL
+    Versions >= 477: GitHub releases (github.com/trinodb/trino/releases/download)
+    Versions <= 476: Maven Central (repo1.maven.org/maven2/io/trino/trino-server)
 
 Starburst
 ---------
@@ -58,7 +62,9 @@ import time
 import urllib.request
 
 LOG_PREFIX = "[download_tarball]"
-TRINO_URL = "https://repo1.maven.org/maven2/io/trino/trino-server"
+TRINO_MAVEN_URL = "https://repo1.maven.org/maven2/io/trino/trino-server"
+TRINO_GITHUB_URL = "https://github.com/trinodb/trino/releases/download"
+TRINO_GITHUB_MIN_VER = 477
 STARBURST_URL = "https://s3.us-east-2.amazonaws.com/software.starburstdata.net"
 
 
@@ -106,7 +112,12 @@ def resolve_tarball_info(
     if cluster_dist == "trino":
         trino_ver = cluster_ver
         tar_name = f"trino-server-{trino_ver}.tar.gz"
-        url = f"{TRINO_URL}/{trino_ver}/{tar_name}"
+        base_url = (
+            TRINO_GITHUB_URL
+            if int(trino_ver) >= TRINO_GITHUB_MIN_VER
+            else TRINO_MAVEN_URL
+        )
+        url = f"{base_url}/{trino_ver}/{tar_name}"
         unpack_dir = f"trino-server-{trino_ver}"
     elif cluster_dist == "starburst":
         trino_ver = cluster_ver[:3]

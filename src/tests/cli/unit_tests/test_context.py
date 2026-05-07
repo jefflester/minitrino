@@ -332,55 +332,44 @@ class TestMinitrinoContext:
         # Should not raise
         ctx._try_parse_library_env()
 
-    @patch("minitrino.context.utils")
-    def test_try_compare_versions_match(self, mock_utils):
-        """Test version comparison when versions match."""
+    def test_try_compare_versions_match(self):
+        """Test version comparison when auto_install_or_update succeeds."""
         ctx = MinitrinoContext()
         ctx.logger = MagicMock()
-        ctx._lib_safe = True
-        ctx._lib_dir = "/lib"
-
-        mock_utils.cli_ver.return_value = "1.0.0"
-        mock_utils.lib_ver.return_value = "1.0.0"
+        ctx.library_manager = MagicMock()
+        ctx.library_manager.auto_install_or_update.return_value = None
 
         ctx._try_compare_versions()
 
         ctx.logger.warn.assert_not_called()
 
-    @patch("minitrino.context.utils")
-    def test_try_compare_versions_mismatch(self, mock_utils):
-        """Test version comparison when versions differ."""
+    def test_try_compare_versions_mismatch(self):
+        """Test that UserError from auto_install_or_update propagates."""
         ctx = MinitrinoContext()
         ctx.logger = MagicMock()
-        ctx._lib_safe = True
-        ctx._lib_dir = "/lib"
+        ctx.library_manager = MagicMock()
+        ctx.library_manager.auto_install_or_update.side_effect = UserError(
+            "Library not installed"
+        )
 
-        mock_utils.cli_ver.return_value = "1.0.0"
-        mock_utils.lib_ver.return_value = "2.0.0"
-
-        ctx._try_compare_versions()
-
-        ctx.logger.warn.assert_called_once()
-        assert "do not match" in ctx.logger.warn.call_args[0][0]
+        with pytest.raises(UserError):
+            ctx._try_compare_versions()
 
     def test_try_compare_versions_no_library(self):
-        """Test that version comparison gracefully handles missing library.
+        """Test that non-UserError exceptions from auto_install_or_update are swallowed.
 
         This is critical for commands like lib-install and config that need to run
         before a library is installed.
         """
         ctx = MinitrinoContext()
         ctx.logger = MagicMock()
-        ctx._lib_safe = True
+        ctx.library_manager = MagicMock()
+        ctx.library_manager.auto_install_or_update.side_effect = RuntimeError(
+            "No library installed"
+        )
 
-        # Mock _get_lib_dir to raise UserError (simulating no library)
-        with patch.object(
-            ctx, "_get_lib_dir", side_effect=UserError("No library installed")
-        ):
-            # Should not raise - gracefully handles missing library
-            ctx._try_compare_versions()
+        ctx._try_compare_versions()
 
-        # Should not log warning since it silently catches the exception
         ctx.logger.warn.assert_not_called()
 
     @patch("minitrino.context.Cluster")

@@ -26,7 +26,7 @@ fi
 echo "🔍 Checking for unused code with vulture..."
 
 # Run vulture on source directories, excluding tests and generated files
-$VULTURE src/cli/minitrino/ \
+$VULTURE src/minitrino/ \
     --exclude src/tests/ \
     --min-confidence 80 \
     --sort-by-size || true

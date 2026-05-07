@@ -7,6 +7,7 @@ from time import monotonic, sleep
 
 import click
 import jsonschema
+
 from minitrino.settings import DEFAULT_CLUSTER_VER
 
 _src_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))

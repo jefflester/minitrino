@@ -7,7 +7,7 @@ cd /docs
 
 rm -rf api
 
-sphinx-apidoc -o api ../src/cli/minitrino -f -e --tocfile index
+sphinx-apidoc -o api ../src/minitrino -f -e --tocfile index
 
 # Fix the title and underline in generated api/index.rst
 sed -i '1s/.*/API Reference/' api/index.rst

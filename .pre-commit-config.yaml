@@ -108,7 +108,7 @@ repos:
     hooks:
       - id: bandit
         name: bandit (informational)
-        entry: bash -c 'venv/bin/bandit -r src/cli/ --skip B101,B603 -q || true'
+        entry: bash -c 'venv/bin/bandit -r src/minitrino/ --skip B101,B603 -q || true'
         language: system
         types: [python]
         pass_filenames: false
@@ -202,7 +202,7 @@ repos:
         name: Sync cluster version across files
         entry: python .precommit/sync_cluster_version.py
         language: python
-        files: ^src/lib/minitrino.env|src/lib/docker-compose.yaml|src/cli/minitrino/settings.py
+        files: ^src/lib/minitrino.env|src/lib/docker-compose.yaml|src/minitrino/settings.py
 
 
   # ============================================================================

@@ -132,4 +132,4 @@ pep621_dev_dependency_groups = ["dev", "docs"]
 known_first_party = ["minitrino", "tests"]
 
 [tool.setuptools]
-package-dir = {"" = "src/cli"}
+package-dir = {"" = "src"}

@@ -10,12 +10,12 @@ from docker import DockerClient
 from docker.models.images import Image, ImageCollection
 from docker.models.networks import NetworkCollection
 from docker.models.volumes import VolumeCollection
+
 from minitrino.settings import (
     COMPOSE_LABEL_KEY,
     MODULE_LABEL_KEY,
     ROOT_LABEL,
 )
-
 from tests import common
 from tests.cli.constants import (
     CLUSTER_NAME,

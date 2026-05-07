@@ -9,8 +9,8 @@ from collections.abc import Generator
 
 import docker
 import pytest
-from minitrino.shutdown import shutdown_event
 
+from minitrino.shutdown import shutdown_event
 from tests import common
 from tests.cli.constants import CLUSTER_NAME
 from tests.cli.integration_tests import utils

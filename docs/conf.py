@@ -98,7 +98,7 @@ minitrino remove --volumes --module ${module}
 
 # -- Paths
 # -------------------------------------------------------------------
-sys.path.insert(0, os.path.abspath("../src/cli"))
+sys.path.insert(0, os.path.abspath("../src"))
 
 
 # -- Autodoc Options
@@ -173,7 +173,7 @@ def linkcode_resolve(domain, info):
         return None
     filename = info["module"].replace(".", "/")
     tag = release
-    return f"https://github.com/jefflester/minitrino/blob/{tag}/src/cli/{filename}.py"
+    return f"https://github.com/jefflester/minitrino/blob/{tag}/src/{filename}.py"
 
 
 # -- Misc. options

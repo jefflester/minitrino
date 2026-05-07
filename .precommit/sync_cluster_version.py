@@ -33,7 +33,7 @@ def update_compose_yaml(version: str) -> None:
 
 def update_settings(version: str) -> None:
     """Update settings.py with the canonical version."""
-    settings_path = Path("src/cli/minitrino/settings.py")
+    settings_path = Path("src/minitrino/settings.py")
     settings_text = settings_path.read_text()
     settings_text = re.sub(
         r"DEFAULT_CLUSTER_VER\s*=\s*\d+",

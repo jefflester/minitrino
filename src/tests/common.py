@@ -15,9 +15,10 @@ from time import sleep
 import docker
 from click.testing import CliRunner, Result
 from docker.models.containers import Container
+
 from minitrino.ansi import strip_ansi
 from minitrino.cli import cli
-from minitrino.core.docker.socket import get_docker_context_name, resolve_docker_socket
+from minitrino.docker.socket import get_docker_context_name, resolve_docker_socket
 from minitrino.settings import ROOT_LABEL
 
 USER_HOME_DIR = os.path.expanduser("~")

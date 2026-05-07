@@ -1,12 +1,12 @@
 from dataclasses import dataclass
 
 import pytest
+
 from minitrino.settings import (
     MODULE_ADMIN,
     MODULE_CATALOG,
     MODULE_SECURITY,
 )
-
 from tests import common
 from tests.cli.integration_tests import utils
 

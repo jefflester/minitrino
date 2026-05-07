@@ -2,8 +2,8 @@ from dataclasses import dataclass
 
 import pytest
 from click.testing import Result
-from minitrino.settings import DEFAULT_CLUSTER_VER, ETC_DIR, MIN_CLUSTER_VER
 
+from minitrino.settings import DEFAULT_CLUSTER_VER, ETC_DIR, MIN_CLUSTER_VER
 from tests import common
 from tests.cli.constants import (
     CLUSTER_NAME,
@@ -773,9 +773,9 @@ TEST_DUPLICATE_CONFIG_PROPS_MSG = "Test duplicate configuration properties warni
 @pytest.mark.parametrize("log_msg", [TEST_DUPLICATE_CONFIG_PROPS_MSG], indirect=True)
 def test_duplicate_config_props() -> None:
     """Ensure that duplicate config properties are logged as a warning to the user."""
-    from minitrino.core.cluster.cluster import Cluster
-    from minitrino.core.cluster.validator import ClusterValidator
-    from minitrino.core.context import MinitrinoContext
+    from minitrino.cluster.cluster import Cluster
+    from minitrino.cluster.validator import ClusterValidator
+    from minitrino.context import MinitrinoContext
 
     ctx = MinitrinoContext()
     ctx.cluster_name = CLUSTER_NAME

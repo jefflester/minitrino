@@ -1,4 +1,4 @@
-"""Tests for the LibraryManager class in minitrino.core.library.
+"""Tests for the LibraryManager class in minitrino.library.
 
 This test suite verifies the functionality of the LibraryManager class, including
 library installation, version management, and error handling.
@@ -9,14 +9,15 @@ from datetime import datetime, timezone
 from unittest.mock import MagicMock, call, patch
 
 import pytest
-from minitrino.core.errors import MinitrinoError, UserError
-from minitrino.core.library import LibraryManager
+
+from minitrino.errors import MinitrinoError, UserError
+from minitrino.library import LibraryManager
 
 
 @pytest.fixture
 def mock_ctx(tmp_path, mock_logger):
     """Create a mock MinitrinoContext with common attributes."""
-    from minitrino.core.context import MinitrinoContext
+    from minitrino.context import MinitrinoContext
 
     ctx = MagicMock(spec=MinitrinoContext)
     ctx.logger = mock_logger
@@ -39,9 +40,9 @@ def library_manager(mock_ctx):
 class TestAutoInstallOrUpdate:
     """Tests for the auto_install_or_update method."""
 
-    @patch("minitrino.core.library.utils.cli_ver", return_value="1.0.0")
-    @patch("minitrino.core.library.utils.lib_ver")
-    @patch("minitrino.core.library.utils.validate_yes", return_value=True)
+    @patch("minitrino.library.utils.cli_ver", return_value="1.0.0")
+    @patch("minitrino.library.utils.lib_ver")
+    @patch("minitrino.library.utils.validate_yes", return_value=True)
     def test_not_installed_accept(
         self, mock_validate, mock_lib_ver, mock_cli_ver, library_manager, mock_ctx
     ):
@@ -54,9 +55,9 @@ class TestAutoInstallOrUpdate:
         mock_ctx.logger.prompt_msg.assert_called_once()
         library_manager.install.assert_called_once_with(version="1.0.0")
 
-    @patch("minitrino.core.library.utils.cli_ver", return_value="1.0.0")
-    @patch("minitrino.core.library.utils.lib_ver")
-    @patch("minitrino.core.library.utils.validate_yes", return_value=False)
+    @patch("minitrino.library.utils.cli_ver", return_value="1.0.0")
+    @patch("minitrino.library.utils.lib_ver")
+    @patch("minitrino.library.utils.validate_yes", return_value=False)
     def test_not_installed_decline_raises(
         self, mock_validate, mock_lib_ver, mock_cli_ver, library_manager, mock_ctx
     ):
@@ -73,8 +74,8 @@ class TestAutoInstallOrUpdate:
             "1.0.0", "NOT INSTALLED"
         )
 
-    @patch("minitrino.core.library.utils.cli_ver", return_value="1.0.0")
-    @patch("minitrino.core.library.utils.lib_ver", return_value="1.0.0")
+    @patch("minitrino.library.utils.cli_ver", return_value="1.0.0")
+    @patch("minitrino.library.utils.lib_ver", return_value="1.0.0")
     def test_versions_match(
         self, mock_lib_ver, mock_cli_ver, library_manager, mock_ctx
     ):
@@ -88,9 +89,9 @@ class TestAutoInstallOrUpdate:
             "CLI and library versions match. No action required."
         )
 
-    @patch("minitrino.core.library.utils.cli_ver", return_value="1.1.0")
-    @patch("minitrino.core.library.utils.lib_ver")
-    @patch("minitrino.core.library.utils.validate_yes", return_value=True)
+    @patch("minitrino.library.utils.cli_ver", return_value="1.1.0")
+    @patch("minitrino.library.utils.lib_ver")
+    @patch("minitrino.library.utils.validate_yes", return_value=True)
     def test_version_mismatch_upgrade(
         self, mock_validate, mock_lib_ver, mock_cli_ver, library_manager, mock_ctx
     ):
@@ -106,9 +107,9 @@ class TestAutoInstallOrUpdate:
             version="1.1.0", _skip_confirm=True
         )
 
-    @patch("minitrino.core.library.utils.cli_ver", return_value="1.1.0")
-    @patch("minitrino.core.library.utils.lib_ver")
-    @patch("minitrino.core.library.utils.validate_yes", return_value=False)
+    @patch("minitrino.library.utils.cli_ver", return_value="1.1.0")
+    @patch("minitrino.library.utils.lib_ver")
+    @patch("minitrino.library.utils.validate_yes", return_value=False)
     def test_version_mismatch_decline(
         self, mock_validate, mock_lib_ver, mock_cli_ver, library_manager, mock_ctx
     ):
@@ -129,8 +130,8 @@ class TestAutoInstallOrUpdate:
             in mock_ctx.logger.warn.call_args[0][0]
         )
 
-    @patch("minitrino.core.library.utils.cli_ver", return_value="1.1.0")
-    @patch("minitrino.core.library.utils.lib_ver")
+    @patch("minitrino.library.utils.cli_ver", return_value="1.1.0")
+    @patch("minitrino.library.utils.lib_ver")
     def test_mismatch_fresh_cache_skips_prompt(
         self, mock_lib_ver, mock_cli_ver, library_manager, mock_ctx
     ):
@@ -148,9 +149,9 @@ class TestAutoInstallOrUpdate:
         library_manager.install.assert_not_called()
         mock_ctx.logger.debug.assert_called_once()
 
-    @patch("minitrino.core.library.utils.cli_ver", return_value="1.1.0")
-    @patch("minitrino.core.library.utils.lib_ver")
-    @patch("minitrino.core.library.utils.validate_yes", return_value=True)
+    @patch("minitrino.library.utils.cli_ver", return_value="1.1.0")
+    @patch("minitrino.library.utils.lib_ver")
+    @patch("minitrino.library.utils.validate_yes", return_value=True)
     def test_mismatch_stale_cache_reprompts(
         self, mock_validate, mock_lib_ver, mock_cli_ver, library_manager, mock_ctx
     ):
@@ -169,8 +170,8 @@ class TestAutoInstallOrUpdate:
             version="1.1.0", _skip_confirm=True
         )
 
-    @patch("minitrino.core.library.utils.cli_ver", return_value="1.0.0")
-    @patch("minitrino.core.library.utils.lib_ver")
+    @patch("minitrino.library.utils.cli_ver", return_value="1.0.0")
+    @patch("minitrino.library.utils.lib_ver")
     def test_assume_yes_not_installed(
         self, mock_lib_ver, mock_cli_ver, library_manager, mock_ctx
     ):
@@ -184,8 +185,8 @@ class TestAutoInstallOrUpdate:
         mock_ctx.logger.prompt_msg.assert_not_called()
         library_manager.install.assert_called_once_with(version="1.0.0")
 
-    @patch("minitrino.core.library.utils.cli_ver", return_value="1.1.0")
-    @patch("minitrino.core.library.utils.lib_ver")
+    @patch("minitrino.library.utils.cli_ver", return_value="1.1.0")
+    @patch("minitrino.library.utils.lib_ver")
     def test_assume_yes_mismatch(
         self, mock_lib_ver, mock_cli_ver, library_manager, mock_ctx
     ):
@@ -246,7 +247,7 @@ class TestDeclineCache:
 class TestLibraryReleases:
     """Tests for library release management."""
 
-    @patch("minitrino.core.library.requests.get")
+    @patch("minitrino.library.requests.get")
     def test_list_releases_success(self, mock_get, library_manager):
         """Test successful listing of releases from GitHub."""
         mock_response = MagicMock()
@@ -262,7 +263,7 @@ class TestLibraryReleases:
         assert releases == ["0.9.0", "1.0.0", "1.1.0"]
         mock_get.assert_called_once()
 
-    @patch("minitrino.core.library.requests.get")
+    @patch("minitrino.library.requests.get")
     def test_list_releases_pagination(self, mock_get, library_manager):
         """Test that list_releases handles pagination correctly."""
         mock_response = MagicMock()
@@ -301,10 +302,10 @@ class TestLibraryValidation:
 class TestFileOperations:
     """Tests for file operations like download, extract, and cleanup."""
 
-    @patch("minitrino.core.library.LibraryManager._download_file")
-    @patch("minitrino.core.library.LibraryManager._extract_tarball")
-    @patch("minitrino.core.library.shutil.move")
-    @patch("minitrino.core.library.LibraryManager._cleanup")
+    @patch("minitrino.library.LibraryManager._download_file")
+    @patch("minitrino.library.LibraryManager._extract_tarball")
+    @patch("minitrino.library.shutil.move")
+    @patch("minitrino.library.LibraryManager._cleanup")
     @patch("os.path.isdir", return_value=False)
     def test_download_and_extract_success(
         self,
@@ -333,7 +334,7 @@ class TestFileOperations:
         mock_cleanup.assert_called_once_with(expected_tarball, f"minitrino-{version}")
 
     @patch("builtins.open")
-    @patch("minitrino.core.library.requests.get")
+    @patch("minitrino.library.requests.get")
     def test_download_file_success(self, mock_get, mock_open, library_manager):
         """Test successful file download."""
         mock_response = MagicMock()
@@ -423,7 +424,7 @@ class TestInstallBackups:
         """LibraryManager wired to the tmp-dir context, validate stubbed."""
         manager = LibraryManager(install_ctx)
         manager._ctx = install_ctx
-        manager.validate = MagicMock()
+        manager.validate = MagicMock()  # type: ignore[method-assign]
         return manager
 
     def _stub_download(self, manager, marker: str = "v"):

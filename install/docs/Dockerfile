@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Copy package files for installation
 COPY pyproject.toml /tmp/minitrino/
-COPY src/cli /tmp/minitrino/src/cli
+COPY src/minitrino /tmp/minitrino/src/minitrino
 
 # Install minitrino package with docs extras
 # This provides all main dependencies (docker, click, etc.) + Sphinx packages

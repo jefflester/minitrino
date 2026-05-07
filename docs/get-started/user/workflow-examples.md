@@ -17,6 +17,7 @@ that the tool is best suited for.
     - [Run Commands in Verbose Mode](#run-commands-in-verbose-mode)
     - [List Modules](#list-modules)
     - [Provision an Environment](#provision-an-environment)
+    - [Building from Local Source Code](#building-from-local-source-code)
     - [Access the UI](#access-the-ui)
     - [Worker Provisioning Overview](#worker-provisioning-overview)
     - [Modify Files in a Running Container](#modify-files-in-a-running-container)
@@ -259,7 +260,7 @@ minitrino -v -e CLUSTER_VER=${VER} provision -m postgres
 Provision with Starburst instead of Trino:
 
 ```sh
-minitrino -v -e IMAGE=starburst -e CLUSTER_VER=476-e provision -m postgres
+minitrino -v -e IMAGE=starburst -e CLUSTER_VER=479-e provision -m postgres
 ```
 
 Provision the `hive` catalog module with two worker nodes:
@@ -286,6 +287,63 @@ Provision multiple password authenticators in tandem:
 
 ```sh
 minitrino -v provision -m ldap -m password-file
+```
+
+### Building from Local Source Code
+
+Developers working on Trino or Starburst Enterprise can build the Minitrino
+image directly from their local Maven output using the `--source-code` (`-s`)
+flag. This avoids downloading a published tarball and enables fast
+edit-build-test cycles.
+
+**Prerequisites:** Run `mvn install -DskipTests` (or equivalent) in your source
+repository so that the distribution target directory exists.
+
+Provision from a local Starburst Enterprise build:
+
+```sh
+minitrino -v provision -s ~/repos/starburst-enterprise -m postgres
+```
+
+Provision from a local Trino build:
+
+```sh
+minitrino -v provision -s ~/repos/trino
+```
+
+You can also point directly to a distribution directory:
+
+```sh
+minitrino -v provision -s ~/repos/starburst-enterprise/core/starburst-enterprise/target/starburst-enterprise-479-e
+```
+
+The distribution type and version are auto-detected from the source path. If you
+need to override the image type, use `--image`:
+
+```sh
+minitrino -v provision -s ~/repos/starburst-enterprise -i starburst -m hive
+```
+
+After an incremental Maven build, reprovisioning picks up only the changed JARs:
+
+```sh
+# Edit source code, then rebuild
+mvn install -DskipTests -pl core/starburst-enterprise
+
+# Reprovision — only changed files are re-staged
+minitrino -v provision -s ~/repos/starburst-enterprise -m postgres
+```
+
+To keep plugins that would otherwise be removed by the default removelist:
+
+```sh
+minitrino -v -e KEEP_PLUGINS="custom-connector" provision -s ~/repos/trino
+```
+
+To keep all plugins (slower staging and larger image):
+
+```sh
+minitrino -v -e KEEP_PLUGINS=ALL provision -s ~/repos/starburst-enterprise
 ```
 
 ### Access the UI
@@ -598,7 +656,7 @@ Your bootstrap script has access to these key variables:
 
 ```bash
 $CLUSTER_DIST         # "trino" or "starburst"
-$CLUSTER_VER          # Version number (e.g., "476")
+$CLUSTER_VER          # Version number (e.g., "479")
 $CLUSTER_NAME         # Cluster name (e.g., "default")
 $SERVICE_USER         # Service user ("trino" or "starburst")
 $HOSTNAME             # Container hostname

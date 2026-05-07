@@ -15,17 +15,18 @@ from time import sleep
 import docker
 from click.testing import CliRunner, Result
 from docker.models.containers import Container
+
 from minitrino.ansi import strip_ansi
 from minitrino.cli import cli
-from minitrino.core.docker.socket import get_docker_context_name, resolve_docker_socket
+from minitrino.docker.socket import get_docker_context_name, resolve_docker_socket
 from minitrino.settings import ROOT_LABEL
 
 USER_HOME_DIR = os.path.expanduser("~")
 MINITRINO_USER_DIR = os.path.abspath(os.path.join(USER_HOME_DIR, ".minitrino"))
 CONFIG_FILE = os.path.abspath(os.path.join(MINITRINO_USER_DIR, "minitrino.cfg"))
-MINITRINO_LIB_DIR = os.path.join(
-    Path(os.path.abspath(__file__)).resolve().parents[2], "lib"
-)
+REPO_ROOT = str(Path(os.path.abspath(__file__)).resolve().parents[2])
+MINITRINO_LIB_DIR = os.path.join(REPO_ROOT, "src", "lib")
+LIB_IMAGE_SCRIPTS_DIR = os.path.join(MINITRINO_LIB_DIR, "image", "scripts")
 
 # ------------------------
 # Logging Utilities

@@ -6,8 +6,8 @@ from dataclasses import dataclass
 
 import pytest
 from click.testing import Result
-from minitrino.settings import SCRUBBED
 
+from minitrino.settings import SCRUBBED
 from tests import common
 from tests.cli.integration_tests import utils
 from tests.common import MINITRINO_USER_DIR

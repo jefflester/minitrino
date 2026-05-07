@@ -183,10 +183,10 @@ python src/tests/lib/runner.py ldap
 
 ```sh
 # Test with Trino using runner directly
-IMAGE=trino CLUSTER_VER=476 python src/tests/lib/runner.py
+IMAGE=trino CLUSTER_VER=479 python src/tests/lib/runner.py
 
 # Test with Starburst Enterprise using runner
-IMAGE=starburst CLUSTER_VER=476-e python src/tests/lib/runner.py
+IMAGE=starburst CLUSTER_VER=479-e python src/tests/lib/runner.py
 ```
 
 **Use Make targets**:
@@ -242,10 +242,10 @@ python src/tests/lib/runner.py my-module
 
 ```sh
 # Test with Trino
-IMAGE=trino CLUSTER_VER=476 python src/tests/lib/runner.py
+IMAGE=trino CLUSTER_VER=479 python src/tests/lib/runner.py
 
 # Test with Starburst
-IMAGE=starburst CLUSTER_VER=476-e python src/tests/lib/runner.py
+IMAGE=starburst CLUSTER_VER=479-e python src/tests/lib/runner.py
 ```
 
 **Debug library test failures**:

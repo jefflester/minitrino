@@ -20,7 +20,7 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-**Latest Stable Release**: 3.0.3
+**Latest Stable Release**: 3.1.0
 
 ## What is Minitrino?
 
@@ -84,6 +84,20 @@ minitrino remove  # Remove all resources
 - 🔄 **Multi-Cluster** - Run multiple independent clusters simultaneously
 - 🚀 **Fast Setup** - First provision ~5 min, subsequent provisions ~30 sec
 - 📦 **Both Distributions** - Switch between Trino and Starburst with a flag
+
+## Development Setup
+
+```sh
+git clone https://github.com/jefflester/minitrino.git
+cd minitrino
+make install
+source venv/bin/activate
+```
+
+This creates a virtual environment, installs the CLI in editable mode with dev
+dependencies, and sets up pre-commit hooks. See the
+[Makefile](Makefile) for additional targets (`pre-commit`, `unit-tests`,
+`integration-tests`, `lib-tests`, `docs`).
 
 ## Documentation
 

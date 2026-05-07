@@ -1,0 +1,20 @@
+[
+  {
+    "min_trino": 464,
+    "max_trino": 467,
+    "java_major": 23,
+    "java_full": "23.0.2"
+  },
+  {
+    "min_trino": 468,
+    "max_trino": 475,
+    "java_major": 24,
+    "java_full": "24.0.2"
+  },
+  {
+    "min_trino": 476,
+    "max_trino": null,
+    "java_major": 25,
+    "java_full": "25.0.1"
+  }
+]

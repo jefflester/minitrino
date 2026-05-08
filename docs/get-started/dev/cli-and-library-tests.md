@@ -153,11 +153,21 @@ These tests provision actual clusters with modules and validate functionality
 through queries, log checks, and container commands. The tests and related logic
 are stored in `src/tests/lib/`.
 
+Library tests are built on [pytest](https://docs.pytest.org/) with a CLI
+wrapper (`runner.py`) for convenience. Each JSON test file becomes a
+parametrized pytest test case, giving you retry support (`--reruns`), failure
+filtering (`--lf`), and standard pytest output.
+
 ### Test Organization
 
 - **JSON Test Definitions** (`src/tests/lib/json/`): Test scenarios defined in
   JSON
-- **Test Runner** (`src/tests/lib/runner.py`): Custom test orchestration engine
+- **Test Runner** (`src/tests/lib/runner.py`): CLI wrapper that translates
+  runner flags to pytest arguments
+- **Pytest Entry Point** (`src/tests/lib/test_modules.py`): Parametrized test
+  function, one case per JSON file
+- **Pytest Config** (`src/tests/lib/conftest.py`): Fixtures for setup, cleanup,
+  and custom options (`--image`, `--modules`, `--remove-images`)
 - **ModuleTest Class** (`src/tests/lib/module_test.py`): Core test execution
   logic
 
@@ -182,11 +192,11 @@ python src/tests/lib/runner.py ldap
 **Run tests for a specific Trino/Starburst version**:
 
 ```sh
-# Test with Trino using runner directly
-IMAGE=trino CLUSTER_VER=479 python src/tests/lib/runner.py
+# Test with Trino
+python src/tests/lib/runner.py --image trino
 
-# Test with Starburst Enterprise using runner
-IMAGE=starburst CLUSTER_VER=479-e python src/tests/lib/runner.py
+# Test with Starburst Enterprise
+python src/tests/lib/runner.py --image starburst
 ```
 
 **Use Make targets**:
@@ -201,6 +211,23 @@ LIC_PATH=/path/to/license make lib-tests
 # Run library tests for specific modules
 make lib-tests ARGS="hive iceberg"
 ```
+
+**Run via pytest directly** (advanced):
+
+```sh
+pytest src/tests/lib/test_modules.py -s --image starburst --modules "hive iceberg"
+```
+
+### Starburst Version Resolution
+
+When running Starburst tests, the test runner automatically resolves the latest
+LTS patch release. For example, if the base version is `479`, the runner queries
+the Starburst release bucket and resolves it to the latest patch (e.g.,
+`479-e.8`) rather than using the initial `479-e` release.
+
+This also applies to the `provision` CLI command. When a user provides a bare
+version like `479-e`, Minitrino resolves it to the latest patch and logs the
+resolved version. To pin the initial release explicitly, use `479-e.0`.
 
 ### Understanding Library Test Structure
 
@@ -238,14 +265,16 @@ Example test scenario structure:
 python src/tests/lib/runner.py my-module
 ```
 
-**Run tests with different distributions**:
+**Run with debug output**:
 
 ```sh
-# Test with Trino
-IMAGE=trino CLUSTER_VER=479 python src/tests/lib/runner.py
+python src/tests/lib/runner.py --debug hive
+```
 
-# Test with Starburst
-IMAGE=starburst CLUSTER_VER=479-e python src/tests/lib/runner.py
+**Rerun only the last failed tests**:
+
+```sh
+python src/tests/lib/runner.py --lf
 ```
 
 **Debug library test failures**:

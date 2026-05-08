@@ -236,7 +236,8 @@ class ModuleTest:
             Whether to run tests with workers.
         """
         if self.image == "starburst":
-            cluster_ver = ["-e", f"CLUSTER_VER={DEFAULT_CLUSTER_VER}-e"]
+            sep_ver = common.resolve_latest_starburst_ver(str(DEFAULT_CLUSTER_VER))
+            cluster_ver = ["-e", f"CLUSTER_VER={sep_ver}"]
         else:
             cluster_ver = ["-e", f"CLUSTER_VER={DEFAULT_CLUSTER_VER}"]
 

@@ -22,6 +22,7 @@ from minitrino.errors import MinitrinoError, UserError
 from minitrino.logging.levels import LogLevel
 from minitrino.logging.utils import configure_logging
 from minitrino.shutdown import shutdown_event
+from minitrino.starburst import resolve_latest_starburst_ver  # noqa: F401
 
 if TYPE_CHECKING:
     from minitrino.context import MinitrinoContext

@@ -14,6 +14,7 @@ from minitrino.settings import (
     CLUSTER_JVM_CONFIG,
     MIN_CLUSTER_VER,
 )
+from minitrino.starburst import resolve_latest_starburst_ver
 
 if TYPE_CHECKING:
     from minitrino.cluster.cluster import Cluster
@@ -94,6 +95,17 @@ class ClusterValidator:
                     raise UserError(error_msg)
             except Exception:
                 raise UserError(error_msg) from None
+
+            if re.fullmatch(r"\d+-e", cluster_ver):
+                base = cluster_ver.split("-")[0]
+                resolved = resolve_latest_starburst_ver(base)
+                if resolved != cluster_ver:
+                    self._ctx.logger.info(
+                        f"Resolved Starburst version {cluster_ver} -> "
+                        f"{resolved}. To pin the initial release, use "
+                        f"{cluster_ver}.0"
+                    )
+                    self._ctx.env["CLUSTER_VER"] = resolved
         elif cluster_dist == "trino":
             error_msg = (
                 f"Provided Trino version '{cluster_ver}' is invalid. "

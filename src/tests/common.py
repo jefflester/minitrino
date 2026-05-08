@@ -20,6 +20,7 @@ from minitrino.ansi import strip_ansi
 from minitrino.cli import cli
 from minitrino.docker.socket import get_docker_context_name, resolve_docker_socket
 from minitrino.settings import ROOT_LABEL
+from minitrino.starburst import resolve_latest_starburst_ver  # noqa: F401
 
 USER_HOME_DIR = os.path.expanduser("~")
 MINITRINO_USER_DIR = os.path.abspath(os.path.join(USER_HOME_DIR, ".minitrino"))

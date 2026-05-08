@@ -36,12 +36,12 @@ runs:
         # For Trino, use the version as-is
         TRINO_VERSION="${CLUSTER_VER}"
 
-        # For Starburst, add -e suffix if not already present
-        if [[ "${CLUSTER_VER}" == *-e* ]]; then
-          STARBURST_VERSION="${CLUSTER_VER}"
-        else
-          STARBURST_VERSION="${CLUSTER_VER}-e"
-        fi
+        # For Starburst, resolve the latest LTS patch release
+        STARBURST_VERSION=$(python3 -c "
+        import sys; sys.path.insert(0, 'src')
+        from minitrino.starburst import resolve_latest_starburst_ver
+        print(resolve_latest_starburst_ver('${CLUSTER_VER}'))
+        ")
 
         echo "Trino version: ${TRINO_VERSION}"
         echo "Starburst version: ${STARBURST_VERSION}"

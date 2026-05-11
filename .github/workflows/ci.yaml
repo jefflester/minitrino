@@ -213,13 +213,20 @@ jobs:
           MINITRINO_TEST_LOG_LEVEL: DEBUG
           LIC_PATH: ~/starburstdata.license
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PYTHONUNBUFFERED: "1"
         run: |-
           minitrino --help || exit 1
-          pytest -x --debug \
+          pytest -x --debug -ra \
             --cov=minitrino \
             --cov-report=term-missing \
             --cov-report=xml \
             ${{ matrix.pytest-args }}
+
+      - name: Collect failure diagnostics (${{ matrix.name }})
+        if: failure()
+        uses: ./.github/actions/collect-failure-diagnostics
+        with:
+          artifact-name: failure-diagnostics-integration-${{ matrix.name }}
 
   cli-source-build-tests:
     name: CLI Integration Tests (Source Build)
@@ -300,13 +307,20 @@ jobs:
           MINITRINO_TEST_LOG_LEVEL: DEBUG
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TRINO_SOURCE_PATH: /tmp/trino-source
+          PYTHONUNBUFFERED: "1"
         run: |-
           minitrino --help || exit 1
-          pytest -x --debug \
+          pytest -x --debug -ra \
             --cov=minitrino \
             --cov-report=term-missing \
             --cov-report=xml \
             src/tests/cli/integration_tests/test_source_build.py
+
+      - name: Collect failure diagnostics (Source Build)
+        if: failure()
+        uses: ./.github/actions/collect-failure-diagnostics
+        with:
+          artifact-name: failure-diagnostics-source-build
 
   # ============================================================================
   # STAGE 4: Library Tests (Always run with conditional image pulling)
@@ -374,10 +388,17 @@ jobs:
       - name: Run library tests (Segment ${{ matrix.segment }})
         env:
           IS_GITHUB: ${{ vars.IS_GITHUB }}
+          PYTHONUNBUFFERED: "1"
         run: |-
           python ./src/tests/lib/runner.py \
             --debug --remove-images --image trino \
             ${{ matrix.modules }}
+
+      - name: Collect failure diagnostics (Trino Segment ${{ matrix.segment }})
+        if: failure()
+        uses: ./.github/actions/collect-failure-diagnostics
+        with:
+          artifact-name: failure-diagnostics-lib-trino-${{ matrix.segment }}
 
   prepare-starburst-matrix:
     name: Prepare Starburst Test Matrix
@@ -446,7 +467,14 @@ jobs:
         env:
           IS_GITHUB: ${{ vars.IS_GITHUB }}
           LIC_PATH: ~/starburstdata.license
+          PYTHONUNBUFFERED: "1"
         run: |-
           python ./src/tests/lib/runner.py \
             --debug --remove-images --image starburst \
             ${{ matrix.modules }}
+
+      - name: Collect failure diagnostics (Starburst Segment ${{ matrix.segment }})
+        if: failure()
+        uses: ./.github/actions/collect-failure-diagnostics
+        with:
+          artifact-name: failure-diagnostics-lib-starburst-${{ matrix.segment }}

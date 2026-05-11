@@ -64,8 +64,18 @@ class HostCommandExecutor:
                     self._ctx.logger.warn(f"Killing subprocess on signal {signum}")
                     process.terminate()
 
-                old_sigint = signal.signal(signal.SIGINT, kill_proc_on_signal)
-                old_sigterm = signal.signal(signal.SIGTERM, kill_proc_on_signal)
+                # signal.signal() only works on the main thread; calling it
+                # from a worker thread raises ValueError and aborts the
+                # interpreter under pytest's in-process CliRunner. Guard so
+                # subprocess invocations from non-main threads (e.g. the
+                # provisioner's compose/worker threads) stay safe.
+                install_handlers = (
+                    threading.current_thread() is threading.main_thread()
+                )
+                old_sigint = old_sigterm = None
+                if install_handlers:
+                    old_sigint = signal.signal(signal.SIGINT, kill_proc_on_signal)
+                    old_sigterm = signal.signal(signal.SIGTERM, kill_proc_on_signal)
                 try:
                     if not kwargs.get("suppress_output", False):
                         started_stream = False
@@ -83,8 +93,11 @@ class HostCommandExecutor:
                         rc = process.returncode
                     rc = process.wait()
                 finally:
-                    signal.signal(signal.SIGINT, old_sigint)
-                    signal.signal(signal.SIGTERM, old_sigterm)
+                    if install_handlers:
+                        if old_sigint is not None:
+                            signal.signal(signal.SIGINT, old_sigint)
+                        if old_sigterm is not None:
+                            signal.signal(signal.SIGTERM, old_sigterm)
         except Exception as e:
             last_e = e
             rc = -1

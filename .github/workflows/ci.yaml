@@ -8,6 +8,12 @@ on:
     paths:
       - src/**
 
+env:
+  IS_GITHUB: ${{ vars.IS_GITHUB }}
+  MINITRINO_TEST_LOG_LEVEL: DEBUG
+  PYTHONUNBUFFERED: "1"
+  PYTHONFAULTHANDLER: "1"
+
 jobs:
   # ============================================================================
   # STAGE 0: Detect File Changes
@@ -147,9 +153,6 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run unit tests with coverage
-        env:
-          IS_GITHUB: ${{ vars.IS_GITHUB }}
-          MINITRINO_TEST_LOG_LEVEL: DEBUG
         run: |-
           minitrino --help || exit 1
           pytest -x --debug \
@@ -209,11 +212,8 @@ jobs:
 
       - name: Run CLI integration tests (${{ matrix.name }})
         env:
-          IS_GITHUB: ${{ vars.IS_GITHUB }}
-          MINITRINO_TEST_LOG_LEVEL: DEBUG
           LIC_PATH: ~/starburstdata.license
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PYTHONUNBUFFERED: "1"
         run: |-
           minitrino --help || exit 1
           pytest -x --debug -ra \
@@ -303,11 +303,8 @@ jobs:
 
       - name: Run source build integration tests
         env:
-          IS_GITHUB: ${{ vars.IS_GITHUB }}
-          MINITRINO_TEST_LOG_LEVEL: DEBUG
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TRINO_SOURCE_PATH: /tmp/trino-source
-          PYTHONUNBUFFERED: "1"
         run: |-
           minitrino --help || exit 1
           pytest -x --debug -ra \
@@ -386,9 +383,6 @@ jobs:
           EOF
 
       - name: Run library tests (Segment ${{ matrix.segment }})
-        env:
-          IS_GITHUB: ${{ vars.IS_GITHUB }}
-          PYTHONUNBUFFERED: "1"
         run: |-
           python ./src/tests/lib/runner.py \
             --debug --remove-images --image trino \
@@ -465,9 +459,7 @@ jobs:
 
       - name: Run library tests (Segment ${{ matrix.segment }})
         env:
-          IS_GITHUB: ${{ vars.IS_GITHUB }}
           LIC_PATH: ~/starburstdata.license
-          PYTHONUNBUFFERED: "1"
         run: |-
           python ./src/tests/lib/runner.py \
             --debug --remove-images --image starburst \

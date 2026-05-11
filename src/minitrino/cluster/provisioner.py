@@ -553,7 +553,7 @@ class ClusterProvisioner:
         except NotFound:
             orig_container_id = None
 
-        compose_thread = threading.Thread(target=_run_compose)
+        compose_thread = threading.Thread(target=_run_compose, daemon=True)
         compose_thread.start()
         self._ctx.logger.debug("Compose command started asynchronously.")
 

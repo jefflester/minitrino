@@ -20,6 +20,12 @@ inputs:
     description: 'Path to minitrino crashdump.log'
     required: false
     default: '~/.minitrino/crashdump.log'
+  watchdog-diag-path:
+    description: >-
+      Path to the watchdog diagnostics file (set by WATCHDOG_DIAG_FILE in the
+      test step env; see src/tests/watchdog.py).
+    required: false
+    default: ''
   docker-log-tail:
     description: 'Tail N lines of each running/exited container log'
     required: false
@@ -77,6 +83,13 @@ runs:
         CRASHDUMP="${CRASHDUMP/#\~/${HOME}}"
         if [ -f "${CRASHDUMP}" ]; then
           cp "${CRASHDUMP}" "${STAGE}/" || true
+        fi
+        # watchdog diagnostics (written by src/tests/watchdog.py on timeout)
+        WATCHDOG_DIAG="${{ inputs.watchdog-diag-path }}"
+        # Fall back to the env var the test step sets, then a default path
+        WATCHDOG_DIAG="${WATCHDOG_DIAG:-${WATCHDOG_DIAG_FILE:-/tmp/watchdog-diagnostics.txt}}"
+        if [ -f "${WATCHDOG_DIAG}" ]; then
+          cp "${WATCHDOG_DIAG}" "${STAGE}/" || true
         fi
         # coverage xml if present (useful for diffing partial runs)
         for f in coverage.xml .coverage; do

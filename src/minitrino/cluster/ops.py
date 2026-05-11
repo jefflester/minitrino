@@ -222,11 +222,15 @@ class ClusterOperations:
                 assert self._ctx.docker_client is not None, (
                     "Docker client is not initialized"
                 )
-                worker_base = self._ctx.docker_client.containers.run(
+                # Create the worker stopped so we can stage /etc before the
+                # entrypoint runs. Starting first races with put_archive: the
+                # bootstrap's chown -R /etc/<dist> can fire while put_archive
+                # is mid-extract, producing TOCTOU "No such file or directory"
+                # errors on files like node.properties.
+                worker_base = self._ctx.docker_client.containers.create(
                     worker_img,
                     name=fq_worker_name,
                     environment=env_dict,
-                    detach=True,
                     hostname=fq_worker_name,
                     network=network_name,
                     extra_hosts=extra_hosts_dict if extra_hosts_dict else None,
@@ -241,10 +245,14 @@ class ClusterOperations:
                 shared_network.connect(worker_base)
 
                 worker = MinitrinoContainer(worker_base, self._ctx.cluster_name)
+                worker.put_archive("/etc", etc_payload)
+                worker_base.start()
                 self._ctx.logger.debug(
                     f"Created and started worker container: '{fq_worker_name}' "
                     f"in network '{network_name}'."
                 )
+                self._ctx.logger.debug(f"Copied {ETC_DIR} to '{fq_worker_name}'")
+                return
 
             worker.put_archive("/etc", etc_payload)
             self._ctx.logger.debug(f"Copied {ETC_DIR} to '{fq_worker_name}'")

@@ -2,6 +2,13 @@
 services:
 
   minitrino:
+    environment:
+      CACHE_SERVICE_JVM_CONFIG: |-
+        -Xmx2G
+        -Xms2G
+      CACHE_SERVICE_WORKER_JVM_CONFIG: |-
+        -Xmx2G
+        -Xms2G
     volumes:
       - ./modules/admin/cache-service/resources/cluster/rules.json:/mnt/etc/rules.json:ro
       - ./modules/admin/cache-service/resources/cluster/cache.properties:/mnt/etc/cache.properties:ro

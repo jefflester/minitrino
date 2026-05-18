@@ -126,7 +126,7 @@ jobs:
           cleanup-disk: true
 
       - name: Build and push Trino image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: src/lib/image
           file: src/lib/image/Dockerfile
@@ -165,7 +165,7 @@ jobs:
           cleanup-disk: true
 
       - name: Build and push Starburst image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: src/lib/image
           file: src/lib/image/Dockerfile

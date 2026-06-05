@@ -123,7 +123,14 @@ def _detect_distribution(
     """
     if _is_distribution_dir(path):
         detected = _detect_dist_type_from_dir(path)
-        if distribution and detected != distribution:
+        if detected is None:
+            if not distribution:
+                raise UserError(
+                    f"Could not determine the distribution type of '{path}'.",
+                    "Pass --image (starburst or trino) to disambiguate.",
+                )
+            detected = distribution
+        elif distribution and detected != distribution:
             raise UserError(
                 f"Distribution mismatch: --image is '{distribution}' but the "
                 f"distribution directory appears to be '{detected}'.",
@@ -170,15 +177,20 @@ def _is_distribution_dir(path: str) -> bool:
     ) and os.path.isfile(os.path.join(path, "bin", "launcher"))
 
 
-def _detect_dist_type_from_dir(path: str) -> str:
-    """Infer distribution type from a direct distribution directory name."""
+def _detect_dist_type_from_dir(path: str) -> str | None:
+    """Infer distribution type from a direct distribution directory name.
+
+    Returns ``None`` when the type cannot be determined, so the caller
+    can either trust an explicit ``--image`` or fail loudly rather than
+    silently guessing a (possibly wrong) distribution.
+    """
     name = os.path.basename(path)
     for dist_type, pattern in DIST_PATTERNS.items():
         if name.startswith(pattern["dir_prefix"]):
             return dist_type
     if os.path.isdir(os.path.join(path, "secrets-plugin")):
         return "starburst"
-    return "trino"
+    return None
 
 
 def _find_best_dist_dir(target_path: str, prefix: str) -> str | None:

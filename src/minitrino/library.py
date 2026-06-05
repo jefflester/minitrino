@@ -84,6 +84,11 @@ class LibraryManager:
                 if os.path.isdir(lib_dir):
                     shutil.rmtree(lib_dir, ignore_errors=True)
                 os.rename(backup_path, lib_dir)
+            elif backup_path:
+                self._ctx.logger.warn(
+                    f"Install failed and the backup at {backup_path} is no "
+                    "longer present; the previous library could not be restored."
+                )
             raise
 
         self._prune_backups()
@@ -121,11 +126,13 @@ class LibraryManager:
             path = os.path.join(parent, name)
             if not os.path.isdir(path):
                 continue
-            try:
-                mtime = os.path.getmtime(path)
-            except OSError:
-                continue
-            backups.append((mtime, path))
+            backups.append((name, path))
+        # Backup names embed a zero-padded UTC timestamp
+        # (lib.bak.YYYYMMDD-HHMMSS[-N]), so a lexicographic sort orders
+        # them chronologically. Sorting by filesystem mtime would be
+        # wrong: tarball extraction preserves the release's mtime, so a
+        # freshly created backup can carry an older timestamp than an
+        # existing one and be pruned by mistake.
         backups.sort(reverse=True)
         for _, path in backups[keep:]:
             try:
@@ -171,18 +178,31 @@ class LibraryManager:
         uri = f"{base_url}/archive/refs/tags/{version}.tar.gz"
         tarball = os.path.join(self._ctx.minitrino_user_dir, f"{version}.tar.gz")
         file_basename = f"minitrino-{version}"
-        lib_dir = os.path.join(
+        extracted_lib_dir = os.path.join(
             self._ctx.minitrino_user_dir, file_basename, "src", "lib"
         )
+        dest_lib_dir = os.path.join(self._ctx.minitrino_user_dir, "lib")
 
         try:
             self._download_file(uri, tarball)
             self._extract_tarball(tarball, self._ctx.minitrino_user_dir)
-            shutil.move(lib_dir, os.path.join(self._ctx.minitrino_user_dir, "lib"))
-            self._cleanup(tarball, file_basename)
+            if not os.path.isdir(extracted_lib_dir):
+                raise MinitrinoError(
+                    f"Expected library directory not found in downloaded "
+                    f"archive: {extracted_lib_dir}"
+                )
+            shutil.move(extracted_lib_dir, dest_lib_dir)
+        except MinitrinoError:
+            self._cleanup(tarball, file_basename, False)
+            raise
         except Exception as e:
             self._cleanup(tarball, file_basename, False)
             raise MinitrinoError(str(e)) from e
+
+        # Removing the tarball and unpacked source tree is cosmetic; a
+        # failure here must never trigger a rollback of the install that
+        # already succeeded above, so swallow cleanup errors.
+        self._cleanup(tarball, file_basename, trigger_error=False)
 
     def _download_file(self, url: str, dest_path: str) -> None:
         """Download a file from URL to destination path."""
@@ -241,7 +261,18 @@ class LibraryManager:
         - Installed, mismatch, stale/no cache → prompt. Yes → install; No → cache, warn.
         """
         cli_version = utils.cli_ver()
-        lib_version = utils.lib_ver(ctx=self._ctx, lib_path=self._ctx.lib_dir)
+        # Accessing lib_dir raises UserError when no library is resolvable.
+        # Treat that as "not installed" so the install prompt below is
+        # reachable on a fresh machine rather than aborting with a bare error.
+        try:
+            lib_path = self._ctx.lib_dir
+        except UserError:
+            lib_path = ""
+        lib_version = (
+            utils.lib_ver(ctx=self._ctx, lib_path=lib_path)
+            if lib_path
+            else "NOT INSTALLED"
+        )
 
         if lib_version == "NOT INSTALLED":
             if self._ctx.effective_assume_yes:
@@ -250,6 +281,12 @@ class LibraryManager:
                 )
                 self.install(version=cli_version)
                 return
+            cache = self._read_decline_cache()
+            if cache and self._decline_is_fresh(cache):
+                raise UserError(
+                    "The Minitrino library is required for this operation.",
+                    "Run 'minitrino lib-install' to install it manually.",
+                )
             response = self._ctx.logger.prompt_msg(
                 f"The Minitrino library is not installed. Install version "
                 f"{cli_version} to "

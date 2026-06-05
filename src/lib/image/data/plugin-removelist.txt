@@ -1,3 +1,6 @@
+# Plugins removed from the image during the build. One plugin name per line.
+# Blank lines and lines beginning with '#' are ignored. KEEP_PLUGINS overrides
+# entries here (KEEP_PLUGINS=ALL keeps everything).
 atlas
 azure-data-explorer
 bigquery

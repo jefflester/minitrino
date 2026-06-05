@@ -34,7 +34,7 @@
 ### Operating System
 
 - **Linux**: Any modern distribution (Ubuntu 20.04+, Fedora 35+, etc.)
-- **macOS**: macOS 11 (Big Sure) or higher
+- **macOS**: macOS 11 (Big Sur) or higher
 - **Windows**: Windows 10/11 with WSL2 (Windows Subsystem for Linux)
   - Minitrino must be run from within WSL2, not from Windows directly
   - Docker Desktop for Windows should be configured to use WSL2 backend
@@ -63,7 +63,10 @@ library files.
    [github.com/jefflester/minitrino/releases](https://github.com/jefflester/minitrino/releases)
 1. **Review breaking changes** - Major version upgrades (e.g., 2.x → 3.x) may
    have breaking changes
-1. **Backup custom modules** - Library installation overwrites existing modules
+1. **Custom modules** - Library installation no longer overwrites in place: the
+   existing library is moved aside to `~/.minitrino/lib.bak.<timestamp>` before
+   the new one is installed (the two most recent backups are retained), so
+   custom modules can be recovered from the backup if needed
 1. **Note your configurations** - Document any custom environment variables or
    settings
 
@@ -107,7 +110,7 @@ cp -r ~/.minitrino/lib/snapshots/ ~/backups/
 pip install minitrino --upgrade
 
 # Or upgrade to specific version
-pip install minitrino==3.0.0 --upgrade
+pip install minitrino==3.1.0 --upgrade
 
 # Verify new version
 minitrino version
@@ -208,6 +211,7 @@ Each Minitrino release is tested with specific Trino/Starburst versions:
 
 | Minitrino Version | Trino Versions | Starburst Versions | Python Required |
 | ----------------- | -------------- | ------------------ | --------------- |
+| 3.1.0             | 443+           | 443-e+             | 3.10+           |
 | 3.0.0             | 443+           | 443-e+             | 3.10+           |
 | 2.2.x             | 400+           | 400-e+             | 3.8+            |
 | 2.0.x             | 351+           | 351-e+             | 3.7+            |

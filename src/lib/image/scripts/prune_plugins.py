@@ -27,7 +27,11 @@ def load_removelist() -> list[str]:
     for path in candidates:
         if os.path.isfile(path):
             with open(path) as f:
-                return [line.strip() for line in f if line.strip()]
+                return [
+                    line.strip()
+                    for line in f
+                    if line.strip() and not line.strip().startswith("#")
+                ]
     print(f"{LOG_PREFIX} WARNING: plugin-removelist.txt not found, using empty list.")
     return []
 

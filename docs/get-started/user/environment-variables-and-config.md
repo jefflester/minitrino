@@ -186,11 +186,14 @@ minitrino -e __PORT_MINITRINO=8090 provision
 Here's a practical example showing how precedence works:
 
 ```sh
-# In minitrino.env: CLUSTER_VER=479
-# Shell environment: export CLUSTER_VER=479
-# Command line: minitrino -e CLUSTER_VER=476 provision
+# In minitrino.env (library default): CLUSTER_VER=479
+# In minitrino.cfg:                    CLUSTER_VER=478
+# Shell environment:                   export CLUSTER_VER=477
+# Command line:                        minitrino -e CLUSTER_VER=476 provision
 
 # Result: CLUSTER_VER=476 (command line wins)
+# Without the -e flag, the shell value (477) would win, then minitrino.cfg
+# (478), and finally the minitrino.env default (479).
 ```
 
 ## Text Editor

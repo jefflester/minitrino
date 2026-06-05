@@ -75,6 +75,32 @@ class TestAutoInstallOrUpdate:
         )
 
     @patch("minitrino.library.utils.cli_ver", return_value="1.0.0")
+    @patch("minitrino.library.utils.validate_yes", return_value=True)
+    def test_not_installed_when_lib_dir_raises(
+        self, mock_validate, mock_cli_ver, library_manager, mock_ctx
+    ):
+        """lib_dir raising UserError (no library present) is treated as
+        NOT INSTALLED so the install prompt stays reachable.
+
+        Regression for the bug where accessing ``ctx.lib_dir`` raised before
+        the NOT INSTALLED branch could run, so a fresh machine got a bare
+        error instead of an install prompt.
+        """
+        from unittest.mock import PropertyMock
+
+        library_manager.install = MagicMock()
+        library_manager._read_decline_cache = MagicMock(return_value=None)
+
+        lib_dir_prop = PropertyMock(
+            side_effect=UserError("requires a library to be installed")
+        )
+        with patch.object(type(mock_ctx), "lib_dir", lib_dir_prop, create=True):
+            library_manager.auto_install_or_update()
+
+        mock_ctx.logger.prompt_msg.assert_called_once()
+        library_manager.install.assert_called_once_with(version="1.0.0")
+
+    @patch("minitrino.library.utils.cli_ver", return_value="1.0.0")
     @patch("minitrino.library.utils.lib_ver", return_value="1.0.0")
     def test_versions_match(
         self, mock_lib_ver, mock_cli_ver, library_manager, mock_ctx
@@ -306,7 +332,7 @@ class TestFileOperations:
     @patch("minitrino.library.LibraryManager._extract_tarball")
     @patch("minitrino.library.shutil.move")
     @patch("minitrino.library.LibraryManager._cleanup")
-    @patch("os.path.isdir", return_value=False)
+    @patch("os.path.isdir", return_value=True)
     def test_download_and_extract_success(
         self,
         mock_isdir,
@@ -331,7 +357,9 @@ class TestFileOperations:
         mock_move.assert_called_once_with(
             expected_lib_dir, os.path.join(mock_ctx.minitrino_user_dir, "lib")
         )
-        mock_cleanup.assert_called_once_with(expected_tarball, f"minitrino-{version}")
+        mock_cleanup.assert_called_once_with(
+            expected_tarball, f"minitrino-{version}", trigger_error=False
+        )
 
     @patch("builtins.open")
     @patch("minitrino.library.requests.get")
@@ -402,6 +430,19 @@ class TestFileOperations:
 
         with pytest.raises(MinitrinoError, match="Failed to remove tarball"):
             library_manager._cleanup(tarball)
+
+    @patch("os.path.isfile", return_value=True)
+    @patch("os.remove", side_effect=OSError("Failed to remove"))
+    def test_cleanup_errors_swallowed_when_not_triggering(
+        self, mock_remove, mock_isfile, library_manager
+    ):
+        """trigger_error=False must swallow cleanup errors.
+
+        Regression: the success-path cleanup in download_and_extract runs with
+        trigger_error=False so a cosmetic cleanup failure can never propagate
+        and cause install() to roll back an already-successful install.
+        """
+        library_manager._cleanup("/path/to/file.tar.gz", trigger_error=False)
 
 
 class TestInstallBackups:
@@ -506,6 +547,32 @@ class TestInstallBackups:
             (b / "marker").read_text() for b in backups if (b / "marker").exists()
         )
         assert "0" not in markers and "1" not in markers
+
+    def test_prune_ranks_by_name_not_mtime(self, install_manager, tmp_path):
+        """Pruning must rank backups by the timestamp embedded in the name,
+        not by filesystem mtime.
+
+        Regression: tarball extraction preserves the release's mtime, so a
+        freshly created backup can carry an older mtime than an older-named
+        one. Here the newer-named backup is given an OLD mtime and the
+        older-named backup a NEW mtime; name-based ranking must still keep
+        the newer-named backup.
+        """
+        newer_name = tmp_path / "lib.bak.20250101-000000"
+        older_name = tmp_path / "lib.bak.20200101-000000"
+        newer_name.mkdir()
+        older_name.mkdir()
+        os.utime(newer_name, (1_000, 1_000))  # old mtime
+        os.utime(older_name, (9_000_000, 9_000_000))  # new mtime
+
+        install_manager._prune_backups(keep=1)
+
+        remaining = sorted(
+            p.name for p in tmp_path.iterdir() if p.name.startswith("lib.bak.")
+        )
+        assert remaining == [
+            "lib.bak.20250101-000000"
+        ], "prune should keep the newest by name, not by mtime"
 
     def test_prompt_decline_skips_install(self, install_manager, tmp_path, mock_ctx):
         """User answers N → no install, no backup, lib untouched."""

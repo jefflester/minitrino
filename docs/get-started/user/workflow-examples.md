@@ -314,11 +314,13 @@ minitrino -v provision -s ~/repos/trino
 You can also point directly to a distribution directory:
 
 ```sh
-minitrino -v provision -s ~/repos/starburst-enterprise/core/starburst-enterprise/target/starburst-enterprise-479-e
+minitrino -v provision -s ~/repos/starburst-enterprise/core/starburst-enterprise/target/starburst-enterprise-479-e.8
 ```
 
-The distribution type and version are auto-detected from the source path. If you
-need to override the image type, use `--image`:
+The distribution type and version are auto-detected from the source path. You
+can optionally pass `--image` to assert the expected distribution; Minitrino
+errors if it does not match the detected build (it is a validation check, not an
+override):
 
 ```sh
 minitrino -v provision -s ~/repos/starburst-enterprise -i starburst -m hive
@@ -334,16 +336,20 @@ mvn install -DskipTests -pl core/starburst-enterprise
 minitrino -v provision -s ~/repos/starburst-enterprise -m postgres
 ```
 
-To keep plugins that would otherwise be removed by the default removelist:
+When provisioning from source, `KEEP_PLUGINS` defaults to `ALL` — every plugin
+is staged so locally built connectors are never stripped. To instead apply the
+standard removelist while keeping only specific plugins, set `KEEP_PLUGINS`
+explicitly:
 
 ```sh
 minitrino -v -e KEEP_PLUGINS="custom-connector" provision -s ~/repos/trino
 ```
 
-To keep all plugins (slower staging and larger image):
+To force the full default removelist (smaller image, slower-to-stage), set
+`KEEP_PLUGINS` to an empty value:
 
 ```sh
-minitrino -v -e KEEP_PLUGINS=ALL provision -s ~/repos/starburst-enterprise
+minitrino -v -e KEEP_PLUGINS="" provision -s ~/repos/starburst-enterprise
 ```
 
 ### Access the UI

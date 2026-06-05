@@ -35,7 +35,9 @@ def get_java_version() -> int:
     cluster_ver = os.environ.get("CLUSTER_VER", "")
     if not cluster_ver:
         return _default_java_major()
-    trino_ver = int(cluster_ver[:3])
+    # Strip any patch/edition suffix (e.g. "479-e.8" -> "479"); a
+    # fixed-width slice would truncate versions >= 1000.
+    trino_ver = int(cluster_ver.split("-")[0])
     with open(JAVA_MATRIX_PATH) as f:
         matrix = json.load(f)
     for entry in matrix:

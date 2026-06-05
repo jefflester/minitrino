@@ -4,6 +4,15 @@ build:
   os: ubuntu-24.04
   tools:
     python: "3.10"
+  jobs:
+    # The docs/api/ API reference is generated output (gitignored, not
+    # committed). Regenerate it on every build so it never goes stale,
+    # mirroring install/docs/docs-build.sh. Runs after the docs extras
+    # (which provide sphinx-apidoc) are installed.
+    pre_build:
+      - sphinx-apidoc -o docs/api src/minitrino -f -e --tocfile index
+      - sed -i '1s/.*/API Reference/' docs/api/index.rst
+      - sed -i '2s/.*/=============/' docs/api/index.rst
 
 sphinx:
   configuration: docs/conf.py

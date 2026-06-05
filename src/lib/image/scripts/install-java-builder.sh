@@ -7,8 +7,9 @@ CLUSTER_VER="${2}"
 SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
 JAVA_MATRIX="${SCRIPT_DIR}/java-matrix.json"
 
-# Extract numeric version from version string (e.g., "474-e" -> "474")
-TRINO_VER=$(echo "${CLUSTER_VER}" | sed 's/-.*//' | head -c 3)
+# Extract numeric version from version string (e.g., "474-e.8" -> "474").
+# Avoid a fixed-width truncation that would break for versions >= 1000.
+TRINO_VER=$(echo "${CLUSTER_VER}" | sed 's/-.*//')
 
 echo "Detected Trino version: ${TRINO_VER}"
 

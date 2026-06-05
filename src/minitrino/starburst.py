@@ -12,14 +12,16 @@ def resolve_latest_starburst_ver(base_ver: str) -> str:
 
     Queries the S3 bucket listing for ``{base_ver}e/`` prefixes and
     returns the highest non-RC release (e.g. ``479-e.8``). Falls back
-    to ``{base_ver}-e`` on any failure.
+    to ``{base_ver}-e.0`` (the initial patch, a real release name) on
+    any failure, so a transient lookup error does not produce an
+    invalid version string that is guaranteed to 404 on download.
 
     Parameters
     ----------
     base_ver : str
         The base version number (e.g. ``"479"``).
     """
-    fallback = f"{base_ver}-e"
+    fallback = f"{base_ver}-e.0"
     try:
         url = f"{STARBURST_S3_BUCKET}?prefix={base_ver}e/&delimiter=/"
         with urllib.request.urlopen(url, timeout=15) as resp:

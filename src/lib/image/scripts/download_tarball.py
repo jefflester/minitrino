@@ -120,14 +120,16 @@ def resolve_tarball_info(
         url = f"{base_url}/{trino_ver}/{tar_name}"
         unpack_dir = f"trino-server-{trino_ver}"
     elif cluster_dist == "starburst":
-        trino_ver = cluster_ver[:3]
-        if int(trino_ver) >= 462:
+        # Strip any patch/edition suffix (e.g. "479-e.8" -> "479"). A
+        # fixed-width slice would silently truncate versions >= 1000.
+        major_ver = cluster_ver.split("-")[0]
+        if int(major_ver) >= 462:
             tar_name = f"starburst-enterprise-{cluster_ver}.{arch_sep_s3}.tar.gz"
             unpack_dir = f"starburst-enterprise-{cluster_ver}-{arch_sep_s3}"
         else:
             tar_name = f"starburst-enterprise-{cluster_ver}.tar.gz"
             unpack_dir = f"starburst-enterprise-{cluster_ver}"
-        url = f"{STARBURST_URL}/{cluster_ver[:3]}e/{cluster_ver}/{tar_name}"
+        url = f"{STARBURST_URL}/{major_ver}e/{cluster_ver}/{tar_name}"
     else:
         raise RuntimeError("Invalid cluster distribution")
     return url, tar_name, unpack_dir, arch_bin

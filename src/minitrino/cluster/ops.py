@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import concurrent.futures
+import contextlib
 import io
 import re
 import tarfile
@@ -245,8 +246,17 @@ class ClusterOperations:
                 shared_network.connect(worker_base)
 
                 worker = MinitrinoContainer(worker_base, self._ctx.cluster_name)
-                worker.put_archive("/etc", etc_payload)
-                worker_base.start()
+                try:
+                    worker.put_archive("/etc", etc_payload)
+                    worker_base.start()
+                except Exception:
+                    # Staging or start failed after the container was created.
+                    # Remove the half-provisioned container so a retry
+                    # re-creates it cleanly rather than finding a stopped,
+                    # never-started worker via the container() lookup above.
+                    with contextlib.suppress(Exception):
+                        worker_base.remove(force=True)
+                    raise
                 self._ctx.logger.debug(
                     f"Created and started worker container: '{fq_worker_name}' "
                     f"in network '{network_name}'."

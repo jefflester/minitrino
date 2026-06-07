@@ -109,7 +109,7 @@ class LibraryManager:
         return candidate
 
     def _prune_backups(self, keep: int = BACKUP_RETENTION) -> None:
-        """Remove old `lib.bak.*` directories, keeping the N newest by mtime.
+        """Remove old `lib.bak.*` dirs, keeping the N newest by name timestamp.
 
         Best-effort: failures are logged but never raised. The freshly
         installed lib stays intact even if pruning hits trouble.
@@ -246,6 +246,19 @@ class LibraryManager:
         except (KeyError, ValueError, TypeError):
             return False
 
+    def _decline_applies(self, cache: dict, cli_ver: str, lib_ver: str) -> bool:
+        """Whether a cached decline should still suppress the prompt.
+
+        A decline only applies while it is within the TTL *and* the
+        CLI/library versions it was recorded against are unchanged. If
+        either has moved (e.g. the CLI was upgraded again), the mismatch
+        is new and the user should be prompted afresh rather than having
+        the stale decline silently swallow it.
+        """
+        if not self._decline_is_fresh(cache):
+            return False
+        return cache.get("cli_ver") == cli_ver and cache.get("lib_ver") == lib_ver
+
     def _clear_decline_cache(self) -> None:
         with contextlib.suppress(FileNotFoundError):
             os.unlink(self._decline_cache_path())
@@ -282,7 +295,7 @@ class LibraryManager:
                 self.install(version=cli_version)
                 return
             cache = self._read_decline_cache()
-            if cache and self._decline_is_fresh(cache):
+            if cache and self._decline_applies(cache, cli_version, lib_version):
                 raise UserError(
                     "The Minitrino library is required for this operation.",
                     "Run 'minitrino lib-install' to install it manually.",
@@ -317,7 +330,7 @@ class LibraryManager:
             return
 
         cache = self._read_decline_cache()
-        if cache and self._decline_is_fresh(cache):
+        if cache and self._decline_applies(cache, cli_version, lib_version):
             self._ctx.logger.debug(
                 f"Library sync declined recently (CLI {cli_version} vs "
                 f"lib {lib_version}). Skipping prompt."

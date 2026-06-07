@@ -161,11 +161,15 @@ class TestAutoInstallOrUpdate:
     def test_mismatch_fresh_cache_skips_prompt(
         self, mock_lib_ver, mock_cli_ver, library_manager, mock_ctx
     ):
-        """Fresh decline cache → no prompt, debug log only."""
+        """Fresh decline cache for the same version pair → no prompt."""
         mock_lib_ver.return_value = "1.0.0"
         library_manager.install = MagicMock()
         library_manager._read_decline_cache = MagicMock(
-            return_value={"declined_at": datetime.now(timezone.utc).isoformat()}
+            return_value={
+                "declined_at": datetime.now(timezone.utc).isoformat(),
+                "cli_ver": "1.1.0",
+                "lib_ver": "1.0.0",
+            }
         )
         library_manager._decline_is_fresh = MagicMock(return_value=True)
 
@@ -174,6 +178,36 @@ class TestAutoInstallOrUpdate:
         mock_ctx.logger.prompt_msg.assert_not_called()
         library_manager.install.assert_not_called()
         mock_ctx.logger.debug.assert_called_once()
+
+    @patch("minitrino.library.utils.cli_ver", return_value="1.2.0")
+    @patch("minitrino.library.utils.lib_ver")
+    @patch("minitrino.library.utils.validate_yes", return_value=True)
+    def test_mismatch_fresh_cache_different_version_reprompts(
+        self, mock_validate, mock_lib_ver, mock_cli_ver, library_manager, mock_ctx
+    ):
+        """Fresh cache but the version pair has changed → prompt again.
+
+        Regression: the decline cache was previously time-only, so upgrading
+        the CLI again within the TTL would silently suppress the prompt for a
+        brand-new mismatch.
+        """
+        mock_lib_ver.return_value = "1.0.0"
+        library_manager.install = MagicMock()
+        library_manager._read_decline_cache = MagicMock(
+            return_value={
+                "declined_at": datetime.now(timezone.utc).isoformat(),
+                "cli_ver": "1.1.0",
+                "lib_ver": "1.0.0",
+            }
+        )
+        library_manager._decline_is_fresh = MagicMock(return_value=True)
+
+        library_manager.auto_install_or_update()
+
+        mock_ctx.logger.prompt_msg.assert_called_once()
+        library_manager.install.assert_called_once_with(
+            version="1.2.0", _skip_confirm=True
+        )
 
     @patch("minitrino.library.utils.cli_ver", return_value="1.1.0")
     @patch("minitrino.library.utils.lib_ver")

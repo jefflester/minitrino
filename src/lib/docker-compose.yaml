@@ -4,15 +4,19 @@ services:
   minitrino:
     build:
       context: ./image/
+      additional_contexts:
+        local-dist: ${LOCAL_DIST_CONTEXT:-./image/}
       args:
         UBUNTU_VER: ${UBUNTU_VER:-22.04}
-        CLUSTER_VER: ${CLUSTER_VER:-476}
+        CLUSTER_VER: ${CLUSTER_VER:-479}
         CLUSTER_DIST: ${CLUSTER_DIST:-trino}
         SERVICE_USER: ${SERVICE_USER:-trino}
+        DIST_SOURCE: ${DIST_SOURCE:-download}
+        KEEP_PLUGINS: ${KEEP_PLUGINS:-}
       labels:
         - org.minitrino.root=true
         - org.minitrino.module.minitrino=true
-    image: minitrino/cluster:${CLUSTER_VER:-476}-${CLUSTER_DIST:-trino}
+    image: minitrino/cluster:${CLUSTER_VER:-479}-${CLUSTER_DIST:-trino}
     container_name: minitrino-${CLUSTER_NAME:-default}
     restart: 'no'
     environment:
@@ -25,7 +29,7 @@ services:
       WORKER_JVM_CONFIG: ${WORKER_JVM_CONFIG:-}
       MINITRINO_MODULES: ${MINITRINO_MODULES:-}
       STARTUP_SELECT_RETRIES: ${STARTUP_SELECT_RETRIES:-30}
-      PROVISION_BUILD_TIMEOUT: ${PROVISION_BUILD_TIMEOUT:-1200}
+      PROVISION_BUILD_TIMEOUT: ${PROVISION_BUILD_TIMEOUT:-1800}
       STARGATE_CATALOG: ${STARGATE_CATALOG:-}
       STARGATE_PARALLEL_CATALOG: ${STARGATE_PARALLEL_CATALOG:-}
     healthcheck:

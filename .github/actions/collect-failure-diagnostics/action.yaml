@@ -1,0 +1,109 @@
+---
+name: 'Collect Failure Diagnostics'
+description: >-
+  Dump system + container state and upload pytest/minitrino debug artifacts
+  when a test step fails. Intended to be invoked from a step with
+  `if: failure()` so the next failing run produces a usable log.
+author: 'Minitrino'
+
+inputs:
+  artifact-name:
+    description: >-
+      Unique artifact name for this job (parallel matrix runs must use
+      distinct names or upload-artifact will overwrite).
+    required: true
+  pytestdebug-path:
+    description: 'Path to pytestdebug.log (written by `pytest --debug`)'
+    required: false
+    default: 'pytestdebug.log'
+  crashdump-path:
+    description: 'Path to minitrino crashdump.log'
+    required: false
+    default: '~/.minitrino/crashdump.log'
+  watchdog-diag-path:
+    description: >-
+      Path to the watchdog diagnostics file (set by WATCHDOG_DIAG_FILE in the
+      test step env; see src/tests/watchdog.py).
+    required: false
+    default: ''
+  docker-log-tail:
+    description: 'Tail N lines of each running/exited container log'
+    required: false
+    default: '500'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Dump kernel messages (OOM-killer evidence)
+      shell: bash
+      run: |-
+        echo "=== dmesg tail (look for 'Killed process' / 'Out of memory') ==="
+        sudo dmesg | tail -200 || true
+        echo
+        echo "=== OOM-killer hits (if any) ==="
+        sudo dmesg | grep -iE "killed process|out of memory|oom-kill" || \
+          echo "No OOM-kill messages found."
+
+    - name: Dump memory + disk state
+      shell: bash
+      run: |-
+        echo "=== free -h ==="
+        free -h || true
+        echo
+        echo "=== df -h ==="
+        df -h || true
+
+    - name: Dump Docker state
+      shell: bash
+      run: |-
+        echo "=== docker ps -a ==="
+        docker ps -a || true
+        echo
+        echo "=== docker stats (one-shot) ==="
+        timeout 10 docker stats --no-stream || true
+        echo
+        echo "=== container logs (tail ${{ inputs.docker-log-tail }}) ==="
+        for c in $(docker ps -a --format '{{.Names}}'); do
+          echo "--- ${c} ---"
+          docker logs --tail "${{ inputs.docker-log-tail }}" "${c}" 2>&1 || true
+          echo
+        done
+
+    - name: Stage diagnostics for upload
+      shell: bash
+      run: |-
+        STAGE="${RUNNER_TEMP}/failure-diagnostics"
+        mkdir -p "${STAGE}"
+        # pytest debug log (written to CWD by --debug)
+        if [ -f "${{ inputs.pytestdebug-path }}" ]; then
+          cp "${{ inputs.pytestdebug-path }}" "${STAGE}/" || true
+        fi
+        # minitrino crashdump (provision failures write here)
+        CRASHDUMP="${{ inputs.crashdump-path }}"
+        CRASHDUMP="${CRASHDUMP/#\~/${HOME}}"
+        if [ -f "${CRASHDUMP}" ]; then
+          cp "${CRASHDUMP}" "${STAGE}/" || true
+        fi
+        # watchdog diagnostics (written by src/tests/watchdog.py on timeout)
+        WATCHDOG_DIAG="${{ inputs.watchdog-diag-path }}"
+        # Fall back to the env var the test step sets, then a default path
+        WATCHDOG_DIAG="${WATCHDOG_DIAG:-${WATCHDOG_DIAG_FILE:-/tmp/watchdog-diagnostics.txt}}"
+        if [ -f "${WATCHDOG_DIAG}" ]; then
+          cp "${WATCHDOG_DIAG}" "${STAGE}/" || true
+        fi
+        # coverage xml if present (useful for diffing partial runs)
+        for f in coverage.xml .coverage; do
+          [ -e "${f}" ] && cp -r "${f}" "${STAGE}/" || true
+        done
+        # snapshot of dmesg + docker state into the artifact too
+        sudo dmesg > "${STAGE}/dmesg.txt" 2>&1 || true
+        docker ps -a > "${STAGE}/docker-ps.txt" 2>&1 || true
+        ls -la "${STAGE}/"
+
+    - name: Upload failure diagnostics
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ runner.temp }}/failure-diagnostics/
+        if-no-files-found: warn
+        retention-days: 14

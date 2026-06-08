@@ -72,7 +72,7 @@ repos:
     rev: v1.39.0
     hooks:
       - id: typos
-        files: \.(md|rst|txt)$
+        files: \.(md|rst)$
 
   # ============================================================================
   # Python Type Checking & Documentation
@@ -108,7 +108,7 @@ repos:
     hooks:
       - id: bandit
         name: bandit (informational)
-        entry: bash -c 'venv/bin/bandit -r src/cli/ --skip B101,B603 -q || true'
+        entry: bash -c 'venv/bin/bandit -r src/minitrino/ --skip B101,B603 -q || true'
         language: system
         types: [python]
         pass_filenames: false
@@ -202,14 +202,8 @@ repos:
         name: Sync cluster version across files
         entry: python .precommit/sync_cluster_version.py
         language: python
-        files: ^src/lib/minitrino.env|src/lib/docker-compose.yaml|src/cli/minitrino/settings.py
+        files: ^src/lib/minitrino.env|src/lib/docker-compose.yaml|src/minitrino/settings.py
 
-      - id: sync-version-files
-        name: Sync version files to branch name
-        entry: python .precommit/sync_version_files.py
-        language: python
-        pass_filenames: false
-        always_run: true
 
   # ============================================================================
   # Validation & Testing

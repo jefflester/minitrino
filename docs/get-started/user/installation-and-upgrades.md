@@ -34,7 +34,7 @@
 ### Operating System
 
 - **Linux**: Any modern distribution (Ubuntu 20.04+, Fedora 35+, etc.)
-- **macOS**: macOS 11 (Big Sure) or higher
+- **macOS**: macOS 11 (Big Sur) or higher
 - **Windows**: Windows 10/11 with WSL2 (Windows Subsystem for Linux)
   - Minitrino must be run from within WSL2, not from Windows directly
   - Docker Desktop for Windows should be configured to use WSL2 backend
@@ -63,7 +63,10 @@ library files.
    [github.com/jefflester/minitrino/releases](https://github.com/jefflester/minitrino/releases)
 1. **Review breaking changes** - Major version upgrades (e.g., 2.x → 3.x) may
    have breaking changes
-1. **Backup custom modules** - Library installation overwrites existing modules
+1. **Custom modules** - Library installation no longer overwrites in place: the
+   existing library is moved aside to `~/.minitrino/lib.bak.<timestamp>` before
+   the new one is installed (the two most recent backups are retained), so
+   custom modules can be recovered from the backup if needed
 1. **Note your configurations** - Document any custom environment variables or
    settings
 
@@ -107,7 +110,7 @@ cp -r ~/.minitrino/lib/snapshots/ ~/backups/
 pip install minitrino --upgrade
 
 # Or upgrade to specific version
-pip install minitrino==3.0.0 --upgrade
+pip install minitrino==3.1.0 --upgrade
 
 # Verify new version
 minitrino version
@@ -115,16 +118,18 @@ minitrino version
 
 #### Step 4: Upgrade the Library
 
-Each Minitrino release has its own library version. After upgrading the CLI,
-install the matching library:
+Each Minitrino release has its own library version. After upgrading the CLI, the
+next command you run will detect the version mismatch and prompt you to sync the
+library automatically. You can also sync manually:
 
 ```sh
-minitrino -v lib-install
+minitrino lib-install
 ```
 
-**Warning:** This command will **overwrite all modules** in
-`~/.minitrino/lib/modules/` and **delete all snapshots** in
-`~/.minitrino/lib/snapshots/`. Ensure you've backed up any custom work.
+The existing library is backed up to `~/.minitrino/lib.bak.<timestamp>` before
+being replaced (the two most recent backups are retained). If you have custom
+modules, ensure you've backed them up or can restore them from the backup
+directory.
 
 #### Step 5: Update Configuration (if needed)
 
@@ -140,7 +145,7 @@ minitrino config
 # STARBURST_VER=443-e
 #
 # New:
-CLUSTER_VER=476
+CLUSTER_VER=479
 IMAGE=trino  # or 'starburst'
 ```
 
@@ -177,15 +182,28 @@ minitrino modules -m my-custom-module
 #### CLI and Library Versions
 
 The CLI and library versions must match. Minitrino automatically detects
-mismatches:
+mismatches and prompts you to sync:
 
-```sh
-minitrino version
-# CLI Version: 3.0.0
-# Library Version: 2.2.4  ← Mismatch detected!
+```text
+CLI version 3.1.0 does not match library version 3.0.0. Sync library to 3.1.0? [Y/N]
 ```
 
-If there's a mismatch, run `minitrino lib-install` to sync versions.
+If you accept, the existing library is backed up (as `lib.bak.<timestamp>`) and
+replaced with the matching version. If you decline, the prompt is suppressed for
+24 hours before asking again.
+
+If the library is not installed at all, Minitrino prompts to install it.
+Declining raises an error because most commands require a library to function.
+
+To skip all prompts and auto-accept, pass `--yes` / `-y` or set
+`MINITRINO_ASSUME_YES=1` in your environment. This is useful for CI pipelines
+and scripted workflows.
+
+You can also sync the library manually at any time:
+
+```sh
+minitrino lib-install
+```
 
 #### Trino/Starburst Compatibility
 
@@ -193,6 +211,7 @@ Each Minitrino release is tested with specific Trino/Starburst versions:
 
 | Minitrino Version | Trino Versions | Starburst Versions | Python Required |
 | ----------------- | -------------- | ------------------ | --------------- |
+| 3.1.0             | 443+           | 443-e+             | 3.10+           |
 | 3.0.0             | 443+           | 443-e+             | 3.10+           |
 | 2.2.x             | 400+           | 400-e+             | 3.8+            |
 | 2.0.x             | 351+           | 351-e+             | 3.7+            |
@@ -220,7 +239,7 @@ If you see version errors, either:
 
 1. Upgrade your Trino/Starburst version:
    ```sh
-   minitrino -v -e CLUSTER_VER=476 provision -m spooling-protocol
+   minitrino -v -e CLUSTER_VER=479 provision -m spooling-protocol
    ```
 1. Use a module without version constraints
 
@@ -313,7 +332,9 @@ test in a non-production environment first.
 
 #### Issue: "Library version mismatch"
 
-**Solution:** Run `minitrino lib-install`
+**Solution:** Minitrino prompts to sync automatically. If you previously declined
+and the 24-hour cache hasn't expired, run `minitrino lib-install` to sync
+manually.
 
 #### Issue: "Module not found after upgrade"
 

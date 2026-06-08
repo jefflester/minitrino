@@ -1,6 +1,6 @@
 ---
 name: 'Setup Image Pull'
-description: 'Handle conditional image pulling with fallback (PR-specific or latest from master)'
+description: 'Handle conditional image pulling (PR-specific with retry, or latest from master)'
 author: 'Minitrino'
 
 inputs:
@@ -30,41 +30,36 @@ runs:
         username: ${{ github.actor }}
         password: ${{ inputs.github-token }}
 
-    - name: Pull image (conditional on image-changed)
+    - name: Pull and tag image
       shell: bash
       run: |
         IMAGE_TYPE="${{ inputs.image-type }}"
         PR_NUMBER="${{ inputs.pr-number }}"
         CLUSTER_VERSION="${{ inputs.cluster-version }}"
         IMAGE_CHANGED="${{ inputs.image-changed }}"
-
-        echo "Image type: ${IMAGE_TYPE}"
-        echo "PR number: ${PR_NUMBER}"
-        echo "Cluster version: ${CLUSTER_VERSION}"
-        echo "Image changed: ${IMAGE_CHANGED}"
+        LOCAL_TAG="minitrino/cluster:${CLUSTER_VERSION}-${IMAGE_TYPE}"
 
         if [ "${IMAGE_CHANGED}" == "true" ]; then
-          echo "Image was built in this PR, pulling PR-specific image..."
-          docker pull ghcr.io/jefflester/minitrino:pr-${PR_NUMBER}-${IMAGE_TYPE}
-          docker tag ghcr.io/jefflester/minitrino:pr-${PR_NUMBER}-${IMAGE_TYPE} \
-            minitrino/cluster:${CLUSTER_VERSION}-${IMAGE_TYPE}
-          echo "✓ Successfully pulled and tagged PR-specific image as minitrino/cluster:${CLUSTER_VERSION}-${IMAGE_TYPE}"
+          IMAGE="ghcr.io/jefflester/minitrino:pr-${PR_NUMBER}-${IMAGE_TYPE}"
+          echo "Waiting for PR image ${IMAGE}..."
+          for i in $(seq 1 120); do
+            if docker manifest inspect "${IMAGE}" >/dev/null 2>&1; then
+              echo "Image available after ${i} attempts"
+              break
+            fi
+            if [ "$i" -eq 120 ]; then
+              echo "Timeout waiting for image ${IMAGE}"
+              exit 1
+            fi
+            sleep 30
+          done
+          docker pull "${IMAGE}"
+          docker tag "${IMAGE}" "${LOCAL_TAG}"
         else
-          echo "Image build was skipped, pulling latest from master..."
-          if docker pull ghcr.io/jefflester/minitrino:latest-${IMAGE_TYPE}; then
-            docker tag ghcr.io/jefflester/minitrino:latest-${IMAGE_TYPE} \
-              minitrino/cluster:${CLUSTER_VERSION}-${IMAGE_TYPE}
-            echo "✓ Successfully pulled and tagged latest image as minitrino/cluster:${CLUSTER_VERSION}-${IMAGE_TYPE}"
-          else
-            echo "⚠ Latest image not found, will fall back to pull-test-image action"
-          fi
+          IMAGE="ghcr.io/jefflester/minitrino:latest-${IMAGE_TYPE}"
+          echo "Pulling latest image ${IMAGE}..."
+          docker pull "${IMAGE}"
+          docker tag "${IMAGE}" "${LOCAL_TAG}"
         fi
 
-    - name: Pull pre-built image (fallback)
-      if: inputs.image-changed == 'true'
-      uses: ./.github/actions/pull-test-image
-      with:
-        github-token: ${{ inputs.github-token }}
-        pr-number: ${{ inputs.pr-number }}
-        image-type: ${{ inputs.image-type }}
-        cluster-version: ${{ inputs.cluster-version }}
+        echo "Image ready: ${LOCAL_TAG}"

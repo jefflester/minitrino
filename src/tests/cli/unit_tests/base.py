@@ -17,10 +17,11 @@ import docker
 import pytest
 from click.testing import CliRunner
 from docker.models.containers import Container
-from minitrino.core.cluster.cluster import Cluster
-from minitrino.core.context import MinitrinoContext
-from minitrino.core.logging.logger import MinitrinoLogger
-from minitrino.core.modules import Modules
+
+from minitrino.cluster.cluster import Cluster
+from minitrino.context import MinitrinoContext
+from minitrino.logging.logger import MinitrinoLogger
+from minitrino.modules import Modules
 
 
 class MinitrinoUnitTestBase:
@@ -254,11 +255,11 @@ class MinitrinoAssertions:
         expected_containers: list[str] | None = None,
     ):
         """Assert that cluster is in valid state."""
-        assert cluster.name == expected_name
-        assert cluster.cluster_name == expected_name
+        assert cluster.name == expected_name  # type: ignore[attr-defined]
+        assert cluster.cluster_name == expected_name  # type: ignore[attr-defined]
 
         if expected_containers:
-            container_names = [c.name for c in cluster.get_containers()]
+            container_names = [c.name for c in cluster.get_containers()]  # type: ignore[attr-defined]
             for expected in expected_containers:
                 assert any(expected in name for name in container_names)
 

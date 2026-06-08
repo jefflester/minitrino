@@ -2,25 +2,41 @@ ARG CLUSTER_VER
 ARG CLUSTER_DIST
 ARG SERVICE_USER
 ARG UBUNTU_VER=22.04
+ARG DIST_SOURCE=download
 
-FROM ubuntu:${UBUNTU_VER} AS tarball
+FROM scratch AS local-dist
+
+FROM ubuntu:${UBUNTU_VER} AS tarball-download
 
 ARG CLUSTER_VER
 ARG CLUSTER_DIST
 
-COPY ./src/scripts/downloader.py /tmp/
+COPY ./scripts/download_tarball.py /tmp/
 RUN apt-get -y update && apt-get install -y --no-install-recommends \
         curl \
         ca-certificates \
         python3 && \
-    python3 /tmp/downloader.py ${CLUSTER_VER} ${CLUSTER_DIST}
+    python3 /tmp/download_tarball.py ${CLUSTER_VER} ${CLUSTER_DIST}
+
+FROM ubuntu:${UBUNTU_VER} AS tarball-local
+
+ARG CLUSTER_DIST
+
+RUN apt-get -y update && apt-get install -y --no-install-recommends python3 && \
+    rm -rf /var/lib/apt/lists/*
+RUN mkdir -p /usr/lib/${CLUSTER_DIST}
+COPY --from=local-dist / /usr/lib/${CLUSTER_DIST}
+
+# hadolint ignore=DL3006
+FROM tarball-${DIST_SOURCE} AS tarball
 
 FROM tarball AS pruned
 
 ARG CLUSTER_DIST
 ARG KEEP_PLUGINS=""
 ENV KEEP_PLUGINS=${KEEP_PLUGINS}
-COPY ./src/scripts/prune_plugins.py /tmp/
+COPY ./scripts/prune_plugins.py /tmp/
+COPY ./data/plugin-removelist.txt /tmp/
 RUN python3 /tmp/prune_plugins.py ${CLUSTER_DIST}
 
 FROM ubuntu:${UBUNTU_VER} AS base
@@ -54,7 +70,7 @@ ARG SERVICE_USER
 
 RUN useradd -m ${SERVICE_USER}
 
-COPY ./src/scripts/install-java-builder.sh /tmp/
+COPY ./scripts/install-java-builder.sh ./data/java-matrix.json /tmp/
 RUN chmod +x /tmp/install-java-builder.sh && \
     /tmp/install-java-builder.sh ${SERVICE_USER} ${CLUSTER_VER}
 
@@ -68,6 +84,7 @@ ARG SERVICE_GROUP=root
 ARG SERVICE_GID=0
 
 ENV SERVICE_USER=${SERVICE_USER}
+ENV SERVICE_UID=${SERVICE_UID}
 ENV CLUSTER_VER=${CLUSTER_VER}
 ENV CLUSTER_DIST=${CLUSTER_DIST}
 
@@ -76,9 +93,10 @@ COPY --from=java-builder --chown=${SERVICE_USER}:${SERVICE_GROUP} /tmp/tls-jvm /
 ENV JAVA_HOME="/opt/java"
 ENV PATH="${JAVA_HOME}/bin:${PATH}"
 
-COPY ./src/scripts /tmp/
+COPY ./scripts /tmp/
+COPY ./data /tmp/
 # Use --chown to set ownership during copy, avoiding duplication in RUN layer
-COPY --chown=${SERVICE_USER}:${SERVICE_GROUP} ./src/etc/app-config /etc/${CLUSTER_DIST}
+COPY --chown=${SERVICE_USER}:${SERVICE_GROUP} ./etc/app-config /etc/${CLUSTER_DIST}
 COPY --from=pruned --chown=${SERVICE_USER}:${SERVICE_GROUP} /usr/lib/${CLUSTER_DIST} /usr/lib/${CLUSTER_DIST}
 
 RUN chmod +x /tmp/*.sh && \

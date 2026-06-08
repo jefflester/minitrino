@@ -82,11 +82,11 @@ SPECS = {
 logger = common.logger
 
 
-def dump_container_logs(debug=False) -> None:
+def dump_container_logs(debug=False, force=False) -> None:
     """Dump logs from containers."""
-    # Only dump logs if debug is enabled and output is NOT a terminal.
-    # Dumping logs to an interactive terminal is obnoxious.
-    if not debug or sys.stdout.isatty():
+    # Only dump logs if debug is enabled and output is NOT a terminal,
+    # unless force=True (used by the watchdog on hang detection).
+    if not force and (not debug or sys.stdout.isatty()):
         return
     containers = common.get_containers(all=True)
     for container in containers:

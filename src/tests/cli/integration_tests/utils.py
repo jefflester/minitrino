@@ -17,7 +17,7 @@ executor = common.MinitrinoExecutor(CLUSTER_NAME)
 
 def docker_client() -> tuple[docker.DockerClient, docker.APIClient]:
     """Return a Docker client for test use."""
-    from minitrino.core.docker.socket import resolve_docker_socket
+    from minitrino.docker.socket import resolve_docker_socket
 
     socket = resolve_docker_socket()
     logger.debug(f"Docker socket path: {socket}")

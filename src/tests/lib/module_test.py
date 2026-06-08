@@ -7,16 +7,16 @@ from time import monotonic, sleep
 
 import click
 import jsonschema
+
 from minitrino.settings import DEFAULT_CLUSTER_VER
 
-here = os.path.abspath(os.path.dirname(__file__))
-src_dir = os.path.abspath(os.path.join(here, "../.."))
-repo_root = os.path.abspath(os.path.join(src_dir, ".."))
+_src_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+_repo_root = os.path.abspath(os.path.join(_src_dir, ".."))
 
-if src_dir not in sys.path:
-    sys.path.insert(0, src_dir)
-if repo_root not in sys.path:
-    sys.path.insert(0, repo_root)
+if _src_dir not in sys.path:
+    sys.path.insert(0, _src_dir)
+if _repo_root not in sys.path:
+    sys.path.insert(0, _repo_root)
 
 
 from tests import common  # noqa: E402
@@ -236,7 +236,8 @@ class ModuleTest:
             Whether to run tests with workers.
         """
         if self.image == "starburst":
-            cluster_ver = ["-e", f"CLUSTER_VER={DEFAULT_CLUSTER_VER}-e"]
+            sep_ver = common.resolve_latest_starburst_ver(str(DEFAULT_CLUSTER_VER))
+            cluster_ver = ["-e", f"CLUSTER_VER={sep_ver}"]
         else:
             cluster_ver = ["-e", f"CLUSTER_VER={DEFAULT_CLUSTER_VER}"]
 

@@ -9,8 +9,8 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from click.testing import CliRunner
-from minitrino.core.errors import MinitrinoError
 
+from minitrino.errors import MinitrinoError
 from tests.cli.unit_tests.base import (
     MinitrinoAssertions,
     TestDataFactory,
@@ -251,7 +251,7 @@ def mock_subprocess():
 @pytest.fixture
 def mock_compose_cmd():
     """Mock Docker Compose command execution."""
-    with patch("minitrino.core.exec.host.execute_host_cmd") as mock_exec:
+    with patch("minitrino.exec.host.execute_host_cmd") as mock_exec:
         mock_exec.return_value = Mock(
             exit_code=0,
             output="Docker Compose executed successfully",
@@ -305,13 +305,13 @@ def capture_logs():
 @pytest.fixture
 def minitrino_error():
     """Provide a MinitrinoError for testing."""
-    return MinitrinoError("Test error", exit_code=1)
+    return MinitrinoError("Test error")
 
 
 @pytest.fixture
 def user_error():
     """Provide a UserError for testing."""
-    from minitrino.core.errors import UserError
+    from minitrino.errors import UserError
 
     return UserError("User error", "Try this instead")
 

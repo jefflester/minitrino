@@ -1,14 +1,11 @@
 """Unit tests for prune_plugins.py script."""
 
-import os
 import sys
 from unittest.mock import call, patch
 
-# Add the image scripts directory to path for imports dynamically
-SCRIPT_PATH = os.path.realpath(__file__)
-HERE = os.path.dirname(SCRIPT_PATH)
-SCRIPTS_DIR = os.path.abspath(os.path.join(HERE, "../../../../lib/image/src/scripts"))
-sys.path.insert(0, SCRIPTS_DIR)
+from tests.common import LIB_IMAGE_SCRIPTS_DIR
+
+sys.path.insert(0, LIB_IMAGE_SCRIPTS_DIR)
 from prune_plugins import main, prune_plugins  # noqa: E402
 
 
@@ -18,23 +15,24 @@ class TestPrunePlugins:
     @patch("prune_plugins.shutil.rmtree")
     @patch("prune_plugins.os.listdir")
     @patch("prune_plugins.os.path.isdir")
-    def test_prune_plugins_basic(self, mock_isdir, mock_listdir, mock_rmtree):
-        """Test basic plugin pruning."""
+    @patch("prune_plugins.load_removelist")
+    def test_prune_plugins_basic(
+        self, mock_removelist, mock_isdir, mock_listdir, mock_rmtree
+    ):
+        """Test basic plugin pruning removes only removelisted plugins."""
+        mock_removelist.return_value = ["mongodb", "redis"]
         mock_isdir.return_value = True
         mock_listdir.return_value = [
-            "hive",  # Keep - in the list
-            "iceberg",  # Keep - in the list
-            "mongodb",  # Remove - not in the list
-            "redis",  # Remove - not in the list
-            "memory",  # Keep - in the list
+            "hive",
+            "iceberg",
+            "mongodb",
+            "redis",
+            "memory",
         ]
 
         prune_plugins("trino", None)
 
-        # Should check if plugin dir exists
         mock_isdir.assert_called_once_with("/usr/lib/trino/plugin")
-
-        # Should remove plugins not in the keep list
         expected_calls = [
             call("/usr/lib/trino/plugin/mongodb", ignore_errors=True),
             call("/usr/lib/trino/plugin/redis", ignore_errors=True),
@@ -45,20 +43,22 @@ class TestPrunePlugins:
     @patch("prune_plugins.shutil.rmtree")
     @patch("prune_plugins.os.listdir")
     @patch("prune_plugins.os.path.isdir")
-    def test_prune_plugins_with_keep_env(self, mock_isdir, mock_listdir, mock_rmtree):
-        """Test plugin pruning with additional plugins to keep."""
+    @patch("prune_plugins.load_removelist")
+    def test_prune_plugins_with_keep_env(
+        self, mock_removelist, mock_isdir, mock_listdir, mock_rmtree
+    ):
+        """Test that KEEP_PLUGINS overrides the removelist."""
+        mock_removelist.return_value = ["mongodb", "redis"]
         mock_isdir.return_value = True
         mock_listdir.return_value = [
             "hive",
-            "mongodb",  # Would be removed, but added to keep list
-            "redis",  # Would be removed, but added to keep list
-            "custom",  # Not in default list, but added to keep list
+            "mongodb",
+            "redis",
+            "custom",
         ]
 
-        prune_plugins("starburst", "mongodb,redis custom")
+        prune_plugins("starburst", "mongodb,redis")
 
-        # Nothing should be removed since all are in the combined keep
-        # list
         mock_rmtree.assert_not_called()
 
     @patch("prune_plugins.shutil.rmtree")
@@ -77,11 +77,7 @@ class TestPrunePlugins:
 
         prune_plugins("trino", "ALL")
 
-        # Should check if plugin dir exists
         mock_isdir.assert_called_once_with("/usr/lib/trino/plugin")
-
-        # Should not list directory or remove anything when ALL is
-        # specified
         mock_listdir.assert_not_called()
         mock_rmtree.assert_not_called()
 
@@ -94,7 +90,6 @@ class TestPrunePlugins:
         """Test plugin pruning with ALL in different cases."""
         mock_isdir.return_value = True
 
-        # Test various case combinations
         for keep_value in ["ALL", "all", "All", "  ALL  ", " all "]:
             prune_plugins("trino", keep_value)
             mock_listdir.assert_not_called()
@@ -112,20 +107,25 @@ class TestPrunePlugins:
 
         prune_plugins("trino", None)
 
-        # Should check if plugin dir exists
         mock_isdir.assert_called_once_with("/usr/lib/trino/plugin")
-
-        # Should not list or remove anything
         mock_listdir.assert_not_called()
         mock_rmtree.assert_not_called()
 
     @patch("prune_plugins.shutil.rmtree")
     @patch("prune_plugins.os.listdir")
     @patch("prune_plugins.os.path.isdir")
+    @patch("prune_plugins.load_removelist")
     def test_prune_plugins_complex_keep_list(
-        self, mock_isdir, mock_listdir, mock_rmtree
+        self, mock_removelist, mock_isdir, mock_listdir, mock_rmtree
     ):
-        """Test with complex keep list parsing."""
+        """Test with complex KEEP_PLUGINS parsing overriding removelist."""
+        mock_removelist.return_value = [
+            "plugin1",
+            "plugin2",
+            "plugin3",
+            "plugin4",
+            "plugin5",
+        ]
         mock_isdir.return_value = True
         mock_listdir.return_value = [
             "plugin1",
@@ -135,60 +135,95 @@ class TestPrunePlugins:
             "plugin5",
         ]
 
-        # Complex format with commas, spaces, and mixed separators
         keep_env = "plugin1, plugin2  plugin3,plugin4,  plugin5"
         prune_plugins("trino", keep_env)
 
-        # All plugins should be kept
         mock_rmtree.assert_not_called()
 
     @patch("prune_plugins.shutil.rmtree")
     @patch("prune_plugins.os.listdir")
     @patch("prune_plugins.os.path.isdir")
-    def test_prune_plugins_default_keep_list(
-        self, mock_isdir, mock_listdir, mock_rmtree
+    @patch("prune_plugins.load_removelist")
+    def test_prune_plugins_default_removelist(
+        self, mock_removelist, mock_isdir, mock_listdir, mock_rmtree
     ):
-        """Test that default keep list includes expected plugins."""
+        """Test that only removelisted plugins are removed."""
+        mock_removelist.return_value = ["bigquery", "cassandra", "druid"]
         mock_isdir.return_value = True
-
-        # Test a subset of plugins that should be in the default keep
-        # list
-        default_plugins = [
+        mock_listdir.return_value = [
             "hive",
             "iceberg",
-            "delta-lake",
-            "elasticsearch",
-            "mysql",
-            "postgresql",
-            "clickhouse",
-            "jmx",
+            "bigquery",
+            "cassandra",
+            "druid",
             "memory",
-            "tpch",
-            "tpcds",
         ]
-
-        mock_listdir.return_value = default_plugins + ["should-be-removed"]
 
         prune_plugins("trino", None)
 
-        # Only the non-default plugin should be removed
+        expected_calls = [
+            call("/usr/lib/trino/plugin/bigquery", ignore_errors=True),
+            call("/usr/lib/trino/plugin/cassandra", ignore_errors=True),
+            call("/usr/lib/trino/plugin/druid", ignore_errors=True),
+        ]
+        mock_rmtree.assert_has_calls(expected_calls, any_order=True)
+        assert mock_rmtree.call_count == 3
+
+    @patch("prune_plugins.shutil.rmtree")
+    @patch("prune_plugins.os.listdir")
+    @patch("prune_plugins.os.path.isdir")
+    @patch("prune_plugins.load_removelist")
+    def test_prune_plugins_empty_keep_env(
+        self, mock_removelist, mock_isdir, mock_listdir, mock_rmtree
+    ):
+        """Test with empty keep_plugins_env."""
+        mock_removelist.return_value = ["mongodb"]
+        mock_isdir.return_value = True
+        mock_listdir.return_value = ["hive", "mongodb"]
+
+        prune_plugins("trino", "")
+
         mock_rmtree.assert_called_once_with(
-            "/usr/lib/trino/plugin/should-be-removed", ignore_errors=True
+            "/usr/lib/trino/plugin/mongodb", ignore_errors=True
         )
 
     @patch("prune_plugins.shutil.rmtree")
     @patch("prune_plugins.os.listdir")
     @patch("prune_plugins.os.path.isdir")
-    def test_prune_plugins_empty_keep_env(self, mock_isdir, mock_listdir, mock_rmtree):
-        """Test with empty keep_plugins_env."""
+    @patch("prune_plugins.load_removelist")
+    def test_prune_plugins_partial_keep_override(
+        self, mock_removelist, mock_isdir, mock_listdir, mock_rmtree
+    ):
+        """Test that KEEP_PLUGINS overrides only specified removelist entries."""
+        mock_removelist.return_value = ["mongodb", "redis", "cassandra"]
         mock_isdir.return_value = True
-        mock_listdir.return_value = ["hive", "not-in-list"]
+        mock_listdir.return_value = ["hive", "mongodb", "redis", "cassandra"]
 
-        prune_plugins("trino", "")
+        prune_plugins("trino", "mongodb")
 
-        # Empty string should be treated as None
+        expected_calls = [
+            call("/usr/lib/trino/plugin/cassandra", ignore_errors=True),
+            call("/usr/lib/trino/plugin/redis", ignore_errors=True),
+        ]
+        mock_rmtree.assert_has_calls(expected_calls, any_order=True)
+        assert mock_rmtree.call_count == 2
+
+    @patch("prune_plugins.shutil.rmtree")
+    @patch("prune_plugins.os.listdir")
+    @patch("prune_plugins.os.path.isdir")
+    @patch("prune_plugins.load_removelist")
+    def test_prune_plugins_removelist_entry_not_present(
+        self, mock_removelist, mock_isdir, mock_listdir, mock_rmtree
+    ):
+        """Test that removelist entries not in the directory are no-ops."""
+        mock_removelist.return_value = ["mongodb", "nonexistent-plugin"]
+        mock_isdir.return_value = True
+        mock_listdir.return_value = ["hive", "mongodb"]
+
+        prune_plugins("trino", None)
+
         mock_rmtree.assert_called_once_with(
-            "/usr/lib/trino/plugin/not-in-list", ignore_errors=True
+            "/usr/lib/trino/plugin/mongodb", ignore_errors=True
         )
 
 
@@ -205,8 +240,6 @@ class TestMain:
         main()
 
         mock_prune.assert_called_once_with("trino", None)
-        # Check that KEEP_PLUGINS was called (may be called multiple
-        # times due to argparse)
         calls = [
             call
             for call in mock_env_get.call_args_list
@@ -226,7 +259,6 @@ class TestMain:
 
         main()
 
-        # CLI arg should take precedence over env var
         mock_prune.assert_called_once_with("starburst", "custom1,custom2")
 
     @patch("prune_plugins.prune_plugins")

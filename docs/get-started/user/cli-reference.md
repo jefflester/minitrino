@@ -13,6 +13,8 @@ The following options are available for all Minitrino commands:
 - `-e, --env` - Set environment variables (format: `KEY=VALUE`)
 - `-c, --cluster` - Specify the cluster name (use `'*'` or `'all'` for all
   clusters)
+- `-y, --yes` - Assume "yes" for all interactive prompts (equivalent to
+  `MINITRINO_ASSUME_YES=1`)
 
 ## Commands
 
@@ -134,7 +136,7 @@ minitrino -c all down
 Environment variables can be set via the `-e` flag:
 
 ```sh
-minitrino -e CLUSTER_VER=476 -e LIC_PATH=/path/to/license provision
+minitrino -e CLUSTER_VER=479 -e LIC_PATH=/path/to/license provision
 ```
 
 ### Choosing Trino or Starburst Distribution

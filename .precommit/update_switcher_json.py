@@ -60,6 +60,7 @@ if not any(e["version"] == current_version for e in entries):
     entries = sorted(entries, key=version_key, reverse=True)
     with open(SWITCHER_PATH, "w") as f:
         json.dump(entries, f, indent=2)
+        f.write("\n")
     subprocess.run(["git", "add", str(SWITCHER_PATH)], check=True)
     print(f"Added entry for {current_version}")
 else:

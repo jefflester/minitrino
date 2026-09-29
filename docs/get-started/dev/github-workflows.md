@@ -54,7 +54,7 @@ stages:
 ### Stage 2: Smoke Test (Release Gate)
 
 Before creating the GitHub release, the workflow runs comprehensive smoke tests
-on both **Ubuntu 22.04** and **macOS 13** to verify the PyPI package works
+on both **Ubuntu 22.04** and **macOS 15 (Intel)** to verify the PyPI package works
 correctly in an isolated environment.
 
 The smoke test intentionally does **not** checkout the repository. This simulates

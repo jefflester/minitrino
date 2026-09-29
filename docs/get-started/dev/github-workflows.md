@@ -62,7 +62,7 @@ stages:
 The workflow calls the reusable `smoke-test.yaml` workflow, which runs on both
 **Ubuntu 22.04** and **macOS 15 (Intel)** to verify the PyPI package works
 correctly in an isolated environment. On macOS, Docker is provided by Colima
-with the Docker Compose v2 plugin.
+with the Docker Compose v2 and Buildx plugins.
 
 The smoke test intentionally does **not** checkout the repository. This
 simulates an end-user installation experience and catches bugs like library
@@ -79,8 +79,8 @@ development.
    installed
 1. **Modules command** - Verifies `minitrino modules` works with the installed
    library
-1. **Docker check** - Verifies the Docker daemon and `docker compose` are
-   available
+1. **Docker check** - Verifies the Docker daemon, `docker compose`, and
+   `docker buildx` are available
 1. **Provision smoke test** - Runs `minitrino provision` for 30 seconds; passes
    if provisioning is still running at the timeout or completes, and fails on
    any error

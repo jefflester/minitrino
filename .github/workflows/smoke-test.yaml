@@ -124,18 +124,22 @@ jobs:
       - name: Set up Docker (macOS)
         if: runner.os == 'macOS'
         run: |
-          # Homebrew's docker formula is the CLI only; the Compose v2 plugin
-          # must be installed and registered separately.
-          brew install coreutils docker docker-compose colima
+          # Homebrew's docker formula is the CLI only; the Compose v2 and
+          # Buildx (BuildKit) plugins must be installed and registered
+          # separately.
+          brew install coreutils docker docker-compose docker-buildx colima
           mkdir -p ~/.docker/cli-plugins
-          ln -sfn "$(brew --prefix)/opt/docker-compose/bin/docker-compose" \
-            ~/.docker/cli-plugins/docker-compose
+          for plugin in docker-compose docker-buildx; do
+            ln -sfn "$(brew --prefix)/opt/${plugin}/bin/${plugin}" \
+              ~/.docker/cli-plugins/${plugin}
+          done
           colima start --cpu 2 --memory 4
 
       - name: Verify Docker and Compose
         run: |
           docker info --format 'Docker server {{.ServerVersion}}'
           docker compose version
+          docker buildx version
 
       - name: Test provision command (30s timeout)
         run: |

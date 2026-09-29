@@ -40,9 +40,20 @@ jobs:
 
           if echo "$CHANGED_FILES" | grep -qE '^src/lib/image/|^src/lib/minitrino\.env$'; then
             echo "image=true" >> $GITHUB_OUTPUT
-          else
-            echo "image=false" >> $GITHUB_OUTPUT
+            exit 0
           fi
+
+          # Unchanged images fall back to latest-* from GHCR; build instead if
+          # those can't be resolved (missing, private, or registry error)
+          for IMAGE_TYPE in trino starburst; do
+            IMAGE="ghcr.io/jefflester/minitrino:latest-${IMAGE_TYPE}"
+            if ! docker manifest inspect "${IMAGE}" >/dev/null 2>&1; then
+              echo "Fallback image ${IMAGE} not available; building test images"
+              echo "image=true" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          done
+          echo "image=false" >> $GITHUB_OUTPUT
 
   # ============================================================================
   # STAGE 1: Test Release

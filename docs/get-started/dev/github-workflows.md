@@ -26,12 +26,14 @@ feature branches to a release branch.
 When a PR is created from a release branch and targets `master`, the `ci.yaml`
 workflow is triggered, which includes the following automated jobs:
 
-- **Change detection** - Determines if image-related files changed
+- **Change detection** - Determines if test images need to be built: either
+  image-related files changed, or the `latest-trino`/`latest-starburst` images
+  that unchanged PRs fall back to are not available in GHCR
 - **Test release creation** - Creates a prerelease tag (`0.0.0`) targeting the
   release branch, allowing the testing suite to access an updated Minitrino
   library reflective of the current state of the release branch
 - **Image builds** - Builds Trino and Starburst test images in parallel via a
-  matrix job (only runs if image files changed)
+  matrix job (only runs if change detection requires it)
 - **CLI tests** - Unit tests plus integration tests split into parallel matrix
   segments (Provision, Snapshot, Remove, Other)
 - **Library tests** - Tests modules with both Trino and Starburst distributions

@@ -3,6 +3,13 @@
 Add a MinIO container for local object storage – used by other modules to store
 data files, such as the `hive`, `iceberg`, and `delta-lake` modules.
 
+```{note}
+MinIO no longer publishes community images to Docker Hub. This module uses the
+community-maintained [`pgsty/minio`](https://hub.docker.com/r/pgsty/minio) and
+[`pgsty/mc`](https://hub.docker.com/r/pgsty/mc) forks, pinned via the
+`MINIO_VER` and `MINIO_MC_VER` environment variables.
+```
+
 ## Usage
 
 {{ persistent_storage_warning }}

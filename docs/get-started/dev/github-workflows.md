@@ -26,12 +26,14 @@ feature branches to a release branch.
 When a PR is created from a release branch and targets `master`, the `ci.yaml`
 workflow is triggered, which includes the following automated jobs:
 
-- **Change detection** - Determines if image-related files changed
+- **Change detection** - Determines if test images need to be built: either
+  image-related files changed, or the `latest-trino`/`latest-starburst` images
+  that unchanged PRs fall back to are not available in GHCR
 - **Test release creation** - Creates a prerelease tag (`0.0.0`) targeting the
   release branch, allowing the testing suite to access an updated Minitrino
   library reflective of the current state of the release branch
 - **Image builds** - Builds Trino and Starburst test images in parallel via a
-  matrix job (only runs if image files changed)
+  matrix job (only runs if change detection requires it)
 - **CLI tests** - Unit tests plus integration tests split into parallel matrix
   segments (Provision, Snapshot, Remove, Other)
 - **Library tests** - Tests modules with both Trino and Starburst distributions
@@ -42,7 +44,7 @@ All tests are described in detail in the [testing overview](cli-and-library-test
 ## Merging a PR into `master`
 
 Upon completion of the code tests and the merging of a release branch PR into
-`master`, the `release.yaml` workflow is triggered. This workflow runs in three
+`master`, the `release.yaml` workflow is triggered. This workflow runs in four
 stages:
 
 ### Stage 1: PyPI Publish
@@ -51,15 +53,25 @@ stages:
 - Publishes it to PyPI (idempotent - skips if version exists)
 - Waits for PyPI availability before proceeding
 
-### Stage 2: Smoke Test (Release Gate)
+### Stage 2: GitHub Release
 
-Before creating the GitHub release, the workflow runs comprehensive smoke tests
-on both **Ubuntu 22.04** and **macOS 15 (Intel)** to verify the PyPI package works
-correctly in an isolated environment.
+- Creates a GitHub release whose name matches the merged PR branch (e.g.,
+  `3.0.0`), using `release-notes/<version>.md` as the description
+- The release is **not** marked as `latest` yet
 
-The smoke test intentionally does **not** checkout the repository. This simulates
-an end-user installation experience and catches bugs like library path resolution
-that might incorrectly fall back to repository paths during development.
+### Stage 3: Smoke Test (Release Gate)
+
+The workflow calls the reusable `smoke-test.yaml` workflow, which runs on both
+**Ubuntu 22.04** and **macOS 15 (Intel)** to verify the PyPI package works
+correctly in an isolated environment. On macOS, Docker is provided by Colima
+with the Docker Compose v2 and Buildx plugins. Colima startup is bounded and
+retried once from a clean VM, and the job has a 35-minute timeout so a hung
+runner fails the gate quickly instead of blocking it.
+
+The smoke test intentionally does **not** checkout the repository. This
+simulates an end-user installation experience and catches bugs like library
+path resolution that might incorrectly fall back to repository paths during
+development.
 
 **Tests performed:**
 
@@ -71,24 +83,32 @@ that might incorrectly fall back to repository paths during development.
    installed
 1. **Modules command** - Verifies `minitrino modules` works with the installed
    library
-1. **Provision smoke test** - Runs `minitrino provision` for 30 seconds to
-   validate the basic provisioning flow starts correctly
+1. **Docker check** - Verifies the Docker daemon, `docker compose`, and
+   `docker buildx` are available
+1. **Provision smoke test** - Runs `minitrino provision` for 30 seconds; passes
+   if provisioning is still running at the timeout or completes, and fails on
+   any error
 
-### Stage 3: GitHub Release (Only if Smoke Test Passes)
+`smoke-test.yaml` can also be run outside of a release:
 
-Only after the smoke test passes on all platforms:
+- **Manually** via `workflow_dispatch`, against any published version (defaults
+  to the latest version on PyPI)
+- **On pull requests** that modify `smoke-test.yaml`, against the latest
+  published version, so changes to the smoke test are validated before they
+  gate a release
 
-- Creates a GitHub release whose name matches the merged PR branch (e.g., `3.0.0`)
-- Publishes the release and marks it as `latest`
+### Stage 4: Mark Release as Latest
+
+Only after the smoke test passes on all platforms is the GitHub release marked
+as `latest`.
 
 ### Handling Failures
 
-If the smoke test fails, the PyPI package has been published but no GitHub
-release is created. This means:
+If the smoke test fails, the package is on PyPI and the GitHub release exists,
+but it is not marked as `latest`. This means:
 
-- The package exists on PyPI but is not "officially" released
 - Users who install by specific version can still access it
-- No announcement or `latest` tag points to the broken version
+- `latest` continues to point to the previous release
 
 To fix:
 
@@ -96,9 +116,10 @@ To fix:
 1. Bump the version (e.g., `3.0.3` → `3.0.4`)
 1. Create a new release PR
 
-The PyPI upload step is idempotent—it checks if the version already exists
-before uploading, so re-running the release workflow will not fail on the
-upload step.
+If the failure was caused by the smoke test or CI environment rather than the
+package, re-run the release workflow via `workflow_dispatch` with the same
+version instead. The PyPI upload step is idempotent—it checks if the version
+already exists before uploading—and the GitHub release is recreated.
 
 ## Automated Dependency Updates
 

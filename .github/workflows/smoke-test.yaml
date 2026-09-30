@@ -36,6 +36,8 @@ jobs:
       matrix:
         os: [ubuntu-22.04, macos-15-intel]
     runs-on: ${{ matrix.os }}
+    # Fail fast instead of blocking the release gate on a hung runner
+    timeout-minutes: 35
     steps:
       # NOTE: We intentionally do NOT checkout the repo here.
       # This simulates an end-user installing from PyPI without access
@@ -123,6 +125,8 @@ jobs:
 
       - name: Set up Docker (macOS)
         if: runner.os == 'macOS'
+        # Backstop for brew installs plus two bounded Colima start attempts
+        timeout-minutes: 20
         run: |
           # Homebrew's docker formula is the CLI only; the Compose v2 and
           # Buildx (BuildKit) plugins must be installed and registered
@@ -133,7 +137,20 @@ jobs:
             ln -sfn "$(brew --prefix)/opt/${plugin}/bin/${plugin}" \
               ~/.docker/cli-plugins/${plugin}
           done
-          colima start --cpu 2 --memory 4
+
+          # Colima VM startup on hosted runners normally takes 4-6 minutes but
+          # occasionally hangs; bound each attempt and retry once from a clean VM.
+          for attempt in 1 2; do
+            if gtimeout 480 colima start --cpu 2 --memory 4; then
+              break
+            fi
+            if [ "${attempt}" -eq 2 ]; then
+              echo "ERROR: Colima failed to start after ${attempt} attempts"
+              exit 1
+            fi
+            echo "Colima start attempt ${attempt} failed; retrying from a clean VM..."
+            colima delete --force || true
+          done
 
       - name: Verify Docker and Compose
         run: |

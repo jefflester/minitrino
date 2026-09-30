@@ -64,7 +64,9 @@ stages:
 The workflow calls the reusable `smoke-test.yaml` workflow, which runs on both
 **Ubuntu 22.04** and **macOS 15 (Intel)** to verify the PyPI package works
 correctly in an isolated environment. On macOS, Docker is provided by Colima
-with the Docker Compose v2 and Buildx plugins.
+with the Docker Compose v2 and Buildx plugins. Colima startup is bounded and
+retried once from a clean VM, and the job has a 35-minute timeout so a hung
+runner fails the gate quickly instead of blocking it.
 
 The smoke test intentionally does **not** checkout the repository. This
 simulates an end-user installation experience and catches bugs like library

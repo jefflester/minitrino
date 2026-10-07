@@ -8,11 +8,10 @@ build:
     # The docs/api/ API reference is generated output (gitignored, not
     # committed). Regenerate it on every build so it never goes stale,
     # mirroring install/docs/docs-build.sh. Runs after the docs extras
-    # (which provide sphinx-apidoc) are installed.
+    # (which provide sphinx-apidoc) are installed. RTD executes these entries
+    # without a shell (no quote handling), so the logic lives in a script.
     pre_build:
-      - sphinx-apidoc -o docs/api src/minitrino -f -e --tocfile index
-      - sed -i '1s/.*/API Reference/' docs/api/index.rst
-      - sed -i '2s/.*/=============/' docs/api/index.rst
+      - bash install/docs/rtd-pre-build.sh
 
 sphinx:
   configuration: docs/conf.py
